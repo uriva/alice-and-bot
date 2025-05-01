@@ -24,8 +24,13 @@ const _schema = i.schema({
       title: i.string(),
     }),
     keys: i.entity({ key: i.string() }),
+    webhooks: i.entity({ url: i.string() }),
   },
   links: {
+    identityWebhook: {
+      forward: { on: "identities", label: "webhooks", has: "many" },
+      reverse: { on: "webhooks", label: "identities", has: "many" },
+    },
     conversationKeys: {
       forward: { on: "conversations", label: "keys", has: "many" },
       reverse: { on: "keys", label: "conversation", has: "one" },
