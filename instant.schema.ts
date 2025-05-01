@@ -9,32 +9,46 @@ const _schema = i.schema({
     $users: i.entity({
       email: i.string().unique().indexed(),
     }),
-    events: i.entity({
-      text: i.string(),
+    accounts: i.entity({}),
+    messages: i.entity({
+      payload: i.string(),
       timestamp: i.number(),
     }),
-    users: i.entity({
+    identities: i.entity({
       name: i.string(),
       avatar: i.string(),
       publicKey: i.string(),
       privateKey: i.string(),
     }),
     conversations: i.entity({
-      name: i.string(),
+      title: i.string(),
     }),
+    keys: i.entity({ key: i.string() }),
   },
   links: {
+    conversationKeys: {
+      forward: { on: "conversations", label: "keys", has: "many" },
+      reverse: { on: "keys", label: "conversation", has: "one" },
+    },
+    identityKeys: {
+      forward: { on: "identities", label: "keys", has: "many" },
+      reverse: { on: "keys", label: "owner", has: "one" },
+    },
+    conversationParent: {
+      forward: { on: "conversations", label: "parent", has: "one" },
+      reverse: { on: "conversations", label: "child", has: "one" },
+    },
     conversationParticipants: {
       forward: { on: "conversations", label: "participants", has: "many" },
-      reverse: { on: "users", label: "conversations", has: "many" },
+      reverse: { on: "identities", label: "conversations", has: "many" },
     },
     conversationAdmins: {
       forward: { on: "conversations", label: "admins", has: "many" },
-      reverse: { on: "users", label: "managedConversations", has: "many" },
+      reverse: { on: "identities", label: "managedConversations", has: "many" },
     },
     conversationEvents: {
       forward: { on: "conversations", label: "events", has: "many" },
-      reverse: { on: "events", label: "conversations", has: "many" },
+      reverse: { on: "messages", label: "conversations", has: "many" },
     },
   },
   rooms: {},
