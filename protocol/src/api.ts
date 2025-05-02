@@ -1,12 +1,17 @@
-import { decryptAsymmetric, encryptAsymmetric, Encrypted, sign, verify } from "./crypto.ts";
 import {
   id,
   type InstantReactWebDatabase,
   InstaQLEntity,
 } from "@instantdb/react";
+import { apiClient } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
-
-const url = "https://alice-and-bot-notification-service.deno.dev";
+import {
+  decryptAsymmetric,
+  encryptAsymmetric,
+  EncryptedAsymmetric,
+  sign,
+  verify,
+} from "./crypto.ts";
 
 type InternalMessage = { type: "text"; text: string };
 
@@ -22,7 +27,11 @@ type SignedPayload<T> = {
   payload: T;
 };
 
-export type EncryptedMessage = Encrypted<SignedPayload<InternalMessage>>;
+export type EncryptedMessage = EncryptedAsymmetric<
+  SignedPayload<InternalMessage>
+>;
+
+export type ConversationKey = EncryptedAsymmetric<string>;
 
 export const sendMessage = async (
   { transact, tx }: Pick<
@@ -34,6 +43,7 @@ export const sendMessage = async (
   privateSignKey: string,
   message: InternalMessage,
   conversation: string,
+  userInstantToken: string,
 ) => {
   const payloadToSign = JSON.stringify(message);
   const signature = await sign(privateSignKey, payloadToSign);
@@ -42,20 +52,33 @@ export const sendMessage = async (
   await transact(
     tx.messages[messageId]
       .update({
-        payload: await encryptAsymmetric(conversationSymmetricKey, signedPayload),
+        payload: await encryptAsymmetric(
+          conversationSymmetricKey,
+          signedPayload,
+        ),
         timestamp: Date.now(),
       })
       .link({ conversation }),
   );
-  await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messageId }),
-  });
+  await apiClient("notify", userInstantToken, { messageId });
   return messageId;
 };
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
+
+export const getConversationKey = async (
+  { queryOnce }: Pick<InstantReactWebDatabase<typeof schema>, "queryOnce">,
+  conversation: string,
+  publicSignKey: string,
+  privateEncryptKey: string,
+) => {
+  const { data: { keys } } = await queryOnce({
+    keys: {
+      $: { where: { "identity.publicSignKey": publicSignKey, conversation } },
+    },
+  });
+  return decryptAsymmetric(privateEncryptKey, keys[0].key);
+};
 
 export const decryptMessage = async (
   conversationSymmetricKey: string,

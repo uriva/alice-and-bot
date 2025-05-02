@@ -1,6 +1,8 @@
 import { Buffer } from "buffer";
 
-export type Encrypted<_T> = string & { readonly __brand: unique symbol };
+export type EncryptedAsymmetric<_T> = string & {
+  readonly __brand: unique symbol;
+};
 export type EncryptedSymmetric<_T> = string & {
   readonly __brand: unique symbol;
 };
@@ -24,7 +26,7 @@ const base64ToUint8Array = (base64: string) => {
 
 export const decryptAsymmetric = async <T>(
   privateKey: string,
-  data: Encrypted<T>,
+  data: EncryptedAsymmetric<T>,
 ): Promise<T> =>
   JSON.parse(
     new TextDecoder().decode(
@@ -66,7 +68,7 @@ export const encryptAsymmetric = async <T>(publicKey: string, data: T) =>
       await importKey(publicKey, "encrypt"),
       new TextEncoder().encode(JSON.stringify(data)),
     ),
-  ).toString("base64") as Encrypted<T>;
+  ).toString("base64") as EncryptedAsymmetric<T>;
 
 const encodeKey = async (key: CryptoKey, format: "spki" | "pkcs8") =>
   btoa(String.fromCharCode(
