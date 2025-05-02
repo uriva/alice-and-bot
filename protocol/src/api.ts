@@ -1,4 +1,4 @@
-import { decrypt, encrypt, Encrypted, sign, verify } from "./crypto.ts";
+import { decryptAsymmetric, encryptAsymmetric, Encrypted, sign, verify } from "./crypto.ts";
 import {
   id,
   type InstantReactWebDatabase,
@@ -42,7 +42,7 @@ export const sendMessage = async (
   await transact(
     tx.messages[messageId]
       .update({
-        payload: await encrypt(conversationSymmetricKey, signedPayload),
+        payload: await encryptAsymmetric(conversationSymmetricKey, signedPayload),
         timestamp: Date.now(),
       })
       .link({ conversation }),
@@ -61,7 +61,7 @@ export const decryptMessage = async (
   conversationSymmetricKey: string,
   dbMsg: DbMessage,
 ) => {
-  const decrypted = await decrypt<SignedPayload<InternalMessage>>(
+  const decrypted = await decryptAsymmetric<SignedPayload<InternalMessage>>(
     conversationSymmetricKey,
     dbMsg.payload,
   );

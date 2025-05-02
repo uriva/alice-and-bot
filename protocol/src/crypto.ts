@@ -22,7 +22,7 @@ const base64ToUint8Array = (base64: string) => {
   return bytes;
 };
 
-export const decrypt = async <T>(
+export const decryptAsymmetric = async <T>(
   privateKey: string,
   data: Encrypted<T>,
 ): Promise<T> =>
@@ -59,7 +59,7 @@ const importSymmetricKey = (key: string, usage: KeyUsage[]) =>
     usage,
   );
 
-export const encrypt = async <T>(publicKey: string, data: T) =>
+export const encryptAsymmetric = async <T>(publicKey: string, data: T) =>
   Buffer.from(
     await crypto.subtle.encrypt(
       encryptAlgo,

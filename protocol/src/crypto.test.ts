@@ -1,8 +1,8 @@
 import { assertEquals } from "@std/assert";
 import {
-  decrypt,
+  decryptAsymmetric,
   decryptSymmetric,
-  encrypt,
+  encryptAsymmetric,
   encryptSymmetric,
   generateKeyPair,
   generateSymmetricKey,
@@ -23,8 +23,8 @@ Deno.test("encrypt and decrypt symmetric", async () => {
 Deno.test("encrypt and decrypt asymmetric", async () => {
   const data = { name: "test" };
   const { privateKey, publicKey } = await generateKeyPair("encrypt");
-  const encrypted = await encrypt(publicKey, data);
-  const decrypted = await decrypt(privateKey, encrypted);
+  const encrypted = await encryptAsymmetric(publicKey, data);
+  const decrypted = await decryptAsymmetric(privateKey, encrypted);
   assertEquals(decrypted, data);
   // @ts-expect-error check retains typing
   const _: number = decrypted;
