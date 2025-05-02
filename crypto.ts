@@ -2,12 +2,6 @@ import { Buffer } from "buffer";
 
 export type Encrypted<_T> = string & { readonly __brand: unique symbol };
 
-export type MessagePayload = {
-  type: "text";
-  authorPublicKey: string;
-  text: string;
-};
-
 const algorithm = { name: "RSA-OAEP", hash: "SHA-256" };
 const publicKeytFormat = "spki";
 const privateKeytFormat = "pkcs8";

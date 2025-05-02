@@ -1,5 +1,6 @@
 import { i } from "@instantdb/react";
-import { Encrypted, MessagePayload } from "./crypto.ts";
+import { Encrypted } from "./crypto.ts";
+import { MessagePayload } from "./api.ts";
 
 const _schema = i.schema({
   entities: {
@@ -21,13 +22,15 @@ const _schema = i.schema({
       publicKey: i.string().unique().indexed(),
       privateKey: i.string().unique(),
     }),
-    conversations: i.entity({
-      title: i.string(),
-    }),
+    conversations: i.entity({ title: i.string() }),
     keys: i.entity({ key: i.string() }),
     webhooks: i.entity({ url: i.string() }),
   },
   links: {
+    conversationMessages: {
+      forward: { on: "conversations", label: "messages", has: "many" },
+      reverse: { on: "messages", label: "conversation", has: "one" },
+    },
     accountIdentities: {
       forward: { on: "accounts", label: "identities", has: "many" },
       reverse: { on: "identities", label: "account", has: "one" },
