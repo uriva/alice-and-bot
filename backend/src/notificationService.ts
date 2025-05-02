@@ -1,6 +1,6 @@
 import { init } from "@instantdb/admin";
 import { coerce } from "gamla";
-import { WebhookSentUpdate } from "../../api.ts";
+import { WebhookSentUpdate } from "../../protocol/src/api.ts";
 import schema from "../../instant.schema.ts";
 
 const INSTANT_APP_ID = Deno.env.get("INSTANT_APP_ID");
