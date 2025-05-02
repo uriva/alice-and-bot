@@ -14,10 +14,7 @@ Deno.test("encrypt and decrypt symmetric", async () => {
   const data = { name: "test" };
   const symmetricKey = await generateSymmetricKey();
   const encrypted = await encryptSymmetric(symmetricKey, data);
-  const decrypted: { name: string } = await decryptSymmetric(
-    symmetricKey,
-    encrypted,
-  );
+  const decrypted = await decryptSymmetric(symmetricKey, encrypted);
   assertEquals(decrypted, data);
   // @ts-expect-error check retains typing
   const _: number = decrypted;
@@ -27,7 +24,7 @@ Deno.test("encrypt and decrypt asymmetric", async () => {
   const data = { name: "test" };
   const { privateKey, publicKey } = await generateKeyPair("encrypt");
   const encrypted = await encrypt(publicKey, data);
-  const decrypted: { name: string } = await decrypt(privateKey, encrypted);
+  const decrypted = await decrypt(privateKey, encrypted);
   assertEquals(decrypted, data);
   // @ts-expect-error check retains typing
   const _: number = decrypted;
