@@ -59,10 +59,6 @@ const _schema = i.schema({
       forward: { on: "conversations", label: "admins", has: "many" },
       reverse: { on: "identities", label: "managedConversations", has: "many" },
     },
-    conversationEvents: {
-      forward: { on: "conversations", label: "events", has: "many" },
-      reverse: { on: "messages", label: "conversations", has: "many" },
-    },
   },
   rooms: {},
 });
