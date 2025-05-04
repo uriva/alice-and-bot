@@ -16,6 +16,15 @@ export type BackendApi = {
   };
   // deno-lint-ignore ban-types
   notify: { input: { messageId: string }; output: {} };
+  setWebhook: {
+    input: { url: string; publicSignKey: string };
+    output:
+      | { success: true }
+      | {
+        success: false;
+        error: "identity-does-not-exist-or-not-owned";
+      };
+  };
 };
 
 export const apiClient = typedApiClient<BackendApi>(

@@ -17,6 +17,17 @@ const endpoints: TypedApiImplementation<InstantUser, BackendApi> = {
     );
     return { success: true };
   },
+  setWebhook: async ({ email }, { url, publicSignKey }) => {
+    const { identities } = await query({
+      identities: { $: { where: { publicSignKey, "account.email": email } } },
+    });
+    if (identities.length === 0) {
+      return { success: false, error: "identity-does-not-exist-or-not-owned" };
+    }
+    const identity = identities[0];
+    await transact(tx.identities[identity.id].update({ webhook: url }));
+    return { success: true };
+  },
 };
 
 const corsHeaders = {

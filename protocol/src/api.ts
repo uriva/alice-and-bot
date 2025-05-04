@@ -13,6 +13,8 @@ import {
   verify,
 } from "./crypto.ts";
 
+export const instantAppId = "bb3dc195-7bdc-478b-b8f7-7fdc36f95d75";
+
 type InternalMessage = { type: "text"; text: string };
 
 export type WebhookSentUpdate = {
@@ -71,7 +73,7 @@ export const getConversationKey = async (
   conversation: string,
   publicSignKey: string,
   privateEncryptKey: string,
-) => {
+): Promise<string> => {
   const { data: { keys } } = await queryOnce({
     keys: {
       $: { where: { "identity.publicSignKey": publicSignKey, conversation } },
@@ -80,24 +82,28 @@ export const getConversationKey = async (
   return decryptAsymmetric(privateEncryptKey, keys[0].key);
 };
 
-export const decryptMessage = async (
-  conversationSymmetricKey: string,
-  dbMsg: DbMessage,
-) => {
-  const decrypted = await decryptAsymmetric<SignedPayload<InternalMessage>>(
-    conversationSymmetricKey,
-    dbMsg.payload,
-  );
-  if (!decrypted) throw new Error("Failed to decrypt message");
-  const isValid = await verify(
-    decrypted.signature,
-    decrypted.publicSignKey,
-    dbMsg.payload,
-  );
-  if (!isValid) throw new Error("Invalid signature");
-  return {
-    publicSignKey: decrypted.publicSignKey,
-    timestamp: dbMsg.timestamp,
-    ...decrypted.payload,
+export type DecipheredMessage = {
+  publicSignKey: string;
+  timestamp: number;
+} & InternalMessage;
+
+export const decryptMessage =
+  (conversationSymmetricKey: string) =>
+  async (dbMsg: DbMessage): Promise<DecipheredMessage> => {
+    const decrypted = await decryptAsymmetric<SignedPayload<InternalMessage>>(
+      conversationSymmetricKey,
+      dbMsg.payload,
+    );
+    if (!decrypted) throw new Error("Failed to decrypt message");
+    const isValid = await verify(
+      decrypted.signature,
+      decrypted.publicSignKey,
+      dbMsg.payload,
+    );
+    if (!isValid) throw new Error("Invalid signature");
+    return {
+      publicSignKey: decrypted.publicSignKey,
+      timestamp: dbMsg.timestamp,
+      ...decrypted.payload,
+    };
   };
-};

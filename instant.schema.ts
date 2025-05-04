@@ -22,10 +22,10 @@ const _schema = i.schema({
       avatar: i.string(),
       publicEncryptKey: i.string().unique().indexed(),
       publicSignKey: i.string().unique().indexed(),
+      webhook: i.string().indexed(),
     }),
     conversations: i.entity({ title: i.string() }),
     keys: i.entity({ key: i.json<ConversationKey>() }),
-    webhooks: i.entity({ url: i.string() }),
   },
   links: {
     conversationMessages: {
@@ -35,10 +35,6 @@ const _schema = i.schema({
     accountIdentities: {
       forward: { on: "accounts", label: "identities", has: "many" },
       reverse: { on: "identities", label: "account", has: "one" },
-    },
-    identityWebhook: {
-      forward: { on: "identities", label: "webhooks", has: "many" },
-      reverse: { on: "webhooks", label: "identities", has: "many" },
     },
     conversationKeys: {
       forward: { on: "conversations", label: "keys", has: "many" },
