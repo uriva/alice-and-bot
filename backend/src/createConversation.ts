@@ -1,9 +1,8 @@
-import { map } from "gamla";
-import { generateSymmetricKey } from "../../crypto.ts";
-import { encryptAsymmetric } from "../../protocol/src/crypto.ts";
-import { query, transact, tx } from "./db.ts";
 import { id, User } from "@instantdb/admin";
+import { map } from "gamla";
+import { encryptAsymmetric, generateSymmetricKey } from "../../protocol/src/crypto.ts";
 import { BackendApi } from "./api.ts";
+import { query, transact, tx } from "./db.ts";
 
 export const createConversation = async (
   { email }: User,

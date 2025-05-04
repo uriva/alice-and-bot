@@ -10,6 +10,10 @@ export type BackendApi = {
         error: "invalid-participants" | "must-own-an-identity";
       };
   };
+  createIdentity: {
+    input: { publicSignKey: string; publicEncryptKey: string };
+    output: { success: true };
+  };
   // deno-lint-ignore ban-types
   notify: { input: { messageId: string }; output: {} };
 };
