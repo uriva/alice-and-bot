@@ -56,7 +56,7 @@ export const Chat = ({
   }, [conversationKey, encryptedMessages]);
   return (
     <div style={{ border: "1px solid #ccc", padding: 16, maxWidth: 400 }}>
-      {conversationId}
+      conversation id: {conversationId}
       <div style={{ minHeight: 200, marginBottom: 8 }}>
         {messages.map((msg, i) => (
           <div key={i}>
@@ -70,28 +70,19 @@ export const Chat = ({
       <input
         value={input}
         onChange={(e) => setInput(e.currentTarget.value)}
-        onKeyDown={(e) =>
-          e.key === "Enter" && useCallback(async () => {
-            if (!conversationKey || !input.trim()) return;
-            await sendMessage(
-              { transact, tx },
-              conversationKey,
-              credentials.publicSignKey,
-              credentials.privateSignKey,
-              { type: "text", text: input },
-              conversationId,
-              userInstantToken,
-            );
-            setInput("");
-          }, [
-            transact,
-            tx,
+        onKeyDown={async (e) => {
+          if (e.key !== "Enter" || !conversationKey || !input.trim()) return;
+          await sendMessage(
+            { transact, tx },
             conversationKey,
-            input,
-            credentials,
+            credentials.publicSignKey,
+            credentials.privateSignKey,
+            { type: "text", text: input },
             conversationId,
             userInstantToken,
-          ])()}
+          );
+          setInput("");
+        }}
         placeholder="Type a message..."
         style={{ width: "80%" }}
       />

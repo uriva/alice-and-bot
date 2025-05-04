@@ -43,22 +43,24 @@ const createIdentity = async (accountToken: string) => {
 };
 
 const Main = () => {
-  const token = useAuth().user?.refresh_token;
+  const activeUser = useAuth().user;
   const [alice, setAlice] = useState<Credentials | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   useEffect(() => {
+    console.log("signing in");
     adminDb.auth.createToken("alice@gmail.com").then(auth.signInWithToken);
   }, []);
   useEffect(() => {
-    if (!token) return;
-    prepareConversation(token)
+    if (!activeUser) return;
+    console.log("preparing conversation");
+    prepareConversation(activeUser.refresh_token)
       .then(({ alice, conversationId }) => {
         setAlice(alice);
         setConversationId(conversationId);
       })
       .catch(console.error);
-  }, [token]);
-  return (!token
+  }, [activeUser?.email]);
+  return (!activeUser?.refresh_token
     ? <div>Not logged in</div>
     : !alice || !conversationId
     ? <div>preparing user and conversation</div>
@@ -66,7 +68,7 @@ const Main = () => {
       <Chat
         credentials={alice}
         conversationId={conversationId}
-        userInstantToken={token}
+        userInstantToken={activeUser.refresh_token}
       />
     ));
 };

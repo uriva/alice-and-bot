@@ -52,7 +52,6 @@ export const sendMessage = async (
   const signature = await sign(privateSignKey, payloadToSign);
   const signedPayload = { payload: message, publicSignKey, signature };
   const messageId = id();
-  console.log("1");
   await transact(
     tx.messages[messageId]
       .update({
@@ -78,19 +77,24 @@ export const useConversationKey = (
   privateEncryptKey: string,
 ): string | null => {
   const [key, setKey] = useState<string | null>(null);
-  const { data } = useQuery({
+  const { isLoading, error, data } = useQuery({
     keys: {
       $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
     },
   });
+  if (error) {
+    console.error("Failed to fetch conversation key", error);
+    return null;
+  }
+  if (isLoading) return null;
   useEffect(() => {
-    if (!data?.keys.length) return;
+    if (!data.keys[0]?.key) return;
     decryptAsymmetric<string>(privateEncryptKey, data.keys[0].key).then(
       (key: string) => {
         setKey(key);
       },
     );
-  }, [data?.keys, data, privateEncryptKey]);
+  }, [data.keys[0]?.key, privateEncryptKey]);
   return key;
 };
 
