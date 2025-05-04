@@ -1,13 +1,22 @@
 import { callWebhooks } from "./notificationService.ts";
 import { typedApiHandler, TypedApiImplementation } from "typed-api";
-import { auth } from "./db.ts";
-import { User as InstantUser } from "@instantdb/admin";
+import { auth, query, transact, tx } from "./db.ts";
+import { id, User as InstantUser } from "@instantdb/admin";
 import { createConversation } from "./createConversation.ts";
 import { BackendApi } from "./api.ts";
 
 const endpoints: TypedApiImplementation<InstantUser, BackendApi> = {
   createConversation,
   notify: callWebhooks,
+  createIdentity: async ({ email }, { publicSignKey, publicEncryptKey }) => {
+    const { accounts } = await query({ accounts: { $: { where: { email } } } });
+    await transact(
+      tx.identities[id()]
+        .update({ publicSignKey, publicEncryptKey })
+        .link({ account: accounts[0].id }),
+    );
+    return { success: true };
+  },
 };
 
 const corsHeaders = {
