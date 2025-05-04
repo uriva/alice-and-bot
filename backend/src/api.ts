@@ -28,5 +28,5 @@ export type BackendApi = {
 };
 
 export const apiClient = typedApiClient<BackendApi>(
-  "https://alice-and-bot-notification-service.deno.dev",
+  "https://alice-and-bot.deno.dev",
 );
