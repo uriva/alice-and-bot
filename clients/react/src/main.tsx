@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useState } from "preact/hooks";
 import { init } from "@instantdb/react";
+import { logAround, logBefore, map, pipe, sideLog } from "gamla";
+import { useCallback, useEffect, useState } from "preact/hooks";
 import schema from "../../../instant.schema.ts";
 import {
   DecipheredMessage,
   decryptMessage,
-  getConversationKey,
   instantAppId,
   sendMessage,
+  useConversationKey,
 } from "../../../protocol/src/api.ts";
-import { map, sideLog } from "gamla";
 
-const { useQuery, queryOnce, transact, tx } = init({
+const { useQuery, transact, tx } = init({
   appId: instantAppId,
   schema,
 });
@@ -21,75 +21,42 @@ export type Credentials = {
   privateEncryptKey: string;
 };
 
-interface ChatProps {
+type ChatProps = {
   credentials: Credentials;
   conversationId: string;
   userInstantToken: string;
-}
+};
 
 export const Chat = ({
   credentials,
   conversationId,
   userInstantToken,
 }: ChatProps) => {
-  const [conversationKey, setConversationKey] = useState<string | null>(null);
   const [messages, setMessages] = useState<DecipheredMessage[]>([]);
   const [input, setInput] = useState("");
-  const { data, isLoading, error } = useQuery({
+  const { data } = useQuery({
     messages: {
       conversation: {},
       $: {
         where: { conversation: conversationId },
-        // orderBy: { timestamp: "asc" },
+        orderBy: { timestamp: "desc" },
       },
     },
   });
-
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {sideLog(error).message}</div>;
-  const { messages: encryptedMessages } = data;
-
-  // Fetch conversation symmetric key
-  useEffect(() => {
-    getConversationKey(
-      { queryOnce },
-      conversationId,
-      credentials.publicSignKey,
-      credentials.privateEncryptKey,
-    ).then(setConversationKey);
-  }, [queryOnce, conversationId, credentials]);
-
-  // Decrypt messages when data or key changes
+  const conversationKey = useConversationKey(
+    { useQuery },
+    conversationId,
+    credentials.publicSignKey,
+    credentials.privateEncryptKey,
+  );
+  const encryptedMessages = data?.messages ?? [];
   useEffect(() => {
     if (!conversationKey) return;
-    map(decryptMessage(conversationKey))(encryptedMessages).then(setMessages);
-  }, [conversationKey, data]);
-
-  // Send a new message
-  const handleSend = useCallback(async () => {
-    if (!conversationKey || !input.trim()) return;
-    await sendMessage(
-      { transact, tx },
-      conversationKey,
-      credentials.publicSignKey,
-      credentials.privateSignKey,
-      { type: "text", text: input },
-      conversationId,
-      userInstantToken,
-    );
-    setInput("");
-  }, [
-    transact,
-    tx,
-    conversationKey,
-    input,
-    credentials,
-    conversationId,
-    userInstantToken,
-  ]);
-
+    pipe(map(decryptMessage(conversationKey)), setMessages)(encryptedMessages);
+  }, [conversationKey, encryptedMessages]);
   return (
     <div style={{ border: "1px solid #ccc", padding: 16, maxWidth: 400 }}>
+      {conversationId}
       <div style={{ minHeight: 200, marginBottom: 8 }}>
         {messages.map((msg, i) => (
           <div key={i}>
@@ -103,13 +70,52 @@ export const Chat = ({
       <input
         value={input}
         onChange={(e) => setInput(e.currentTarget.value)}
-        onKeyDown={(e) => e.key === "Enter" && handleSend()}
+        onKeyDown={(e) =>
+          e.key === "Enter" && useCallback(async () => {
+            if (!conversationKey || !input.trim()) return;
+            await sendMessage(
+              { transact, tx },
+              conversationKey,
+              credentials.publicSignKey,
+              credentials.privateSignKey,
+              { type: "text", text: input },
+              conversationId,
+              userInstantToken,
+            );
+            setInput("");
+          }, [
+            transact,
+            tx,
+            conversationKey,
+            input,
+            credentials,
+            conversationId,
+            userInstantToken,
+          ])()}
         placeholder="Type a message..."
         style={{ width: "80%" }}
       />
+      {!conversationKey && (
+        <div style={{ color: "red", fontSize: 12 }}>
+          Waiting for conversation key...
+        </div>
+      )}
       <button
         type="button"
-        onClick={handleSend}
+        disabled={!input.trim() || !conversationKey}
+        onClick={async () => {
+          if (!conversationKey || !input.trim()) return;
+          await sendMessage(
+            { transact, tx },
+            conversationKey,
+            credentials.publicSignKey,
+            credentials.privateSignKey,
+            { type: "text", text: input },
+            conversationId,
+            userInstantToken,
+          );
+          setInput("");
+        }}
         style={{ width: "18%", marginLeft: 4 }}
       >
         Send

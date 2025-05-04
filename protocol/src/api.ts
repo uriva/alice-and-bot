@@ -3,6 +3,7 @@ import {
   type InstantReactWebDatabase,
   InstaQLEntity,
 } from "@instantdb/react";
+import { useEffect, useState } from "preact/hooks";
 import { apiClient } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
 import {
@@ -51,6 +52,7 @@ export const sendMessage = async (
   const signature = await sign(privateSignKey, payloadToSign);
   const signedPayload = { payload: message, publicSignKey, signature };
   const messageId = id();
+  console.log("1");
   await transact(
     tx.messages[messageId]
       .update({
@@ -62,24 +64,34 @@ export const sendMessage = async (
       })
       .link({ conversation }),
   );
+  console.log("ghello");
   await apiClient("notify", userInstantToken, { messageId });
   return messageId;
 };
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
-export const getConversationKey = async (
-  { queryOnce }: Pick<InstantReactWebDatabase<typeof schema>, "queryOnce">,
+export const useConversationKey = (
+  { useQuery }: Pick<InstantReactWebDatabase<typeof schema>, "useQuery">,
   conversation: string,
   publicSignKey: string,
   privateEncryptKey: string,
-): Promise<string> => {
-  const { data: { keys } } = await queryOnce({
+): string | null => {
+  const [key, setKey] = useState<string | null>(null);
+  const { data } = useQuery({
     keys: {
-      $: { where: { "identity.publicSignKey": publicSignKey, conversation } },
+      $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
     },
   });
-  return decryptAsymmetric(privateEncryptKey, keys[0].key);
+  useEffect(() => {
+    if (!data?.keys.length) return;
+    decryptAsymmetric<string>(privateEncryptKey, data.keys[0].key).then(
+      (key: string) => {
+        setKey(key);
+      },
+    );
+  }, [data?.keys, data, privateEncryptKey]);
+  return key;
 };
 
 export type DecipheredMessage = {
