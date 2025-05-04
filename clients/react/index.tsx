@@ -1,21 +1,18 @@
+import { init as adminInit } from "@instantdb/admin";
+import { init } from "@instantdb/react";
 import { coerce } from "gamla";
 import { render } from "preact";
+import { useEffect, useState } from "preact/hooks";
 import { apiClient } from "../../backend/src/api.ts";
+import { adminToken } from "../../backend/src/db.ts";
+import schema from "../../instant.schema.ts";
+import { instantAppId } from "../../protocol/src/api.ts";
 import { generateKeyPair } from "../../protocol/src/crypto.ts";
 import { Chat, Credentials } from "./src/main.tsx";
-import { init } from "@instantdb/react";
-import { instantAppId } from "../../protocol/src/api.ts";
-import schema from "../../instant.schema.ts";
-import { useEffect, useState } from "preact/hooks";
-import { init as adminInit } from "@instantdb/admin";
 
 const { useAuth, auth } = init({ appId: instantAppId, schema });
 
-const adminDb = adminInit({
-  appId: instantAppId,
-  adminToken: "ef7dc3c0-6453-4257-9f92-31e5df140656", // todo
-  schema,
-});
+const adminDb = adminInit({ appId: instantAppId, adminToken, schema });
 
 const prepareConversation = async (accountToken: string) => {
   const alice = await createIdentity(accountToken);

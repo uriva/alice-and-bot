@@ -1,12 +1,11 @@
 import { init } from "@instantdb/admin";
-import { coerce } from "gamla";
 import schema from "../../instant.schema.ts";
+import { instantAppId } from "../../protocol/src/api.ts";
 
-const INSTANT_APP_ID = Deno.env.get("INSTANT_APP_ID");
-const INSTANT_ADMIN_TOKEN = Deno.env.get("INSTANT_ADMIN_TOKEN");
+export const adminToken = "ef7dc3c0-6453-4257-9f92-31e5df140656";
 
 export const { auth, query, tx, transact } = init({
-  appId: coerce(INSTANT_APP_ID),
-  adminToken: coerce(INSTANT_ADMIN_TOKEN),
+  appId: instantAppId,
+  adminToken,
   schema,
 });
