@@ -9,8 +9,8 @@ import { apiClient } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
 import {
   decryptAsymmetric,
-  EncryptedSymmetric,
   EncryptedAsymmetric,
+  EncryptedSymmetric,
   encryptSymmetric,
   sign,
   verify,
@@ -52,22 +52,16 @@ export const sendMessage = async (
 ) => {
   const payloadToSign = JSON.stringify(message);
   const signature = await sign(privateSignKey, payloadToSign);
-  console.log("encrypting message", payloadToSign);
   const payload = await encryptSymmetric(
     conversationSymmetricKey,
     { payload: message, publicSignKey, signature },
   );
-  console.log("done encrypting message", payloadToSign);
   const messageId = id();
   await transact(
     tx.messages[messageId]
-      .update({
-        payload,
-        timestamp: Date.now(),
-      })
+      .update({ payload, timestamp: Date.now() })
       .link({ conversation }),
   );
-  console.log("ghello");
   await apiClient("notify", userInstantToken, { messageId });
   return messageId;
 };
@@ -96,7 +90,7 @@ export const useConversationKey = (
     if (data.keys.length > 1) throw new Error("Multiple keys found");
     decryptAsymmetric<string>(privateEncryptKey, data.keys[0].key)
       .then((key: string) => {
-        setKey(sideLog(key));
+        setKey(key);
       });
   }, [data.keys[0]?.key, privateEncryptKey]);
   return key;

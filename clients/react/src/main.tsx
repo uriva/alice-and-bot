@@ -1,6 +1,7 @@
+import {sideLog} from "gamla"
 import { init } from "@instantdb/react";
-import { logAround, logBefore, map, pipe, sideLog } from "gamla";
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { map, pipe } from "gamla";
+import { useEffect, useState } from "preact/hooks";
 import schema from "../../../instant.schema.ts";
 import {
   DecipheredMessage,
@@ -34,22 +35,23 @@ export const Chat = ({
 }: ChatProps) => {
   const [messages, setMessages] = useState<DecipheredMessage[]>([]);
   const [input, setInput] = useState("");
-  const { data } = useQuery({
+  const { data, error,isLoading } = useQuery({
     messages: {
       conversation: {},
       $: {
         where: { conversation: conversationId },
-        orderBy: { timestamp: "desc" },
+        order: { timestamp: "desc" },
       },
     },
   });
+  console.log(error, isLoading)
   const conversationKey = useConversationKey(
     { useQuery },
     conversationId,
     credentials.publicSignKey,
     credentials.privateEncryptKey,
   );
-  const encryptedMessages = data?.messages;
+  const encryptedMessages = sideLog(data?.messages);
   useEffect(() => {
     if (conversationKey && encryptedMessages) {
       pipe(map(decryptMessage(conversationKey)), setMessages)(

@@ -15,7 +15,7 @@ const _schema = i.schema({
     }),
     messages: i.entity({
       payload: i.json<EncryptedMessage>(),
-      timestamp: i.number(),
+      timestamp: i.number().indexed(),
     }),
     identities: i.entity({
       name: i.string(),
