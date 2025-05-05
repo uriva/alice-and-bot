@@ -58,28 +58,28 @@ export const TryIt = () => {
   };
 
   return (
-    <section class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20">
+    <section class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20 w-full max-w-2xl mx-auto">
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Try it now</h2>
-      <div class="mb-4 flex gap-2">
+      <div class="mb-4 flex flex-col sm:flex-row gap-2 w-full">
         <button
           type="button"
-          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 w-full sm:w-auto"
           onClick={createIdentity}
         >
           Create Identity
         </button>
-        <span class="text-gray-700 dark:text-gray-200">({identities.length} created)</span>
+        <span class="text-gray-700 dark:text-gray-200 flex items-center">({identities.length} created)</span>
       </div>
-      <div class="mb-4 flex gap-2 items-center">
+      <div class="mb-4 flex flex-col sm:flex-row gap-2 items-stretch w-full">
         <input
-          class="border px-2 py-1 rounded w-96 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+          class="border px-2 py-1 rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 w-full"
           placeholder="Comma-separated publicSignKey(s) to chat with"
           value={publicSignKeyInput}
           onInput={(e) => setPublicSignKeyInput(e.currentTarget.value)}
         />
         <button
           type="button"
-          class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
+          class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 w-full sm:w-auto"
           onClick={startConversation}
         >
           Start Conversation
@@ -92,7 +92,7 @@ export const TryIt = () => {
             <li key={i}>
               <button
                 type="button"
-                class={`px-3 py-1 rounded border transition-colors ${
+                class={`px-3 py-1 rounded border transition-colors w-full sm:w-auto mt-1 sm:mt-0 ${
                   selectedConversation === i
                     ? "bg-blue-200 dark:bg-blue-800 text-gray-900 dark:text-gray-100 border-blue-400 dark:border-blue-600"
                     : "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700"
@@ -106,7 +106,7 @@ export const TryIt = () => {
         </ul>
       </div>
       {selectedConversation !== null && conversations[selectedConversation] && (
-        <div class="mt-6">
+        <div class="mt-6 overflow-x-auto">
           <Chat
             credentials={conversations[selectedConversation].credentials}
             conversationId={conversations[selectedConversation].conversationId}
