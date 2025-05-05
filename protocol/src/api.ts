@@ -9,8 +9,9 @@ import { apiClient } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
 import {
   decryptAsymmetric,
-  encryptAsymmetric,
+  EncryptedSymmetric,
   EncryptedAsymmetric,
+  encryptSymmetric,
   sign,
   verify,
 } from "./crypto.ts";
@@ -31,7 +32,7 @@ type SignedPayload<T> = {
   payload: T;
 };
 
-export type EncryptedMessage = EncryptedAsymmetric<
+export type EncryptedMessage = EncryptedSymmetric<
   SignedPayload<InternalMessage>
 >;
 
@@ -52,7 +53,7 @@ export const sendMessage = async (
   const payloadToSign = JSON.stringify(message);
   const signature = await sign(privateSignKey, payloadToSign);
   console.log("encrypting message", payloadToSign);
-  const payload = await encryptAsymmetric(
+  const payload = await encryptSymmetric(
     conversationSymmetricKey,
     { payload: message, publicSignKey, signature },
   );
