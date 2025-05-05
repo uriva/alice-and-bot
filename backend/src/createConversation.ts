@@ -1,5 +1,5 @@
 import { id, User } from "@instantdb/admin";
-import { map } from "gamla";
+import { map, sideLog } from "gamla";
 import { encryptAsymmetric, generateSymmetricKey } from "../../protocol/src/crypto.ts";
 import { BackendApi } from "./api.ts";
 import { query, transact, tx } from "./db.ts";
@@ -33,7 +33,7 @@ export const createConversation = async (
       participants: identities.map((x) => x.id),
     }),
   );
-  const symmetricKey = await generateSymmetricKey();
+  const symmetricKey = sideLog(await generateSymmetricKey());
   await transact(
     await map(async (identity) =>
       tx.keys[id()]

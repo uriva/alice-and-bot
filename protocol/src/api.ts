@@ -3,6 +3,7 @@ import {
   type InstantReactWebDatabase,
   InstaQLEntity,
 } from "@instantdb/react";
+import { sideLog } from "gamla";
 import { useEffect, useState } from "preact/hooks";
 import { apiClient } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
@@ -50,15 +51,17 @@ export const sendMessage = async (
 ) => {
   const payloadToSign = JSON.stringify(message);
   const signature = await sign(privateSignKey, payloadToSign);
-  const signedPayload = { payload: message, publicSignKey, signature };
+  console.log("encrypting message", payloadToSign);
+  const payload = await encryptAsymmetric(
+    conversationSymmetricKey,
+    { payload: message, publicSignKey, signature },
+  );
+  console.log("done encrypting message", payloadToSign);
   const messageId = id();
   await transact(
     tx.messages[messageId]
       .update({
-        payload: await encryptAsymmetric(
-          conversationSymmetricKey,
-          signedPayload,
-        ),
+        payload,
         timestamp: Date.now(),
       })
       .link({ conversation }),
@@ -89,11 +92,11 @@ export const useConversationKey = (
   if (isLoading) return null;
   useEffect(() => {
     if (!data.keys[0]?.key) return;
-    decryptAsymmetric<string>(privateEncryptKey, data.keys[0].key).then(
-      (key: string) => {
-        setKey(key);
-      },
-    );
+    if (data.keys.length > 1) throw new Error("Multiple keys found");
+    decryptAsymmetric<string>(privateEncryptKey, data.keys[0].key)
+      .then((key: string) => {
+        setKey(sideLog(key));
+      });
   }, [data.keys[0]?.key, privateEncryptKey]);
   return key;
 };
