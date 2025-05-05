@@ -38,7 +38,7 @@ const LandingPage = () => {
   return (
     <main class="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-900 dark:via-gray-950 dark:to-blue-950 px-0 py-0">
       <header class="w-full py-16 flex flex-col items-center justify-center bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 dark:from-blue-900 dark:via-blue-800 dark:to-blue-700 shadow-lg mb-12">
-        <img src="/icon.png" alt="Alice&Bot logo" style={{ width: 384 }} />
+        <img src="icon.png" alt="Alice&Bot logo" style={{ width: 384 }} />
         <h1 class="text-6xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg mb-4">
           Alice&Bot
         </h1>
