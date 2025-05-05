@@ -1,5 +1,6 @@
 {
   "tasks": {
+    "build-landing": "cd landing; deno run -A --node-modules-dir=auto npm:vite build",
     "landing": "cd landing; deno run -A --node-modules-dir=auto npm:vite",
     "dev": "cd clients/react; deno run -A --node-modules-dir=auto npm:vite",
     "build": "deno run -A --node-modules-dir=auto npm:vite build"

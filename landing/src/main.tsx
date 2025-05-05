@@ -1,4 +1,5 @@
 import { render } from "preact";
+import { TryIt } from "./tryIt.tsx";
 
 const features = [
   {
@@ -100,6 +101,7 @@ const LandingPage = () => {
         &copy; {new Date().getFullYear()}{" "}
         Alice&Bot. Built for the next era of chat.
       </footer>
+      <TryIt />
     </main>
   );
 };
