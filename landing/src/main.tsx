@@ -36,42 +36,46 @@ const features = [
 
 const LandingPage = () => {
   return (
-    <main class="container mx-auto max-w-2xl px-4 py-8 text-gray-900 bg-white rounded-lg shadow-lg">
+    <main class="container mx-auto max-w-2xl px-4 py-8 text-gray-900 bg-white dark:bg-gray-900 dark:text-gray-100 rounded-lg shadow-lg dark:shadow-blue-900/30">
       <header class="mb-8 text-center">
-        <h1 class="text-4xl font-extrabold tracking-tight text-blue-700 mb-2">
+        <h1 class="text-4xl font-extrabold tracking-tight text-blue-700 dark:text-blue-400 mb-2">
           Alice&Bot
         </h1>
       </header>
       <article class="mb-8">
-        <h2 class="text-2xl font-bold mb-2 text-gray-800">
+        <h2 class="text-2xl font-bold mb-2 text-gray-800 dark:text-gray-100">
           Let's unbreak chat.
         </h2>
-        <p class="text-gray-600">
+        <p class="text-gray-600 dark:text-gray-300">
           It’s time to kill WhatsApp by building a chat platform for bots and
           humans, not tied to a phone number, and designed for easy white
           labeling. Alice&Bot is the developer-first, privacy-first chat
           solution for the age of AI.
         </p>
       </article>
-      <h2 class="text-xl font-semibold mb-4 text-gray-800">
+      <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
         What’s missing from chat today?
       </h2>
       <ul class="grid gap-6 mb-8">
         {features.map((f, i) => (
           <li
             key={i}
-            class="p-4 bg-blue-50 rounded-lg border border-blue-100 shadow-sm"
+            class="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-100 dark:border-blue-900 shadow-sm dark:shadow-blue-900/20"
           >
-            <strong class="block text-blue-700 font-semibold mb-1">
+            <strong class="block text-blue-700 dark:text-blue-300 font-semibold mb-1">
               {f.title}
             </strong>
-            <div class="text-gray-700 text-sm">{f.description}</div>
+            <div class="text-gray-700 dark:text-gray-200 text-sm">
+              {f.description}
+            </div>
           </li>
         ))}
       </ul>
       <article class="mb-8">
-        <h3 class="text-lg font-bold mb-2 text-gray-800">Philosophy</h3>
-        <p class="text-gray-600">
+        <h3 class="text-lg font-bold mb-2 text-gray-800 dark:text-gray-100">
+          Philosophy
+        </h3>
+        <p class="text-gray-600 dark:text-gray-300">
           We believe chat should be open, programmable, and privacy-respecting.
           End-to-end encryption and seamless device transition are
           non-negotiable. Spam is solved by user-set pricing, not by captchas or
@@ -80,8 +84,10 @@ const LandingPage = () => {
         </p>
       </article>
       <article class="mb-8">
-        <h3 class="text-lg font-bold mb-2 text-gray-800">For Developers</h3>
-        <ul class="list-disc list-inside text-gray-700 space-y-1">
+        <h3 class="text-lg font-bold mb-2 text-gray-800 dark:text-gray-100">
+          For Developers
+        </h3>
+        <ul class="list-disc list-inside text-gray-700 dark:text-gray-200 space-y-1">
           <li>APIs and webhooks for full automation</li>
           <li>Cloud storage for device independence</li>
           <li>Bring your own identity (public/private key)</li>
@@ -92,12 +98,12 @@ const LandingPage = () => {
         <button
           type="button"
           disabled
-          class="px-6 py-3 bg-blue-300 text-white font-semibold rounded-lg shadow cursor-not-allowed opacity-70"
+          class="px-6 py-3 bg-blue-300 dark:bg-blue-800 text-white font-semibold rounded-lg shadow cursor-not-allowed opacity-70"
         >
           Get Early Access (Coming Soon)
         </button>
       </div>
-      <footer class="text-center text-gray-400 text-sm mt-8">
+      <footer class="text-center text-gray-400 dark:text-gray-500 text-sm mt-8">
         &copy; {new Date().getFullYear()}{" "}
         Alice&Bot. Built for the next era of chat.
       </footer>

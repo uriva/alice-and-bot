@@ -58,42 +58,44 @@ export const TryIt = () => {
   };
 
   return (
-    <section class="my-8 p-6 bg-gray-50 rounded-lg shadow">
-      <h2 class="text-xl font-bold mb-4">Try it now</h2>
+    <section class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20">
+      <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Try it now</h2>
       <div class="mb-4 flex gap-2">
         <button
           type="button"
-          class="px-4 py-2 bg-blue-600 text-white rounded"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
           onClick={createIdentity}
         >
           Create Identity
         </button>
-        <span class="text-gray-700">({identities.length} created)</span>
+        <span class="text-gray-700 dark:text-gray-200">({identities.length} created)</span>
       </div>
       <div class="mb-4 flex gap-2 items-center">
         <input
-          class="border px-2 py-1 rounded w-96"
+          class="border px-2 py-1 rounded w-96 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
           placeholder="Comma-separated publicSignKey(s) to chat with"
           value={publicSignKeyInput}
           onInput={(e) => setPublicSignKeyInput(e.currentTarget.value)}
         />
         <button
           type="button"
-          class="px-4 py-2 bg-green-600 text-white rounded"
+          class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
           onClick={startConversation}
         >
           Start Conversation
         </button>
       </div>
       <div class="mb-4">
-        <h3 class="font-semibold mb-2">Open Chats</h3>
+        <h3 class="font-semibold mb-2 text-gray-900 dark:text-gray-100">Open Chats</h3>
         <ul class="flex gap-2 flex-wrap">
           {conversations.map((c, i) => (
             <li key={i}>
               <button
                 type="button"
-                class={`px-3 py-1 rounded border ${
-                  selectedConversation === i ? "bg-blue-200" : "bg-white"
+                class={`px-3 py-1 rounded border transition-colors ${
+                  selectedConversation === i
+                    ? "bg-blue-200 dark:bg-blue-800 text-gray-900 dark:text-gray-100 border-blue-400 dark:border-blue-600"
+                    : "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700"
                 }`}
                 onClick={() => setSelectedConversation(i)}
               >
