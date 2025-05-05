@@ -1,5 +1,8 @@
 import { i } from "@instantdb/react";
-import { ConversationKey, EncryptedMessage } from "./protocol/src/api.ts";
+import {
+  EncryptedConversationKey,
+  EncryptedMessage,
+} from "./protocol/src/api.ts";
 
 const _schema = i.schema({
   entities: {
@@ -25,7 +28,7 @@ const _schema = i.schema({
       webhook: i.string().indexed(),
     }),
     conversations: i.entity({ title: i.string() }),
-    keys: i.entity({ key: i.json<ConversationKey>() }),
+    keys: i.entity({ key: i.json<EncryptedConversationKey>() }),
   },
   links: {
     conversationMessages: {

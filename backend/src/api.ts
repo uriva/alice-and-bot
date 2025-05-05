@@ -1,8 +1,15 @@
 import { typedApiClient } from "typed-api";
+import { EncryptedConversationKey } from "../../protocol/src/api.ts";
 
 export type BackendApi = {
   createConversation: {
-    input: { publicSignKeys: string[]; title: string };
+    input: {
+      publicSignKeyToEncryptedSymmetricKey: Record<
+        string,
+        EncryptedConversationKey
+      >;
+      title: string;
+    };
     output:
       | { success: true; conversationId: string }
       | {

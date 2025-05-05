@@ -1,12 +1,14 @@
-import {
-  id,
-  type InstantReactWebDatabase,
-  InstaQLEntity,
-} from "@instantdb/react";
+import { id, InstaQLEntity } from "@instantdb/core";
+import { type InstantReactWebDatabase } from "@instantdb/react";
+import { map, pipe } from "gamla";
 import { useEffect, useState } from "preact/hooks";
 import stringify from "safe-stable-stringify";
-import { apiClient } from "../../backend/src/api.ts";
+import { apiClient, BackendApi } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
+import {
+  encryptAsymmetric,
+  generateSymmetricKey,
+} from "../../protocol/src/crypto.ts";
 import {
   decryptAsymmetric,
   decryptSymmetric,
@@ -39,7 +41,7 @@ export type EncryptedMessage = EncryptedSymmetric<
 
 const msgToStr = stringify;
 
-export type ConversationKey = EncryptedAsymmetric<string>;
+export type EncryptedConversationKey = EncryptedAsymmetric<string>;
 
 export const sendMessage = async (
   { transact, tx }: Pick<
@@ -98,10 +100,9 @@ export const useConversationKey = (
   return key;
 };
 
-export type DecipheredMessage = {
-  publicSignKey: string;
-  timestamp: number;
-} & InternalMessage;
+export type DecipheredMessage =
+  & { publicSignKey: string; timestamp: number }
+  & InternalMessage;
 
 export const decryptMessage =
   (conversationSymmetricKey: string) =>
@@ -123,3 +124,47 @@ export const decryptMessage =
       ...decrypted.payload,
     };
   };
+
+// deno-lint-ignore ban-types
+type Identity = InstaQLEntity<typeof schema, "identities", { account: {} }>;
+
+export const createConversation = async (
+  { queryOnce }: Pick<InstantReactWebDatabase<typeof schema>, "queryOnce">,
+  userInstantToken: string,
+  publicSignKeys: string[],
+  conversationTitle: string,
+): Promise<BackendApi["createConversation"]["output"]> => {
+  const { data: { identities } } = await queryOnce({
+    identities: {
+      account: {},
+      $: { where: { publicSignKey: { $in: publicSignKeys } } },
+    },
+  });
+  if (identities.length !== publicSignKeys.length) {
+    return { success: false, error: "invalid-participants" };
+  }
+  const signKeyToEncrypionKey = pipe(
+    map(({ publicSignKey, publicEncryptKey }: Identity) =>
+      [publicSignKey, publicEncryptKey] as const
+    ),
+    Object.fromEntries<string>,
+  )(identities);
+  const symmetricKey = await generateSymmetricKey();
+  return pipe(
+    map(async (
+      publicSignKey: string,
+    ): Promise<[string, EncryptedConversationKey]> => [
+      publicSignKey,
+      await encryptAsymmetric(
+        signKeyToEncrypionKey[publicSignKey],
+        symmetricKey,
+      ),
+    ]),
+    Object.fromEntries<EncryptedConversationKey>,
+    (publicSignKeyToEncryptedSymmetricKey) =>
+      apiClient("createConversation", userInstantToken, {
+        publicSignKeyToEncryptedSymmetricKey,
+        title: conversationTitle,
+      }),
+  )(publicSignKeys);
+};

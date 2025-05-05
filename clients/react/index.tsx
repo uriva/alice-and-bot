@@ -6,21 +6,21 @@ import { useEffect, useState } from "preact/hooks";
 import { apiClient } from "../../backend/src/api.ts";
 import { adminToken } from "../../backend/src/db.ts";
 import schema from "../../instant.schema.ts";
-import { instantAppId } from "../../protocol/src/api.ts";
+import { createConversation, instantAppId } from "../../protocol/src/api.ts";
 import { generateKeyPair } from "../../protocol/src/crypto.ts";
 import { Chat, Credentials } from "./src/main.tsx";
 
-const { useAuth, auth } = init({ appId: instantAppId, schema });
+const { useAuth, auth, queryOnce } = init({ appId: instantAppId, schema });
 
 const adminDb = adminInit({ appId: instantAppId, adminToken, schema });
 
 const prepareConversation = async (accountToken: string) => {
   const alice = await createIdentity(accountToken);
   const bob = await createIdentity(accountToken);
-  const convo = await apiClient("createConversation", accountToken, {
-    title: "new chat",
-    publicSignKeys: [alice.publicSignKey, bob.publicSignKey],
-  });
+  const convo = await createConversation({ queryOnce }, accountToken, [
+    alice.publicSignKey,
+    bob.publicSignKey,
+  ], "new chat");
   if (!convo.success) throw new Error("Failed to create conversation");
   return { conversationId: convo.conversationId, alice };
 };

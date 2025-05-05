@@ -1,30 +1,32 @@
-import { id, User } from "@instantdb/admin";
+import { id, User as InstantUser, User } from "@instantdb/core";
 import { map } from "gamla";
-import {
-  encryptAsymmetric,
-  generateSymmetricKey,
-} from "../../protocol/src/crypto.ts";
+import { TypedApiImplementation } from "typed-api";
 import { BackendApi } from "./api.ts";
 import { query, transact, tx } from "./db.ts";
 
-export const createConversation = async (
+export const createConversation: TypedApiImplementation<
+  InstantUser,
+  BackendApi
+>["createConversation"] = async (
   { email }: User,
-  { title, publicSignKeys }: {
-    title: string;
-    publicSignKeys: string[];
-  },
-): Promise<BackendApi["createConversation"]["output"]> => {
+  { title, publicSignKeyToEncryptedSymmetricKey },
+) => {
   const { identities } = await query({
     identities: {
       account: {},
       $: {
         where: {
-          publicSignKey: { $in: publicSignKeys },
+          publicSignKey: {
+            $in: Object.keys(publicSignKeyToEncryptedSymmetricKey),
+          },
         },
       },
     },
   });
-  if (identities.length !== publicSignKeys.length) {
+  if (
+    identities.length !==
+      Object.keys(publicSignKeyToEncryptedSymmetricKey).length
+  ) {
     return { success: false, error: "invalid-participants" };
   }
   if (!identities.some((identity) => identity.account?.email === email)) {
@@ -36,14 +38,12 @@ export const createConversation = async (
       participants: identities.map((x) => x.id),
     }),
   );
-  const symmetricKey = await generateSymmetricKey();
   await transact(
-    await map(async (identity) =>
+    map((identity) =>
       tx.keys[id()]
         .update({
-          key: await encryptAsymmetric(identity.publicEncryptKey, symmetricKey),
-        })
-        .link({ conversation: conversationId, owner: identity.id })
+          key: publicSignKeyToEncryptedSymmetricKey[identity.publicSignKey],
+        }).link({ conversation: conversationId, owner: identity.id })
     )(identities),
   );
   return { success: true, conversationId };
