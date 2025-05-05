@@ -49,10 +49,13 @@ export const Chat = ({
     credentials.publicSignKey,
     credentials.privateEncryptKey,
   );
-  const encryptedMessages = data?.messages ?? [];
+  const encryptedMessages = data?.messages;
   useEffect(() => {
-    if (!conversationKey) return;
-    pipe(map(decryptMessage(conversationKey)), setMessages)(encryptedMessages);
+    if (conversationKey && encryptedMessages) {
+      pipe(map(decryptMessage(conversationKey)), setMessages)(
+        encryptedMessages,
+      );
+    }
   }, [conversationKey, encryptedMessages]);
   return (
     <div style={{ border: "1px solid #ccc", padding: 16, maxWidth: 400 }}>
