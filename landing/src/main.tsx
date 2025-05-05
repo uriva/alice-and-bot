@@ -44,7 +44,7 @@ const LandingPage = () => {
       </header>
       <article class="mb-8">
         <h2 class="text-2xl font-bold mb-2 text-gray-800">
-          Let's unbreak Chat in 2025
+          Let's unbreak chat.
         </h2>
         <p class="text-gray-600">
           It’s time to kill WhatsApp by building a chat platform for bots and
