@@ -3,8 +3,8 @@ import {
   type InstantReactWebDatabase,
   InstaQLEntity,
 } from "@instantdb/react";
-import { sideLog } from "gamla";
 import { useEffect, useState } from "preact/hooks";
+import stringify from "safe-stable-stringify";
 import { apiClient } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
 import {
@@ -37,6 +37,8 @@ export type EncryptedMessage = EncryptedSymmetric<
   SignedPayload<InternalMessage>
 >;
 
+const msgToStr = stringify;
+
 export type ConversationKey = EncryptedAsymmetric<string>;
 
 export const sendMessage = async (
@@ -51,8 +53,7 @@ export const sendMessage = async (
   conversation: string,
   userInstantToken: string,
 ) => {
-  const payloadToSign = JSON.stringify(message);
-  const signature = await sign(privateSignKey, payloadToSign);
+  const signature = await sign(privateSignKey, msgToStr(message));
   const payload = await encryptSymmetric(
     conversationSymmetricKey,
     { payload: message, publicSignKey, signature },
@@ -113,7 +114,7 @@ export const decryptMessage =
     const isValid = await verify(
       decrypted.signature,
       decrypted.publicSignKey,
-      dbMsg.payload,
+      msgToStr(decrypted.payload),
     );
     if (!isValid) throw new Error("Invalid signature");
     return {
