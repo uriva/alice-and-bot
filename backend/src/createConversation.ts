@@ -1,5 +1,5 @@
 import { id, User } from "@instantdb/admin";
-import { map, sideLog } from "gamla";
+import { map } from "gamla";
 import {
   encryptAsymmetric,
   generateSymmetricKey,
