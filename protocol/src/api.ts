@@ -9,6 +9,7 @@ import { apiClient } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
 import {
   decryptAsymmetric,
+  decryptSymmetric,
   EncryptedAsymmetric,
   EncryptedSymmetric,
   encryptSymmetric,
@@ -104,7 +105,7 @@ export type DecipheredMessage = {
 export const decryptMessage =
   (conversationSymmetricKey: string) =>
   async (dbMsg: DbMessage): Promise<DecipheredMessage> => {
-    const decrypted = await decryptAsymmetric<SignedPayload<InternalMessage>>(
+    const decrypted = await decryptSymmetric<SignedPayload<InternalMessage>>(
       conversationSymmetricKey,
       dbMsg.payload,
     );
