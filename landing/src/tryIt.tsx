@@ -1,7 +1,12 @@
+import { init } from "@instantdb/react";
 import { useState } from "preact/hooks";
 import { apiClient } from "../../backend/src/api.ts";
 import { Chat, Credentials } from "../../clients/react/src/main.tsx";
+import schema from "../../instant.schema.ts";
+import { createConversation, instantAppId } from "../../protocol/src/api.ts";
 import { generateKeyPair } from "../../protocol/src/crypto.ts";
+
+const { queryOnce } = init({ appId: instantAppId, schema });
 
 export const TryIt = () => {
   const [identities, setIdentities] = useState<Credentials[]>([]);
@@ -35,10 +40,12 @@ export const TryIt = () => {
       myIdentity.publicSignKey,
       ...publicSignKeyInput.split(",").map((k) => k.trim()).filter(Boolean),
     ];
-    const result = await apiClient("createConversation", userToken, {
-      title: "Test Chat",
-      publicSignKeys: participantKeys,
-    });
+    const result = await createConversation(
+      { queryOnce },
+      userToken,
+      participantKeys,
+      "new chat",
+    );
     if (result.success) {
       setConversations((convs) => [...convs, {
         conversationId: result.conversationId,
