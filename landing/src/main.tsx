@@ -46,12 +46,14 @@ const LandingPage = () => {
           Let's unbreak chat.
         </p>
         <p class="text-lg text-blue-200 max-w-2xl text-center">
-          The developer-first, privacy-first chat platform for bots and humans. No phone numbers. No bureaucracy. Just open, programmable, secure communication.
+          The developer-first, privacy-first chat platform for bots and humans.
+          No phone numbers. No bureaucracy. Just open, programmable, secure
+          communication.
         </p>
       </header>
       <section class="w-full max-w-6xl px-4 flex flex-col items-center">
         <h2 class="text-3xl font-bold mb-8 text-blue-800 dark:text-blue-200 text-center">
-          What’s missing from chat today?
+          Everything that's mmissing from chat today
         </h2>
         <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full mb-12">
           {features.map((f, i) => (
@@ -74,7 +76,11 @@ const LandingPage = () => {
           Philosophy
         </h3>
         <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-6">
-          We believe chat should be open, programmable, and privacy-respecting. End-to-end encryption and seamless device transition are non-negotiable. Spam is solved by user-set pricing, not by captchas or bureaucracy. Alice&Bot is for developers, businesses, and anyone who wants to build the future of communication.
+          We believe chat should be open, programmable, and privacy-respecting.
+          End-to-end encryption and seamless device transition are
+          non-negotiable. Spam is solved by user-set pricing, not by captchas or
+          bureaucracy. Alice&Bot is for developers, businesses, and anyone who
+          wants to build the future of communication.
         </p>
       </section>
       <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
@@ -98,7 +104,8 @@ const LandingPage = () => {
         </button>
       </div>
       <footer class="w-full text-center text-gray-400 dark:text-gray-500 text-base py-8 mt-auto">
-        &copy; {new Date().getFullYear()} Alice&Bot. Built for the next era of chat.
+        &copy; {new Date().getFullYear()}{" "}
+        Alice&Bot. Built for the next era of chat.
       </footer>
       <div class="w-full max-w-3xl px-4 mb-16">
         <TryIt />
