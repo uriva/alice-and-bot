@@ -53,7 +53,7 @@ const LandingPage = () => {
       </header>
       <section class="w-full max-w-6xl px-4 flex flex-col items-center">
         <h2 class="text-3xl font-bold mb-8 text-blue-800 dark:text-blue-200 text-center">
-          Everything that's mmissing from chat today
+          Everything that's missing from chat today
         </h2>
         <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full mb-12">
           {features.map((f, i) => (
