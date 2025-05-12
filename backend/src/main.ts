@@ -35,7 +35,7 @@ const endpoints: ApiImplementation<User, BackendApi> = {
         await transact(tx.accounts[accountId].update({ accessToken }));
         return { success: true, accountId, accessToken };
       },
-      authRequired: true,
+      authRequired: false,
     },
     createIdentityUsingToken: {
       authRequired: false,

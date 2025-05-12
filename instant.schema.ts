@@ -15,18 +15,18 @@ const _schema = i.schema({
     }),
     accounts: i.entity({
       email: i.string().unique().indexed().optional(),
-      accessToken: i.string().unique().indexed(),
+      accessToken: i.string().optional().unique().indexed(),
     }),
     messages: i.entity({
       payload: i.json<EncryptedMessage>(),
       timestamp: i.number().indexed(),
     }),
     identities: i.entity({
-      name: i.string(),
-      avatar: i.string(),
+      name: i.string().optional(),
+      avatar: i.string().optional(),
       publicEncryptKey: i.string().unique().indexed(),
       publicSignKey: i.string().unique().indexed(),
-      webhook: i.string().indexed(),
+      webhook: i.string().indexed().optional(),
     }),
     conversations: i.entity({ title: i.string() }),
     keys: i.entity({ key: i.json<EncryptedConversationKey>() }),

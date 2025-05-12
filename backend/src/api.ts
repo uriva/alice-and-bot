@@ -19,7 +19,7 @@ export type BackendApi = {
       };
   };
   createAccount: {
-    authRequired: true;
+    authRequired: false;
     // deno-lint-ignore ban-types
     input: {};
     output: { success: true; accountId: string; accessToken: string };
