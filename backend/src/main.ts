@@ -37,24 +37,12 @@ const endpoints: ApiImplementation<User, BackendApi> = {
       },
       authRequired: false,
     },
-    createIdentityUsingToken: {
+    createAnonymousIdentity: {
       authRequired: false,
-      handler: async (
-        { accessToken, publicSignKey, publicEncryptKey },
-      ) => {
-        const { accounts } = await query({
-          accounts: { $: { where: { accessToken } } },
-        });
-        if (accounts.length === 0) {
-          return { success: false, error: "invalid-access-token" };
-        }
-        const [account] = accounts;
-        return createIdentityForAccount({
-          publicSignKey,
-          publicEncryptKey,
-          account: account.id,
-        });
-      },
+      handler: ({ publicSignKey, publicEncryptKey }) =>
+        transact(
+          tx.identities[id()].update({ publicSignKey, publicEncryptKey }),
+        ),
     },
     createIdentity: {
       authRequired: true,

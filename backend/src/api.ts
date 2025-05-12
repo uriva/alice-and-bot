@@ -24,10 +24,9 @@ export type BackendApi = {
     input: {};
     output: { success: true; accountId: string; accessToken: string };
   };
-  createIdentityUsingToken: {
+  createAnonymousIdentity: {
     authRequired: false;
     input: {
-      accessToken: string;
       publicSignKey: string;
       publicEncryptKey: string;
     };
