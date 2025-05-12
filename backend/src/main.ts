@@ -22,13 +22,11 @@ const createIdentityForAccount = async (
 
 const endpoints: ApiImplementation<User, BackendApi> = {
   authenticate: (token: string) => auth.verifyToken(token),
-
   handlers: {
     createConversation: {
       handler: createConversation,
       authRequired: true,
     },
-
     notify: { handler: callWebhooks, authRequired: true },
     createAccount: {
       handler: async () => {
