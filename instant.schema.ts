@@ -14,7 +14,8 @@ const _schema = i.schema({
       email: i.string().unique().indexed(),
     }),
     accounts: i.entity({
-      email: i.string().unique().indexed(),
+      email: i.string().unique().indexed().optional(),
+      accessToken: i.string().unique().indexed(),
     }),
     messages: i.entity({
       payload: i.json<EncryptedMessage>(),

@@ -1,13 +1,13 @@
-import { id, User as InstantUser, User } from "@instantdb/core";
+import { id, User, User as InstantUser } from "@instantdb/core";
 import { map } from "gamla";
-import { TypedApiImplementation } from "typed-api";
+import { ApiImplementation } from "typed-api";
 import { BackendApi } from "./api.ts";
 import { query, transact, tx } from "./db.ts";
 
-export const createConversation: TypedApiImplementation<
+export const createConversation: ApiImplementation<
   InstantUser,
   BackendApi
->["createConversation"] = async (
+>["handlers"]["createConversation"]["handler"] = async (
   { email }: User,
   { title, publicSignKeyToEncryptedSymmetricKey },
 ) => {

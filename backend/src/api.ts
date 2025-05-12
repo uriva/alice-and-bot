@@ -1,8 +1,9 @@
-import { typedApiClient } from "typed-api";
+import { apiClient as apiClientMaker } from "typed-api";
 import { EncryptedConversationKey } from "../../protocol/src/api.ts";
 
 export type BackendApi = {
   createConversation: {
+    authRequired: true;
     input: {
       publicSignKeyToEncryptedSymmetricKey: Record<
         string,
@@ -17,13 +18,32 @@ export type BackendApi = {
         error: "invalid-participants" | "must-own-an-identity";
       };
   };
+  createAccount: {
+    authRequired: true;
+    // deno-lint-ignore ban-types
+    input: {};
+    output: { success: true; accountId: string; accessToken: string };
+  };
+  createIdentityUsingToken: {
+    authRequired: false;
+    input: {
+      accessToken: string;
+      publicSignKey: string;
+      publicEncryptKey: string;
+    };
+    output:
+      | { success: true }
+      | { success: false; error: "invalid-access-token" };
+  };
   createIdentity: {
+    authRequired: true;
     input: { publicSignKey: string; publicEncryptKey: string };
     output: { success: true };
   };
   // deno-lint-ignore ban-types
-  notify: { input: { messageId: string }; output: {} };
+  notify: { authRequired: true; input: { messageId: string }; output: {} };
   setWebhook: {
+    authRequired: true;
     input: { url: string; publicSignKey: string };
     output:
       | { success: true }
@@ -34,6 +54,6 @@ export type BackendApi = {
   };
 };
 
-export const apiClient = typedApiClient<BackendApi>(
+export const apiClient = apiClientMaker<BackendApi>(
   "https://alice-and-bot.deno.dev",
 );
