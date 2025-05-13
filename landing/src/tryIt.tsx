@@ -10,7 +10,9 @@ const { queryOnce } = init({ appId: instantAppId, schema });
 
 export const TryIt = () => {
   const [identities, setIdentities] = useState<Credentials[]>([]);
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<
+    { conversationId: string; credentials: Credentials }[]
+  >([]);
   const [selectedConversation, setSelectedConversation] = useState<
     number | null
   >(null);
@@ -90,7 +92,7 @@ export const TryIt = () => {
           Open Chats
         </h3>
         <ul class="flex gap-2 flex-wrap">
-          {conversations.map((c, i) => (
+          {conversations.map((_, i) => (
             <li key={i}>
               <button
                 type="button"
