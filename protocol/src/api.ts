@@ -3,7 +3,7 @@ import { type InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import { useEffect, useState } from "preact/hooks";
 import stringify from "safe-stable-stringify";
-import { apiClient, BackendApi } from "../../backend/src/api.ts";
+import { apiClient } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
 import {
   encryptAsymmetric,
@@ -53,7 +53,6 @@ export const sendMessage = async (
   privateSignKey: string,
   message: InternalMessage,
   conversation: string,
-  userInstantToken: string,
 ) => {
   const signature = await sign(privateSignKey, msgToStr(message));
   const payload = await encryptSymmetric(
@@ -66,7 +65,7 @@ export const sendMessage = async (
       .update({ payload, timestamp: Date.now() })
       .link({ conversation }),
   );
-  await apiClient("notify", userInstantToken, { messageId });
+  await apiClient({ endpoint: "notify", payload: { messageId } });
   return messageId;
 };
 
@@ -130,10 +129,9 @@ type Identity = InstaQLEntity<typeof schema, "identities", { account: {} }>;
 
 export const createConversation = async (
   { queryOnce }: Pick<InstantReactWebDatabase<typeof schema>, "queryOnce">,
-  userInstantToken: string,
   publicSignKeys: string[],
   conversationTitle: string,
-): Promise<BackendApi["createConversation"]["output"]> => {
+) => {
   const { data: { identities } } = await queryOnce({
     identities: {
       account: {},
@@ -141,7 +139,7 @@ export const createConversation = async (
     },
   });
   if (identities.length !== publicSignKeys.length) {
-    return { success: false, error: "invalid-participants" };
+    return { error: "invalid-participants" };
   }
   const signKeyToEncrypionKey = pipe(
     map(({ publicSignKey, publicEncryptKey }: Identity) =>
@@ -162,9 +160,12 @@ export const createConversation = async (
     ]),
     Object.fromEntries<EncryptedConversationKey>,
     (publicSignKeyToEncryptedSymmetricKey) =>
-      apiClient("createConversation", userInstantToken, {
-        publicSignKeyToEncryptedSymmetricKey,
-        title: conversationTitle,
+      apiClient({
+        endpoint: "createConversation",
+        payload: {
+          publicSignKeyToEncryptedSymmetricKey,
+          title: conversationTitle,
+        },
       }),
   )(publicSignKeys);
 };

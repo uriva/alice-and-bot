@@ -1,6 +1,6 @@
 import { id, User } from "@instantdb/admin";
 import { apiHandler, ApiImplementation } from "typed-api";
-import { BackendApi } from "./api.ts";
+import { backendApiSchema } from "./api.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import { callWebhooks } from "./notificationService.ts";
@@ -20,61 +20,46 @@ const createIdentityForAccount = async (
   return { success: true };
 };
 
-const endpoints: ApiImplementation<User, BackendApi> = {
+const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
   authenticate: (token: string) => auth.verifyToken(token),
   handlers: {
-    createConversation: {
-      handler: createConversation,
-      authRequired: true,
+    createConversation,
+    notify: callWebhooks,
+    createAccount: async () => {
+      const accountId = id();
+      const accessToken = crypto.randomUUID();
+      await transact(tx.accounts[accountId].update({ accessToken }));
+      return { success: true, accountId, accessToken };
     },
-    notify: { handler: callWebhooks, authRequired: true },
-    createAccount: {
-      handler: async () => {
-        const accountId = id();
-        const accessToken = crypto.randomUUID();
-        await transact(tx.accounts[accountId].update({ accessToken }));
-        return { success: true, accountId, accessToken };
-      },
-      authRequired: false,
+    createAnonymousIdentity: ({ publicSignKey, publicEncryptKey }) =>
+      transact(
+        tx.identities[id()].update({ publicSignKey, publicEncryptKey }),
+      ),
+    createIdentity: async ({ email }, { publicSignKey, publicEncryptKey }) => {
+      const { accounts } = await query({
+        accounts: { $: { where: { email } } },
+      });
+      return createIdentityForAccount({
+        publicSignKey,
+        publicEncryptKey,
+        account: accounts[0].id,
+      });
     },
-    createAnonymousIdentity: {
-      authRequired: false,
-      handler: ({ publicSignKey, publicEncryptKey }) =>
-        transact(
-          tx.identities[id()].update({ publicSignKey, publicEncryptKey }),
-        ),
-    },
-    createIdentity: {
-      authRequired: true,
-      handler: async ({ email }, { publicSignKey, publicEncryptKey }) => {
-        const { accounts } = await query({
-          accounts: { $: { where: { email } } },
-        });
-        return createIdentityForAccount({
-          publicSignKey,
-          publicEncryptKey,
-          account: accounts[0].id,
-        });
-      },
-    },
-    setWebhook: {
-      authRequired: true,
-      handler: async ({ email }, { url, publicSignKey }) => {
-        const { identities } = await query({
-          identities: {
-            $: { where: { publicSignKey, "account.email": email } },
-          },
-        });
-        if (identities.length === 0) {
-          return {
-            success: false,
-            error: "identity-does-not-exist-or-not-owned",
-          };
-        }
-        const identity = identities[0];
-        await transact(tx.identities[identity.id].update({ webhook: url }));
-        return { success: true };
-      },
+    setWebhook: async ({ email }, { url, publicSignKey }) => {
+      const { identities } = await query({
+        identities: {
+          $: { where: { publicSignKey, "account.email": email } },
+        },
+      });
+      if (identities.length === 0) {
+        return {
+          success: false,
+          error: "identity-does-not-exist-or-not-owned",
+        };
+      }
+      const identity = identities[0];
+      await transact(tx.identities[identity.id].update({ webhook: url }));
+      return { success: true };
     },
   },
 };
@@ -91,7 +76,9 @@ const respondCors = (x: null | BodyInit, y: ResponseInit) =>
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return respondCors(null, { status: 204 });
   return respondCors(
-    JSON.stringify(await apiHandler(endpoints, await req.json())),
+    JSON.stringify(
+      await apiHandler(backendApiSchema, endpoints, await req.json()),
+    ),
     {
       status: 200,
       headers: { "content-type": "application/json; charset=utf-8" },

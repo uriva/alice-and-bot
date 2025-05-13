@@ -1,58 +1,77 @@
-import { apiClient as apiClientMaker } from "typed-api";
-import { EncryptedConversationKey } from "../../protocol/src/api.ts";
+import { apiClient as apiClientMaker, httpCommunication } from "typed-api";
 
-export type BackendApi = {
-  createConversation: {
-    authRequired: true;
-    input: {
-      publicSignKeyToEncryptedSymmetricKey: Record<
-        string,
-        EncryptedConversationKey
-      >;
-      title: string;
-    };
-    output:
-      | { success: true; conversationId: string }
-      | {
-        success: false;
-        error: "invalid-participants" | "must-own-an-identity";
-      };
-  };
-  createAccount: {
-    authRequired: false;
-    // deno-lint-ignore ban-types
-    input: {};
-    output: { success: true; accountId: string; accessToken: string };
-  };
-  createAnonymousIdentity: {
-    authRequired: false;
-    input: {
-      publicSignKey: string;
-      publicEncryptKey: string;
-    };
-    output:
-      | { success: true }
-      | { success: false; error: "invalid-access-token" };
-  };
-  createIdentity: {
-    authRequired: true;
-    input: { publicSignKey: string; publicEncryptKey: string };
-    output: { success: true };
-  };
-  // deno-lint-ignore ban-types
-  notify: { authRequired: true; input: { messageId: string }; output: {} };
-  setWebhook: {
-    authRequired: true;
-    input: { url: string; publicSignKey: string };
-    output:
-      | { success: true }
-      | {
-        success: false;
-        error: "identity-does-not-exist-or-not-owned";
-      };
-  };
+import { z } from "zod";
+import { endpoint } from "typed-api";
+
+export const backendApiSchema = {
+  createConversation: endpoint({
+    authRequired: false,
+    input: z.object({
+      publicSignKeyToEncryptedSymmetricKey: z.record(z.string(), z.string()),
+      title: z.string(),
+    }),
+    output: z.union([
+      z.object({ conversationId: z.string() }),
+      z.object({
+        error: z.enum(["invalid-participants", "must-own-an-identity"]),
+      }),
+    ]),
+  }),
+  createAccount: endpoint({
+    authRequired: false,
+    input: z.object({}),
+    output: z.object({
+      success: z.literal(true),
+      accountId: z.string(),
+      accessToken: z.string(),
+    }),
+  }),
+  createAnonymousIdentity: endpoint({
+    authRequired: false,
+    input: z.object({
+      publicSignKey: z.string(),
+      publicEncryptKey: z.string(),
+    }),
+    output: z.union([
+      z.object({ success: z.literal(true) }),
+      z.object({
+        success: z.literal(false),
+        error: z.literal("invalid-access-token"),
+      }),
+    ]),
+  }),
+  createIdentity: endpoint({
+    authRequired: true,
+    input: z.object({
+      publicSignKey: z.string(),
+      publicEncryptKey: z.string(),
+    }),
+    output: z.object({ success: z.literal(true) }),
+  }),
+  notify: endpoint({
+    authRequired: false,
+    input: z.object({ messageId: z.string() }),
+    output: z.object({}),
+  }),
+  setWebhook: endpoint({
+    authRequired: true,
+    input: z.object({
+      url: z.string(),
+      publicSignKey: z.string(),
+    }),
+    output: z.union([
+      z.object({ success: z.literal(true) }),
+      z.object({
+        success: z.literal(false),
+        error: z.literal("identity-does-not-exist-or-not-owned"),
+      }),
+    ]),
+  }),
 };
 
-export const apiClient = apiClientMaker<BackendApi>(
-  "https://alice-and-bot.deno.dev",
+export type backendApi = typeof backendApiSchema;
+
+export const apiClient = apiClientMaker(
+  httpCommunication("https://alice-and-bot.deno.dev"),
+  backendApiSchema,
 );

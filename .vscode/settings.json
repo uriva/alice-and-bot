@@ -1,6 +1,6 @@
 {
-    "deno.enable": true,
-    "search.exclude": {
-        "**/.vite": true
-    }
+  "deno.enable": true,
+  "search.exclude": {
+    "**/.vite": true
+  }
 }

@@ -83,11 +83,9 @@ const Message = (
 export const Chat = ({
   credentials,
   conversationId,
-  userInstantToken,
 }: {
   credentials: Credentials;
   conversationId: string;
-  userInstantToken: string;
 }) => {
   const [messages, setMessages] = useState<DecipheredMessage[]>([]);
   const [input, setInput] = useState("");
@@ -159,7 +157,6 @@ export const Chat = ({
         credentials.privateSignKey,
         { type: "text", text: input },
         conversationId,
-        userInstantToken,
       );
       setInput("");
       inputRef.current?.focus();

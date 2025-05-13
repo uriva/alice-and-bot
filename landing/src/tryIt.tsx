@@ -15,15 +15,15 @@ export const TryIt = () => {
     number | null
   >(null);
   const [publicSignKeyInput, setPublicSignKeyInput] = useState("");
-  const [userToken, setUserToken] = useState<string>("demo-token"); // Replace with real token logic if needed
-
-  // Create a new identity
   const createIdentity = async () => {
     const signKey = await generateKeyPair("sign");
     const encryptKey = await generateKeyPair("encrypt");
-    await apiClient("createIdentity", userToken, {
-      publicSignKey: signKey.publicKey,
-      publicEncryptKey: encryptKey.publicKey,
+    await apiClient({
+      endpoint: "createAnonymousIdentity",
+      payload: {
+        publicSignKey: signKey.publicKey,
+        publicEncryptKey: encryptKey.publicKey,
+      },
     });
     setIdentities((ids) => [...ids, {
       publicSignKey: signKey.publicKey,
@@ -31,8 +31,6 @@ export const TryIt = () => {
       privateEncryptKey: encryptKey.privateKey,
     }]);
   };
-
-  // Start a conversation with one or more participants
   const startConversation = async () => {
     if (identities.length === 0 || !publicSignKeyInput.trim()) return;
     const myIdentity = identities[0];
@@ -42,11 +40,10 @@ export const TryIt = () => {
     ];
     const result = await createConversation(
       { queryOnce },
-      userToken,
       participantKeys,
       "new chat",
     );
-    if (result.success) {
+    if ("conversationId" in result) {
       setConversations((convs) => [...convs, {
         conversationId: result.conversationId,
         credentials: myIdentity,
@@ -56,10 +53,11 @@ export const TryIt = () => {
       alert("Failed to create conversation: " + result.error);
     }
   };
-
   return (
     <section class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20 w-full max-w-2xl mx-auto">
-      <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Try it now</h2>
+      <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+        Try it now
+      </h2>
       <div class="mb-4 flex flex-col sm:flex-row gap-2 w-full">
         <button
           type="button"
@@ -68,7 +66,9 @@ export const TryIt = () => {
         >
           Create Identity
         </button>
-        <span class="text-gray-700 dark:text-gray-200 flex items-center">({identities.length} created)</span>
+        <span class="text-gray-700 dark:text-gray-200 flex items-center">
+          ({identities.length} created)
+        </span>
       </div>
       <div class="mb-4 flex flex-col sm:flex-row gap-2 items-stretch w-full">
         <input
@@ -86,7 +86,9 @@ export const TryIt = () => {
         </button>
       </div>
       <div class="mb-4">
-        <h3 class="font-semibold mb-2 text-gray-900 dark:text-gray-100">Open Chats</h3>
+        <h3 class="font-semibold mb-2 text-gray-900 dark:text-gray-100">
+          Open Chats
+        </h3>
         <ul class="flex gap-2 flex-wrap">
           {conversations.map((c, i) => (
             <li key={i}>
@@ -110,7 +112,6 @@ export const TryIt = () => {
           <Chat
             credentials={conversations[selectedConversation].credentials}
             conversationId={conversations[selectedConversation].conversationId}
-            userInstantToken={userToken}
           />
         </div>
       )}

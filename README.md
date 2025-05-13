@@ -9,7 +9,10 @@
 1. handle impersonation of the notification server
 1. handle message being in the db but webhooks not called
 1. limit editing instant entities
-1. handle a member of the conversation injecting a geniuine signed message from someone outside
+1. handle a member of the conversation injecting a geniuine signed message from
+   someone outside
+1. createConversation endpoint is public
+1. notify endpoint is public
 
 ### flow
 
