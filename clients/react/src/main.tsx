@@ -1,5 +1,5 @@
 import { init } from "@instantdb/react";
-import timeAgo from "epoch-timeago";
+import { timeAgo } from "jsr:@egamagz/time-ago";
 import { map, pipe, sideLog } from "gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
 import schema from "../../../instant.schema.ts";
