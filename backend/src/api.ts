@@ -41,7 +41,7 @@ export const backendApiSchema = {
     ]),
   }),
   createIdentity: endpoint({
-    authRequired: true,
+    authRequired: false,
     input: z.object({
       publicSignKey: z.string(),
       publicEncryptKey: z.string(),

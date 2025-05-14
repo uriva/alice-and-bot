@@ -14,23 +14,28 @@ const { useAuth, auth, queryOnce } = init({ appId: instantAppId, schema });
 
 const adminDb = adminInit({ appId: instantAppId, adminToken, schema });
 
-const prepareConversation = async (accountToken: string) => {
-  const alice = await createIdentity(accountToken);
-  const bob = await createIdentity(accountToken);
-  const convo = await createConversation({ queryOnce }, accountToken, [
+const prepareConversation = async () => {
+  const alice = await createIdentity();
+  const bob = await createIdentity();
+  const convo = await createConversation({ queryOnce }, [
     alice.publicSignKey,
     bob.publicSignKey,
   ], "new chat");
-  if (!convo.success) throw new Error("Failed to create conversation");
+  if (!("conversationId" in convo)) {
+    throw new Error("Failed to create conversation");
+  }
   return { conversationId: convo.conversationId, alice };
 };
 
-const createIdentity = async (accountToken: string) => {
+const createIdentity = async () => {
   const signKey = await generateKeyPair("sign");
   const encryptKey = await generateKeyPair("encrypt");
-  const result = await apiClient("createIdentity", accountToken, {
-    publicSignKey: signKey.publicKey,
-    publicEncryptKey: encryptKey.publicKey,
+  const result = await apiClient({
+    endpoint: "createIdentity",
+    payload: {
+      publicSignKey: signKey.publicKey,
+      publicEncryptKey: encryptKey.publicKey,
+    },
   });
   if (!result.success) {
     throw new Error("Failed to create identity");
@@ -53,7 +58,7 @@ const Main = () => {
   useEffect(() => {
     if (!activeUser) return;
     console.log("preparing conversation");
-    prepareConversation(activeUser.refresh_token)
+    prepareConversation()
       .then(({ alice, conversationId }) => {
         setAlice(alice);
         setConversationId(conversationId);
@@ -68,7 +73,6 @@ const Main = () => {
       <Chat
         credentials={alice}
         conversationId={conversationId}
-        userInstantToken={activeUser.refresh_token}
       />
     ));
 };
