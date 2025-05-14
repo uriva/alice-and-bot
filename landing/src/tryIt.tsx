@@ -60,7 +60,7 @@ export const TryIt = () => {
   };
 
   // Step 3: Query server for existing chats (stub for now)
-  const fetchConversations = async () => {
+  const fetchConversations = () => {
     // TODO: Replace with real API call
     setConversations([]);
   };
