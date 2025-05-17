@@ -6,7 +6,7 @@ import schema from "../../instant.schema.ts";
 import { instantAppId } from "../../protocol/src/api.ts";
 import { generateKeyPair } from "../../protocol/src/crypto.ts";
 
-const { queryOnce: _queryOnce } = init({ appId: instantAppId, schema });
+const { useQuery } = init({ appId: instantAppId, schema });
 
 export const TryIt = () => {
   const [identityName, setIdentityName] = useState("");
@@ -14,14 +14,27 @@ export const TryIt = () => {
     null,
   );
   const [credentials, setCredentials] = useState<Credentials | null>(null);
-  const [conversations, setConversations] = useState<
-    { conversationId: string; name: string }[]
-  >([]);
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
   >(null);
   const [inputCredentials, setInputCredentials] = useState("");
-
+  const { data, error, isLoading } = useQuery({
+    conversations: {
+      $: {
+        where: {
+          "participants.publicSignKey": credentials?.publicSignKey ?? "",
+        },
+      },
+    },
+  });
+  if (error) {
+    console.error("Error fetching conversations:", error);
+    return <div class="text-red-500">Error fetching conversations</div>;
+  }
+  if (isLoading) {
+    return <div class="text-gray-500 dark:text-gray-400">Loading...</div>;
+  }
+  const { conversations } = data;
   const createIdentity = async () => {
     if (!identityName.trim()) {
       alert("Please enter a name for your identity.");
@@ -52,10 +65,6 @@ export const TryIt = () => {
     } catch {
       alert("Invalid credentials string");
     }
-  };
-
-  const fetchConversations = () => {
-    setConversations([]);
   };
 
   const selectConversation = (id: string) => setSelectedConversation(id);
@@ -132,13 +141,6 @@ export const TryIt = () => {
           <div class={inputRowStyle + " mb-4"}>
             <button
               type="button"
-              class={buttonBlueStyle}
-              onClick={fetchConversations}
-            >
-              Refresh Conversations
-            </button>
-            <button
-              type="button"
               class={buttonGreenStyle}
               onClick={startConversation}
             >
@@ -152,16 +154,16 @@ export const TryIt = () => {
               : (
                 <ul class="flex gap-2 flex-wrap">
                   {conversations.map((conv) => (
-                    <li key={conv.conversationId}>
+                    <li key={conv.id}>
                       <button
                         type="button"
                         class={chatButtonStyle +
-                          (selectedConversation === conv.conversationId
+                          (selectedConversation === conv.id
                             ? " " + chatButtonActiveStyle
                             : "")}
-                        onClick={() => selectConversation(conv.conversationId)}
+                        onClick={() => selectConversation(conv.id)}
                       >
-                        {conv.name || conv.conversationId}
+                        {conv.title || conv.id}
                       </button>
                     </li>
                   ))}
