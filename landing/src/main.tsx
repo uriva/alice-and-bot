@@ -1,14 +1,14 @@
 import { render } from "preact";
 import { ErrorBoundary, Route, Router } from "preact-iso";
 import { Toaster } from "react-hot-toast";
-import { TryIt } from "./chat.tsx";
+import { ChatDemo } from "./chat.tsx";
 import { LandingPage } from "./landing.tsx";
 import { Legal } from "./legal.tsx";
 import { chatPath, homePath } from "./paths.ts";
 
 export const routes = [
   { path: homePath, component: LandingPage },
-  { path: chatPath, component: TryIt },
+  { path: chatPath, component: ChatDemo },
   { path: "/legal", component: Legal },
 ];
 

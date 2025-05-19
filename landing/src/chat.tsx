@@ -8,7 +8,7 @@ import { generateKeyPair } from "../../protocol/src/crypto.ts";
 
 const { useQuery } = init({ appId: instantAppId, schema });
 
-export const TryIt = () => {
+export const ChatDemo = () => {
   const [identityName, setIdentityName] = useState("");
   const [credentialsString, setCredentialsString] = useState<string | null>(
     null,
