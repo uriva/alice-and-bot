@@ -1,4 +1,4 @@
-import { useLocation } from "preact-iso/router";
+import { useLocation } from "preact-iso";
 import { Button } from "./components.tsx";
 import { chatPath } from "./paths.ts";
 
