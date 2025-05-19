@@ -6,4 +6,5 @@ export default defineConfig({
   root: "./",
   server: { port: 3000 },
   plugins: [preact(), deno()],
+  build: { sourcemap: true },
 });
