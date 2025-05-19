@@ -41,12 +41,12 @@ export const backendApiSchema = {
     ]),
   }),
   createIdentity: endpoint({
-    authRequired: false,
+    authRequired: true,
     input: z.object({
       publicSignKey: z.string(),
       publicEncryptKey: z.string(),
     }),
-    output: z.object({ success: z.literal(true) }),
+    output: z.object({}),
   }),
   notify: endpoint({
     authRequired: false,

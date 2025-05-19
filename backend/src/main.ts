@@ -39,11 +39,12 @@ const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
       const { accounts } = await query({
         accounts: { $: { where: { email } } },
       });
-      return createIdentityForAccount({
+      await createIdentityForAccount({
         publicSignKey,
         publicEncryptKey,
         account: accounts[0].id,
       });
+      return {}
     },
     setWebhook: async ({ email }, { url, publicSignKey }) => {
       const { identities } = await query({

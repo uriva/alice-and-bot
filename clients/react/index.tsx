@@ -31,7 +31,7 @@ const createIdentity = async () => {
   const signKey = await generateKeyPair("sign");
   const encryptKey = await generateKeyPair("encrypt");
   const result = await apiClient({
-    endpoint: "createIdentity",
+    endpoint: "createAnonymousIdentity",
     payload: {
       publicSignKey: signKey.publicKey,
       publicEncryptKey: encryptKey.publicKey,
