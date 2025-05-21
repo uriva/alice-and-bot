@@ -1,12 +1,47 @@
 import { init } from "@instantdb/react";
 import { useState } from "preact/hooks";
+import { signal } from "@preact/signals";
 import { apiClient } from "../../backend/src/api.ts";
 import { Chat, type Credentials } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
-import { instantAppId } from "../../protocol/src/api.ts";
+import { createConversation, instantAppId } from "../../protocol/src/api.ts";
 import { generateKeyPair } from "../../protocol/src/crypto.ts";
 
-const { useQuery } = init({ appId: instantAppId, schema });
+const { useQuery, queryOnce } = init({ appId: instantAppId, schema });
+
+const nameFromPublicSignKey = async (publicSignKey: string) => {
+  const { data } = await queryOnce({
+    identities: { $: { where: { publicSignKey } } },
+  });
+  if (data.identities.length === 0) {
+    return publicSignKey;
+  }
+  return data.identities[0].name;
+};
+
+const selectedConversation = signal<string | null>(null);
+
+const startConversation =
+  (credentials: Credentials, publicSignKey: string) => async () => {
+    if (!credentials) {
+      alert("Please create or identify an identity first.");
+      return;
+    }
+    const title = `${await nameFromPublicSignKey(
+      credentials.publicSignKey,
+    )} & ${await nameFromPublicSignKey(publicSignKey)}`;
+    createConversation(
+      { queryOnce },
+      [publicSignKey, credentials.publicSignKey],
+      title,
+    ).then((response) => {
+      if (!("conversationId" in response)) {
+        alert("Failed to create conversation");
+        return;
+      }
+      selectedConversation.value = response.conversationId;
+    });
+  };
 
 export const ChatDemo = () => {
   const [identityName, setIdentityName] = useState("");
@@ -14,9 +49,6 @@ export const ChatDemo = () => {
     null,
   );
   const [credentials, setCredentials] = useState<Credentials | null>(null);
-  const [selectedConversation, setSelectedConversation] = useState<
-    string | null
-  >(null);
   const [inputCredentials, setInputCredentials] = useState("");
   const { data, error, isLoading } = useQuery({
     conversations: {
@@ -65,12 +97,6 @@ export const ChatDemo = () => {
     } catch {
       alert("Invalid credentials string");
     }
-  };
-
-  const selectConversation = (id: string) => setSelectedConversation(id);
-
-  const startConversation = () => {
-    alert("Start new conversation: not implemented yet");
   };
 
   return (
@@ -142,7 +168,10 @@ export const ChatDemo = () => {
             <button
               type="button"
               class={buttonGreenStyle}
-              onClick={startConversation}
+              onClick={startConversation(
+                credentials,
+                credentials.publicSignKey,
+              )}
             >
               Start New Conversation
             </button>
@@ -158,10 +187,12 @@ export const ChatDemo = () => {
                       <button
                         type="button"
                         class={chatButtonStyle +
-                          (selectedConversation === conv.id
+                          (selectedConversation.value === conv.id
                             ? " " + chatButtonActiveStyle
                             : "")}
-                        onClick={() => selectConversation(conv.id)}
+                        onClick={() => {
+                          selectedConversation.value = conv.id;
+                        }}
                       >
                         {conv.title || conv.id}
                       </button>
@@ -170,11 +201,11 @@ export const ChatDemo = () => {
                 </ul>
               )}
           </div>
-          {selectedConversation && (
+          {selectedConversation.value && (
             <div class="mt-6 overflow-x-auto">
               <Chat
                 credentials={credentials}
-                conversationId={selectedConversation}
+                conversationId={selectedConversation.value}
               />
             </div>
           )}
