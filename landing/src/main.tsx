@@ -1,5 +1,5 @@
 import { render } from "preact";
-import { ErrorBoundary, Route, Router } from "preact-iso";
+import { ErrorBoundary, LocationProvider, Route, Router } from "preact-iso";
 import { Toaster } from "react-hot-toast";
 import { ChatDemo } from "./chat.tsx";
 import { LandingPage } from "./landing.tsx";
@@ -30,7 +30,7 @@ const NotFound = () => (
 );
 
 const App = () => (
-  <>
+  <LocationProvider>
     <Toaster />
     <div className="flex flex-col flex-grow gap-3 p-3 font-sans">
       <ErrorBoundary>
@@ -42,7 +42,7 @@ const App = () => (
         </Router>
       </ErrorBoundary>
     </div>
-  </>
+  </LocationProvider>
 );
 
 render(<App />, document.getElementById("root")!);
