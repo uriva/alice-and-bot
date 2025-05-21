@@ -1,7 +1,6 @@
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useState } from "preact/hooks";
-import { apiClient } from "../../backend/src/api.ts";
 import { Chat, type Credentials } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import {
@@ -9,7 +8,6 @@ import {
   createIdentity,
   instantAppId,
 } from "../../protocol/src/api.ts";
-import { generateKeyPair } from "../../protocol/src/crypto.ts";
 import { PublicKey } from "./components.tsx";
 
 const { useQuery, queryOnce } = init({ appId: instantAppId, schema });
