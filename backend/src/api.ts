@@ -29,6 +29,7 @@ export const backendApiSchema = {
   createAnonymousIdentity: endpoint({
     authRequired: false,
     input: z.object({
+      name: z.string(),
       publicSignKey: z.string(),
       publicEncryptKey: z.string(),
     }),

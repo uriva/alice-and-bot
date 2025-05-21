@@ -31,9 +31,9 @@ const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
       await transact(tx.accounts[accountId].update({ accessToken }));
       return { success: true, accountId, accessToken };
     },
-    createAnonymousIdentity: ({ publicSignKey, publicEncryptKey }) =>
+    createAnonymousIdentity: ({ name, publicSignKey, publicEncryptKey }) =>
       transact(
-        tx.identities[id()].update({ publicSignKey, publicEncryptKey }),
+        tx.identities[id()].update({ name, publicSignKey, publicEncryptKey }),
       ),
     createIdentity: async ({ email }, { publicSignKey, publicEncryptKey }) => {
       const { accounts } = await query({
@@ -44,7 +44,7 @@ const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
         publicEncryptKey,
         account: accounts[0].id,
       });
-      return {}
+      return {};
     },
     setWebhook: async ({ email }, { url, publicSignKey }) => {
       const { identities } = await query({

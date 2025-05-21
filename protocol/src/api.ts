@@ -7,6 +7,7 @@ import { apiClient } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
 import {
   encryptAsymmetric,
+  generateKeyPair,
   generateSymmetricKey,
 } from "../../protocol/src/crypto.ts";
 import {
@@ -168,4 +169,25 @@ export const createConversation = async (
         },
       }),
   )(publicSignKeys);
+};
+
+export const createIdentity = async (name: string) => {
+  const signKey = await generateKeyPair("sign");
+  const encryptKey = await generateKeyPair("encrypt");
+  const result = await apiClient({
+    endpoint: "createAnonymousIdentity",
+    payload: {
+      name,
+      publicSignKey: signKey.publicKey,
+      publicEncryptKey: encryptKey.publicKey,
+    },
+  });
+  if (!result.success) {
+    throw new Error("Failed to create identity");
+  }
+  return {
+    publicSignKey: signKey.publicKey,
+    privateSignKey: signKey.privateKey,
+    privateEncryptKey: encryptKey.privateKey,
+  };
 };

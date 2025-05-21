@@ -4,7 +4,11 @@ import { useState } from "preact/hooks";
 import { apiClient } from "../../backend/src/api.ts";
 import { Chat, type Credentials } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
-import { createConversation, instantAppId } from "../../protocol/src/api.ts";
+import {
+  createConversation,
+  createIdentity,
+  instantAppId,
+} from "../../protocol/src/api.ts";
 import { generateKeyPair } from "../../protocol/src/crypto.ts";
 import { PublicKey } from "./components.tsx";
 
@@ -15,9 +19,12 @@ const nameFromPublicSignKey = async (publicSignKey: string) => {
     identities: { $: { where: { publicSignKey } } },
   });
   if (data.identities.length === 0) {
+    console.error(
+      `No identity found for public sign key: ${publicSignKey}`,
+    );
     return publicSignKey;
   }
-  return data.identities[0].name;
+  return data.identities[0].name ?? publicSignKey;
 };
 
 const selectedConversation = signal<string | null>(null);
@@ -64,25 +71,12 @@ export const ChatDemo = () => {
     return <div class="text-gray-500 dark:text-gray-400">Loading...</div>;
   }
   const { conversations } = data;
-  const createIdentity = async () => {
+  const onClickCreateIdentity = async () => {
     if (!identityName.trim()) {
       alert("Please enter a name for your identity.");
       return;
     }
-    const signKey = await generateKeyPair("sign");
-    const encryptKey = await generateKeyPair("encrypt");
-    await apiClient({
-      endpoint: "createAnonymousIdentity",
-      payload: {
-        publicSignKey: signKey.publicKey,
-        publicEncryptKey: encryptKey.publicKey,
-      },
-    });
-    const creds: Credentials = {
-      publicSignKey: signKey.publicKey,
-      privateSignKey: signKey.privateKey,
-      privateEncryptKey: encryptKey.privateKey,
-    };
+    const creds = await createIdentity(identityName);
     setCredentialsString(JSON.stringify(creds));
     setCredentials(creds);
   };
@@ -119,7 +113,7 @@ export const ChatDemo = () => {
             <button
               type="button"
               class={buttonBlueStyle}
-              onClick={createIdentity}
+              onClick={onClickCreateIdentity}
             >
               Create Identity
             </button>

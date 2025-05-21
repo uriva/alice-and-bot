@@ -3,11 +3,9 @@ import { init } from "@instantdb/react";
 import { coerce } from "gamla";
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { apiClient } from "../../backend/src/api.ts";
 import { adminToken } from "../../backend/src/db.ts";
 import schema from "../../instant.schema.ts";
-import { createConversation, instantAppId } from "../../protocol/src/api.ts";
-import { generateKeyPair } from "../../protocol/src/crypto.ts";
+import { createConversation, instantAppId, createIdentity } from "../../protocol/src/api.ts";
 import { Chat, Credentials } from "./src/main.tsx";
 
 const { useAuth, auth, queryOnce } = init({ appId: instantAppId, schema });
@@ -15,8 +13,8 @@ const { useAuth, auth, queryOnce } = init({ appId: instantAppId, schema });
 const adminDb = adminInit({ appId: instantAppId, adminToken, schema });
 
 const prepareConversation = async () => {
-  const alice = await createIdentity();
-  const bob = await createIdentity();
+  const alice = await createIdentity("alice");
+  const bob = await createIdentity("bob");
   const convo = await createConversation({ queryOnce }, [
     alice.publicSignKey,
     bob.publicSignKey,
@@ -25,26 +23,6 @@ const prepareConversation = async () => {
     throw new Error("Failed to create conversation");
   }
   return { conversationId: convo.conversationId, alice };
-};
-
-const createIdentity = async () => {
-  const signKey = await generateKeyPair("sign");
-  const encryptKey = await generateKeyPair("encrypt");
-  const result = await apiClient({
-    endpoint: "createAnonymousIdentity",
-    payload: {
-      publicSignKey: signKey.publicKey,
-      publicEncryptKey: encryptKey.publicKey,
-    },
-  });
-  if (!result.success) {
-    throw new Error("Failed to create identity");
-  }
-  return {
-    publicSignKey: signKey.publicKey,
-    privateSignKey: signKey.privateKey,
-    privateEncryptKey: encryptKey.privateKey,
-  };
 };
 
 const Main = () => {
