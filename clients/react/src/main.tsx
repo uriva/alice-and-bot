@@ -1,6 +1,6 @@
 import { init } from "@instantdb/react";
-import { timeAgo } from "jsr:@egamagz/time-ago";
 import { map, pipe, sideLog } from "gamla";
+import { timeAgo } from "jsr:@egamagz/time-ago";
 import { useEffect, useRef, useState } from "preact/hooks";
 import schema from "../../../instant.schema.ts";
 import {
@@ -14,11 +14,9 @@ import {
   bubbleStyle,
   CHAT_CONTAINER_STYLE,
   getAvatar,
-  INPUT_STYLE,
   isLightColor,
   loadingStyle,
   MESSAGES_CONTAINER_STYLE,
-  SEND_BUTTON_STYLE,
   stringToColor,
   WAITING_STYLE,
 } from "./design.tsx";
@@ -169,7 +167,6 @@ export const Chat = ({
 
   return (
     <div style={{ ...CHAT_CONTAINER_STYLE, ...style }} className={className}>
-      conversation id: {conversationId}
       <div
         ref={messagesContainerRef}
         style={MESSAGES_CONTAINER_STYLE}
@@ -184,33 +181,45 @@ export const Chat = ({
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <input
-        ref={inputRef}
-        value={input}
-        onChange={(e) =>
-          setInput(e.currentTarget.value)}
-        onKeyDown={async (e) => {
-          if (e.key !== "Enter") {
-            return;
-          }
-          await onSend();
-        }}
-        placeholder="Type a message..."
-        style={INPUT_STYLE}
-      />
+      {/* Flex container for input and send button */}
+      <div className="flex items-center mt-2 gap-2">
+        <input
+          ref={inputRef}
+          value={input}
+          onChange={(e) =>
+            setInput(e.currentTarget.value)}
+          onKeyDown={async (e) => {
+            if (e.key !== "Enter") {
+              return;
+            }
+            await onSend();
+          }}
+          placeholder="Type a message..."
+          className="flex-grow p-2 border rounded-md 
+                     bg-gray-50 dark:bg-gray-700 
+                     border-gray-300 dark:border-gray-600 
+                     text-gray-900 dark:text-white 
+                     placeholder-gray-500 dark:placeholder-gray-400
+                     focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <button
+          type="button"
+          disabled={!input.trim() || !conversationKey}
+          onClick={onSend}
+          className="p-2 border border-blue-500 rounded-md 
+                     bg-blue-500 hover:bg-blue-600 
+                     text-white 
+                     focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Send
+        </button>
+      </div>
       {!conversationKey && (
         <div style={WAITING_STYLE}>
           Waiting for conversation key...
         </div>
       )}
-      <button
-        type="button"
-        disabled={!input.trim() || !conversationKey}
-        onClick={onSend}
-        style={SEND_BUTTON_STYLE}
-      >
-        Send
-      </button>
       {fetchingMore && <div style={loadingStyle}>Loading more...</div>}
     </div>
   );

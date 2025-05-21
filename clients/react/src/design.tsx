@@ -23,8 +23,6 @@ const AVATAR_BASE_STYLE = {
   marginRight: 8,
   fontSize: 14,
 };
-export const INPUT_STYLE = { width: "80%" };
-export const SEND_BUTTON_STYLE = { width: "18%", marginLeft: 4 };
 export const loadingStyle = { fontSize: 12, color: "#bbb" };
 export const WAITING_STYLE = { color: "red", fontSize: 12 };
 
