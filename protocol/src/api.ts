@@ -182,9 +182,6 @@ export const createIdentity = async (name: string) => {
       publicEncryptKey: encryptKey.publicKey,
     },
   });
-  if (!result.success) {
-    throw new Error("Failed to create identity");
-  }
   return {
     publicSignKey: signKey.publicKey,
     privateSignKey: signKey.privateKey,

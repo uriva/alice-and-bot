@@ -31,10 +31,14 @@ const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
       await transact(tx.accounts[accountId].update({ accessToken }));
       return { success: true, accountId, accessToken };
     },
-    createAnonymousIdentity: ({ name, publicSignKey, publicEncryptKey }) =>
-      transact(
+    createAnonymousIdentity: async (
+      { name, publicSignKey, publicEncryptKey },
+    ) => {
+      await transact(
         tx.identities[id()].update({ name, publicSignKey, publicEncryptKey }),
-      ),
+      );
+      return {};
+    },
     createIdentity: async ({ email }, { publicSignKey, publicEncryptKey }) => {
       const { accounts } = await query({
         accounts: { $: { where: { email } } },

@@ -33,13 +33,7 @@ export const backendApiSchema = {
       publicSignKey: z.string(),
       publicEncryptKey: z.string(),
     }),
-    output: z.union([
-      z.object({ success: z.literal(true) }),
-      z.object({
-        success: z.literal(false),
-        error: z.literal("invalid-access-token"),
-      }),
-    ]),
+    output: z.object({}),
   }),
   createIdentity: endpoint({
     authRequired: true,
