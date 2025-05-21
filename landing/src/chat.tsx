@@ -1,11 +1,12 @@
 import { init } from "@instantdb/react";
-import { useState } from "preact/hooks";
 import { signal } from "@preact/signals";
+import { useState } from "preact/hooks";
 import { apiClient } from "../../backend/src/api.ts";
 import { Chat, type Credentials } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import { createConversation, instantAppId } from "../../protocol/src/api.ts";
 import { generateKeyPair } from "../../protocol/src/crypto.ts";
+import { PublicKey } from "./components.tsx";
 
 const { useQuery, queryOnce } = init({ appId: instantAppId, schema });
 
@@ -168,6 +169,11 @@ export const ChatDemo = () => {
 
       {credentials && (
         <div>
+          <div class="text-gray-900 dark:text-gray-100 mb-2 break-all">
+            Your public key is <PublicKey pubkey={credentials.publicSignKey} />
+            You can share it with others to start a conversation. It's like a
+            phone number, but for secure messaging.
+          </div>
           <div class={inputRowStyle + " mb-4"}>
             <input
               class={inputStyle}
