@@ -24,14 +24,10 @@ const selectedConversation = signal<string | null>(null);
 
 const startConversation =
   (credentials: Credentials, publicSignKey: string) => async () => {
-    if (!credentials) {
-      alert("Please create or identify an identity first.");
-      return;
-    }
     const title = `${await nameFromPublicSignKey(
       credentials.publicSignKey,
     )} & ${await nameFromPublicSignKey(publicSignKey)}`;
-    createConversation(
+    await createConversation(
       { queryOnce },
       [publicSignKey, credentials.publicSignKey],
       title,
