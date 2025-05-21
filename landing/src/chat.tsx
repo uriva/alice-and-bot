@@ -99,6 +99,10 @@ export const ChatDemo = () => {
     }
   };
 
+  const [otherParticipantPublicKey, setOtherParticipantPublicKey] = useState(
+    "",
+  );
+
   return (
     <section class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20 w-full max-w-2xl mx-auto">
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
@@ -165,12 +169,19 @@ export const ChatDemo = () => {
       {credentials && (
         <div>
           <div class={inputRowStyle + " mb-4"}>
+            <input
+              class={inputStyle}
+              placeholder="Enter public key of the other participant"
+              onInput={(e) => {
+                setOtherParticipantPublicKey(e.currentTarget.value);
+              }}
+            />
             <button
               type="button"
               class={buttonGreenStyle}
               onClick={startConversation(
                 credentials,
-                credentials.publicSignKey,
+                otherParticipantPublicKey,
               )}
             >
               Start New Conversation
