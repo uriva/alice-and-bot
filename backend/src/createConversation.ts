@@ -1,14 +1,16 @@
-import { id, User, User as InstantUser } from "@instantdb/core";
+import { id, User } from "@instantdb/core";
 import { map } from "gamla";
 import { ApiImplementation } from "typed-api";
-import { BackendApi } from "./api.ts";
+import { backendApiSchema } from "./api.ts";
 import { query, transact, tx } from "./db.ts";
+import { EncryptedConversationKey } from "../../protocol/src/api.ts";
 
-export const createConversation: ApiImplementation<
-  InstantUser,
-  BackendApi
->["handlers"]["createConversation"]["handler"] = async (
-  { email }: User,
+type Type = ApiImplementation<
+  User,
+  typeof backendApiSchema
+>["handlers"]["createConversation"];
+
+export const createConversation: Type = async (
   { title, publicSignKeyToEncryptedSymmetricKey },
 ) => {
   const { identities } = await query({
@@ -29,9 +31,6 @@ export const createConversation: ApiImplementation<
   ) {
     return { success: false, error: "invalid-participants" };
   }
-  if (!identities.some((identity) => identity.account?.email === email)) {
-    return { success: false, error: "must-own-an-identity" };
-  }
   const conversationId = id();
   await transact(
     tx.conversations[conversationId].update({ title }).link({
@@ -42,7 +41,10 @@ export const createConversation: ApiImplementation<
     map((identity) =>
       tx.keys[id()]
         .update({
-          key: publicSignKeyToEncryptedSymmetricKey[identity.publicSignKey],
+          key:
+            publicSignKeyToEncryptedSymmetricKey[
+              identity.publicSignKey
+            ] as EncryptedConversationKey,
         }).link({ conversation: conversationId, owner: identity.id })
     )(identities),
   );

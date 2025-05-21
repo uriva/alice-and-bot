@@ -67,7 +67,7 @@ export const backendApiSchema = {
       }),
     ]),
   }),
-};
+} as const;
 
 export type backendApi = typeof backendApiSchema;
 
