@@ -95,9 +95,8 @@ export const ChatDemo = () => {
   return (
     <section class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20 w-full max-w-2xl mx-auto">
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-        Try it now
+        Alice&Bot encrypted chat
       </h2>
-
       {!credentials && (
         <div class={sectionSpacing}>
           <label class={labelStyle}>Create a new identity</label>

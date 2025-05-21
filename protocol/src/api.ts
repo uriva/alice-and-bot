@@ -174,7 +174,7 @@ export const createConversation = async (
 export const createIdentity = async (name: string) => {
   const signKey = await generateKeyPair("sign");
   const encryptKey = await generateKeyPair("encrypt");
-  const result = await apiClient({
+  await apiClient({
     endpoint: "createAnonymousIdentity",
     payload: {
       name,

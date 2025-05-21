@@ -16,7 +16,7 @@ import {
   getAvatar,
   INPUT_STYLE,
   isLightColor,
-  LOADING_STYLE,
+  loadingStyle,
   MESSAGES_CONTAINER_STYLE,
   SEND_BUTTON_STYLE,
   stringToColor,
@@ -83,9 +83,13 @@ const Message = (
 export const Chat = ({
   credentials,
   conversationId,
+  style,
+  className,
 }: {
   credentials: Credentials;
   conversationId: string;
+  style?: Record<string, string>;
+  className?: string;
 }) => {
   const [messages, setMessages] = useState<DecipheredMessage[]>([]);
   const [input, setInput] = useState("");
@@ -164,7 +168,7 @@ export const Chat = ({
   };
 
   return (
-    <div style={CHAT_CONTAINER_STYLE}>
+    <div style={{ ...CHAT_CONTAINER_STYLE, ...style }} className={className}>
       conversation id: {conversationId}
       <div
         ref={messagesContainerRef}
@@ -183,9 +187,12 @@ export const Chat = ({
       <input
         ref={inputRef}
         value={input}
-        onChange={(e) => setInput(e.currentTarget.value)}
+        onChange={(e) =>
+          setInput(e.currentTarget.value)}
         onKeyDown={async (e) => {
-          if (e.key !== "Enter") return;
+          if (e.key !== "Enter") {
+            return;
+          }
           await onSend();
         }}
         placeholder="Type a message..."
@@ -204,7 +211,7 @@ export const Chat = ({
       >
         Send
       </button>
-      {fetchingMore && <div style={LOADING_STYLE}>Loading more...</div>}
+      {fetchingMore && <div style={loadingStyle}>Loading more...</div>}
     </div>
   );
 };
