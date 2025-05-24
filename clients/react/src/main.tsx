@@ -1,12 +1,9 @@
-import { init } from "@instantdb/react";
 import { map, pipe, sideLog } from "gamla";
 import { timeAgo } from "jsr:@egamagz/time-ago";
 import { useEffect, useRef, useState } from "preact/hooks";
-import schema from "../../../instant.schema.ts";
 import {
   DecipheredMessage,
   decryptMessage,
-  instantAppId,
   sendMessage,
   useConversationKey,
 } from "../../../protocol/src/api.ts";
@@ -20,8 +17,8 @@ import {
   stringToColor,
   WAITING_STYLE,
 } from "./design.tsx";
-
-const { useQuery, transact, tx } = init({ appId: instantAppId, schema });
+import { InstantReactWebDatabase } from "@instantdb/react";
+import schema from "../../../instant.schema.ts";
 
 export type Credentials = {
   publicSignKey: string;
@@ -78,7 +75,8 @@ const Message = (
   );
 };
 
-export const Chat = ({
+export const Chat = (db: InstantReactWebDatabase<typeof schema>) =>
+({
   credentials,
   conversationId,
   style,
@@ -94,7 +92,7 @@ export const Chat = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const [limit, setLimit] = useState(100);
   const [fetchingMore, setFetchingMore] = useState(false);
-  const { data, error } = useQuery({
+  const { data, error } = db.useQuery({
     messages: {
       conversation: {},
       $: {
@@ -107,8 +105,7 @@ export const Chat = ({
 
   if (error) console.error(error);
 
-  const conversationKey = useConversationKey(
-    { useQuery },
+  const conversationKey = useConversationKey(db)(
     conversationId,
     credentials.publicSignKey,
     credentials.privateEncryptKey,
@@ -152,8 +149,7 @@ export const Chat = ({
 
   const onSend = async () => {
     if (conversationKey && input.trim()) {
-      await sendMessage(
-        { transact, tx },
+      await sendMessage(db)(
         conversationKey,
         credentials.publicSignKey,
         credentials.privateSignKey,

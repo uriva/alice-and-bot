@@ -44,11 +44,13 @@ const msgToStr = stringify;
 
 export type EncryptedConversationKey = EncryptedAsymmetric<string>;
 
-export const sendMessage = async (
+export const sendMessage = (
   { transact, tx }: Pick<
     InstantReactWebDatabase<typeof schema>,
     "transact" | "tx"
   >,
+) =>
+async (
   conversationSymmetricKey: string,
   publicSignKey: string,
   privateSignKey: string,
@@ -74,6 +76,8 @@ type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
 export const useConversationKey = (
   { useQuery }: Pick<InstantReactWebDatabase<typeof schema>, "useQuery">,
+) =>
+(
   conversation: string,
   publicSignKey: string,
   privateEncryptKey: string,
@@ -128,8 +132,10 @@ export const decryptMessage =
 // deno-lint-ignore ban-types
 type Identity = InstaQLEntity<typeof schema, "identities", { account: {} }>;
 
-export const createConversation = async (
+export const createConversation = (
   { queryOnce }: Pick<InstantReactWebDatabase<typeof schema>, "queryOnce">,
+) =>
+async (
   publicSignKeys: string[],
   conversationTitle: string,
 ) => {

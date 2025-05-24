@@ -1,21 +1,25 @@
 import { init as adminInit } from "@instantdb/admin";
-import { init } from "@instantdb/react";
+import { init, InstantReactWebDatabase } from "@instantdb/react";
 import { coerce } from "gamla";
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { adminToken } from "../../backend/src/db.ts";
 import schema from "../../instant.schema.ts";
-import { createConversation, instantAppId, createIdentity } from "../../protocol/src/api.ts";
+import {
+  createConversation,
+  createIdentity,
+  instantAppId,
+} from "../../protocol/src/api.ts";
 import { Chat, Credentials } from "./src/main.tsx";
-
-const { useAuth, auth, queryOnce } = init({ appId: instantAppId, schema });
 
 const adminDb = adminInit({ appId: instantAppId, adminToken, schema });
 
-const prepareConversation = async () => {
+const prepareConversation = async (
+  db: InstantReactWebDatabase<typeof schema>,
+) => {
   const alice = await createIdentity("alice");
   const bob = await createIdentity("bob");
-  const convo = await createConversation({ queryOnce }, [
+  const convo = await createConversation(db)([
     alice.publicSignKey,
     bob.publicSignKey,
   ], "new chat");
@@ -25,18 +29,17 @@ const prepareConversation = async () => {
   return { conversationId: convo.conversationId, alice };
 };
 
-const Main = () => {
-  const activeUser = useAuth().user;
+const Main = ({ db }: { db: InstantReactWebDatabase<typeof schema> }) => {
+  const activeUser = db.useAuth().user;
   const [alice, setAlice] = useState<Credentials | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const ChatWithDb = Chat(db);
   useEffect(() => {
     console.log("signing in");
-    adminDb.auth.createToken("alice@gmail.com").then(auth.signInWithToken);
+    adminDb.auth.createToken("alice@gmail.com").then(db.auth.signInWithToken);
   }, []);
   useEffect(() => {
-    if (!activeUser) return;
-    console.log("preparing conversation");
-    prepareConversation()
+    prepareConversation(db)
       .then(({ alice, conversationId }) => {
         setAlice(alice);
         setConversationId(conversationId);
@@ -48,7 +51,7 @@ const Main = () => {
     : !alice || !conversationId
     ? <div>preparing user and conversation</div>
     : (
-      <Chat
+      <ChatWithDb
         credentials={alice}
         conversationId={conversationId}
       />
@@ -56,6 +59,6 @@ const Main = () => {
 };
 
 render(
-  <Main />,
+  <Main db={init({ appId: instantAppId, schema })} />,
   coerce(document.getElementById("root")),
 );
