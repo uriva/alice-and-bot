@@ -1,5 +1,4 @@
 import { init } from "@instantdb/react";
-import type { JSX } from "preact/jsx-runtime";
 import {
   apiClient,
   type CreateConversationOutput,
@@ -7,7 +6,6 @@ import {
 } from "./backend/src/api.ts";
 import {
   Chat as ChatNoDb,
-  type ChatProps,
   useConversations as useConversationsNoDb,
 } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
@@ -43,7 +41,7 @@ export const handleWebhookUpdate: (
   }
 > = handleWebhookUpdateNoDb(db);
 
-export const Chat: (cp: ChatProps) => JSX.Element = ChatNoDb(db);
+export const Chat = ChatNoDb(db);
 
 export const sendMessage: (params: SendMessageParams) => Promise<string> =
   sendMessageNoDb(db);
