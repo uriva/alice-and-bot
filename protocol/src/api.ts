@@ -1,7 +1,6 @@
 import { id, type InstaQLEntity } from "@instantdb/core";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
-import { useEffect, useState } from "preact/hooks";
 import stringify from "safe-stable-stringify";
 import {
   apiClient,
@@ -85,7 +84,7 @@ async (
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
-const keysQuery = ({ publicSignKey }: Credentials, conversation: string) => ({
+export const keysQuery = ({ publicSignKey }: Credentials, conversation: string) => ({
   keys: {
     $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
   },
@@ -119,33 +118,6 @@ export const handleWebhookUpdate =
       conversationKey: key,
     };
   };
-
-export const useConversationKey = (
-  { useQuery }: Pick<InstantReactWebDatabase<typeof schema>, "useQuery">,
-) =>
-(
-  conversation: string,
-  credentials: Credentials,
-): string | null => {
-  const [key, setKey] = useState<string | null>(null);
-  const { isLoading, error, data } = useQuery(
-    keysQuery(credentials, conversation),
-  );
-  if (error) {
-    console.error("Failed to fetch conversation key", error);
-    return null;
-  }
-  if (isLoading) return null;
-  useEffect(() => {
-    if (!data.keys[0]?.key) return;
-    if (data.keys.length > 1) throw new Error("Multiple keys found");
-    decryptAsymmetric<string>(credentials.privateEncryptKey, data.keys[0].key)
-      .then((key: string) => {
-        setKey(key);
-      });
-  }, [data.keys[0]?.key, credentials.privateEncryptKey]);
-  return key;
-};
 
 export type DecipheredMessage =
   & { publicSignKey: string; timestamp: number }

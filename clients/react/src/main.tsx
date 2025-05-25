@@ -8,9 +8,10 @@ import {
   type Credentials,
   type DecipheredMessage,
   decryptMessage,
+  keysQuery,
   sendMessage,
-  useConversationKey,
 } from "../../../protocol/src/api.ts";
+import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
 import {
   bubbleStyle,
   CHAT_CONTAINER_STYLE,
@@ -77,21 +78,6 @@ export type ChatProps = {
   style?: Record<string, string>;
   className?: string;
 };
-
-export const useConversations =
-  (db: InstantReactWebDatabase<typeof schema>) =>
-  ({ publicSignKey }: Credentials) => {
-    const { data, error } = db.useQuery({
-      conversations: {
-        participants: {},
-        $: { where: { "participants.publicSignKey": publicSignKey } },
-      },
-    });
-    if (error) {
-      console.error("Error fetching conversations:", error);
-    }
-    return data?.conversations ?? [];
-  };
 
 export const Chat = (db: InstantReactWebDatabase<typeof schema>) =>
 ({
@@ -225,3 +211,45 @@ export const Chat = (db: InstantReactWebDatabase<typeof schema>) =>
     </div>
   );
 };
+
+const useConversationKey = (
+  { useQuery }: Pick<InstantReactWebDatabase<typeof schema>, "useQuery">,
+) =>
+(
+  conversation: string,
+  credentials: Credentials,
+): string | null => {
+  const [key, setKey] = useState<string | null>(null);
+  const { isLoading, error, data } = useQuery(
+    keysQuery(credentials, conversation),
+  );
+  if (error) {
+    console.error("Failed to fetch conversation key", error);
+    return null;
+  }
+  if (isLoading) return null;
+  useEffect(() => {
+    if (!data.keys[0]?.key) return;
+    if (data.keys.length > 1) throw new Error("Multiple keys found");
+    decryptAsymmetric<string>(credentials.privateEncryptKey, data.keys[0].key)
+      .then((key: string) => {
+        setKey(key);
+      });
+  }, [data.keys[0]?.key, credentials.privateEncryptKey]);
+  return key;
+};
+
+export const useConversations =
+  (db: InstantReactWebDatabase<typeof schema>) =>
+  ({ publicSignKey }: Credentials) => {
+    const { data, error } = db.useQuery({
+      conversations: {
+        participants: {},
+        $: { where: { "participants.publicSignKey": publicSignKey } },
+      },
+    });
+    if (error) {
+      console.error("Error fetching conversations:", error);
+    }
+    return data?.conversations ?? [];
+  };
