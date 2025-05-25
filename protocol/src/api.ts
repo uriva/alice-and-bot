@@ -113,7 +113,11 @@ export const handleWebhookUpdate =
       credentials,
       whUpdate.conversationId,
     );
-    return await decryptMessage(key)(whUpdate);
+    return {
+      conversationId: whUpdate.conversationId,
+      message: await decryptMessage(key)(whUpdate),
+      conversationKey: key,
+    };
   };
 
 export const useConversationKey = (

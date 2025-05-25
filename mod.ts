@@ -29,7 +29,13 @@ const db = init({ appId: instantAppId, schema });
 export const handleWebhookUpdate: (
   whUpdate: WebhookUpdate,
   credentials: Credentials,
-) => Promise<DecipheredMessage> = handleWebhookUpdateNoDb(db);
+) => Promise<
+  {
+    conversationId: string;
+    conversationKey: string;
+    message: DecipheredMessage;
+  }
+> = handleWebhookUpdateNoDb(db);
 
 export const Chat: (cp: ChatProps) => JSX.Element = ChatNoDb(db);
 
