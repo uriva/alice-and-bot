@@ -1,10 +1,8 @@
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useState } from "preact/hooks";
-import {
-  Chat as ChatNoDb,
-  useConversations,
-} from "../../clients/react/src/main.tsx";
+import { useConversations } from "../..//clients/react/src/hooks.ts";
+import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import {
   createConversation,
