@@ -7,7 +7,7 @@
   },
   "imports": {
     "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
-    "buffer": "npm:buffer",
+    "buffer": "npm:buffer@6.0.3",
     "epoch-timeago": "npm:epoch-timeago@1.1.9",
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.0",
     "@instantdb/admin": "npm:@instantdb/admin@0.19.5",
