@@ -100,16 +100,9 @@ export const Chat = (db: InstantReactWebDatabase<typeof schema>) =>
       },
     },
   });
-
   if (error) console.error(error);
-
-  const conversationKey = useConversationKey(db)(
-    conversationId,
-    credentials.publicSignKey,
-    credentials.privateEncryptKey,
-  );
+  const conversationKey = useConversationKey(db)(conversationId, credentials);
   const encryptedMessages = sideLog(data?.messages);
-
   useEffect(() => {
     if (conversationKey && encryptedMessages) {
       const sorted = [...encryptedMessages].sort((a, b) =>

@@ -27,7 +27,7 @@ export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
 
 type InternalMessage = { type: "text"; text: string };
 
-export type WebhookSentUpdate = {
+export type WebhookUpdate = {
   payload: EncryptedMessage;
   timestamp: number;
   conversationId: string;
@@ -85,20 +85,48 @@ async (
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
+const keysQuery = ({ publicSignKey }: Credentials, conversation: string) => ({
+  keys: {
+    $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
+  },
+});
+
+const getConversationKeyForWebhookHandling =
+  (db: InstantReactWebDatabase<typeof schema>) =>
+  async (credentials: Credentials, conversation: string) => {
+    const { data: { keys } } = await db.queryOnce(
+      keysQuery(credentials, conversation),
+    );
+    if (keys.length === 0) {
+      throw new Error("No keys found for conversation");
+    }
+    return await decryptAsymmetric<string>(
+      credentials.privateEncryptKey,
+      keys[0].key,
+    );
+  };
+
+export const handleWebhookUpdate =
+  (db: InstantReactWebDatabase<typeof schema>) =>
+  async (whUpdate: WebhookUpdate, credentials: Credentials) => {
+    const key = await getConversationKeyForWebhookHandling(db)(
+      credentials,
+      whUpdate.conversationId,
+    );
+    return await decryptMessage(key)(whUpdate);
+  };
+
 export const useConversationKey = (
   { useQuery }: Pick<InstantReactWebDatabase<typeof schema>, "useQuery">,
 ) =>
 (
   conversation: string,
-  publicSignKey: string,
-  privateEncryptKey: string,
+  credentials: Credentials,
 ): string | null => {
   const [key, setKey] = useState<string | null>(null);
-  const { isLoading, error, data } = useQuery({
-    keys: {
-      $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
-    },
-  });
+  const { isLoading, error, data } = useQuery(
+    keysQuery(credentials, conversation),
+  );
   if (error) {
     console.error("Failed to fetch conversation key", error);
     return null;
@@ -107,11 +135,11 @@ export const useConversationKey = (
   useEffect(() => {
     if (!data.keys[0]?.key) return;
     if (data.keys.length > 1) throw new Error("Multiple keys found");
-    decryptAsymmetric<string>(privateEncryptKey, data.keys[0].key)
+    decryptAsymmetric<string>(credentials.privateEncryptKey, data.keys[0].key)
       .then((key: string) => {
         setKey(key);
       });
-  }, [data.keys[0]?.key, privateEncryptKey]);
+  }, [data.keys[0]?.key, credentials.privateEncryptKey]);
   return key;
 };
 
@@ -121,7 +149,7 @@ export type DecipheredMessage =
 
 export const decryptMessage =
   (conversationSymmetricKey: string) =>
-  async (dbMsg: DbMessage): Promise<DecipheredMessage> => {
+  async (dbMsg: Omit<DbMessage, "id">): Promise<DecipheredMessage> => {
     const decrypted = await decryptSymmetric<SignedPayload<InternalMessage>>(
       conversationSymmetricKey,
       dbMsg.payload,

@@ -1,5 +1,5 @@
 import { coerce } from "gamla";
-import type { WebhookSentUpdate } from "../../protocol/src/api.ts";
+import type { WebhookUpdate } from "../../protocol/src/api.ts";
 import { query } from "./db.ts";
 
 export const callWebhooks = async ({ messageId }: { messageId: string }) => {
@@ -13,7 +13,7 @@ export const callWebhooks = async ({ messageId }: { messageId: string }) => {
   const message = messages[0];
   const conversation = coerce(message.conversation);
   const webhooks = conversation.participants.map(({ webhook }) => webhook);
-  const update: WebhookSentUpdate = {
+  const update: WebhookUpdate = {
     conversationId: conversation.id,
     payload: message.payload,
     timestamp: message.timestamp,

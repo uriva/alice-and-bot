@@ -10,14 +10,21 @@ import schema from "./instant.schema.ts";
 import {
   createConversation as createConversationNoDb,
   type Credentials,
+  handleWebhookUpdate as handleWebhookUpdateNoDb,
   instantAppId,
   sendMessage as sendMessageNoDb,
   type SendMessageParams,
 } from "./protocol/src/api.ts";
 
-export { createIdentity, type Credentials } from "./protocol/src/api.ts";
+export {
+  createIdentity,
+  type Credentials,
+  type WebhookUpdate,
+} from "./protocol/src/api.ts";
 
 const db = init({ appId: instantAppId, schema });
+
+export const handleWebhookUpdate = handleWebhookUpdateNoDb(db);
 
 export const Chat: (cp: ChatProps) => JSX.Element = ChatNoDb(db);
 
