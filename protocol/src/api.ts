@@ -1,10 +1,11 @@
-import { id, InstaQLEntity } from "@instantdb/core";
-import { type InstantReactWebDatabase } from "@instantdb/react";
+import { id, type InstaQLEntity } from "@instantdb/core";
+import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import { useEffect, useState } from "preact/hooks";
+import type { JSX } from "preact/jsx-runtime";
 import stringify from "safe-stable-stringify";
-import { apiClient } from "../../backend/src/api.ts";
-import schema from "../../instant.schema.ts";
+import { apiClient, CreateConversationOutput } from "../../backend/src/api.ts";
+import type schema from "../../instant.schema.ts";
 import {
   encryptAsymmetric,
   generateKeyPair,
@@ -13,8 +14,8 @@ import {
 import {
   decryptAsymmetric,
   decryptSymmetric,
-  EncryptedAsymmetric,
-  EncryptedSymmetric,
+  type EncryptedAsymmetric,
+  type EncryptedSymmetric,
   encryptSymmetric,
   sign,
   verify,
@@ -56,7 +57,7 @@ async (
   privateSignKey: string,
   message: InternalMessage,
   conversation: string,
-) => {
+): Promise<string> => {
   const signature = await sign(privateSignKey, msgToStr(message));
   const payload = await encryptSymmetric(
     conversationSymmetricKey,
@@ -138,7 +139,7 @@ export const createConversation = (
 async (
   publicSignKeys: string[],
   conversationTitle: string,
-) => {
+): Promise<CreateConversationOutput> => {
   const { data: { identities } } = await queryOnce({
     identities: {
       account: {},
@@ -177,7 +178,13 @@ async (
   )(publicSignKeys);
 };
 
-export const createIdentity = async (name: string) => {
+export type Credentials = {
+  publicSignKey: string;
+  privateSignKey: string;
+  privateEncryptKey: string;
+};
+
+export const createIdentity = async (name: string): Promise<Credentials> => {
   const signKey = await generateKeyPair("sign");
   const encryptKey = await generateKeyPair("encrypt");
   await apiClient({

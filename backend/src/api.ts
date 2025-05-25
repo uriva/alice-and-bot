@@ -3,6 +3,17 @@ import { apiClient as apiClientMaker, httpCommunication } from "typed-api";
 import { z } from "zod";
 import { endpoint } from "typed-api";
 
+const createConversationOutputZod = z.union([
+  z.object({ conversationId: z.string() }),
+  z.object({
+    error: z.enum(["invalid-participants", "must-own-an-identity"]),
+  }),
+]);
+
+export type CreateConversationOutput = z.infer<
+  typeof createConversationOutputZod
+>;
+
 export const backendApiSchema = {
   createConversation: endpoint({
     authRequired: false,
@@ -10,12 +21,7 @@ export const backendApiSchema = {
       publicSignKeyToEncryptedSymmetricKey: z.record(z.string(), z.string()),
       title: z.string(),
     }),
-    output: z.union([
-      z.object({ conversationId: z.string() }),
-      z.object({
-        error: z.enum(["invalid-participants", "must-own-an-identity"]),
-      }),
-    ]),
+    output: createConversationOutputZod,
   }),
   createAccount: endpoint({
     authRequired: false,

@@ -1,8 +1,12 @@
+import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe, sideLog } from "gamla";
-import { timeAgo } from "jsr:@egamagz/time-ago";
+import { timeAgo } from "jsr:@egamagz/time-ago@2025.4.9";
+import type { JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import type schema from "../../../instant.schema.ts";
 import {
-  DecipheredMessage,
+  Credentials,
+  type DecipheredMessage,
   decryptMessage,
   sendMessage,
   useConversationKey,
@@ -17,14 +21,6 @@ import {
   stringToColor,
   WAITING_STYLE,
 } from "./design.tsx";
-import { InstantReactWebDatabase } from "@instantdb/react";
-import schema from "../../../instant.schema.ts";
-
-export type Credentials = {
-  publicSignKey: string;
-  privateSignKey: string;
-  privateEncryptKey: string;
-};
 
 const Message = (
   { msg: { publicSignKey, text, timestamp }, next, isOwn }: {
@@ -75,18 +71,20 @@ const Message = (
   );
 };
 
+export type ChatProps = {
+  credentials: Credentials;
+  conversationId: string;
+  style?: Record<string, string>;
+  className?: string;
+};
+
 export const Chat = (db: InstantReactWebDatabase<typeof schema>) =>
 ({
   credentials,
   conversationId,
   style,
   className,
-}: {
-  credentials: Credentials;
-  conversationId: string;
-  style?: Record<string, string>;
-  className?: string;
-}) => {
+}: ChatProps): JSX.Element => {
   const [messages, setMessages] = useState<DecipheredMessage[]>([]);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);

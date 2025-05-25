@@ -1,5 +1,0 @@
-{
-  "name": "@alice-and-bot/react-chat",
-  "version": "0.0.1",
-  "exports": "./mod.ts"
-}

@@ -1,4 +1,7 @@
 import { init } from "@instantdb/react";
+import type { JSX } from "preact/jsx-runtime";
+import { CreateConversationOutput } from "./backend/src/api.ts";
+import { Chat as ChatNoDb, type ChatProps } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
 import {
   createConversation as createConversationNoDb,
@@ -6,15 +9,20 @@ import {
   sendMessage as sendMessageNoDb,
 } from "./protocol/src/api.ts";
 
-import { Chat as ChatNoDb } from "./clients/react/src/main.tsx";
 export { createIdentity } from "./protocol/src/api.ts";
 
 const db = init({ appId: instantAppId, schema });
 
-export const Chat = ChatNoDb(db);
+export const Chat: (cp: ChatProps) => JSX.Element = ChatNoDb(db);
 export const sendMessage = sendMessageNoDb(db);
-export const createConversation = createConversationNoDb(db);
+export const createConversation: (
+  publicSignKeys: string[],
+  conversationTitle: string,
+) => Promise<CreateConversationOutput> = createConversationNoDb(db);
 
-export const addWebhook = async (url: string, publicSignKey: string) => {
+export const addWebhook = (
+  url: string,
+  publicSignKey: string,
+): Promise<void> => {
   throw new Error("Not yet implemented");
 };

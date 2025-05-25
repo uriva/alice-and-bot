@@ -1,11 +1,12 @@
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useState } from "preact/hooks";
-import { Chat, type Credentials } from "../../clients/react/src/main.tsx";
+import { Chat } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import {
   createConversation,
   createIdentity,
+  type Credentials,
   instantAppId,
 } from "../../protocol/src/api.ts";
 import { PublicKey } from "./components.tsx";
@@ -32,8 +33,7 @@ const startConversation =
     const title = `${await nameFromPublicSignKey(
       credentials.publicSignKey,
     )} & ${await nameFromPublicSignKey(publicSignKey)}`;
-    await createConversation(
-      { queryOnce },
+    await createConversation({ queryOnce })(
       [publicSignKey, credentials.publicSignKey],
       title,
     ).then((response) => {

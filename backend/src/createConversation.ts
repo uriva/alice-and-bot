@@ -41,10 +41,9 @@ export const createConversation: Type = async (
     map((identity) =>
       tx.keys[id()]
         .update({
-          key:
-            publicSignKeyToEncryptedSymmetricKey[
-              identity.publicSignKey
-            ] as EncryptedConversationKey,
+          key: publicSignKeyToEncryptedSymmetricKey[
+            identity.publicSignKey
+          ] as EncryptedConversationKey,
         }).link({ conversation: conversationId, owner: identity.id })
     )(identities),
   );

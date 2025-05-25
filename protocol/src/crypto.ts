@@ -1,4 +1,4 @@
-import { Buffer } from "buffer";
+import { Buffer } from "node:buffer";
 
 export type EncryptedAsymmetric<_T> = string & {
   readonly __brand: unique symbol;

@@ -1,5 +1,5 @@
 import { i } from "@instantdb/react";
-import {
+import type {
   EncryptedConversationKey,
   EncryptedMessage,
 } from "./protocol/src/api.ts";

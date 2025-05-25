@@ -1,5 +1,5 @@
 import { init as adminInit } from "@instantdb/admin";
-import { init, InstantReactWebDatabase } from "@instantdb/react";
+import { init, type InstantReactWebDatabase } from "@instantdb/react";
 import { coerce } from "gamla";
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
@@ -8,9 +8,10 @@ import schema from "../../instant.schema.ts";
 import {
   createConversation,
   createIdentity,
+  type Credentials,
   instantAppId,
 } from "../../protocol/src/api.ts";
-import { Chat, Credentials } from "./src/main.tsx";
+import { Chat } from "./src/main.tsx";
 
 const adminDb = adminInit({ appId: instantAppId, adminToken, schema });
 
