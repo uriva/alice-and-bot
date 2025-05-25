@@ -1,9 +1,7 @@
-import { init as adminInit } from "@instantdb/admin";
 import { init, type InstantReactWebDatabase } from "@instantdb/react";
 import { coerce } from "gamla";
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { adminToken } from "../../backend/src/db.ts";
 import schema from "../../instant.schema.ts";
 import {
   createConversation,
@@ -12,8 +10,6 @@ import {
   instantAppId,
 } from "../../protocol/src/api.ts";
 import { Chat } from "./src/main.tsx";
-
-const adminDb = adminInit({ appId: instantAppId, adminToken, schema });
 
 const prepareConversation = async (
   db: InstantReactWebDatabase<typeof schema>,
@@ -35,10 +31,6 @@ const Main = ({ db }: { db: InstantReactWebDatabase<typeof schema> }) => {
   const [alice, setAlice] = useState<Credentials | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const ChatWithDb = Chat(db);
-  useEffect(() => {
-    console.log("signing in");
-    adminDb.auth.createToken("alice@gmail.com").then(db.auth.signInWithToken);
-  }, []);
   useEffect(() => {
     prepareConversation(db)
       .then(({ alice, conversationId }) => {
