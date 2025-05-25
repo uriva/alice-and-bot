@@ -5,7 +5,7 @@ import type { JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
-  Credentials,
+  type Credentials,
   type DecipheredMessage,
   decryptMessage,
   sendMessage,

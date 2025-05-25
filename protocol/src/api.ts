@@ -2,9 +2,11 @@ import { id, type InstaQLEntity } from "@instantdb/core";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import { useEffect, useState } from "preact/hooks";
-import type { JSX } from "preact/jsx-runtime";
 import stringify from "safe-stable-stringify";
-import { apiClient, CreateConversationOutput } from "../../backend/src/api.ts";
+import {
+  apiClient,
+  type CreateConversationOutput,
+} from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
 import {
   encryptAsymmetric,

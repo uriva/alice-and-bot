@@ -1,7 +1,7 @@
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useState } from "preact/hooks";
-import { Chat } from "../../clients/react/src/main.tsx";
+import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import {
   createConversation,
@@ -11,10 +11,10 @@ import {
 } from "../../protocol/src/api.ts";
 import { PublicKey } from "./components.tsx";
 
-const { useQuery, queryOnce } = init({ appId: instantAppId, schema });
+const db = init({ appId: instantAppId, schema });
 
 const nameFromPublicSignKey = async (publicSignKey: string) => {
-  const { data } = await queryOnce({
+  const { data } = await db.queryOnce({
     identities: { $: { where: { publicSignKey } } },
   });
   if (data.identities.length === 0) {
@@ -28,12 +28,14 @@ const nameFromPublicSignKey = async (publicSignKey: string) => {
 
 const selectedConversation = signal<string | null>(null);
 
+const Chat = ChatNoDb(db);
+
 const startConversation =
   (credentials: Credentials, publicSignKey: string) => async () => {
     const title = `${await nameFromPublicSignKey(
       credentials.publicSignKey,
     )} & ${await nameFromPublicSignKey(publicSignKey)}`;
-    await createConversation({ queryOnce })(
+    await createConversation(db)(
       [publicSignKey, credentials.publicSignKey],
       title,
     ).then((response) => {
@@ -52,7 +54,7 @@ export const ChatDemo = () => {
   );
   const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [inputCredentials, setInputCredentials] = useState("");
-  const { data, error, isLoading } = useQuery({
+  const { data, error, isLoading } = db.useQuery({
     conversations: {
       $: {
         where: {
