@@ -78,6 +78,20 @@ export type ChatProps = {
   className?: string;
 };
 
+export const useConversations =
+  (db: InstantReactWebDatabase<typeof schema>) =>
+  ({ publicSignKey }: Credentials) => {
+    const { data, error } = db.useQuery({
+      conversations: {
+        $: { where: { "participants.publicSignKey": publicSignKey } },
+      },
+    });
+    if (error) {
+      console.error("Error fetching conversations:", error);
+    }
+    return data?.conversations ?? [];
+  };
+
 export const Chat = (db: InstantReactWebDatabase<typeof schema>) =>
 ({
   credentials,

@@ -1,7 +1,10 @@
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useState } from "preact/hooks";
-import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
+import {
+  Chat as ChatNoDb,
+  useConversations,
+} from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import {
   createConversation,
@@ -54,23 +57,7 @@ export const ChatDemo = () => {
   );
   const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [inputCredentials, setInputCredentials] = useState("");
-  const { data, error, isLoading } = db.useQuery({
-    conversations: {
-      $: {
-        where: {
-          "participants.publicSignKey": credentials?.publicSignKey ?? "",
-        },
-      },
-    },
-  });
-  if (error) {
-    console.error("Error fetching conversations:", error);
-    return <div class="text-red-500">Error fetching conversations</div>;
-  }
-  if (isLoading) {
-    return <div class="text-gray-500 dark:text-gray-400">Loading...</div>;
-  }
-  const { conversations } = data;
+  const conversations = credentials ? useConversations(db)(credentials) : [];
   const onClickCreateIdentity = async () => {
     if (!identityName.trim()) {
       alert("Please enter a name for your identity.");
