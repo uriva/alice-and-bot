@@ -1,6 +1,6 @@
 import { init } from "@instantdb/react";
 import type { JSX } from "preact/jsx-runtime";
-import type { CreateConversationOutput } from "./backend/src/api.ts";
+import { apiClient, type CreateConversationOutput } from "./backend/src/api.ts";
 import { Chat as ChatNoDb, type ChatProps } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
 import {
@@ -20,9 +20,5 @@ export const createConversation: (
   conversationTitle: string,
 ) => Promise<CreateConversationOutput> = createConversationNoDb(db);
 
-export const addWebhook = (
-  _url: string,
-  _publicSignKey: string,
-): Promise<void> => {
-  throw new Error("Not yet implemented");
-};
+export const addWebhook = (payload: { url: string; publicSignKey: string }) =>
+  apiClient({ endpoint: "setWebhook", payload });
