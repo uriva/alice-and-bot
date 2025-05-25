@@ -32,7 +32,7 @@
     "types": []
   },
   "license": "MIT",
-  "name": "@alice-and-bot/react-chat",
+  "name": "@alice-and-bot/core",
   "version": "0.0.1",
   "exports": "./mod.ts"
 }
