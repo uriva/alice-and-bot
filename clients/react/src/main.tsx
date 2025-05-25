@@ -83,6 +83,7 @@ export const useConversations =
   ({ publicSignKey }: Credentials) => {
     const { data, error } = db.useQuery({
       conversations: {
+        participants: {},
         $: { where: { "participants.publicSignKey": publicSignKey } },
       },
     });
