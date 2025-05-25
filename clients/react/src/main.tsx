@@ -1,8 +1,8 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe, sideLog } from "gamla";
-import { timeAgo } from "jsr:@egamagz/time-ago@2025.4.9";
 import type { JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { timeAgo } from "time-ago";
 import type schema from "../../../instant.schema.ts";
 import {
   type Credentials,
