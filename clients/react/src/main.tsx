@@ -1,6 +1,5 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe, sideLog } from "gamla";
-import type { JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { timeAgo } from "time-ago";
 import type schema from "../../../instant.schema.ts";
@@ -85,7 +84,7 @@ export const Chat = (db: InstantReactWebDatabase<typeof schema>) =>
   conversationId,
   style,
   className,
-}: ChatProps): JSX.Element => {
+}: ChatProps) => {
   const [messages, setMessages] = useState<DecipheredMessage[]>([]);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
