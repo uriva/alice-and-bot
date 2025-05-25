@@ -1,5 +1,5 @@
-import { id, User } from "@instantdb/admin";
-import { apiHandler, ApiImplementation } from "typed-api";
+import { id, type User } from "@instantdb/admin";
+import { apiHandler, type ApiImplementation } from "typed-api";
 import { backendApiSchema } from "./api.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
