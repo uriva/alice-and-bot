@@ -28,15 +28,13 @@ export const decryptAsymmetric = async <T>(
   privateKey: string,
   data: EncryptedAsymmetric<T>,
 ): Promise<T> =>
-  JSON.parse(
-    new TextDecoder().decode(
-      await crypto.subtle.decrypt(
-        encryptAlgo,
-        await importKey(privateKey, "decrypt"),
-        base64ToUint8Array(data),
-      ),
+  JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt(
+      encryptAlgo,
+      await importKey(privateKey, "decrypt"),
+      base64ToUint8Array(data),
     ),
-  );
+  ));
 
 const importKey = (
   key: string,

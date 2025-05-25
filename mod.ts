@@ -14,7 +14,7 @@ import {
   type SendMessageParams,
 } from "./protocol/src/api.ts";
 
-export { createIdentity } from "./protocol/src/api.ts";
+export { createIdentity, type Credentials } from "./protocol/src/api.ts";
 
 const db = init({ appId: instantAppId, schema });
 
