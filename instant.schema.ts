@@ -1,4 +1,4 @@
-import { i } from "@instantdb/react";
+import { i } from "@instantdb/core";
 import type {
   EncryptedConversationKey,
   EncryptedMessage,
