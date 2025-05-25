@@ -9,6 +9,7 @@ import { Chat as ChatNoDb, type ChatProps } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
 import {
   createConversation as createConversationNoDb,
+  type Credentials,
   instantAppId,
   sendMessage as sendMessageNoDb,
   type SendMessageParams,
@@ -28,6 +29,10 @@ export const createConversation: (
   conversationTitle: string,
 ) => Promise<CreateConversationOutput> = createConversationNoDb(db);
 
-export const addWebhook = (
-  payload: { url: string; publicSignKey: string },
-): Promise<SetWebhookOutput> => apiClient({ endpoint: "setWebhook", payload });
+export const setWebhook = (
+  { url, credentials: { publicSignKey } }: {
+    url: string;
+    credentials: Credentials;
+  },
+): Promise<SetWebhookOutput> =>
+  apiClient({ endpoint: "setWebhook", payload: { url, publicSignKey } });
