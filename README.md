@@ -1,8 +1,6 @@
 # alice-and-bot
 
-## tasks
-
-### security
+## known security weaknesses
 
 1. handle faking the time
 1. handle linking message to a bad conversation id
@@ -13,9 +11,3 @@
    someone outside
 1. createConversation endpoint is public
 1. notify endpoint is public
-
-### flow
-
-1. account owner creates two identities, one for bot and one for tester
-1. it enrolls the bot identity with a webhook
-1. it stores the user identity in the db
