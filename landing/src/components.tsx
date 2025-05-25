@@ -1,5 +1,5 @@
-import type { JSX } from "preact";
 import { useState } from "preact/hooks";
+import type { JSX } from "preact/jsx-runtime";
 
 export const Button = (props: JSX.IntrinsicElements["button"]) => {
   const { className = "", children, disabled, ...rest } = props;
