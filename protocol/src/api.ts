@@ -23,7 +23,7 @@ import {
   verify,
 } from "./crypto.ts";
 
-export const instantAppId = "bb3dc195-7bdc-478b-b8f7-7fdc36f95d75";
+export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
 
 type InternalMessage = { type: "text"; text: string };
 
