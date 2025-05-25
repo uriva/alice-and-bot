@@ -50,16 +50,14 @@ const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
       });
       return {};
     },
-    setWebhook: async ({ email }, { url, publicSignKey }) => {
+    setWebhook: async ({ url, publicSignKey }) => {
       const { identities } = await query({
-        identities: {
-          $: { where: { publicSignKey, "account.email": email } },
-        },
+        identities: { $: { where: { publicSignKey } } },
       });
       if (identities.length === 0) {
         return {
           success: false,
-          error: "identity-does-not-exist-or-not-owned",
+          error: "identity-does-not-exist",
         };
       }
       const identity = identities[0];

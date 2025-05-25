@@ -55,7 +55,7 @@ export const backendApiSchema = {
     output: z.object({}),
   }),
   setWebhook: endpoint({
-    authRequired: true,
+    authRequired: false,
     input: z.object({
       url: z.string(),
       publicSignKey: z.string(),
@@ -64,7 +64,7 @@ export const backendApiSchema = {
       z.object({ success: z.literal(true) }),
       z.object({
         success: z.literal(false),
-        error: z.literal("identity-does-not-exist-or-not-owned"),
+        error: z.literal("identity-does-not-exist"),
       }),
     ]),
   }),
