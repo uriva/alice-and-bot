@@ -4,10 +4,10 @@ import {
   type CreateConversationOutput,
   type SetWebhookOutput,
 } from "./backend/src/api.ts";
-import {
-  Chat as ChatNoDb,
-  useConversations as useConversationsNoDb,
-} from "./clients/react/src/main.tsx";
+// import {
+//   Chat as ChatNoDb,
+//   useConversations as useConversationsNoDb,
+// } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
 import {
   createConversation as createConversationNoDb,
@@ -28,7 +28,8 @@ export {
 
 const db = init({ appId: instantAppId, schema });
 
-export const useConversations = useConversationsNoDb(db);
+// export const useConversations = useConversationsNoDb(db);
+// export const Chat = ChatNoDb(db);
 
 export const handleWebhookUpdate: (
   whUpdate: WebhookUpdate,
@@ -41,7 +42,6 @@ export const handleWebhookUpdate: (
   }
 > = handleWebhookUpdateNoDb(db);
 
-export const Chat = ChatNoDb(db);
 
 export const sendMessage: (params: SendMessageParams) => Promise<string> =
   sendMessageNoDb(db);
