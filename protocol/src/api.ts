@@ -47,6 +47,13 @@ const msgToStr = stringify;
 
 export type EncryptedConversationKey = EncryptedAsymmetric<string>;
 
+export type SendMessageParams = {
+  conversationKey: string;
+  credentials: Credentials;
+  message: InternalMessage;
+  conversation: string;
+};
+
 export const sendMessage = (
   { transact, tx }: Pick<
     InstantReactWebDatabase<typeof schema>,
@@ -54,15 +61,16 @@ export const sendMessage = (
   >,
 ) =>
 async (
-  conversationSymmetricKey: string,
-  publicSignKey: string,
-  privateSignKey: string,
-  message: InternalMessage,
-  conversation: string,
+  {
+    conversationKey,
+    conversation,
+    credentials: { privateSignKey, publicSignKey },
+    message,
+  }: SendMessageParams,
 ): Promise<string> => {
   const signature = await sign(privateSignKey, msgToStr(message));
   const payload = await encryptSymmetric(
-    conversationSymmetricKey,
+    conversationKey,
     { payload: message, publicSignKey, signature },
   );
   const messageId = id();

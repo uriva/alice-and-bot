@@ -147,13 +147,12 @@ export const Chat = (db: InstantReactWebDatabase<typeof schema>) =>
 
   const onSend = async () => {
     if (conversationKey && input.trim()) {
-      await sendMessage(db)(
+      await sendMessage(db)({
         conversationKey,
-        credentials.publicSignKey,
-        credentials.privateSignKey,
-        { type: "text", text: input },
-        conversationId,
-      );
+        credentials,
+        message: { type: "text", text: input },
+        conversation: conversationId,
+      });
       setInput("");
       inputRef.current?.focus();
     }
