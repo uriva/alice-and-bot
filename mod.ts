@@ -30,10 +30,7 @@ export {
 
 const db = init({ appId: instantAppId, schema });
 
-export const useConversations: ({ publicSignKey }: Credentials) => {
-  id: string;
-  title: string;
-}[] = useConversationsNoDb(db);
+export const useConversations = useConversationsNoDb(db);
 
 export const handleWebhookUpdate: (
   whUpdate: WebhookUpdate,

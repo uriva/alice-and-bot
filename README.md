@@ -13,3 +13,4 @@
 1. notify endpoint is public
 1. one can choose not to notify - adding messages
 1. everyone can see all metadata - groups, who sent when
+1. webhooks are exposed to anyone seeing participants
