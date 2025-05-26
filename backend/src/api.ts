@@ -62,9 +62,9 @@ export const backendApiSchema = {
     }),
     output: z.object({}),
   }),
-  notify: endpoint({
+  sendMessage: endpoint({
     authRequired: false,
-    input: z.object({ messageId: z.string() }),
+    input: z.object({ encryptedMessage: z.string(), conversation: z.string() }),
     output: z.object({}),
   }),
   setWebhook: endpoint({

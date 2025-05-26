@@ -1,4 +1,4 @@
-import { id, type InstaQLEntity } from "@instantdb/core";
+import { type InstaQLEntity } from "@instantdb/core";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import stringify from "safe-stable-stringify";
@@ -53,33 +53,26 @@ export type SendMessageParams = {
   conversation: string;
 };
 
-export const sendMessage = (
-  { transact, tx }: Pick<
-    InstantReactWebDatabase<typeof schema>,
-    "transact" | "tx"
-  >,
-) =>
-async (
+export const sendMessage = async (
   {
     conversationKey,
     conversation,
     credentials: { privateSignKey, publicSignKey },
     message,
   }: SendMessageParams,
-): Promise<string> => {
-  const signature = await sign(privateSignKey, msgToStr(message));
-  const payload = await encryptSymmetric(
+) => {
+  const encryptedMessage = await encryptSymmetric(
     conversationKey,
-    { payload: message, publicSignKey, signature },
+    {
+      payload: message,
+      publicSignKey,
+      signature: await sign(privateSignKey, msgToStr(message)),
+    },
   );
-  const messageId = id();
-  await transact(
-    tx.messages[messageId]
-      .update({ payload, timestamp: Date.now() })
-      .link({ conversation }),
-  );
-  await apiClient({ endpoint: "notify", payload: { messageId } });
-  return messageId;
+  await apiClient({
+    endpoint: "sendMessage",
+    payload: { conversation, encryptedMessage },
+  });
 };
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;

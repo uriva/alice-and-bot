@@ -1,9 +1,9 @@
-import { id, User } from "@instantdb/core";
+import { id, type User } from "@instantdb/core";
 import { map } from "gamla";
-import { ApiImplementation } from "typed-api";
-import { backendApiSchema } from "./api.ts";
+import type { ApiImplementation } from "typed-api";
+import type { EncryptedConversationKey } from "../../protocol/src/api.ts";
+import type { backendApiSchema } from "./api.ts";
 import { query, transact, tx } from "./db.ts";
-import { EncryptedConversationKey } from "../../protocol/src/api.ts";
 
 type Type = ApiImplementation<
   User,

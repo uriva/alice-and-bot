@@ -4,6 +4,7 @@ import { backendApiSchema } from "./api.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import { callWebhooks } from "./notificationService.ts";
+import { EncryptedMessage } from "../../protocol/src/api.ts";
 
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
@@ -39,7 +40,20 @@ const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
         : { conversationKey: keys[0].key };
     },
     createConversation,
-    notify: callWebhooks,
+    sendMessage: async ({ encryptedMessage, conversation }) => {
+      const messageId = id();
+      await transact(
+        tx.messages[messageId]
+          .update({
+            payload: encryptedMessage as EncryptedMessage,
+            timestamp: Date.now(),
+          }).link({
+            conversation,
+          }),
+      );
+      await callWebhooks({ messageId });
+      return {};
+    },
     createAccount: async () => {
       const accountId = id();
       const accessToken = crypto.randomUUID();
