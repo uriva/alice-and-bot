@@ -7,7 +7,6 @@ import {
   type Credentials,
   type DecipheredMessage,
   decryptMessage,
-  keysQuery,
   sendMessage,
 } from "../../../protocol/src/api.ts";
 import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
@@ -216,11 +215,15 @@ const useConversationKey = (
 ) =>
 (
   conversation: string,
-  credentials: Credentials,
+  { publicSignKey, privateEncryptKey }: Credentials,
 ): string | null => {
   const [key, setKey] = useState<string | null>(null);
   const { isLoading, error, data } = useQuery(
-    keysQuery(credentials, conversation),
+    {
+      keys: {
+        $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
+      },
+    },
   );
   if (error) {
     console.error("Failed to fetch conversation key", error);
@@ -230,10 +233,10 @@ const useConversationKey = (
   useEffect(() => {
     if (!data.keys[0]?.key) return;
     if (data.keys.length > 1) throw new Error("Multiple keys found");
-    decryptAsymmetric<string>(credentials.privateEncryptKey, data.keys[0].key)
+    decryptAsymmetric<string>(privateEncryptKey, data.keys[0].key)
       .then((key: string) => {
         setKey(key);
       });
-  }, [data.keys[0]?.key, credentials.privateEncryptKey]);
+  }, [data.keys[0]?.key, privateEncryptKey]);
   return key;
 };

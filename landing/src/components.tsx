@@ -19,9 +19,7 @@ export const Button = (props: JSX.IntrinsicElements["button"]) => {
   );
 };
 
-export const PublicKey = (
-  { pubkey }: { pubkey: string },
-) => {
+export const PublicKey = ({ pubkey }: { pubkey: string }) => {
   const [copied, setCopied] = useState(false);
   const truncateKey = (key: string) => {
     if (key.length <= 10) return key;

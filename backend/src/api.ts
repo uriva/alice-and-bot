@@ -12,6 +12,17 @@ export type SetWebhookOutput = z.infer<
 >;
 
 export const backendApiSchema = {
+  conversationKey: endpoint({
+    authRequired: false,
+    input: z.object({
+      conversationId: z.string(),
+      publicSignKey: z.string(),
+    }),
+    output: z.union([
+      z.object({ conversationKey: z.string() }),
+      z.object({ error: z.literal("no-such-key") }),
+    ]),
+  }),
   createConversation: endpoint({
     authRequired: false,
     input: z.object({

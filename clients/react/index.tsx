@@ -55,5 +55,3 @@ render(
   <Main db={init({ appId: instantAppId, schema })} />,
   coerce(document.getElementById("root")),
 );
-
-

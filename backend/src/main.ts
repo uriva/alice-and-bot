@@ -23,6 +23,21 @@ const createIdentityForAccount = async (
 const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
   authenticate: (token: string) => auth.verifyToken(token),
   handlers: {
+    conversationKey: async ({ conversationId, publicSignKey }) => {
+      const { keys } = await query({
+        keys: {
+          $: {
+            where: {
+              conversation: conversationId,
+              "owner.publicSignKey": publicSignKey,
+            },
+          },
+        },
+      });
+      return (keys.length === 0)
+        ? { error: "no-such-key" }
+        : { conversationKey: keys[0].key };
+    },
     createConversation,
     notify: callWebhooks,
     createAccount: async () => {

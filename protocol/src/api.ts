@@ -1,4 +1,4 @@
-import { id, type InstaQLEntity } from "@instantdb/core";
+import { id, InstantCoreDatabase, type InstaQLEntity } from "@instantdb/core";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import stringify from "safe-stable-stringify";
@@ -84,40 +84,40 @@ async (
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
-export const keysQuery = ({ publicSignKey }: Credentials, conversation: string) => ({
-  keys: {
-    $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
-  },
-});
+const getConversationKeyForWebhookHandling = async (
+  credentials: Credentials,
+  conversation: string,
+) => {
+  const result = await apiClient({
+    endpoint: "conversationKey",
+    payload: {
+      conversationId: conversation,
+      publicSignKey: credentials.publicSignKey,
+    },
+  });
+  if ("error" in result) {
+    throw new Error("No keys found for conversation");
+  }
+  return await decryptAsymmetric<string>(
+    credentials.privateEncryptKey,
+    result.conversationKey as EncryptedAsymmetric<string>,
+  );
+};
 
-const getConversationKeyForWebhookHandling =
-  (db: InstantReactWebDatabase<typeof schema>) =>
-  async (credentials: Credentials, conversation: string) => {
-    const { data: { keys } } = await db.queryOnce(
-      keysQuery(credentials, conversation),
-    );
-    if (keys.length === 0) {
-      throw new Error("No keys found for conversation");
-    }
-    return await decryptAsymmetric<string>(
-      credentials.privateEncryptKey,
-      keys[0].key,
-    );
+export const handleWebhookUpdate = async (
+  whUpdate: WebhookUpdate,
+  credentials: Credentials,
+) => {
+  const key = await getConversationKeyForWebhookHandling(
+    credentials,
+    whUpdate.conversationId,
+  );
+  return {
+    conversationId: whUpdate.conversationId,
+    message: await decryptMessage(key)(whUpdate),
+    conversationKey: key,
   };
-
-export const handleWebhookUpdate =
-  (db: InstantReactWebDatabase<typeof schema>) =>
-  async (whUpdate: WebhookUpdate, credentials: Credentials) => {
-    const key = await getConversationKeyForWebhookHandling(db)(
-      credentials,
-      whUpdate.conversationId,
-    );
-    return {
-      conversationId: whUpdate.conversationId,
-      message: await decryptMessage(key)(whUpdate),
-      conversationKey: key,
-    };
-  };
+};
 
 export type DecipheredMessage =
   & { publicSignKey: string; timestamp: number }

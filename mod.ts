@@ -10,17 +10,15 @@ import schema from "./instant.schema.ts";
 import {
   createConversation as createConversationNoDb,
   type Credentials,
-  type DecipheredMessage,
-  handleWebhookUpdate as handleWebhookUpdateNoDb,
   instantAppId,
   sendMessage as sendMessageNoDb,
   type SendMessageParams,
-  type WebhookUpdate,
 } from "./protocol/src/api.ts";
 
 export {
   createIdentity,
   type Credentials,
+  handleWebhookUpdate,
   type WebhookUpdate,
 } from "./protocol/src/api.ts";
 
@@ -28,17 +26,6 @@ const db = init({ appId: instantAppId, schema });
 
 export const useConversations = useConversationsNoDb(db);
 export const Chat = ChatNoDb(db);
-
-export const handleWebhookUpdate: (
-  whUpdate: WebhookUpdate,
-  credentials: Credentials,
-) => Promise<
-  {
-    conversationId: string;
-    conversationKey: string;
-    message: DecipheredMessage;
-  }
-> = handleWebhookUpdateNoDb(db);
 
 export const sendMessage: (params: SendMessageParams) => Promise<string> =
   sendMessageNoDb(db);
