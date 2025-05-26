@@ -46,7 +46,7 @@ const msgToStr = stringify;
 
 export type EncryptedConversationKey = EncryptedAsymmetric<string>;
 
-export type SendMessageParams = {
+type SendMessageParams = {
   conversationKey: string;
   credentials: Credentials;
   message: InternalMessage;

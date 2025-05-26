@@ -135,7 +135,7 @@ export const Chat =
 
     const onSend = async () => {
       if (conversationKey && input.trim()) {
-        await sendMessage(db)({
+        await sendMessage({
           conversationKey,
           credentials,
           message: { type: "text", text: input },

@@ -11,14 +11,13 @@ import {
   createConversation as createConversationNoDb,
   type Credentials,
   instantAppId,
-  sendMessage as sendMessageNoDb,
-  type SendMessageParams,
 } from "./protocol/src/api.ts";
 
 export {
   createIdentity,
   type Credentials,
   handleWebhookUpdate,
+  sendMessage,
   type WebhookUpdate,
 } from "./protocol/src/api.ts";
 
@@ -26,9 +25,6 @@ const db = init({ appId: instantAppId, schema });
 
 export const useConversations = useConversationsNoDb(db);
 export const Chat = ChatNoDb(db);
-
-export const sendMessage: (params: SendMessageParams) => Promise<string> =
-  sendMessageNoDb(db);
 
 export const createConversation: (
   publicSignKeys: string[],
