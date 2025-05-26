@@ -133,13 +133,15 @@ export const Chat =
       }
     }, [limit, data, fetchingMore]);
 
-    const onSend = async () => {
+    const onSend = () => {
       if (conversationKey && input.trim()) {
-        await sendMessage({
+        sendMessage({
           conversationKey,
           credentials,
           message: { type: "text", text: input },
           conversation: conversationId,
+        }).catch((err) => {
+          console.error("Failed to send message", err);
         });
         setInput("");
         inputRef.current?.focus();
