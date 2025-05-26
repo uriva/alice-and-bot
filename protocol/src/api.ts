@@ -69,7 +69,7 @@ export const sendMessage = async (
       signature: await sign(privateSignKey, msgToStr(message)),
     },
   );
-  await apiClient({
+  return apiClient({
     endpoint: "sendMessage",
     payload: { conversation, encryptedMessage },
   });
