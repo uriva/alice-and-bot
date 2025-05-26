@@ -1,10 +1,10 @@
 import { id, type User } from "@instantdb/admin";
 import { apiHandler, type ApiImplementation } from "typed-api";
+import type { EncryptedMessage } from "../../protocol/src/api.ts";
 import { backendApiSchema } from "./api.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import { callWebhooks } from "./notificationService.ts";
-import { EncryptedMessage } from "../../protocol/src/api.ts";
 
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
@@ -52,7 +52,7 @@ const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
           }),
       );
       await callWebhooks({ messageId });
-      return {};
+      return { messageId };
     },
     createAccount: async () => {
       const accountId = id();

@@ -1,4 +1,4 @@
-import { type InstaQLEntity } from "@instantdb/core";
+import type { InstaQLEntity } from "@instantdb/core";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import stringify from "safe-stable-stringify";
