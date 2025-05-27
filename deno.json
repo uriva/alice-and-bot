@@ -2,7 +2,7 @@
   "tasks": {
     "build-landing": "cd landing; deno run -A --node-modules-dir=auto npm:vite build",
     "landing": "cd landing; deno run -A --node-modules-dir=auto npm:vite",
-    "widget": "cd widget; deno run -A --node-modules-dir=auto npm:vite build",
+    "widget": "cd widget && deno run -A --node-modules-dir=auto npm:vite build --config vite.config.ts",
     "dev": "cd clients/react; deno run -A --node-modules-dir=auto npm:vite",
     "build": "deno run -A --node-modules-dir=auto npm:vite build"
   },

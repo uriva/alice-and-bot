@@ -16,7 +16,8 @@ jobs:
             deno-version: v2.x
       - uses: actions/checkout@v4
       - run: deno task widget
-      - run: find . -type d -name dist
+      - name: Confirm widget is built
+        run: ls -l widget/dist
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
