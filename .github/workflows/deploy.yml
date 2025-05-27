@@ -14,20 +14,9 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
             deno-version: v2.x
-
       - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - run: deno task widget
-
-      - name: Find dist folder
-        run: find . -type d -name dist
-
-
+      - run: find . -type d -name dist
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
