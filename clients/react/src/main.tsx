@@ -9,7 +9,10 @@ import {
   sendMessage,
 } from "../../../protocol/src/api.ts";
 import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
-import { AbstractChatBox } from "./abstractChatBox.tsx";
+import {
+  type AbstracChatMessage,
+  AbstractChatBox,
+} from "./abstractChatBox.tsx";
 
 export type ChatProps = {
   credentials: Credentials;
@@ -17,6 +20,17 @@ export type ChatProps = {
   style?: Record<string, string>;
   className?: string;
 };
+
+const msgToUIMessage =
+  (details: Record<string, { name: string; avatar?: string }>) =>
+  (msg: DecipheredMessage): AbstracChatMessage => ({
+    authorId: msg.publicSignKey,
+    authorName: details[msg.publicSignKey]?.name ||
+      msg.publicSignKey,
+    authorAvatar: details[msg.publicSignKey]?.avatar,
+    text: msg.text,
+    timestamp: msg.timestamp,
+  });
 
 export const Chat =
   (db: InstantReactWebDatabase<typeof schema>) =>
@@ -44,14 +58,32 @@ export const Chat =
         pipe(map(decryptMessage(conversationKey)), setMessages)(sorted);
       }
     }, [conversationKey, encryptedMessages]);
-    if (!conversationKey) return null;
+    const { data: identitiesData } = db.useQuery({
+      identities: {
+        $: {
+          where: {
+            publicSignKey: { $in: messages.map((msg) => msg.publicSignKey) },
+          },
+        },
+      },
+    });
+    const details = Object.fromEntries(
+      (identitiesData?.identities ?? []).map((identity) => [
+        identity.publicSignKey,
+        {
+          name: identity.name || identity.publicSignKey,
+          avatar: identity.avatar,
+        },
+      ]),
+    );
     return (
       <AbstractChatBox
         limit={limit}
         setLimit={setLimit}
         userId={credentials.publicSignKey}
-        messages={messages}
+        messages={messages.map(msgToUIMessage(details))}
         onSend={(input: string) => {
+          if (!conversationKey) return null;
           sendMessage({
             conversationKey,
             credentials,

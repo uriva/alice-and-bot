@@ -1,7 +1,16 @@
+const isDarkMode = () =>
+  typeof globalThis !== "undefined" &&
+  "matchMedia" in globalThis &&
+  globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+
 export const chatContainerStyle = {
   border: "1px solid #ccc",
   padding: 8,
   maxWidth: 400,
+  background: isDarkMode() ? "#1a202c" : "#fff",
+  color: isDarkMode() ? "#f3f4f6" : "#222",
+  borderColor: isDarkMode() ? "#374151" : "#ccc",
+  transition: "background 0.2s, color 0.2s, border-color 0.2s",
 };
 export const messageContainerStyle = {
   minHeight: 200,
@@ -10,6 +19,8 @@ export const messageContainerStyle = {
   marginBottom: 8,
   display: "flex",
   flexDirection: "column-reverse",
+  background: isDarkMode() ? "#111827" : "#f9fafb",
+  transition: "background 0.2s",
 };
 const avatarBaseStyle = {
   display: "inline-block",

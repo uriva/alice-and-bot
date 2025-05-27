@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { timeAgo } from "time-ago";
-import type { DecipheredMessage } from "../../../protocol/src/api.ts";
 import {
   bubbleStyle,
   chatContainerStyle,
@@ -12,15 +11,15 @@ import {
 } from "./design.tsx";
 
 const Message = (
-  { msg: { publicSignKey, text, timestamp }, next, isOwn }: {
-    msg: DecipheredMessage;
-    next: DecipheredMessage | undefined;
+  { msg: { authorId: author, text, timestamp }, next, isOwn }: {
+    msg: AbstracChatMessage;
+    next: AbstracChatMessage | undefined;
     isOwn: boolean;
   },
 ) => {
-  const isFirstOfSequence = !next || next.publicSignKey !== publicSignKey;
+  const isFirstOfSequence = !next || next.authorId !== author;
   const align = isOwn ? "flex-end" : "flex-start";
-  const bubbleColor = stringToColor(publicSignKey);
+  const bubbleColor = stringToColor(author);
   const showAvatar = isFirstOfSequence;
   const textColor = isLightColor(bubbleColor) ? "#222" : "#fff";
   return (
@@ -33,7 +32,7 @@ const Message = (
         marginBottom: showAvatar ? 12 : 2,
       }}
     >
-      {!isOwn && showAvatar && getAvatar(publicSignKey)}
+      {!isOwn && showAvatar && getAvatar(author)}
       <div
         style={bubbleStyle({
           textColor,
@@ -43,8 +42,10 @@ const Message = (
           align,
         })}
       >
-        <b style={{ fontSize: 11 }}>{publicSignKey.slice(0, 8)}</b>
-        <div>{text}</div>
+        <b style={{ fontSize: 11 }}>{author.slice(0, 8)}</b>
+        <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {text}
+        </div>
         <span
           style={{
             color: textColor === "#222" ? "#555" : "#eee",
@@ -59,10 +60,18 @@ const Message = (
   );
 };
 
+export type AbstracChatMessage = {
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  text: string;
+  timestamp: number;
+};
+
 export const AbstractChatBox = ({ limit, setLimit, userId, onSend, messages }: {
   userId: string;
   onSend: (input: string) => void;
-  messages: DecipheredMessage[];
+  messages: AbstracChatMessage[];
   limit: number;
   setLimit: (setter: (limit: number) => number) => void;
 }) => {
@@ -102,7 +111,7 @@ export const AbstractChatBox = ({ limit, setLimit, userId, onSend, messages }: {
         {messages.map((msg, i) => (
           <Message
             key={i}
-            isOwn={msg.publicSignKey === userId}
+            isOwn={msg.authorId === userId}
             msg={msg}
             next={messages[i + 1]}
           />
