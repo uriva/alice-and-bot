@@ -153,7 +153,7 @@ export const AbstractChatBox = (
     onSend: (input: string) => void;
     messages: AbstracChatMessage[];
     limit: number;
-    setLimit: (setter: (limit: number) => number) => void;
+    setLimit: (limit: number) => void;
     onClose?: () => void;
   },
 ) => {
@@ -170,7 +170,7 @@ export const AbstractChatBox = (
       messages?.length === limit
     ) {
       setFetchingMore(true);
-      setLimit((prev) => prev + 100);
+      setLimit(limit + 100);
       setFetchingMore(false);
     }
   };
