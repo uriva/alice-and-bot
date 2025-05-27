@@ -21,7 +21,8 @@ const Message = (
   const isFirstOfSequence = !next || next.authorId !== authorId;
   const bubbleColor = stringToColor(authorId);
   const showAvatar = isFirstOfSequence;
-  const textColor = isLightColor(bubbleColor) ? "#222" : "#fff";
+  // In dark mode, use light text; in light mode, use dark text
+  const textColor = isLightColor(bubbleColor) ? (isDarkMode() ? "#fff" : "#222") : (isDarkMode() ? "#fff" : "#fff");
   return (
     <div
       style={{
@@ -60,7 +61,7 @@ const Message = (
             : (
               <span
                 style={{
-                  color: isLightColor(bubbleColor) ? "#222" : "#fff",
+                  color: isLightColor(bubbleColor) ? (isDarkMode() ? "#fff" : "#222") : (isDarkMode() ? "#fff" : "#fff"),
                   fontWeight: 700,
                   fontSize: 14,
                 }}
@@ -85,7 +86,7 @@ const Message = (
         </div>
         <span
           style={{
-            color: textColor === "#222" ? "#555" : "#eee",
+            color: isDarkMode() ? "#bbb" : (textColor === "#222" ? "#555" : "#eee"),
             fontSize: 10,
             float: "right",
           }}

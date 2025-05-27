@@ -33,12 +33,15 @@ export const stringToColor = (str: string) => {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   const h = Math.abs(hash) % 360;
-  return `hsl(${h}, 60%, 70%)`;
+  const lightness = isDarkMode() ? 32 : 70;
+  return `hsl(${h}, 60%, ${lightness}%)`;
 };
 
 export const isLightColor = (hsl: string) => {
   const match = hsl.match(/hsl\(\d+, *\d+%, *(\d+)%\)/);
-  return !match || parseInt(match[1], 10) > 60;
+  if (!match) return false;
+  const lightness = parseInt(match[1], 10);
+  return lightness > 60;
 };
 
 export const bubbleStyle = (
