@@ -13,8 +13,7 @@ export const chatContainerStyle = {
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
 };
 export const messageContainerStyle = {
-  minHeight: 200,
-  maxHeight: 600,
+  height: 600,
   overflowY: "auto",
   marginBottom: 8,
   gap: 8,
