@@ -16,9 +16,8 @@ import {
 
 export type ChatProps = {
   credentials: Credentials;
+  onClose?: () => void;
   conversationId: string;
-  style?: Record<string, string>;
-  className?: string;
 };
 
 const msgToUIMessage =
@@ -82,11 +81,12 @@ const useDecryptedMessages = (
 
 export const Chat =
   (db: InstantReactWebDatabase<typeof schema>) =>
-  ({ credentials, conversationId }: ChatProps) => {
+  ({ credentials, conversationId, onClose }: ChatProps) => {
     const conversationKey = useConversationKey(db)(conversationId, credentials);
     const [limit, setLimit] = useState(100);
     return (
       <AbstractChatBox
+        onClose={onClose}
         limit={limit}
         setLimit={setLimit}
         userId={credentials.publicSignKey}

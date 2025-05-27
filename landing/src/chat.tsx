@@ -197,7 +197,6 @@ export const ChatDemo = () => {
               <Chat
                 credentials={credentials}
                 conversationId={selectedConversation.value}
-                className="bg-white dark:bg-gray-900 rounded-lg shadow"
               />
             </div>
           )}

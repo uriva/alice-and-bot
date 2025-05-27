@@ -83,13 +83,47 @@ export type AbstracChatMessage = {
   timestamp: number;
 };
 
-export const AbstractChatBox = ({ limit, setLimit, userId, onSend, messages }: {
-  userId: string;
-  onSend: (input: string) => void;
-  messages: AbstracChatMessage[];
-  limit: number;
-  setLimit: (setter: (limit: number) => number) => void;
-}) => {
+const CloseButton = ({ onClose }: { onClose: () => void }) => (
+  <button
+    type="button"
+    onClick={onClose}
+    title="Close chat"
+    style={{
+      position: "absolute",
+      top: 8,
+      right: 8,
+      background: "#f3f4f6",
+      border: "none",
+      borderRadius: "50%",
+      width: 32,
+      height: 32,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+      cursor: "pointer",
+      fontSize: 20,
+      color: "#555",
+      zIndex: 10,
+      transition: "background 0.2s",
+    }}
+    onMouseOver={(e) => (e.currentTarget.style.background = "#e5e7eb")}
+    onMouseOut={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+  >
+    ×
+  </button>
+);
+
+export const AbstractChatBox = (
+  { limit, setLimit, userId, onSend, messages, onClose }: {
+    userId: string;
+    onSend: (input: string) => void;
+    messages: AbstracChatMessage[];
+    limit: number;
+    setLimit: (setter: (limit: number) => number) => void;
+    onClose?: () => void;
+  },
+) => {
   const [fetchingMore, setFetchingMore] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
@@ -118,7 +152,8 @@ export const AbstractChatBox = ({ limit, setLimit, userId, onSend, messages }: {
     }
   }, [limit, messages, fetchingMore]);
   return (
-    <div style={chatContainerStyle}>
+    <div style={{ ...chatContainerStyle, position: "relative" }}>
+      {onClose && <CloseButton onClose={onClose} />}
       <div
         ref={messagesContainerRef}
         style={messageContainerStyle}
