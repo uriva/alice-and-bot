@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [preact(), deno()],
   build: {
     sourcemap: true,
-    outDir: "./dist",
+    outDir: "dist",
     lib: {
       entry: "src/entry.tsx",
       name: "aliceAndBot",
