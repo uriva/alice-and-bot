@@ -44,7 +44,7 @@ const useCredentials = (name: string | null) => {
   return credentials;
 };
 
-export const Widget = ({ dialTo }: { dialTo: string }) => {
+const InternalWidget = ({ dialTo }: { dialTo: string }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [name, setName] = useState<string | null>(null);
   const credentials = useCredentials(name);
@@ -122,3 +122,16 @@ export const Widget = ({ dialTo }: { dialTo: string }) => {
 
   return null;
 };
+
+export const Widget = ({ dialTo }: { dialTo: string }) => (
+  <div
+    style={{
+      position: "fixed",
+      bottom: 24,
+      right: 24,
+      zIndex: 10000,
+    }}
+  >
+    <InternalWidget dialTo={dialTo} />
+  </div>
+);
