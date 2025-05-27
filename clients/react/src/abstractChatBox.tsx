@@ -26,8 +26,8 @@ const Message = (
     <div
       style={{
         display: "flex",
-        alignItems: isOwn ? "flex-end" : "flex-start",
-        justifyContent: isOwn ? "flex-end" : "flex-start",
+        gap: 4,
+        flexDirection: isOwn ? "row-reverse" : "row",
       }}
     >
       {showAvatar && (

@@ -14,7 +14,7 @@ export const chatContainerStyle = {
 };
 export const messageContainerStyle = {
   minHeight: 200,
-  maxHeight: 300,
+  maxHeight: 600,
   overflowY: "auto",
   marginBottom: 8,
   gap: 8,
