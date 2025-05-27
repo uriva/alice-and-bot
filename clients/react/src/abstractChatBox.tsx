@@ -148,12 +148,12 @@ const CloseButton = ({ onClose }: { onClose: () => void }) => {
 };
 
 export const AbstractChatBox = (
-  { limit, setLimit, userId, onSend, messages, onClose }: {
+  { limit, loadMore, userId, onSend, messages, onClose }: {
     userId: string;
     onSend: (input: string) => void;
     messages: AbstracChatMessage[];
     limit: number;
-    setLimit: (limit: number) => void;
+    loadMore: () => void;
     onClose?: () => void;
   },
 ) => {
@@ -167,10 +167,10 @@ export const AbstractChatBox = (
       messagesContainerRef.current &&
       !fetchingMore &&
       messagesContainerRef.current.scrollTop === 0 &&
-      messages?.length === limit
+      messages.length === limit
     ) {
       setFetchingMore(true);
-      setLimit(limit + 100);
+      loadMore();
       setFetchingMore(false);
     }
   };
@@ -226,7 +226,10 @@ export const AbstractChatBox = (
         <button
           type="button"
           disabled={!input.trim()}
-          onClick={() => onSend(input.trim())}
+          onClick={() => {
+            setInput("");
+            onSend(input.trim());
+          }}
           className="p-2 border border-blue-500 rounded-md 
                      bg-blue-500 hover:bg-blue-600 
                      text-white 

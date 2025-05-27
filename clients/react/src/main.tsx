@@ -48,7 +48,7 @@ const useDecryptedMessages = (
       },
     },
   });
-  if (error) console.error(error);
+  if (error) console.error("error fetching alice and bot messages", error);
   const encryptedMessages = data?.messages;
   useEffect(() => {
     if (conversationKey && encryptedMessages) {
@@ -82,24 +82,21 @@ const useDecryptedMessages = (
 export const Chat =
   (db: InstantReactWebDatabase<typeof schema>) =>
   ({ credentials, conversationId, onClose }: ChatProps) => {
-    const conversationKey = useConversationKey(db)(conversationId, credentials);
+    const convoKey = useConversationKey(db)(conversationId, credentials);
     const [limit, setLimit] = useState(100);
     return (
       <AbstractChatBox
         onClose={onClose}
         limit={limit}
-        setLimit={setLimit}
+        loadMore={() => {
+          setLimit(limit + 100);
+        }}
         userId={credentials.publicSignKey}
-        messages={useDecryptedMessages(
-          db,
-          limit,
-          conversationKey,
-          conversationId,
-        )}
+        messages={useDecryptedMessages(db, limit, convoKey, conversationId)}
         onSend={(input: string) => {
-          if (!conversationKey) return null;
+          if (!convoKey) return null;
           sendMessage({
-            conversationKey,
+            conversationKey: convoKey,
             credentials,
             message: { type: "text", text: input },
             conversation: conversationId,

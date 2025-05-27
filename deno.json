@@ -10,7 +10,7 @@
     "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
     "buffer": "npm:buffer@6.0.3",
     "epoch-timeago": "npm:epoch-timeago@1.1.9",
-    "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.0",
+    "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.4",
     "@instantdb/admin": "npm:@instantdb/admin@0.19.5",
     "@instantdb/core": "npm:@instantdb/core@0.19.5",
     "@instantdb/react": "npm:@instantdb/react@0.19.5",
@@ -22,7 +22,7 @@
     "gamla": "npm:gamla@124.0.0",
     "posthog-js": "https://esm.sh/posthog-js@1.215.6",
     "react-hot-toast": "npm:react-hot-toast",
-    "vite": "npm:vite@^5.4.11",
+    "vite": "npm:vite@^6.3.5",
     "zod": "npm:zod@3.22.4",
     "time-ago": "jsr:@egamagz/time-ago@2025.4.9",
     "typed-api": "jsr:@uri/typed-api@0.0.8"
