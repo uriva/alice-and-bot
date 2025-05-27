@@ -1,6 +1,6 @@
 export const CHAT_CONTAINER_STYLE = {
   border: "1px solid #ccc",
-  padding: 16,
+  padding: 8,
   maxWidth: 400,
 };
 export const MESSAGES_CONTAINER_STYLE = {
