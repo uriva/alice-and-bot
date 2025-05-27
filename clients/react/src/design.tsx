@@ -1,4 +1,4 @@
-const isDarkMode = () =>
+export const isDarkMode = () =>
   typeof globalThis !== "undefined" &&
   "matchMedia" in globalThis &&
   globalThis.matchMedia("(prefers-color-scheme: dark)").matches;

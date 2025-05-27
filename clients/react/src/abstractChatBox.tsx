@@ -3,6 +3,7 @@ import { timeAgo } from "time-ago";
 import {
   bubbleStyle,
   chatContainerStyle,
+  isDarkMode,
   isLightColor,
   loadingStyle,
   messageContainerStyle,
@@ -104,36 +105,47 @@ export type AbstracChatMessage = {
   timestamp: number;
 };
 
-const CloseButton = ({ onClose }: { onClose: () => void }) => (
-  <button
-    type="button"
-    onClick={onClose}
-    title="Close chat"
-    style={{
-      position: "absolute",
-      top: 8,
-      right: 8,
-      background: "#f3f4f6",
-      border: "none",
-      borderRadius: "50%",
-      width: 32,
-      height: 32,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-      cursor: "pointer",
-      fontSize: 20,
-      color: "#555",
-      zIndex: 10,
-      transition: "background 0.2s",
-    }}
-    onMouseOver={(e) => (e.currentTarget.style.background = "#e5e7eb")}
-    onMouseOut={(e) => (e.currentTarget.style.background = "#f3f4f6")}
-  >
-    ×
-  </button>
-);
+const CloseButton = ({ onClose }: { onClose: () => void }) => {
+  const dark = isDarkMode();
+  const baseBg = dark ? "#23272f" : "#f3f4f6";
+  const hoverBg = dark ? "#374151" : "#e5e7eb";
+  const color = dark ? "#eee" : "#222";
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      title="Close chat"
+      style={{
+        position: "absolute",
+        top: 8,
+        right: 8,
+        background: baseBg,
+        border: "none",
+        borderRadius: "50%",
+        width: 28,
+        height: 28,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+        cursor: "pointer",
+        fontSize: 22,
+        color,
+        zIndex: 10,
+        transition: "background 0.2s, color 0.2s",
+        padding: 0,
+        fontWeight: 700,
+        lineHeight: 1,
+      }}
+      onMouseOver={(e) => (e.currentTarget.style.background = hoverBg)}
+      onMouseOut={(e) => (e.currentTarget.style.background = baseBg)}
+    >
+      <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1, color }}>
+        ×
+      </span>
+    </button>
+  );
+};
 
 export const AbstractChatBox = (
   { limit, setLimit, userId, onSend, messages, onClose }: {
