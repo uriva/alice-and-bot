@@ -26,8 +26,7 @@ const Message = (
     <div
       style={{
         display: "flex",
-        flexDirection: isOwn ? "row-reverse" : "row",
-        alignItems: "flex-end",
+        alignItems: isOwn ? "flex-end" : "flex-start",
         justifyContent: isOwn ? "flex-end" : "flex-start",
         marginBottom: showAvatar ? 12 : 2,
       }}
