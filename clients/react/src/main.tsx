@@ -32,56 +32,70 @@ const msgToUIMessage =
     timestamp: msg.timestamp,
   });
 
+const useDecryptedMessages = (
+  db: InstantReactWebDatabase<typeof schema>,
+  limit: number,
+  conversationKey: string | null,
+  conversationId: string,
+) => {
+  const [messages, setMessages] = useState<DecipheredMessage[]>([]);
+  const { data, error } = db.useQuery({
+    messages: {
+      conversation: {},
+      $: {
+        where: { conversation: conversationId },
+        order: { timestamp: "desc" },
+        limit,
+      },
+    },
+  });
+  if (error) console.error(error);
+  const encryptedMessages = data?.messages;
+  useEffect(() => {
+    if (conversationKey && encryptedMessages) {
+      const sorted = [...encryptedMessages].sort((a, b) =>
+        b.timestamp - a.timestamp
+      );
+      pipe(map(decryptMessage(conversationKey)), setMessages)(sorted);
+    }
+  }, [conversationKey, encryptedMessages]);
+  const { data: identitiesData } = db.useQuery({
+    identities: {
+      $: {
+        where: {
+          publicSignKey: { $in: messages.map((msg) => msg.publicSignKey) },
+        },
+      },
+    },
+  });
+  const details = Object.fromEntries(
+    (identitiesData?.identities ?? []).map((identity) => [
+      identity.publicSignKey,
+      {
+        name: identity.name || identity.publicSignKey,
+        avatar: identity.avatar,
+      },
+    ]),
+  );
+  return messages.map(msgToUIMessage(details));
+};
+
 export const Chat =
   (db: InstantReactWebDatabase<typeof schema>) =>
   ({ credentials, conversationId }: ChatProps) => {
-    const [messages, setMessages] = useState<DecipheredMessage[]>([]);
-    const [limit, setLimit] = useState(100);
-    const { data, error } = db.useQuery({
-      messages: {
-        conversation: {},
-        $: {
-          where: { conversation: conversationId },
-          order: { timestamp: "desc" },
-          limit,
-        },
-      },
-    });
-    if (error) console.error(error);
     const conversationKey = useConversationKey(db)(conversationId, credentials);
-    const encryptedMessages = data?.messages;
-    useEffect(() => {
-      if (conversationKey && encryptedMessages) {
-        const sorted = [...encryptedMessages].sort((a, b) =>
-          b.timestamp - a.timestamp
-        );
-        pipe(map(decryptMessage(conversationKey)), setMessages)(sorted);
-      }
-    }, [conversationKey, encryptedMessages]);
-    const { data: identitiesData } = db.useQuery({
-      identities: {
-        $: {
-          where: {
-            publicSignKey: { $in: messages.map((msg) => msg.publicSignKey) },
-          },
-        },
-      },
-    });
-    const details = Object.fromEntries(
-      (identitiesData?.identities ?? []).map((identity) => [
-        identity.publicSignKey,
-        {
-          name: identity.name || identity.publicSignKey,
-          avatar: identity.avatar,
-        },
-      ]),
-    );
+    const [limit, setLimit] = useState(100);
     return (
       <AbstractChatBox
         limit={limit}
         setLimit={setLimit}
         userId={credentials.publicSignKey}
-        messages={messages.map(msgToUIMessage(details))}
+        messages={useDecryptedMessages(
+          db,
+          limit,
+          conversationKey,
+          conversationId,
+        )}
         onSend={(input: string) => {
           if (!conversationKey) return null;
           sendMessage({
