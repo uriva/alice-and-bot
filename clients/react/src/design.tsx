@@ -1,9 +1,9 @@
-export const CHAT_CONTAINER_STYLE = {
+export const chatContainerStyle = {
   border: "1px solid #ccc",
   padding: 8,
   maxWidth: 400,
 };
-export const MESSAGES_CONTAINER_STYLE = {
+export const messageContainerStyle = {
   minHeight: 200,
   maxHeight: 300,
   overflowY: "auto",
@@ -11,7 +11,7 @@ export const MESSAGES_CONTAINER_STYLE = {
   display: "flex",
   flexDirection: "column-reverse",
 };
-const AVATAR_BASE_STYLE = {
+const avatarBaseStyle = {
   display: "inline-block",
   width: 28,
   height: 28,
@@ -24,7 +24,7 @@ const AVATAR_BASE_STYLE = {
   fontSize: 14,
 };
 export const loadingStyle = { fontSize: 12, color: "#bbb" };
-export const WAITING_STYLE = { color: "red", fontSize: 12 };
+export const waitingStyle = { color: "red", fontSize: 12 };
 
 export const stringToColor = (str: string) => {
   let hash = 0;
@@ -37,18 +37,14 @@ export const stringToColor = (str: string) => {
 
 export const isLightColor = (hsl: string) => {
   const match = hsl.match(/hsl\(\d+, *\d+%, *(\d+)%\)/);
-  if (!match) return true;
-  const lightness = parseInt(match[1], 10);
-  return lightness > 60;
+  return !match || parseInt(match[1], 10) > 60;
 };
 
-export const getAvatar = (publicSignKey: string) => {
-  const color = stringToColor(publicSignKey);
-  const initials = publicSignKey.slice(0, 2).toUpperCase();
-  return (
-    <div style={{ ...AVATAR_BASE_STYLE, background: color }}>{initials}</div>
-  );
-};
+export const getAvatar = (publicSignKey: string) => (
+  <div style={{ ...avatarBaseStyle, background: stringToColor(publicSignKey) }}>
+    {publicSignKey.slice(0, 2).toUpperCase()}
+  </div>
+);
 
 export const bubbleStyle = (
   { bubbleColor, textColor, isOwn, showAvatar, align }: {

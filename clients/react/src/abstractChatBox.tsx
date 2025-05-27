@@ -3,11 +3,11 @@ import { timeAgo } from "time-ago";
 import type { DecipheredMessage } from "../../../protocol/src/api.ts";
 import {
   bubbleStyle,
-  CHAT_CONTAINER_STYLE,
+  chatContainerStyle,
   getAvatar,
   isLightColor,
   loadingStyle,
-  MESSAGES_CONTAINER_STYLE,
+  messageContainerStyle,
   stringToColor,
 } from "./design.tsx";
 
@@ -94,10 +94,10 @@ export const AbstractChatBox = ({ limit, setLimit, userId, onSend, messages }: {
     }
   }, [limit, messages, fetchingMore]);
   return (
-    <div style={CHAT_CONTAINER_STYLE}>
+    <div style={chatContainerStyle}>
       <div
         ref={messagesContainerRef}
-        style={MESSAGES_CONTAINER_STYLE}
+        style={messageContainerStyle}
       >
         {messages.map((msg, i) => (
           <Message
