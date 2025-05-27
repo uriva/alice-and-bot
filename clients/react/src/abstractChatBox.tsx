@@ -11,15 +11,15 @@ import {
 } from "./design.tsx";
 
 const Message = (
-  { msg: { authorId: author, text, timestamp }, next, isOwn }: {
-    msg: AbstracChatMessage;
-    next: AbstracChatMessage | undefined;
-    isOwn: boolean;
-  },
+  { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
+    {
+      msg: AbstracChatMessage;
+      next: AbstracChatMessage | undefined;
+      isOwn: boolean;
+    },
 ) => {
-  const isFirstOfSequence = !next || next.authorId !== author;
-  const align = isOwn ? "flex-end" : "flex-start";
-  const bubbleColor = stringToColor(author);
+  const isFirstOfSequence = !next || next.authorId !== authorId;
+  const bubbleColor = stringToColor(authorId);
   const showAvatar = isFirstOfSequence;
   const textColor = isLightColor(bubbleColor) ? "#222" : "#fff";
   return (
@@ -28,21 +28,37 @@ const Message = (
         display: "flex",
         flexDirection: isOwn ? "row-reverse" : "row",
         alignItems: "flex-end",
-        justifyContent: align,
+        justifyContent: isOwn ? "flex-end" : "flex-start",
         marginBottom: showAvatar ? 12 : 2,
       }}
     >
-      {!isOwn && showAvatar && getAvatar(author)}
+      {!isOwn && showAvatar && (
+        authorAvatar
+          ? (
+            <img
+              src={authorAvatar}
+              alt={authorName}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                marginRight: 8,
+                objectFit: "cover",
+              }}
+            />
+          )
+          : getAvatar(authorName)
+      )}
       <div
         style={bubbleStyle({
           textColor,
           bubbleColor,
           isOwn,
           showAvatar,
-          align,
+          align: isOwn ? "flex-end" : "flex-start",
         })}
       >
-        <b style={{ fontSize: 11 }}>{author.slice(0, 8)}</b>
+        <b style={{ fontSize: 11 }}>{authorName}</b>
         <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
           {text}
         </div>
