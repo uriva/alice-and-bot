@@ -1,5 +1,5 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
-import { map, pipe, sideLog } from "gamla";
+import { map, pipe } from "gamla";
 import { useEffect, useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
@@ -49,7 +49,7 @@ export const Chat =
     });
     if (error) console.error(error);
     const conversationKey = useConversationKey(db)(conversationId, credentials);
-    const encryptedMessages = sideLog(data?.messages);
+    const encryptedMessages = data?.messages;
     useEffect(() => {
       if (conversationKey && encryptedMessages) {
         const sorted = [...encryptedMessages].sort((a, b) =>
