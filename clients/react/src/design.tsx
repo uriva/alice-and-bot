@@ -17,24 +17,15 @@ export const messageContainerStyle = {
   maxHeight: 300,
   overflowY: "auto",
   marginBottom: 8,
+  gap: 8,
   display: "flex",
   flexDirection: "column-reverse",
   background: isDarkMode() ? "#111827" : "#f9fafb",
   transition: "background 0.2s",
 };
-const avatarBaseStyle = {
-  display: "inline-block",
-  width: 28,
-  height: 28,
-  borderRadius: "50%",
-  color: "#222",
-  textAlign: "center",
-  lineHeight: "28px",
-  fontWeight: 700,
-  marginRight: 8,
-  fontSize: 14,
-};
+
 export const loadingStyle = { fontSize: 12, color: "#bbb" };
+
 export const waitingStyle = { color: "red", fontSize: 12 };
 
 export const stringToColor = (str: string) => {
@@ -50,12 +41,6 @@ export const isLightColor = (hsl: string) => {
   const match = hsl.match(/hsl\(\d+, *\d+%, *(\d+)%\)/);
   return !match || parseInt(match[1], 10) > 60;
 };
-
-export const getAvatar = (publicSignKey: string) => (
-  <div style={{ ...avatarBaseStyle, background: stringToColor(publicSignKey) }}>
-    {publicSignKey.slice(0, 2).toUpperCase()}
-  </div>
-);
 
 export const bubbleStyle = (
   { bubbleColor, textColor, isOwn, showAvatar, align }: {
@@ -73,6 +58,5 @@ export const bubbleStyle = (
   maxWidth: 220,
   marginLeft: isOwn ? 0 : (!isOwn && showAvatar ? 0 : 36),
   marginRight: isOwn ? (showAvatar ? 0 : 36) : 0,
-  marginBottom: 2,
   alignSelf: align,
 });

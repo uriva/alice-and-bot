@@ -3,7 +3,6 @@ import { timeAgo } from "time-ago";
 import {
   bubbleStyle,
   chatContainerStyle,
-  getAvatar,
   isLightColor,
   loadingStyle,
   messageContainerStyle,
@@ -28,25 +27,47 @@ const Message = (
         display: "flex",
         alignItems: isOwn ? "flex-end" : "flex-start",
         justifyContent: isOwn ? "flex-end" : "flex-start",
-        marginBottom: showAvatar ? 12 : 2,
       }}
     >
-      {!isOwn && showAvatar && (
-        authorAvatar
-          ? (
-            <img
-              src={authorAvatar}
-              alt={authorName}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                marginRight: 8,
-                objectFit: "cover",
-              }}
-            />
-          )
-          : getAvatar(authorName)
+      {showAvatar && (
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            marginRight: 8,
+            background: bubbleColor,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          {authorAvatar
+            ? (
+              <img
+                src={authorAvatar}
+                alt={authorName}
+                style={{
+                  width: 28,
+                  height: 28,
+                  objectFit: "cover",
+                  borderRadius: "50%",
+                }}
+              />
+            )
+            : (
+              <span
+                style={{
+                  color: isLightColor(bubbleColor) ? "#222" : "#fff",
+                  fontWeight: 700,
+                  fontSize: 14,
+                }}
+              >
+                {authorName.slice(0, 2).toUpperCase()}
+              </span>
+            )}
+        </div>
       )}
       <div
         style={bubbleStyle({
