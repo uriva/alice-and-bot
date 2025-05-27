@@ -21,7 +21,7 @@ export {
   type WebhookUpdate,
 } from "./protocol/src/api.ts";
 
-const db = init({ appId: instantAppId, schema });
+const db = init({ appId: instantAppId, schema, devtool: false });
 
 export const useConversations = useConversationsNoDb(db);
 export const Chat = ChatNoDb(db);
