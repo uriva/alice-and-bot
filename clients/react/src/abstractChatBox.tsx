@@ -251,6 +251,11 @@ export const AbstractChatBox = (
           ? (
             <div
               style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
                 textAlign: "center",
                 color: "#888",
               }}
@@ -324,7 +329,7 @@ export const AbstractChatBox = (
               : "0 2px 8px rgba(0,0,0,0.08)",
             fontFamily: "inherit",
             letterSpacing: 0.1,
-            overflow: "auto"
+            overflow: "auto",
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
@@ -379,7 +384,7 @@ export const AbstractChatBox = (
               : "0 2px 8px rgba(0,0,0,0.08)",
             fontFamily: "inherit",
             letterSpacing: 0.1,
-            overflow: "auto"
+            overflow: "auto",
           }}
         />
         <button
