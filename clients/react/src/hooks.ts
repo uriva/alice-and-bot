@@ -6,6 +6,24 @@ import {
   type Credentials,
 } from "../../../protocol/src/api.ts";
 
+export const useDarkMode = () => {
+  const getPref = () =>
+    typeof globalThis !== "undefined" &&
+    "matchMedia" in globalThis &&
+    globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  const [isDark, setIsDark] = useState(getPref());
+
+  useEffect(() => {
+    const mql = globalThis.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  return isDark;
+};
+
 export const useConversations =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
   ({ publicSignKey }: Credentials) => {

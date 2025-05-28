@@ -5,13 +5,12 @@ import ReactMarkdown from "react-markdown";
 import {
   bubbleStyle,
   chatContainerStyle,
-  isDarkMode,
   isLightColor,
   loadingStyle,
   messageContainerStyle,
   stringToColor,
 } from "./design.tsx";
-import { useIsMobile } from "./hooks.ts";
+import { useDarkMode, useIsMobile } from "./hooks.ts";
 
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
@@ -22,12 +21,13 @@ const Message = (
     },
 ) => {
   const isFirstOfSequence = !next || next.authorId !== authorId;
-  const bubbleColor = stringToColor(authorId);
+  const isDark = useDarkMode();
+  const bubbleColor = stringToColor(authorId, isDark);
   const showAvatar = isFirstOfSequence;
   // In dark mode, use light text; in light mode, use dark text
   const textColor = isLightColor(bubbleColor)
-    ? (isDarkMode() ? "#fff" : "#222")
-    : (isDarkMode() ? "#fff" : "#fff");
+    ? (isDark ? "#fff" : "#222")
+    : (isDark ? "#fff" : "#fff");
   return (
     <div
       style={{
@@ -50,7 +50,7 @@ const Message = (
             overflow: "hidden",
             padding: 4,
             boxSizing: "border-box",
-            boxShadow: isDarkMode() ? "0 1px 4px #0004" : "0 1px 4px #0001",
+            boxShadow: isDark ? "0 1px 4px #0004" : "0 1px 4px #0001",
             transition: "background 0.2s, box-shadow 0.2s",
           }}
         >
@@ -71,8 +71,8 @@ const Message = (
               <span
                 style={{
                   color: isLightColor(bubbleColor)
-                    ? (isDarkMode() ? "#fff" : "#222")
-                    : (isDarkMode() ? "#fff" : "#fff"),
+                    ? (isDark ? "#fff" : "#222")
+                    : (isDark ? "#fff" : "#fff"),
                   fontWeight: 700,
                   fontSize: 15,
                   letterSpacing: 0.5,
@@ -99,9 +99,7 @@ const Message = (
         </div>
         <span
           style={{
-            color: isDarkMode()
-              ? "#bbb"
-              : (textColor === "#222" ? "#555" : "#eee"),
+            color: isDark ? "#bbb" : (textColor === "#222" ? "#555" : "#eee"),
             fontSize: 10,
             float: "right",
           }}
@@ -122,10 +120,10 @@ export type AbstracChatMessage = {
 };
 
 const CloseButton = ({ onClose }: { onClose: () => void }) => {
-  const dark = isDarkMode();
-  const baseBg = dark ? "#23272f" : "#f3f4f6";
-  const hoverBg = dark ? "#374151" : "#e5e7eb";
-  const color = dark ? "#eee" : "#222";
+  const isDark = useDarkMode();
+  const baseBg = isDark ? "#23272f" : "#f3f4f6";
+  const hoverBg = isDark ? "#374151" : "#e5e7eb";
+  const color = isDark ? "#eee" : "#222";
   return (
     <button
       type="button"
@@ -202,10 +200,11 @@ export const AbstractChatBox = (
         );
     }
   }, [limit, messages, fetchingMore]);
+  const isDark = useDarkMode();
   return (
     <div
       style={{
-        ...chatContainerStyle,
+        ...chatContainerStyle(isDark),
         position: "relative",
         fontFamily:
           "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
@@ -231,14 +230,14 @@ export const AbstractChatBox = (
           fontWeight: "bold",
           fontSize: "1.2em",
           padding: "0.7em 0 0.5em 0",
-          background: isDarkMode() ? "#23272f" : "#fff",
-          color: isDarkMode() ? "#f3f4f6" : "#222",
-          boxShadow: isDarkMode()
+          background: isDark ? "#23272f" : "#fff",
+          color: isDark ? "#f3f4f6" : "#222",
+          boxShadow: isDark
             ? "0 1px 0 0 #23272f, 0 2px 8px 0 #0002"
             : "0 1px 0 0 #e5e7eb, 0 2px 8px 0 #0001",
           borderBottom: "none",
-          borderTopLeftRadius: isDarkMode() ? 0 : 16,
-          borderTopRightRadius: isDarkMode() ? 0 : 16,
+          borderTopLeftRadius: isDark ? 0 : 16,
+          borderTopRightRadius: isDark ? 0 : 16,
         }}
       >
         {title}
@@ -246,12 +245,16 @@ export const AbstractChatBox = (
       {onClose && <CloseButton onClose={onClose} />}
       <div
         ref={messagesContainerRef}
-        style={messageContainerStyle}
+        style={messageContainerStyle(isDark)}
       >
         {messages.length === 0
           ? (
             <div
-              style={{ textAlign: "center", color: "#888", marginBottom: "2em" }}
+              style={{
+                textAlign: "center",
+                color: "#888",
+                marginBottom: "2em",
+              }}
             >
               No messages yet. Start the conversation!
             </div>
@@ -294,14 +297,14 @@ export const AbstractChatBox = (
           style={{
             flexGrow: 1,
             padding: "12px 16px",
-            border: `2px solid ${isDarkMode() ? "#2563eb" : "#3182ce"}`,
+            border: `2px solid ${isDark ? "#2563eb" : "#3182ce"}`,
             borderRadius: 32,
-            background: isDarkMode() ? "#181c23" : "#f1f5f9",
-            color: isDarkMode() ? "#f3f4f6" : "#1e293b",
+            background: isDark ? "#181c23" : "#f1f5f9",
+            color: isDark ? "#f3f4f6" : "#1e293b",
             fontSize: 16,
             outline: "none",
             transition: "border 0.2s, background 0.2s, color 0.2s",
-            boxShadow: isDarkMode()
+            boxShadow: isDark
               ? "0 2px 8px rgba(0,0,0,0.18)"
               : "0 2px 8px rgba(0,0,0,0.08)",
             fontFamily: "inherit",
@@ -325,15 +328,15 @@ export const AbstractChatBox = (
             borderRadius: 32,
             border: "none",
             background: input.trim()
-              ? (isDarkMode()
+              ? (isDark
                 ? "linear-gradient(90deg,#2563eb 60%,#60a5fa 100%)"
                 : "linear-gradient(90deg,#3182ce 60%,#60a5fa 100%)")
-              : (isDarkMode() ? "#23272f" : "#cbd5e1"),
-            color: input.trim() ? "#fff" : (isDarkMode() ? "#aaa" : "#64748b"),
+              : (isDark ? "#23272f" : "#cbd5e1"),
+            color: input.trim() ? "#fff" : (isDark ? "#aaa" : "#64748b"),
             fontWeight: 700,
             fontSize: 17,
             cursor: input.trim() ? "pointer" : "not-allowed",
-            boxShadow: isDarkMode()
+            boxShadow: isDark
               ? "0 2px 8px rgba(0,0,0,0.18)"
               : "0 2px 8px rgba(0,0,0,0.08)",
             transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
