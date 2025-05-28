@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { FaPaperPlane } from "react-icons/fa";
 import { timeAgo } from "time-ago";
 import {
   bubbleStyle,
@@ -22,7 +23,9 @@ const Message = (
   const bubbleColor = stringToColor(authorId);
   const showAvatar = isFirstOfSequence;
   // In dark mode, use light text; in light mode, use dark text
-  const textColor = isLightColor(bubbleColor) ? (isDarkMode() ? "#fff" : "#222") : (isDarkMode() ? "#fff" : "#fff");
+  const textColor = isLightColor(bubbleColor)
+    ? (isDarkMode() ? "#fff" : "#222")
+    : (isDarkMode() ? "#fff" : "#fff");
   return (
     <div
       style={{
@@ -34,8 +37,8 @@ const Message = (
       {showAvatar && (
         <div
           style={{
-            width: 28,
-            height: 28,
+            width: 32,
+            height: 32,
             borderRadius: "50%",
             marginRight: 8,
             background: bubbleColor,
@@ -43,6 +46,10 @@ const Message = (
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
+            padding: 4,
+            boxSizing: "border-box",
+            boxShadow: isDarkMode() ? "0 1px 4px #0004" : "0 1px 4px #0001",
+            transition: "background 0.2s, box-shadow 0.2s",
           }}
         >
           {authorAvatar
@@ -51,8 +58,8 @@ const Message = (
                 src={authorAvatar}
                 alt={authorName}
                 style={{
-                  width: 28,
-                  height: 28,
+                  width: 24,
+                  height: 24,
                   objectFit: "cover",
                   borderRadius: "50%",
                 }}
@@ -61,9 +68,12 @@ const Message = (
             : (
               <span
                 style={{
-                  color: isLightColor(bubbleColor) ? (isDarkMode() ? "#fff" : "#222") : (isDarkMode() ? "#fff" : "#fff"),
+                  color: isLightColor(bubbleColor)
+                    ? (isDarkMode() ? "#fff" : "#222")
+                    : (isDarkMode() ? "#fff" : "#fff"),
                   fontWeight: 700,
-                  fontSize: 14,
+                  fontSize: 15,
+                  letterSpacing: 0.5,
                 }}
               >
                 {authorName.slice(0, 2).toUpperCase()}
@@ -86,7 +96,9 @@ const Message = (
         </div>
         <span
           style={{
-            color: isDarkMode() ? "#bbb" : (textColor === "#222" ? "#555" : "#eee"),
+            color: isDarkMode()
+              ? "#bbb"
+              : (textColor === "#222" ? "#555" : "#eee"),
             fontSize: 10,
             float: "right",
           }}
@@ -187,15 +199,24 @@ export const AbstractChatBox = (
     }
   }, [limit, messages, fetchingMore]);
   return (
-    <div style={{ ...chatContainerStyle, position: "relative" }}>
-      <div style={{
-        textAlign: "center",
-        fontWeight: "bold",
-        fontSize: "1.2em",
-        padding: "0.5em 0",
-        borderBottom: "1px solid #eee",
-        background: isDarkMode() ? "#222" : "#fafafa",
-      }}>
+    <div
+      style={{
+        ...chatContainerStyle,
+        position: "relative",
+        fontFamily:
+          "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
+      }}
+    >
+      <div
+        style={{
+          textAlign: "center",
+          fontWeight: "bold",
+          fontSize: "1.2em",
+          padding: "0.5em 0",
+          borderBottom: "1px solid #eee",
+          background: isDarkMode() ? "#222" : "#fafafa",
+        }}
+      >
         {title}
       </div>
       {onClose && <CloseButton onClose={onClose} />}
@@ -203,60 +224,124 @@ export const AbstractChatBox = (
         ref={messagesContainerRef}
         style={messageContainerStyle}
       >
-        {messages.length === 0 ? (
-          <div style={{ textAlign: "center", color: "#888", marginTop: "2em" }}>
-            No messages yet. Start the conversation!
-          </div>
-        ) : (
-          <>
-            {messages.map((msg, i) => (
-              <Message
-                key={i}
-                isOwn={msg.authorId === userId}
-                msg={msg}
-                next={messages[i + 1]}
-              />
-            ))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
+        {messages.length === 0
+          ? (
+            <div
+              style={{ textAlign: "center", color: "#888", marginTop: "2em" }}
+            >
+              No messages yet. Start the conversation!
+            </div>
+          )
+          : (
+            <>
+              {messages.map((msg, i) => (
+                <Message
+                  key={i}
+                  isOwn={msg.authorId === userId}
+                  msg={msg}
+                  next={messages[i + 1]}
+                />
+              ))}
+              <div ref={messagesEndRef} />
+            </>
+          )}
       </div>
-      <div className="flex items-center mt-2 gap-2">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          marginTop: 8,
+          gap: 8,
+        }}
+      >
         <input
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.currentTarget.value)}
           onKeyDown={(e) => {
-            if (e.key !== "Enter") {
-              return;
-            }
+            if (e.key !== "Enter") return;
             if (input.trim()) {
               onSend(input.trim());
               setInput("");
             }
           }}
           placeholder="Type a message..."
-          className="flex-grow p-2 border rounded-md 
-                     bg-gray-50 dark:bg-gray-700 
-                     border-gray-300 dark:border-gray-600 
-                     text-gray-900 dark:text-white 
-                     placeholder-gray-500 dark:placeholder-gray-400
-                     focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          style={{
+            flexGrow: 1,
+            padding: "12px 16px",
+            border: `2px solid ${isDarkMode() ? "#2563eb" : "#3182ce"}`,
+            borderRadius: 32,
+            background: isDarkMode() ? "#181c23" : "#f1f5f9",
+            color: isDarkMode() ? "#f3f4f6" : "#1e293b",
+            fontSize: 16,
+            outline: "none",
+            transition: "border 0.2s, background 0.2s, color 0.2s",
+            boxShadow: isDarkMode()
+              ? "0 2px 8px rgba(0,0,0,0.18)"
+              : "0 2px 8px rgba(0,0,0,0.08)",
+            fontFamily: "inherit",
+            letterSpacing: 0.1,
+          }}
         />
         <button
           type="button"
           disabled={!input.trim()}
           onClick={() => {
-            setInput("");
+            if (!input.trim()) return;
             onSend(input.trim());
+            setInput("");
           }}
-          className="p-2 border border-blue-500 rounded-md 
-                     bg-blue-500 hover:bg-blue-600 
-                     text-white 
-                     focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 
-                     disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 22px 0 16px",
+            height: 44,
+            borderRadius: 32,
+            border: "none",
+            background: input.trim()
+              ? (isDarkMode()
+                ? "linear-gradient(90deg,#2563eb 60%,#60a5fa 100%)"
+                : "linear-gradient(90deg,#3182ce 60%,#60a5fa 100%)")
+              : (isDarkMode() ? "#23272f" : "#cbd5e1"),
+            color: input.trim() ? "#fff" : (isDarkMode() ? "#aaa" : "#64748b"),
+            fontWeight: 700,
+            fontSize: 17,
+            cursor: input.trim() ? "pointer" : "not-allowed",
+            boxShadow: isDarkMode()
+              ? "0 2px 8px rgba(0,0,0,0.18)"
+              : "0 2px 8px rgba(0,0,0,0.08)",
+            transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
+            opacity: input.trim() ? 1 : 0.7,
+            borderTopLeftRadius: 12,
+            borderBottomLeftRadius: 12,
+            gap: 7,
+          }}
+          title="Send"
         >
-          Send
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginRight: 0,
+              color: input.trim() ? "#fff" : "#64748b",
+              filter: input.trim() ? "drop-shadow(0 1px 2px #0002)" : "none",
+              opacity: input.trim() ? 0.95 : 0.7,
+              transition: "color 0.2s, filter 0.2s",
+            }}
+          >
+            <FaPaperPlane size={20} />
+          </span>
+          <span
+            style={{
+              fontWeight: 600,
+              letterSpacing: 0.3,
+              fontSize: 15,
+              marginLeft: 2,
+            }}
+          >
+            Send
+          </span>
         </button>
       </div>
       {fetchingMore && <div style={loadingStyle}>Loading more...</div>}
