@@ -84,6 +84,7 @@ const Message = (
         </div>
       )}
       <div
+        dir="auto"
         style={bubbleStyle({
           textColor,
           bubbleColor,
@@ -210,17 +211,17 @@ export const AbstractChatBox = (
           "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
         ...(isMobile
           ? {
-              width: "100vw",
-              height: "100vh",
-              maxWidth: "100vw",
-              maxHeight: "100vh",
-              borderRadius: 0,
-              border: "none",
-              padding: 0,
-            }
+            width: "100vw",
+            height: "100vh",
+            maxWidth: "100vw",
+            maxHeight: "100vh",
+            borderRadius: 0,
+            border: "none",
+            padding: 0,
+          }
           : {
-              maxWidth: 480,
-              width: "100%",
+            maxWidth: 480,
+            width: "100%",
           }),
       }}
     >
@@ -278,6 +279,7 @@ export const AbstractChatBox = (
         }}
       >
         <input
+          dir="auto"
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.currentTarget.value)}
