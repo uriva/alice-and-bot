@@ -29,14 +29,14 @@ const nameFromPublicSignKey = async (publicSignKey: string) => {
 
 const selectedConversation = signal<string | null>(null);
 
-const Chat = ChatNoDb(db);
+const Chat = ChatNoDb(() => db);
 
 const startConversation =
   (credentials: Credentials, publicSignKey: string) => async () => {
     const title = `${await nameFromPublicSignKey(
       credentials.publicSignKey,
     )} & ${await nameFromPublicSignKey(publicSignKey)}`;
-    await createConversation(db)(
+    await createConversation(() => db)(
       [publicSignKey, credentials.publicSignKey],
       title,
     ).then((response) => {
