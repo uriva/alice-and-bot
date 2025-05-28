@@ -44,12 +44,43 @@ const useCredentials = (name: string | null) => {
   return credentials;
 };
 
+const getStartButtonStyle = (isDark: boolean): preact.JSX.CSSProperties => ({
+  background: isDark
+    ? "linear-gradient(90deg, #232526 0%, #414345 100%)"
+    : "linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%)",
+  color: isDark ? "#fff" : "#fff",
+  fontWeight: "bold",
+  padding: "12px 28px",
+  border: "none",
+  borderRadius: "999px",
+  boxShadow: isDark
+    ? "0 2px 8px rgba(20, 20, 40, 0.35)"
+    : "0 2px 8px rgba(80, 80, 120, 0.15)",
+  cursor: "pointer",
+  fontSize: "1rem",
+  transition: "background 0.2s, box-shadow 0.2s",
+  outline: "none",
+  margin: "8px",
+  display: "inline-block",
+});
+
 const InternalWidget = ({ dialTo }: { dialTo: string }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [name, setName] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState(false);
   const credentials = useCredentials(name);
   const conversation = chatOpen && credentials &&
     useGetOrCreateConversation(credentials, dialTo);
+
+  // Detect dark mode
+  useEffect(() => {
+    const mq = globalThis.matchMedia("(prefers-color-scheme: dark)");
+    setIsDark(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   if (chatOpen) {
     if (conversation) {
       return (
@@ -79,8 +110,12 @@ const InternalWidget = ({ dialTo }: { dialTo: string }) => {
   if (!chatOpen) {
     if (conversation) {
       return (
-        <div>
-          <button type="button" onClick={() => setChatOpen(true)}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <button
+            type="button"
+            style={getStartButtonStyle(isDark)}
+            onClick={() => setChatOpen(true)}
+          >
             Open Chat
           </button>
         </div>
@@ -88,9 +123,10 @@ const InternalWidget = ({ dialTo }: { dialTo: string }) => {
     }
     if (!credentials) {
       return (
-        <div>
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <button
             type="button"
+            style={getStartButtonStyle(isDark)}
             onClick={() => {
               const userName = prompt("Enter your name:");
               if (userName) {
@@ -107,8 +143,9 @@ const InternalWidget = ({ dialTo }: { dialTo: string }) => {
       );
     }
     return (
-      <div>
+      <div style={{ display: "flex", justifyContent: "center" }}>
         <button
+          style={getStartButtonStyle(isDark)}
           type="button"
           onClick={() => {
             setChatOpen(true);
