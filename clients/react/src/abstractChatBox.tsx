@@ -11,6 +11,7 @@ import {
   messageContainerStyle,
   stringToColor,
 } from "./design.tsx";
+import { useIsMobile } from "./hooks.ts";
 
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
@@ -172,6 +173,7 @@ export const AbstractChatBox = (
     title: string;
   },
 ) => {
+  const isMobile = useIsMobile();
   const [fetchingMore, setFetchingMore] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
@@ -206,6 +208,17 @@ export const AbstractChatBox = (
         position: "relative",
         fontFamily:
           "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
+        ...(isMobile
+          ? {
+              width: "100vw",
+              height: "100vh",
+              maxWidth: "100vw",
+              maxHeight: "100vh",
+              borderRadius: 0,
+              border: "none",
+              padding: 0,
+            }
+          : {}),
       }}
     >
       <div

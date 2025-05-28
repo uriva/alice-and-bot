@@ -30,6 +30,8 @@ const Main = ({ db }: { db: () => InstantReactWebDatabase<typeof schema> }) => {
   const [alice, setAlice] = useState<Credentials | null>(null);
   const [bot, setBot] = useState<Credentials | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [showAlice, setShowAlice] = useState(true);
+  const [showBot, setShowBot] = useState(true);
   const ChatWithDb = Chat(db);
   useEffect(() => {
     prepareConversation(db())
@@ -44,14 +46,34 @@ const Main = ({ db }: { db: () => InstantReactWebDatabase<typeof schema> }) => {
     ? <div>preparing user and conversation</div>
     : (
       <div>
-        <ChatWithDb
-          credentials={alice}
-          conversationId={conversationId}
+        <input
+          type="checkbox"
+          id="show-alice"
+          checked={showAlice}
+          onChange={(e) => setShowAlice(e.currentTarget.checked)}
         />
-        <ChatWithDb
-          credentials={bot}
-          conversationId={conversationId}
+        <label htmlFor="show-alice">Show alice</label>
+        <input
+          type="checkbox"
+          id="show-bot"
+          checked={showBot}
+          onChange={(e) => setShowBot(e.currentTarget.checked)}
         />
+        <label htmlFor="show-bot">Show bot</label>
+        <div>
+          {showAlice && (
+            <ChatWithDb
+              credentials={alice}
+              conversationId={conversationId}
+            />
+          )}
+          {showBot && (
+            <ChatWithDb
+              credentials={bot}
+              conversationId={conversationId}
+            />
+          )}
+        </div>
       </div>
     );
 };
