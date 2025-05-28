@@ -31,4 +31,5 @@ jobs:
         with:
           path: widget/dist
           destination: alice-and-bot/widget/
+          process_gcloudignore: false
         
