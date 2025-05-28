@@ -26,7 +26,7 @@ export const useDarkMode = () => {
 
 export const useConversations =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  ({ publicSignKey }: Credentials) => {
+  (publicSignKey: string) => {
     const { data, error } = db().useQuery({
       conversations: {
         participants: {},
@@ -65,7 +65,7 @@ export const useGetOrCreateConversation =
     otherSide: string,
   ) => {
     const [conversation, setConversation] = useState<string | null>(null);
-    const conversations = useConversations(db)(creds);
+    const conversations = useConversations(db)(creds.publicSignKey);
     useEffect(() => {
       if (conversation) return;
       const existingConversation = conversations.find(({ participants }) =>

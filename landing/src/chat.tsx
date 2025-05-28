@@ -55,9 +55,9 @@ export const ChatDemo = () => {
   );
   const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [inputCredentials, setInputCredentials] = useState("");
-  const conversations = credentials
-    ? useConversations(() => db)(credentials)
-    : [];
+  const conversations = useConversations(() => db)(
+    credentials?.publicSignKey ?? "",
+  );
   const onClickCreateIdentity = async () => {
     if (!identityName.trim()) {
       alert("Please enter a name for your identity.");

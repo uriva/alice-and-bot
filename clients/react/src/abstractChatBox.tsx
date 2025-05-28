@@ -337,7 +337,6 @@ export const AbstractChatBox = (
               if (input.trim()) {
                 onSend(input.trim());
                 setInput("");
-                // Reset height after send
                 setTimeout(() => {
                   if (inputRef.current) inputRef.current.style.height = "auto";
                 }, 0);
@@ -362,29 +361,6 @@ export const AbstractChatBox = (
               }, 0);
               e.preventDefault();
             }
-          }}
-          // Only one style prop should be present
-          // This style ensures the textarea starts as a single line and grows only when needed
-          style={{
-            flexGrow: 1,
-            padding: "12px 16px",
-            border: `2px solid ${isDark ? "#2563eb" : "#3182ce"}`,
-            borderRadius: 32,
-            background: isDark ? "#181c23" : "#f1f5f9",
-            color: isDark ? "#f3f4f6" : "#1e293b",
-            fontSize: 16,
-            outline: "none",
-            resize: "none",
-            minHeight: "1.5em",
-            maxHeight: 200,
-            lineHeight: 1.5,
-            transition: "border 0.2s, background 0.2s, color 0.2s",
-            boxShadow: isDark
-              ? "0 2px 8px rgba(0,0,0,0.18)"
-              : "0 2px 8px rgba(0,0,0,0.08)",
-            fontFamily: "inherit",
-            letterSpacing: 0.1,
-            overflow: "auto",
           }}
         />
         <button
