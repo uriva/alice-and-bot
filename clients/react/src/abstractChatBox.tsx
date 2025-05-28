@@ -149,13 +149,14 @@ const CloseButton = ({ onClose }: { onClose: () => void }) => {
 };
 
 export const AbstractChatBox = (
-  { limit, loadMore, userId, onSend, messages, onClose }: {
+  { limit, loadMore, userId, onSend, messages, onClose, title }: {
     userId: string;
     onSend: (input: string) => void;
     messages: AbstracChatMessage[];
     limit: number;
     loadMore: () => void;
     onClose?: () => void;
+    title: string;
   },
 ) => {
   const [fetchingMore, setFetchingMore] = useState(false);
@@ -187,20 +188,38 @@ export const AbstractChatBox = (
   }, [limit, messages, fetchingMore]);
   return (
     <div style={{ ...chatContainerStyle, position: "relative" }}>
+      <div style={{
+        textAlign: "center",
+        fontWeight: "bold",
+        fontSize: "1.2em",
+        padding: "0.5em 0",
+        borderBottom: "1px solid #eee",
+        background: isDarkMode() ? "#222" : "#fafafa",
+      }}>
+        {title}
+      </div>
       {onClose && <CloseButton onClose={onClose} />}
       <div
         ref={messagesContainerRef}
         style={messageContainerStyle}
       >
-        {messages.map((msg, i) => (
-          <Message
-            key={i}
-            isOwn={msg.authorId === userId}
-            msg={msg}
-            next={messages[i + 1]}
-          />
-        ))}
-        <div ref={messagesEndRef} />
+        {messages.length === 0 ? (
+          <div style={{ textAlign: "center", color: "#888", marginTop: "2em" }}>
+            No messages yet. Start the conversation!
+          </div>
+        ) : (
+          <>
+            {messages.map((msg, i) => (
+              <Message
+                key={i}
+                isOwn={msg.authorId === userId}
+                msg={msg}
+                next={messages[i + 1]}
+              />
+            ))}
+            <div ref={messagesEndRef} />
+          </>
+        )}
       </div>
       <div className="flex items-center mt-2 gap-2">
         <input

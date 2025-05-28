@@ -83,9 +83,15 @@ export const Chat =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
   ({ credentials, conversationId, onClose }: ChatProps) => {
     const convoKey = useConversationKey(db())(conversationId, credentials);
+    const conversationTitle = db().useQuery({
+      conversations: {
+        $: { where: { id: conversationId } },
+      },
+    }).data?.conversations[0]?.title || conversationId;
     const [limit, setLimit] = useState(100);
     return (
       <AbstractChatBox
+        title={conversationTitle}
         onClose={onClose}
         limit={limit}
         loadMore={() => {
