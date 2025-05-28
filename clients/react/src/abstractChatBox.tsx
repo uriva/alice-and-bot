@@ -287,10 +287,32 @@ export const AbstractChatBox = (
           value={input}
           onChange={(e) => setInput(e.currentTarget.value)}
           onKeyDown={(e) => {
-            if (e.key !== "Enter") return;
-            if (input.trim()) {
-              onSend(input.trim());
-              setInput("");
+            if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
+              if (isMobile) return;
+
+              if (input.trim()) {
+                onSend(input.trim());
+                setInput("");
+              }
+              e.preventDefault();
+            } else if (
+              e.key === "Enter" && (e.shiftKey || e.ctrlKey)
+            ) {
+              const selectionStart = e.currentTarget.selectionStart ??
+                input.length;
+              const selectionEnd = e.currentTarget.selectionEnd ?? input.length;
+              const newValue = input.slice(0, selectionStart) +
+                "\n" +
+                input.slice(selectionEnd);
+              setInput(newValue);
+              setTimeout(() => {
+                if (e.currentTarget) {
+                  e.currentTarget.selectionStart =
+                    e.currentTarget.selectionEnd =
+                      selectionStart + 1;
+                }
+              }, 0);
+              e.preventDefault();
             }
           }}
           placeholder="Type a message..."
