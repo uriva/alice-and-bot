@@ -176,7 +176,7 @@ export const AbstractChatBox = (
   const [fetchingMore, setFetchingMore] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const handleScroll = () => {
     if (
@@ -253,7 +253,6 @@ export const AbstractChatBox = (
               style={{
                 textAlign: "center",
                 color: "#888",
-                marginBottom: "2em",
               }}
             >
               No messages yet. Start the conversation!
@@ -281,18 +280,62 @@ export const AbstractChatBox = (
           gap: 8,
         }}
       >
-        <input
+        <textarea
           dir="auto"
           ref={inputRef}
           value={input}
-          onChange={(e) => setInput(e.currentTarget.value)}
+          rows={1}
+          placeholder="Type a message..."
+          onChange={(e) => {
+            setInput(e.currentTarget.value);
+            // Only auto-grow if content exceeds one line
+            const textarea = e.currentTarget;
+            textarea.style.height = "auto";
+            // Calculate the height for a single line
+            const singleLine = textarea.value.split("\n").length === 1;
+            if (singleLine) {
+              textarea.style.height = textarea.scrollHeight + "px";
+              // If the scrollHeight is greater than clientHeight, grow
+              if (textarea.scrollHeight > textarea.clientHeight) {
+                textarea.style.height = textarea.scrollHeight + "px";
+              } else {
+                textarea.style.height = "1.5em";
+              }
+            } else {
+              textarea.style.height = textarea.scrollHeight + "px";
+            }
+          }}
+          style={{
+            flexGrow: 1,
+            padding: "12px 16px",
+            border: `2px solid ${isDark ? "#2563eb" : "#3182ce"}`,
+            borderRadius: 32,
+            background: isDark ? "#181c23" : "#f1f5f9",
+            color: isDark ? "#f3f4f6" : "#1e293b",
+            fontSize: 16,
+            outline: "none",
+            resize: "none",
+            minHeight: "1.5em",
+            maxHeight: 200,
+            lineHeight: 1.5,
+            transition: "border 0.2s, background 0.2s, color 0.2s",
+            boxShadow: isDark
+              ? "0 2px 8px rgba(0,0,0,0.18)"
+              : "0 2px 8px rgba(0,0,0,0.08)",
+            fontFamily: "inherit",
+            letterSpacing: 0.1,
+            overflow: "auto"
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
               if (isMobile) return;
-
               if (input.trim()) {
                 onSend(input.trim());
                 setInput("");
+                // Reset height after send
+                setTimeout(() => {
+                  if (inputRef.current) inputRef.current.style.height = "auto";
+                }, 0);
               }
               e.preventDefault();
             } else if (
@@ -315,7 +358,8 @@ export const AbstractChatBox = (
               e.preventDefault();
             }
           }}
-          placeholder="Type a message..."
+          // Only one style prop should be present
+          // This style ensures the textarea starts as a single line and grows only when needed
           style={{
             flexGrow: 1,
             padding: "12px 16px",
@@ -325,12 +369,17 @@ export const AbstractChatBox = (
             color: isDark ? "#f3f4f6" : "#1e293b",
             fontSize: 16,
             outline: "none",
+            resize: "none",
+            minHeight: "1.5em",
+            maxHeight: 200,
+            lineHeight: 1.5,
             transition: "border 0.2s, background 0.2s, color 0.2s",
             boxShadow: isDark
               ? "0 2px 8px rgba(0,0,0,0.18)"
               : "0 2px 8px rgba(0,0,0,0.08)",
             fontFamily: "inherit",
             letterSpacing: 0.1,
+            overflow: "auto"
           }}
         />
         <button
