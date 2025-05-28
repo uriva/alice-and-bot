@@ -15,43 +15,48 @@ const prepareConversation = async (
   db: InstantReactWebDatabase<typeof schema>,
 ) => {
   const alice = await createIdentity("alice");
-  const bob = await createIdentity("bob");
-  const convo = await createConversation(db)([
+  const bot = await createIdentity("bot");
+  const convo = await createConversation(() => db)([
     alice.publicSignKey,
-    bob.publicSignKey,
+    bot.publicSignKey,
   ], "new chat");
   if (!("conversationId" in convo)) {
     throw new Error("Failed to create conversation");
   }
-  return { conversationId: convo.conversationId, alice };
+  return { conversationId: convo.conversationId, alice, bot };
 };
 
-const Main = ({ db }: { db: InstantReactWebDatabase<typeof schema> }) => {
-  const activeUser = db.useAuth().user;
+const Main = ({ db }: { db: () => InstantReactWebDatabase<typeof schema> }) => {
   const [alice, setAlice] = useState<Credentials | null>(null);
+  const [bot, setBot] = useState<Credentials | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const ChatWithDb = Chat(db);
   useEffect(() => {
-    prepareConversation(db)
-      .then(({ alice, conversationId }) => {
+    prepareConversation(db())
+      .then(({ alice, bot, conversationId }) => {
         setAlice(alice);
+        setBot(bot);
         setConversationId(conversationId);
       })
       .catch(console.error);
-  }, [activeUser?.email]);
-  return (!activeUser?.refresh_token
-    ? <div>Not logged in</div>
-    : !alice || !conversationId
+  }, []);
+  return !alice || !conversationId || !bot
     ? <div>preparing user and conversation</div>
     : (
-      <ChatWithDb
-        credentials={alice}
-        conversationId={conversationId}
-      />
-    ));
+      <div>
+        <ChatWithDb
+          credentials={alice}
+          conversationId={conversationId}
+        />
+        <ChatWithDb
+          credentials={bot}
+          conversationId={conversationId}
+        />
+      </div>
+    );
 };
 
 render(
-  <Main db={init({ appId: instantAppId, schema })} />,
+  <Main db={() => init({ appId: instantAppId, schema })} />,
   coerce(document.getElementById("root")),
 );
