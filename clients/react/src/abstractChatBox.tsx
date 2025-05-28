@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
 import { timeAgo } from "time-ago";
+import ReactMarkdown from "react-markdown";
 import {
   bubbleStyle,
   chatContainerStyle,
@@ -92,7 +93,24 @@ const Message = (
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>
         <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-          {text}
+          <ReactMarkdown
+            components={{
+              a: ({ node, ...props }) => (
+                <a {...props} style={{ color: '#2563eb', textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer" />
+              ),
+              strong: ({ node, ...props }) => (
+                <strong {...props} style={{ fontWeight: 700 }} />
+              ),
+              em: ({ node, ...props }) => (
+                <em {...props} style={{ fontStyle: 'italic' }} />
+              ),
+              code: ({ node, ...props }) => (
+                <code {...props} style={{ background: '#f4f4f4', borderRadius: 4, padding: '0 4px', fontSize: '0.95em' }} />
+              ),
+            }}
+          >
+            {text}
+          </ReactMarkdown>
         </div>
         <span
           style={{
