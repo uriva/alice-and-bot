@@ -39,24 +39,20 @@ export const useConversations =
     return data?.conversations ?? [];
   };
 
-// Hook to detect if the device is mobile (by width)
-export function useIsMobile(breakpoint = 600) {
+export const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(
-    typeof globalThis !== "undefined"
-      ? globalThis.innerWidth <= breakpoint
-      : false,
+    typeof globalThis !== "undefined" ? globalThis.innerWidth <= 600 : false,
   );
-
   useEffect(() => {
-    function handleResize() {
-      setIsMobile(globalThis.innerWidth <= breakpoint);
-    }
+    const handleResize = () => {
+      setIsMobile(globalThis.innerWidth <= 600);
+    };
     globalThis.addEventListener("resize", handleResize);
     return () => globalThis.removeEventListener("resize", handleResize);
-  }, [breakpoint]);
+  }, []);
 
   return isMobile;
-}
+};
 
 export const useGetOrCreateConversation =
   (db: () => InstantReactWebDatabase<typeof schema>) =>

@@ -1,12 +1,12 @@
+import { coerce } from "gamla";
 import { useEffect, useState } from "preact/hooks";
+import { useDarkMode, useIsMobile } from "../../clients/react/src/hooks.ts";
 import {
   Chat,
   createIdentity,
   type Credentials,
   useGetOrCreateConversation,
 } from "../../mod.ts";
-import { useDarkMode } from "../../clients/react/src/hooks.ts";
-import { coerce } from "gamla";
 
 const useCredentials = (name: string | null) => {
   const [credentials, setCredentials] = useState<Credentials | null>(null);
@@ -54,6 +54,7 @@ const InternalWidget = ({ dialTo }: { dialTo: string }) => {
   const credentials = useCredentials(name);
   const conversation = useGetOrCreateConversation(credentials, dialTo);
   const isDark = useDarkMode();
+
   if (chatOpen) {
     if (conversation) {
       return (
@@ -133,15 +134,15 @@ const InternalWidget = ({ dialTo }: { dialTo: string }) => {
   return null;
 };
 
-export const Widget = ({ dialTo }: { dialTo: string }) => (
-  <div
-    style={{
-      position: "fixed",
-      bottom: 24,
-      right: 24,
-      zIndex: 10000,
-    }}
-  >
-    <InternalWidget dialTo={dialTo} />
-  </div>
-);
+export const Widget = ({ dialTo }: { dialTo: string }) => {
+  const isMobile = useIsMobile();
+  return (
+    <div
+      style={isMobile
+        ? { position: "fixed", inset: 0, zIndex: 10000 }
+        : { position: "fixed", bottom: 24, right: 24, zIndex: 10000 }}
+    >
+      <InternalWidget dialTo={dialTo} />
+    </div>
+  );
+};
