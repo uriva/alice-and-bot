@@ -89,6 +89,7 @@ export const Chat =
       },
     }).data?.conversations[0]?.title || conversationId;
     const [limit, setLimit] = useState(100);
+    console.log(limit);
     return (
       <AbstractChatBox
         title={conversationTitle}
