@@ -5,7 +5,7 @@ import {
   type Credentials,
   useGetOrCreateConversation,
 } from "../../mod.ts";
-import { useDarkMode } from "../../clients/react/src/useDarkMode.ts";
+import { useDarkMode } from "../../clients/react/src/hooks.ts";
 
 const useCredentials = (name: string | null) => {
   const [credentials, setCredentials] = useState<Credentials | null>(null);
