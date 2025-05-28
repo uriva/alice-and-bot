@@ -24,8 +24,7 @@ const msgToUIMessage =
   (details: Record<string, { name: string; avatar?: string }>) =>
   (msg: DecipheredMessage): AbstracChatMessage => ({
     authorId: msg.publicSignKey,
-    authorName: details[msg.publicSignKey]?.name ||
-      msg.publicSignKey,
+    authorName: details[msg.publicSignKey]?.name || "User",
     authorAvatar: details[msg.publicSignKey]?.avatar,
     text: msg.text,
     timestamp: msg.timestamp,
@@ -87,9 +86,8 @@ export const Chat =
       conversations: {
         $: { where: { id: conversationId } },
       },
-    }).data?.conversations[0]?.title || conversationId;
+    }).data?.conversations[0]?.title || "Chat";
     const [limit, setLimit] = useState(100);
-    console.log(limit);
     return (
       <AbstractChatBox
         title={conversationTitle}
