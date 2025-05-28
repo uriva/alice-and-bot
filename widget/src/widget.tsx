@@ -5,6 +5,7 @@ import {
   type Credentials,
   useGetOrCreateConversation,
 } from "../../mod.ts";
+import { useDarkMode } from "../../clients/react/src/useDarkMode.ts";
 
 const useCredentials = (name: string | null) => {
   const [credentials, setCredentials] = useState<Credentials | null>(null);
@@ -49,20 +50,10 @@ const getStartButtonStyle = (isDark: boolean): preact.JSX.CSSProperties => ({
 const InternalWidget = ({ dialTo }: { dialTo: string }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [name, setName] = useState<string | null>(null);
-  const [isDark, setIsDark] = useState(false);
   const credentials = useCredentials(name);
   const conversation = chatOpen && credentials &&
     useGetOrCreateConversation(credentials, dialTo);
-
-  // Detect dark mode
-  useEffect(() => {
-    const mq = globalThis.matchMedia("(prefers-color-scheme: dark)");
-    setIsDark(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
+  const isDark = useDarkMode();
   if (chatOpen) {
     if (conversation) {
       return (
