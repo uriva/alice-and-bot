@@ -115,33 +115,28 @@ export const Chat =
     );
   };
 
-const useConversationKey = (
-  { useQuery }: Pick<InstantReactWebDatabase<typeof schema>, "useQuery">,
-) =>
-(
-  conversation: string,
-  { publicSignKey, privateEncryptKey }: Credentials,
-): string | null => {
-  const [key, setKey] = useState<string | null>(null);
-  const { isLoading, error, data } = useQuery(
-    {
+const useConversationKey =
+  ({ useQuery }: Pick<InstantReactWebDatabase<typeof schema>, "useQuery">) =>
+  (
+    conversation: string,
+    { publicSignKey, privateEncryptKey }: Credentials,
+  ): string | null => {
+    const [key, setKey] = useState<string | null>(null);
+    const { error, data } = useQuery({
       keys: {
         $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
       },
-    },
-  );
-  if (error) {
-    console.error("Failed to fetch conversation key", error);
-    return null;
-  }
-  if (isLoading) return null;
-  useEffect(() => {
-    if (!data.keys[0]?.key) return;
-    if (data.keys.length > 1) throw new Error("Multiple keys found");
-    decryptAsymmetric<string>(privateEncryptKey, data.keys[0].key)
-      .then((key: string) => {
-        setKey(key);
-      });
-  }, [data.keys[0]?.key, privateEncryptKey]);
-  return key;
-};
+    });
+    if (error) {
+      console.error("Failed to fetch conversation key", error);
+    }
+    const encryptedKey = data?.keys[0]?.key;
+    useEffect(() => {
+      if (!encryptedKey) return;
+      decryptAsymmetric<string>(privateEncryptKey, encryptedKey)
+        .then((key: string) => {
+          setKey(key);
+        });
+    }, [encryptedKey, privateEncryptKey]);
+    return key;
+  };
