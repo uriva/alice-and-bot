@@ -1,5 +1,7 @@
 import { init } from "@instantdb/react";
+import type { InstantReactWebDatabase } from "@instantdb/react";
 import {
+
   apiClient,
   type CreateConversationOutput,
   type SetWebhookOutput,
@@ -21,15 +23,22 @@ export {
   type WebhookUpdate,
 } from "./protocol/src/api.ts";
 
-const db = init({ appId: instantAppId, schema, devtool: false });
+let db: InstantReactWebDatabase <typeof schema>| null = null;
 
-export const useConversations = useConversationsNoDb(db);
-export const Chat = ChatNoDb(db);
+const accessDb = () => {
+  if (!db) {
+     db = init({ appId: instantAppId, schema, devtool: false });
+  }
+  return db;
+};
+
+export const useConversations = useConversationsNoDb(accessDb);
+export const Chat = ChatNoDb(accessDb);
 
 export const createConversation: (
   publicSignKeys: string[],
   conversationTitle: string,
-) => Promise<CreateConversationOutput> = createConversationNoDb(db);
+) => Promise<CreateConversationOutput> = createConversationNoDb(accessDb);
 
 export const setWebhook = (
   { url, credentials: { publicSignKey } }: {

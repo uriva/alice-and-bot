@@ -141,13 +141,13 @@ export const decryptMessage =
 type Identity = InstaQLEntity<typeof schema, "identities", { account: {} }>;
 
 export const createConversation = (
-  { queryOnce }: Pick<InstantReactWebDatabase<typeof schema>, "queryOnce">,
+  db: () => InstantReactWebDatabase<typeof schema>,
 ) =>
 async (
   publicSignKeys: string[],
   conversationTitle: string,
 ): Promise<CreateConversationOutput> => {
-  const { data: { identities } } = await queryOnce({
+  const { data: { identities } } = await db().queryOnce({
     identities: {
       account: {},
       $: { where: { publicSignKey: { $in: publicSignKeys } } },

@@ -80,9 +80,9 @@ const useDecryptedMessages = (
 };
 
 export const Chat =
-  (db: InstantReactWebDatabase<typeof schema>) =>
+  (db: () => InstantReactWebDatabase<typeof schema>) =>
   ({ credentials, conversationId, onClose }: ChatProps) => {
-    const convoKey = useConversationKey(db)(conversationId, credentials);
+    const convoKey = useConversationKey(db())(conversationId, credentials);
     const [limit, setLimit] = useState(100);
     return (
       <AbstractChatBox
@@ -92,7 +92,7 @@ export const Chat =
           setLimit(limit + 100);
         }}
         userId={credentials.publicSignKey}
-        messages={useDecryptedMessages(db, limit, convoKey, conversationId)}
+        messages={useDecryptedMessages(db(), limit, convoKey, conversationId)}
         onSend={(input: string) => {
           if (!convoKey) return null;
           sendMessage({
