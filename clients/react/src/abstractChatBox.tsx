@@ -93,24 +93,7 @@ const Message = (
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>
         <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-          <ReactMarkdown
-            components={{
-              a: ({ node, ...props }) => (
-                <a {...props} style={{ color: '#2563eb', textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer" />
-              ),
-              strong: ({ node, ...props }) => (
-                <strong {...props} style={{ fontWeight: 700 }} />
-              ),
-              em: ({ node, ...props }) => (
-                <em {...props} style={{ fontStyle: 'italic' }} />
-              ),
-              code: ({ node, ...props }) => (
-                <code {...props} style={{ background: '#f4f4f4', borderRadius: 4, padding: '0 4px', fontSize: '0.95em' }} />
-              ),
-            }}
-          >
-            {text}
-          </ReactMarkdown>
+          <ReactMarkdown>{text}</ReactMarkdown>
         </div>
         <span
           style={{
