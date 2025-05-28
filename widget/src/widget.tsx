@@ -1,28 +1,10 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   Chat,
-  createConversation,
   createIdentity,
   type Credentials,
-  useConversations,
+  useGetOrCreateConversation,
 } from "../../mod.ts";
-
-const useGetOrCreateConversation = (creds: Credentials, otherSide: string) => {
-  const [conversation, setConversation] = useState<string | null>(null);
-  const conversations = useConversations(creds);
-  useEffect(() => {
-    if (conversation) return;
-    const existingConversation = conversations.find(({ participants }) =>
-      participants.some(({ publicSignKey }) => publicSignKey === otherSide)
-    );
-    if (existingConversation) {
-      setConversation(existingConversation.id);
-      return;
-    }
-    createConversation([creds.publicSignKey, otherSide], "Chat");
-  }, [conversation, conversations]);
-  return conversation;
-};
 
 const useCredentials = (name: string | null) => {
   const [credentials, setCredentials] = useState<Credentials | null>(null);

@@ -218,7 +218,10 @@ export const AbstractChatBox = (
               border: "none",
               padding: 0,
             }
-          : {}),
+          : {
+              maxWidth: 480,
+              width: "100%",
+          }),
       }}
     >
       <div
@@ -226,9 +229,15 @@ export const AbstractChatBox = (
           textAlign: "center",
           fontWeight: "bold",
           fontSize: "1.2em",
-          padding: "0.5em 0",
-          borderBottom: "1px solid #eee",
-          background: isDarkMode() ? "#222" : "#fafafa",
+          padding: "0.7em 0 0.5em 0",
+          background: isDarkMode() ? "#23272f" : "#fff",
+          color: isDarkMode() ? "#f3f4f6" : "#222",
+          boxShadow: isDarkMode()
+            ? "0 1px 0 0 #23272f, 0 2px 8px 0 #0002"
+            : "0 1px 0 0 #e5e7eb, 0 2px 8px 0 #0001",
+          borderBottom: "none",
+          borderTopLeftRadius: isDarkMode() ? 0 : 16,
+          borderTopRightRadius: isDarkMode() ? 0 : 16,
         }}
       >
         {title}

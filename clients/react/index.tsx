@@ -11,11 +11,21 @@ import {
 } from "../../protocol/src/api.ts";
 import { Chat } from "./src/main.tsx";
 
+const createIdentityOrGetFromLocalStorage = async (name: string) => {
+  const existing = localStorage.getItem(`dev-identity-${name}`);
+  if (existing) {
+    return JSON.parse(existing);
+  }
+  const newIdentity = await createIdentity(name);
+  localStorage.setItem(`identity-${name}`, JSON.stringify(newIdentity));
+  return newIdentity;
+};
+
 const prepareConversation = async (
   db: InstantReactWebDatabase<typeof schema>,
 ) => {
-  const alice = await createIdentity("alice");
-  const bot = await createIdentity("bot");
+  const alice = await createIdentityOrGetFromLocalStorage("alice");
+  const bot = await createIdentityOrGetFromLocalStorage("bot");
   const convo = await createConversation(() => db)([
     alice.publicSignKey,
     bot.publicSignKey,
@@ -60,7 +70,7 @@ const Main = ({ db }: { db: () => InstantReactWebDatabase<typeof schema> }) => {
           onChange={(e) => setShowBot(e.currentTarget.checked)}
         />
         <label htmlFor="show-bot">Show bot</label>
-        <div>
+        <div style={{ display: "flex", gap: 8 }}>
           {showAlice && (
             <ChatWithDb
               credentials={alice}

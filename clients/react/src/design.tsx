@@ -98,7 +98,6 @@ export const chatContainerStyle = {
 };
 export const messageContainerStyle = {
   height: 700,
-  width: 400,
   overflowY: "auto",
   marginBottom: 8,
   gap: 8,

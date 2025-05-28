@@ -1,12 +1,14 @@
 import { init } from "@instantdb/react";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import {
-
   apiClient,
   type CreateConversationOutput,
   type SetWebhookOutput,
 } from "./backend/src/api.ts";
-import { useConversations as useConversationsNoDb } from "./clients/react/src/hooks.ts";
+import {
+  useConversations as useConversationsNoDb,
+  useGetOrCreateConversation as useGetOrCreateConversationNoDb,
+} from "./clients/react/src/hooks.ts";
 import { Chat as ChatNoDb } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
 import {
@@ -23,14 +25,18 @@ export {
   type WebhookUpdate,
 } from "./protocol/src/api.ts";
 
-let db: InstantReactWebDatabase <typeof schema>| null = null;
+let db: InstantReactWebDatabase<typeof schema> | null = null;
 
 const accessDb = () => {
   if (!db) {
-     db = init({ appId: instantAppId, schema, devtool: false });
+    db = init({ appId: instantAppId, schema, devtool: false });
   }
   return db;
 };
+
+export const useGetOrCreateConversation = useGetOrCreateConversationNoDb(
+  accessDb,
+);
 
 export const useConversations = useConversationsNoDb(accessDb);
 export const Chat = ChatNoDb(accessDb);
