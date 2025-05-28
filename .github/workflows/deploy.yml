@@ -28,8 +28,9 @@ jobs:
           path: widget/dist
           destination: alice-and-bot/widget/
           process_gcloudignore: false
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
       - name: Make uploaded files public
         run: |
-          pip install google-cloud-storage
           gsutil -m acl set -R -a public-read gs://alice-and-bot/widget/
         
