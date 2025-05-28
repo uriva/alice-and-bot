@@ -220,8 +220,8 @@ export const AbstractChatBox = (
             padding: 0,
           }
           : {
-            maxWidth: 480,
-            width: "100%",
+            height: 700,
+            width: 400,
           }),
       }}
     >
@@ -251,7 +251,7 @@ export const AbstractChatBox = (
         {messages.length === 0
           ? (
             <div
-              style={{ textAlign: "center", color: "#888", marginTop: "2em" }}
+              style={{ textAlign: "center", color: "#888", marginBottom: "2em" }}
             >
               No messages yet. Start the conversation!
             </div>

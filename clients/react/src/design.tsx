@@ -83,28 +83,28 @@ export const sendIconStyle = (enabled: boolean) => ({
   opacity: enabled ? 0.95 : 0.7,
   transition: "color 0.2s, filter 0.2s",
 });
-export const isDarkMode = () =>
-  typeof globalThis !== "undefined" &&
-  "matchMedia" in globalThis &&
-  globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+// Deprecated: use useDarkMode hook in components instead
+export const isDarkMode = () => false;
 
 export const chatContainerStyle = {
   border: "1px solid #ccc",
   padding: 8,
+  display: "flex",
+  flexDirection: "column",
   background: isDarkMode() ? "#1a202c" : "#fff",
   color: isDarkMode() ? "#f3f4f6" : "#222",
   borderColor: isDarkMode() ? "#374151" : "#ccc",
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
 };
 export const messageContainerStyle = {
-  height: 700,
-  overflowY: "auto",
-  marginBottom: 8,
-  gap: 8,
   display: "flex",
-  flexDirection: "column-reverse",
+  flexGrow: 1,
+  overflowY: "auto",
+  scrollbarGutter: "stable",
+  gap: 8,
   background: isDarkMode() ? "#111827" : "#f9fafb",
   transition: "background 0.2s",
+  flexDirection: "column-reverse",
 };
 
 export const loadingStyle = { fontSize: 12, color: "#bbb" };

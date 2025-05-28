@@ -29,7 +29,7 @@ const prepareConversation = async (
   const convo = await createConversation(() => db)([
     alice.publicSignKey,
     bot.publicSignKey,
-  ], "new chat");
+  ], "New Chat");
   if (!("conversationId" in convo)) {
     throw new Error("Failed to create conversation");
   }
