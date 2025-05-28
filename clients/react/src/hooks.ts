@@ -60,9 +60,9 @@ export function useIsMobile(breakpoint = 600) {
 
 export const useGetOrCreateConversation =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  (creds: Credentials, otherSide: string) => {
+  (creds: Credentials | null, otherSide: string) => {
     const [conversation, setConversation] = useState<string | null>(null);
-    const conversations = useConversations(db)(creds.publicSignKey);
+    const conversations = useConversations(db)(creds?.publicSignKey ?? "");
     useEffect(() => {
       if (conversation) return;
       const existingConversation = conversations.find(({ participants }) =>
@@ -72,6 +72,7 @@ export const useGetOrCreateConversation =
         setConversation(existingConversation.id);
         return;
       }
+      if (!creds) return;
       createConversation(db)([creds.publicSignKey, otherSide], "Chat");
     }, [conversation, conversations]);
     return conversation;

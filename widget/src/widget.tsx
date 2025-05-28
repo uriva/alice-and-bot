@@ -6,6 +6,7 @@ import {
   useGetOrCreateConversation,
 } from "../../mod.ts";
 import { useDarkMode } from "../../clients/react/src/hooks.ts";
+import { coerce } from "gamla";
 
 const useCredentials = (name: string | null) => {
   const [credentials, setCredentials] = useState<Credentials | null>(null);
@@ -51,8 +52,7 @@ const InternalWidget = ({ dialTo }: { dialTo: string }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [name, setName] = useState<string | null>(null);
   const credentials = useCredentials(name);
-  const conversation = chatOpen && credentials &&
-    useGetOrCreateConversation(credentials, dialTo);
+  const conversation = useGetOrCreateConversation(credentials, dialTo);
   const isDark = useDarkMode();
   if (chatOpen) {
     if (conversation) {
@@ -61,7 +61,7 @@ const InternalWidget = ({ dialTo }: { dialTo: string }) => {
           onClose={() => {
             setChatOpen(false);
           }}
-          credentials={credentials}
+          credentials={coerce(credentials)}
           conversationId={conversation}
         />
       );
