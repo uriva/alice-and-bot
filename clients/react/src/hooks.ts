@@ -60,10 +60,7 @@ export function useIsMobile(breakpoint = 600) {
 
 export const useGetOrCreateConversation =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  (
-    creds: Credentials,
-    otherSide: string,
-  ) => {
+  (creds: Credentials, otherSide: string) => {
     const [conversation, setConversation] = useState<string | null>(null);
     const conversations = useConversations(db)(creds.publicSignKey);
     useEffect(() => {
