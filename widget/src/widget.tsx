@@ -1,32 +1,11 @@
 import { coerce } from "gamla";
-import { useEffect, useState } from "preact/hooks";
-import { useDarkMode, useIsMobile } from "../../clients/react/src/hooks.ts";
+import { useState } from "preact/hooks";
 import {
-  Chat,
-  createIdentity,
-  type Credentials,
-  useGetOrCreateConversation,
-} from "../../mod.ts";
-
-const useCredentials = (name: string | null) => {
-  const [credentials, setCredentials] = useState<Credentials | null>(null);
-  useEffect(() => {
-    const existingCredentials = localStorage.getItem("aliceAndBotCredentials");
-    if (existingCredentials) {
-      setCredentials(JSON.parse(existingCredentials));
-      return;
-    }
-    if (!name) return;
-    createIdentity(name).then((newCredentials) => {
-      setCredentials(newCredentials);
-      localStorage.setItem(
-        "aliceAndBotCredentials",
-        JSON.stringify(newCredentials),
-      );
-    });
-  }, [name]);
-  return credentials;
-};
+  useCredentials,
+  useDarkMode,
+  useIsMobile,
+} from "../../clients/react/src/hooks.ts";
+import { Chat, useGetOrCreateConversation } from "../../mod.ts";
 
 const getStartButtonStyle = (isDark: boolean): preact.JSX.CSSProperties => ({
   background: isDark
@@ -51,7 +30,7 @@ const getStartButtonStyle = (isDark: boolean): preact.JSX.CSSProperties => ({
 const InternalWidget = ({ dialTo }: { dialTo: string }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [name, setName] = useState<string | null>(null);
-  const credentials = useCredentials(name);
+  const credentials = useCredentials(name, "aliceAndBotCredentials");
   const conversation = useGetOrCreateConversation(credentials, dialTo);
   const isDark = useDarkMode();
 
