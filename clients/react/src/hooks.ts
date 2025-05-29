@@ -28,22 +28,22 @@ export const useDarkMode = () => {
 
 export const useConversations =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  (
-    publicSignKey: string,
-  ): {
-    id: string;
-    title: string;
-    participants: { publicSignKey: string }[];
-  }[] => {
-    const { data, error } = db().useQuery({
-      conversations: {
-        participants: {},
-        $: { where: { "participants.publicSignKey": publicSignKey } },
-      },
-    });
-    if (error) console.error("Error fetching conversations:", error);
-    return data?.conversations ?? [];
-  };
+    (
+      publicSignKey: string,
+    ): {
+      id: string;
+      title: string;
+      participants: { publicSignKey: string }[];
+    }[] => {
+      const { data, error } = db().useQuery({
+        conversations: {
+          participants: {},
+          $: { where: { "participants.publicSignKey": publicSignKey } },
+        },
+      });
+      if (error) console.error("Error fetching conversations:", error);
+      return data?.conversations ?? [];
+    };
 
 export const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(
@@ -62,31 +62,35 @@ export const useIsMobile = () => {
 
 const matchesParticipants =
   (participants: string[]) =>
-  (conversation: { participants: { publicSignKey: string }[] }) =>
-    conversation.participants.length === participants.length &&
-    conversation.participants.every(
-      (p) => participants.includes(p.publicSignKey),
-    );
+    (conversation: { participants: { publicSignKey: string }[] }) =>
+      conversation.participants.length === participants.length &&
+      conversation.participants.every(
+        (p) => participants.includes(p.publicSignKey),
+      );
 
 export const useGetOrCreateConversation =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  ({ publicSignKey }: Credentials, participants: string[]): string | null => {
-    const [conversation, setConversation] = useState<string | null>(null);
-    const conversations = useConversations(db)(publicSignKey);
-    const fixedParticipants = unique([publicSignKey, ...participants]);
-    useEffect(() => {
-      if (conversation) return;
-      const existingConversation = conversations.find(
-        matchesParticipants(fixedParticipants),
-      );
-      if (existingConversation) {
-        setConversation(existingConversation.id);
-        return;
-      }
-      createConversation(db)(fixedParticipants, "Chat");
-    }, [conversation, conversations, fixedParticipants]);
-    return conversation;
-  };
+    ({ publicSignKey }: Credentials, participants: string[]): string | null => {
+      const [conversation, setConversation] = useState<string | null>(null);
+      const conversations = useConversations(db)(publicSignKey);
+      const fixedParticipants = unique([publicSignKey, ...participants]);
+      useEffect(() => {
+        if (conversation) return;
+        const existingConversation = conversations.find(
+          matchesParticipants(fixedParticipants),
+        );
+        if (existingConversation) {
+          setConversation(existingConversation.id);
+          return;
+        }
+        createConversation(db)(fixedParticipants, "Chat").then(result => {
+          if ("error" in result) {
+            console.error("Error creating conversation:", result.error);
+          }
+        })
+      }, [conversation, conversations, fixedParticipants]);
+      return conversation;
+    };
 
 export const useCredentials = (name: string | null, key: string) => {
   const [credentials, setCredentials] = useState<Credentials | null>(null);
