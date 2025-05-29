@@ -106,8 +106,8 @@ export const LandingPage = () => {
         </button>
       </div>
       <footer class="w-full text-center text-gray-400 dark:text-gray-500 text-base py-8 mt-auto">
-        &copy; {new Date().getFullYear()}{" "}
-        Alice&Bot. Built for the next era of chat.
+        &copy; {new Date().getFullYear()} Alice&Bot. Built for the next era of chat. |
+        <a href="/manifesto" class="underline text-blue-700 dark:text-blue-300 hover:text-blue-900 ml-2">Manifesto</a>
       </footer>
       <Button
         onClick={() => {
