@@ -60,20 +60,18 @@ const matchesParticipants = (participants: string[]) =>
 
 export const useGetOrCreateConversation =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-    (creds: Credentials | null, participants: string[]): string | null => {
+    (creds: Credentials, participants: string[]): string | null => {
       const [conversation, setConversation] = useState<string | null>(null);
-      const conversations = useConversations(db)(creds?.publicSignKey ?? "");
-      const fixedParticipants = creds && unique([creds.publicSignKey, ...participants]);
+      const conversations = useConversations(db)(creds.publicSignKey);
+      const fixedParticipants = unique([creds.publicSignKey, ...participants]);
       useEffect(() => {
-        if (!creds || conversation || !fixedParticipants) return;
+        if (conversation) return;
         const existingConversation = conversations.find(matchesParticipants(fixedParticipants));
         if (existingConversation) {
           setConversation(existingConversation.id);
           return;
         }
-        if (fixedParticipants.length) {
-          createConversation(db)(fixedParticipants, "Chat");
-        }
+        createConversation(db)(fixedParticipants, "Chat");
       }, [conversation, conversations, fixedParticipants]);
       return conversation;
     };
