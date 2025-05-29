@@ -283,7 +283,6 @@ export const AbstractChatBox = (
         style={{
           display: "flex",
           alignItems: "center",
-          marginTop: 8,
           gap: 8,
         }}
       >
@@ -411,16 +410,7 @@ export const AbstractChatBox = (
           >
             <FaPaperPlane size={20} />
           </span>
-          <span
-            style={{
-              fontWeight: 600,
-              letterSpacing: 0.3,
-              fontSize: 15,
-              marginLeft: 2,
-            }}
-          >
-            Send
-          </span>
+          <span>Send</span>
         </button>
       </div>
       {fetchingMore && <div style={loadingStyle}>Loading more...</div>}
