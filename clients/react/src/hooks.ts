@@ -4,7 +4,7 @@ import type schema from "../../../instant.schema.ts";
 import {
   createConversation,
   createIdentity,
-  type Credentials
+  type Credentials,
 } from "../../../protocol/src/api.ts";
 import { unique } from "gamla";
 
@@ -28,13 +28,22 @@ export const useDarkMode = () => {
 
 export const useConversations =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-    (publicSignKey: string): { id: string; title: string; participants: { publicSignKey: string }[] }[] => {
-      const { data, error } = db().useQuery({
-        conversations: { participants: {}, $: { where: { "participants.publicSignKey": publicSignKey } }, },
-      });
-      if (error) console.error("Error fetching conversations:", error);
-      return data?.conversations ?? [];
-    };
+  (
+    publicSignKey: string,
+  ): {
+    id: string;
+    title: string;
+    participants: { publicSignKey: string }[];
+  }[] => {
+    const { data, error } = db().useQuery({
+      conversations: {
+        participants: {},
+        $: { where: { "participants.publicSignKey": publicSignKey } },
+      },
+    });
+    if (error) console.error("Error fetching conversations:", error);
+    return data?.conversations ?? [];
+  };
 
 export const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(
@@ -51,7 +60,8 @@ export const useIsMobile = () => {
   return isMobile;
 };
 
-const matchesParticipants = (participants: string[]) =>
+const matchesParticipants =
+  (participants: string[]) =>
   (conversation: { participants: { publicSignKey: string }[] }) =>
     conversation.participants.length === participants.length &&
     conversation.participants.every(
@@ -60,21 +70,23 @@ const matchesParticipants = (participants: string[]) =>
 
 export const useGetOrCreateConversation =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-    ({ publicSignKey }: Credentials, participants: string[]): string | null => {
-      const [conversation, setConversation] = useState<string | null>(null);
-      const conversations = useConversations(db)(publicSignKey);
-      const fixedParticipants = unique([publicSignKey, ...participants]);
-      useEffect(() => {
-        if (conversation) return;
-        const existingConversation = conversations.find(matchesParticipants(fixedParticipants));
-        if (existingConversation) {
-          setConversation(existingConversation.id);
-          return;
-        }
-        createConversation(db)(fixedParticipants, "Chat");
-      }, [conversation, conversations, fixedParticipants]);
-      return conversation;
-    };
+  ({ publicSignKey }: Credentials, participants: string[]): string | null => {
+    const [conversation, setConversation] = useState<string | null>(null);
+    const conversations = useConversations(db)(publicSignKey);
+    const fixedParticipants = unique([publicSignKey, ...participants]);
+    useEffect(() => {
+      if (conversation) return;
+      const existingConversation = conversations.find(
+        matchesParticipants(fixedParticipants),
+      );
+      if (existingConversation) {
+        setConversation(existingConversation.id);
+        return;
+      }
+      createConversation(db)(fixedParticipants, "Chat");
+    }, [conversation, conversations, fixedParticipants]);
+    return conversation;
+  };
 
 export const useCredentials = (name: string | null, key: string) => {
   const [credentials, setCredentials] = useState<Credentials | null>(null);
@@ -87,7 +99,7 @@ export const useCredentials = (name: string | null, key: string) => {
     if (!name) return;
     createIdentity(name).then((newCredentials) => {
       setCredentials(newCredentials);
-      localStorage.setItem(key, JSON.stringify(newCredentials),);
+      localStorage.setItem(key, JSON.stringify(newCredentials));
     });
   }, [name]);
   return credentials;
