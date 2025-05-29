@@ -9,7 +9,6 @@ export const chatContainerStyle = (isDarkMode: boolean) => ({
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
 });
 
-
 export const loadingStyle = { fontSize: 12, color: "#bbb" };
 
 export const stringToColor = (str: string, isDarkMode: boolean) => {
@@ -17,9 +16,10 @@ export const stringToColor = (str: string, isDarkMode: boolean) => {
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const h = Math.abs(hash) % 360;
+  const h = Math.abs(hash * 31 + 137) % 360;
+  const s = 70;
   const lightness = isDarkMode ? 32 : 70;
-  return `hsl(${h}, 60%, ${lightness}%)`;
+  return `hsl(${h}, ${s}%, ${lightness}%)`;
 };
 
 export const isLightColor = (hsl: string) => {

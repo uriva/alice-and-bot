@@ -20,7 +20,8 @@ const Message = (
 ) => {
   const isFirstOfSequence = !next || next.authorId !== authorId;
   const isDark = useDarkMode();
-  const bubbleColor = stringToColor(authorId, isDark);
+  const baseColor = stringToColor(authorId, isDark);
+  const bubbleColor = baseColor;
   const showAvatar = isFirstOfSequence;
   const textColor = isLightColor(bubbleColor)
     ? (isDark ? "#fff" : "#222")
@@ -176,8 +177,9 @@ const messageContainerStyle = (isDark: boolean) => ({
   gap: 8,
   transition: "background 0.2s",
   flexDirection: "column-reverse",
-  background: isDark ? "#181c23" : "#f8fafc", // Added background for gutter fit
-  scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc", // Custom scrollbar for dark/light
+  background: isDark ? "#181c23" : "#f8fafc",
+  scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
+  padding: 4,
 });
 
 export const AbstractChatBox = (
@@ -293,14 +295,11 @@ export const AbstractChatBox = (
           placeholder="Type a message..."
           onChange={(e) => {
             setInput(e.currentTarget.value);
-            // Only auto-grow if content exceeds one line
             const textarea = e.currentTarget;
             textarea.style.height = "auto";
-            // Calculate the height for a single line
             const singleLine = textarea.value.split("\n").length === 1;
             if (singleLine) {
               textarea.style.height = textarea.scrollHeight + "px";
-              // If the scrollHeight is greater than clientHeight, grow
               if (textarea.scrollHeight > textarea.clientHeight) {
                 textarea.style.height = textarea.scrollHeight + "px";
               } else {
