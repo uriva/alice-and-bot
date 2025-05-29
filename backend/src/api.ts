@@ -1,15 +1,12 @@
-import { apiClient as apiClientMaker, httpCommunication } from "typed-api";
-
+import type { User } from "@instantdb/core";
+import {
+  apiClient as apiClientMaker,
+  type ApiImplementation,
+  endpoint,
+  httpCommunication,
+} from "typed-api";
 import { z } from "zod";
-import { endpoint } from "typed-api";
-
-export type CreateConversationOutput = z.infer<
-  typeof backendApiSchema.createConversation.output
->;
-
-export type SetWebhookOutput = z.infer<
-  typeof backendApiSchema.setWebhook.output
->;
+import type { Credentials } from "../../protocol/src/api.ts";
 
 export const backendApiSchema = {
   conversationKey: endpoint({
@@ -83,9 +80,21 @@ export const backendApiSchema = {
   }),
 } as const;
 
-export type backendApi = typeof backendApiSchema;
-
 export const apiClient = apiClientMaker(
   httpCommunication("https://alice-and-bot.deno.dev"),
   backendApiSchema,
 );
+
+export type BackendApiImpl = ApiImplementation<User, typeof backendApiSchema>;
+
+export const setWebhook = (
+  { url, credentials: { publicSignKey } }: {
+    url: string;
+    credentials: Credentials;
+  },
+): Promise<
+  {
+    success: false;
+    error: "identity-does-not-exist";
+  } | { success: true }
+> => apiClient({ endpoint: "setWebhook", payload: { url, publicSignKey } });

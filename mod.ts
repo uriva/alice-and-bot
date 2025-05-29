@@ -1,15 +1,11 @@
 import { init } from "@instantdb/react";
+import type { JSX } from "preact";
 import type { InstantReactWebDatabase } from "@instantdb/react";
-import {
-  apiClient,
-  type CreateConversationOutput,
-  type SetWebhookOutput,
-} from "./backend/src/api.ts";
 import {
   useConversations as useConversationsNoDb,
   useGetOrCreateConversation as useGetOrCreateConversationNoDb,
 } from "./clients/react/src/hooks.ts";
-import { Chat as ChatNoDb } from "./clients/react/src/main.tsx";
+import { Chat as ChatNoDb, type ChatProps } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
 import {
   createConversation as createConversationNoDb,
@@ -17,6 +13,7 @@ import {
   instantAppId,
 } from "./protocol/src/api.ts";
 
+export { setWebhook } from "./backend/src/api.ts";
 export {
   createIdentity,
   type Credentials,
@@ -27,16 +24,17 @@ export {
 
 let db: InstantReactWebDatabase<typeof schema> | null = null;
 
-const accessDb = () => {
+const accessDb = (): InstantReactWebDatabase<typeof schema> => {
   if (!db) {
     db = init({ appId: instantAppId, schema, devtool: false });
   }
   return db;
 };
 
-export const useGetOrCreateConversation = useGetOrCreateConversationNoDb(
-  accessDb,
-);
+export const useGetOrCreateConversation: (
+  creds: Credentials | null,
+  otherSide: string,
+) => string | null = useGetOrCreateConversationNoDb(accessDb);
 
 export const useConversations: (publicSignKey: string) => {
   id: string;
@@ -45,17 +43,12 @@ export const useConversations: (publicSignKey: string) => {
     publicSignKey: string;
   }[];
 }[] = useConversationsNoDb(accessDb);
-export const Chat = ChatNoDb(accessDb);
+export const Chat: (
+  { credentials, conversationId, onClose }: ChatProps,
+) => JSX.Element = ChatNoDb(accessDb);
 
 export const createConversation: (
   publicSignKeys: string[],
   conversationTitle: string,
-) => Promise<CreateConversationOutput> = createConversationNoDb(accessDb);
-
-export const setWebhook = (
-  { url, credentials: { publicSignKey } }: {
-    url: string;
-    credentials: Credentials;
-  },
-): Promise<SetWebhookOutput> =>
-  apiClient({ endpoint: "setWebhook", payload: { url, publicSignKey } });
+) => Promise<{ conversationId: string } | { error: string }> =
+  createConversationNoDb(accessDb);

@@ -2,10 +2,7 @@ import type { InstaQLEntity } from "@instantdb/core";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import stringify from "safe-stable-stringify";
-import {
-  apiClient,
-  type CreateConversationOutput,
-} from "../../backend/src/api.ts";
+import { apiClient } from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
 import {
   encryptAsymmetric,
@@ -60,7 +57,7 @@ export const sendMessage = async (
     credentials: { privateSignKey, publicSignKey },
     message,
   }: SendMessageParams,
-) => {
+): Promise<{ messageId: string }> => {
   const encryptedMessage = await encryptSymmetric(
     conversationKey,
     {
@@ -100,7 +97,11 @@ const getConversationKeyForWebhookHandling = async (
 export const handleWebhookUpdate = async (
   whUpdate: WebhookUpdate,
   credentials: Credentials,
-) => {
+): Promise<{
+  conversationId: string;
+  message: DecipheredMessage;
+  conversationKey: string;
+}> => {
   const key = await getConversationKeyForWebhookHandling(
     credentials,
     whUpdate.conversationId,
@@ -146,7 +147,7 @@ export const createConversation = (
 async (
   publicSignKeys: string[],
   conversationTitle: string,
-): Promise<CreateConversationOutput> => {
+) => {
   const { data: { identities } } = await db().queryOnce({
     identities: {
       account: {},

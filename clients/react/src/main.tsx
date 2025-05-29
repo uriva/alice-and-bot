@@ -1,5 +1,6 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
+import type { JSX } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
@@ -80,7 +81,7 @@ const useDecryptedMessages = (
 
 export const Chat =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  ({ credentials, conversationId, onClose }: ChatProps) => {
+  ({ credentials, conversationId, onClose }: ChatProps): JSX.Element => {
     const convoKey = useConversationKey(db())(conversationId, credentials);
     const conversationTitle = db().useQuery({
       conversations: {

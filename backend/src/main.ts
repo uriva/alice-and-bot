@@ -1,7 +1,7 @@
-import { id, type User } from "@instantdb/admin";
-import { apiHandler, type ApiImplementation } from "typed-api";
+import { id } from "@instantdb/admin";
+import { apiHandler } from "typed-api";
 import type { EncryptedMessage } from "../../protocol/src/api.ts";
-import { backendApiSchema } from "./api.ts";
+import { type BackendApiImpl, backendApiSchema } from "./api.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import { callWebhooks } from "./notificationService.ts";
@@ -21,7 +21,7 @@ const createIdentityForAccount = async (
   return { success: true };
 };
 
-const endpoints: ApiImplementation<User, typeof backendApiSchema> = {
+const endpoints: BackendApiImpl = {
   authenticate: (token: string) => auth.verifyToken(token),
   handlers: {
     conversationKey: async ({ conversationId, publicSignKey }) => {

@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: denoland/setup-deno@v2
         with:
-            deno-version: v2.x
+          deno-version: v2.x
       - uses: actions/checkout@v4
       - run: deno task widget
       - name: Confirm widget is built
@@ -28,4 +28,3 @@ jobs:
           path: widget/dist
           destination: alice-and-bot/widget/
           process_gcloudignore: false
-        

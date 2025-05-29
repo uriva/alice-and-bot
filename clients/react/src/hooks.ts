@@ -62,7 +62,7 @@ export const useIsMobile = () => {
 
 export const useGetOrCreateConversation =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  (creds: Credentials | null, otherSide: string) => {
+  (creds: Credentials | null, otherSide: string): string | null => {
     const [conversation, setConversation] = useState<string | null>(null);
     const conversations = useConversations(db)(creds?.publicSignKey ?? "");
     useEffect(() => {
