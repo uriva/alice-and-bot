@@ -27,7 +27,7 @@
     "react-markdown": "npm:react-markdown@10.1.0",
     "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
     "time-ago": "jsr:@egamagz/time-ago@2025.4.9",
-    "typed-api": "jsr:@uri/typed-api@0.0.8",
+    "typed-api": "jsr:@uri/typed-api@0.0.9",
     "vite": "npm:vite@^6.3.5",
     "zod": "npm:zod@3.24.4"
   },
