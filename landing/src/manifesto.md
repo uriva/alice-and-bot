@@ -98,5 +98,4 @@ conversations would follow.
 
 ## How can I try it out?
 
-Check out [https://github.com/uriva/alice-and-bot](our GitHub) and get to
-chatting! 👧🤖
+Check out [our GitHub](https://github.com/uriva/alice-and-bot) and get to chatting! 👧🤖
