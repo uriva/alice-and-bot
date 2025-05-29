@@ -31,7 +31,8 @@ const Message = (
     <div
       style={{
         display: "flex",
-        gap: 4,
+        gap: 6,
+        padding: 8,
         flexDirection: isOwn ? "row-reverse" : "row",
       }}
     >
@@ -41,8 +42,9 @@ const Message = (
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 40,
-            height: 40,
+            flexShrink: 0,
+            width: 32,
+            height: 32,
             padding: 4,
             borderRadius: "50%",
             background: bubbleColor,
