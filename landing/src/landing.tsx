@@ -1,6 +1,6 @@
 import { useLocation } from "preact-iso";
 import { Button } from "./components.tsx";
-import { chatPath } from "./paths.ts";
+import { chatPath, manifestoPath } from "./paths.ts";
 
 const features = [
   {
@@ -111,13 +111,20 @@ export const LandingPage = () => {
         >
           Live demo
         </a>
+        <a
+          type="button"
+          href={manifestoPath}
+          class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
+        >
+          Learn why
+        </a>
       </div>
       <footer class="w-full text-center text-gray-400 dark:text-gray-500 text-base py-8 mt-auto">
         &copy; {new Date().getFullYear()}{"  "}
         <span>Alice&Bot. Built for the next era of chat.</span>
         <span class="mx-2">|</span>
         <a
-          href="/manifesto"
+          href={manifestoPath}
           class="underline text-blue-700 dark:text-blue-300 hover:text-blue-900 ml-2"
         >
           Manifesto
