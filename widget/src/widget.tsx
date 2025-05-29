@@ -58,6 +58,9 @@ const WithCredentials = (
 
 export const Widget = ({ dialTo }: { dialTo: string }) => {
   const isMobile = useIsMobile();
+  const containerPositioning = isMobile
+    ? { position: "fixed", inset: 0, zIndex: 10000 }
+    : { position: "fixed", bottom: 24, right: 24, zIndex: 10000 };
   const [name, setName] = useState<string | null>(null);
   const isDark = useDarkMode();
   const credentials = useCredentials(name, "aliceAndBotCredentials");
@@ -82,36 +85,23 @@ export const Widget = ({ dialTo }: { dialTo: string }) => {
       </div>
     );
   }
-  if (!credentials && chatOpen.value) {
-    return (
-      <div>
-        <p>Loading credentials...</p>
-      </div>
-    );
-  }
-  return chatOpen.value
-    ? (
-      <div
-        style={isMobile
-          ? { position: "fixed", inset: 0, zIndex: 10000 }
-          : { position: "fixed", bottom: 24, right: 24, zIndex: 10000 }}
-      >
-        {credentials && chatOpen.value && (
-          <WithCredentials dialTo={dialTo} credentials={credentials} />
+  return (
+    <div style={containerPositioning}>
+      {chatOpen.value
+        ? (credentials
+          ? <WithCredentials dialTo={dialTo} credentials={credentials} />
+          : <p>Loading credentials...</p>)
+        : (
+          <button
+            type="button"
+            style={getStartButtonStyle(isDark)}
+            onClick={() => {
+              chatOpen.value = true;
+            }}
+          >
+            Chat
+          </button>
         )}
-      </div>
-    )
-    : (
-      <div style={{ display: "flex", justifyContent: "center" }}>
-        <button
-          type="button"
-          style={getStartButtonStyle(isDark)}
-          onClick={() => {
-            chatOpen.value = true;
-          }}
-        >
-          Chat
-        </button>
-      </div>
-    );
+    </div>
+  );
 };
