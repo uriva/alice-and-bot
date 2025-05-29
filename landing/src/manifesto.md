@@ -1,9 +1,9 @@
 # 👧🤖 Alice&Bot
 
-## Let's unbreak chat for the AI era.
-
 **tldr; it's time to kill Whatsapp by building a competitor oriented to bots,
 not tied to a phone number, and allows easy white labeling.**
+
+## Let's unbreak chat for the AI era.
 
 I've been working on a new service - alice&bot, which is basically my (our?)
 very own encrypted chat for bots and humans.
