@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { FaPaperPlane } from "react-icons/fa";
+import { FaPaperPlane } from "@preact-icons/fa";
 import { timeAgo } from "time-ago";
 import ReactMarkdown from "react-markdown";
 import {
