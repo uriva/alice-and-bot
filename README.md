@@ -9,6 +9,9 @@ Chat reimagined for the age of bots.
 1. unlimited identities
 1. basic UI to deploy on a react app or a script to embed in any page
 
+Alice in bot is in its early days, API is likely to change often, but it already
+works i produciton, powering build-chatbot.com and other sites.
+
 ## Usage
 
 ### Functions
@@ -98,7 +101,11 @@ Embed a chat UI in your React app:
 ></script>
 ```
 
-## known security weaknesses
+## Known security weaknesses
+
+As discussed, we are at the early days, and beyond the encryption on the
+messages themselves, all metadata is exposed. Specific weaknesses we are aware
+of:
 
 1. handle faking the time
 1. handle linking message to a bad conversation id
@@ -112,3 +119,5 @@ Embed a chat UI in your React app:
 1. one can choose not to notify - adding messages
 1. everyone can see all metadata - groups, who sent when
 1. webhooks are exposed to anyone seeing participants
+
+We hope to tackle all in the coming period!
