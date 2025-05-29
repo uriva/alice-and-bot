@@ -1,4 +1,4 @@
-# 👧🤖 Alice&Bot
+# Alice&Bot 👧🤖
 
 **tldr; it's time to kill Whatsapp by building a competitor oriented to bots,
 not tied to a phone number, and allows easy white labeling.**
@@ -26,34 +26,55 @@ difficult to expose our services in a nice user interface.
 
 ## So what was missing?
 
-You can't create multiple identities and manage them easily. This has many use
-cases, maybe you want to talk to people on behalf of a company, or you as an
-employer want to give your salesperson an identity that they can use, but still
-belongs to the company. Maybe you met someone who you don't trust yet and want
-to give them a burner identity, so you can communicate with them but close the
-connection without repercussions. You should be able to create as many
-identities as you like, without phone or email. pay for traffic. You should be
-able to manage them in a single app. The identities cannot be linked externally
-assuring anonymity. corollary - creating accounts for nonhumans should be
-trivial. In whatsapp, bot creation is incredibly difficult and prone to closure
-without reason, and no support to talk to. To get certain abilities, developers
-need to undergo reviews, specifically difficult is sending messages to users
-without them initiating the conversation. This is essential in the age of AI (if
-you think it may lead to spam, keep reading). embed anywhere - sometimes we want
-to chat to our service providers in the context of a web page. we should be able
-to embed a chat with representatives, and easily bring into the conversation
-whoever we want. Think of initiating a support conversation on the bank website,
-then bringing your spouse into the conversation and continuing on mobile, along
-with your other chats. we should be able to give others permission to view a
-conversation without participating in it, as long as we have the permission to
-participate in it. This is useful for supervision over bots or other business
-use cases. APIs - we should be able to send messages via api and receive them
-via webhook. There should be no added cost to this, it should be trivial. cloud
-storage baked in - so the chats are device independent. an ability to keep your
-identity even if the chat provider solution fails or there is a better one. This
-can be achieved by having the identity be a public/private key pair. so if you
-move between providers you can only message that provider, but at least you have
-your "address book" with you, and it stays relevant.
+### You can't create multiple identities and manage them easily.
+
+This has many use cases, maybe you want to talk to people on behalf of a
+company, or you as an employer want to give your salesperson an identity that
+they can use, but still belongs to the company. Maybe you met someone who you
+don't trust yet and want to give them a burner identity, so you can communicate
+with them but close the connection without repercussions.
+
+You should be able to create as many identities as you like, without phone or
+email. You should just pay for traffic. You should be able to manage them in a
+single app.
+
+The identities cannot be linked externally assuring anonymity. corollary -
+creating accounts for nonhumans should be trivial. In whatsapp, bot creation is
+incredibly difficult and prone to closure without reason, and no support to talk
+to.
+
+To get certain abilities, developers need to undergo reviews, specifically
+difficult is sending messages to users without them initiating the conversation.
+This is essential in the age of AI (if you think it may lead to spam, keep
+reading).
+
+### Embed anywhere
+
+Sometimes we want to chat to our service providers in the context of a web page.
+we should be able to embed a chat with representatives, and easily bring into
+the conversation whoever we want.
+
+Think of initiating a support conversation on the bank website, then bringing
+your spouse into the conversation and continuing on mobile, along with your
+other chats. we should be able to give others permission to view a conversation
+without participating in it, as long as we have the permission to participate in
+it.
+
+This is useful for supervision over bots or other business use cases. APIs - we
+should be able to send messages via api and receive them via webhook. There
+should be no added cost to this, it should be trivial.
+
+### Storage
+
+Cloud storage should be baked in - so the chats are device independent.
+
+### Freedom
+
+You should be able to keep your identity even if the chat provider solution
+fails or there is a better one. This can be achieved by having the identity be a
+public/private key pair. so if you move between providers you can only message
+that provider, but at least you have your "address book" with you, and it stays
+relevant.
 
 ## What was good and needed to be preserved?
 
