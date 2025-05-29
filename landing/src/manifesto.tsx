@@ -76,21 +76,25 @@ export const Manifesto = () => {
       <div style={{ color: "white" }}>
         <Markdown
           components={{
+            // @ts-expect-error Markdown types are not fully compatible with Preact
             h1: ({ children }) => (
               <h1 className="text-4xl font-extrabold mt-8 mb-4 text-blue-700 dark:text-blue-300 text-center">
                 {children}
               </h1>
             ),
+            // @ts-expect-error Markdown types are not fully compatible with Preact
             h2: ({ children }) => (
               <h2 className="text-2xl font-bold mt-6 mb-3 text-blue-600 dark:text-blue-200">
                 {children}
               </h2>
             ),
+            // @ts-expect-error Markdown types are not fully compatible with Preact
             h3: ({ children }) => (
               <h3 className="text-xl font-semibold mt-4 mb-2 text-blue-500 dark:text-blue-100">
                 {children}
               </h3>
             ),
+            // @ts-expect-error Markdown types are not fully compatible with Preact
             a: ({ children, href }) => (
               <a
                 className="text-blue-400 underline hover:text-blue-600"
@@ -101,13 +105,17 @@ export const Manifesto = () => {
                 {children}
               </a>
             ),
+            // @ts-expect-error Markdown types are not fully compatible with Preact
             ul: ({ children }) => (
               <ul className="list-disc list-inside my-4 pl-6">{children}</ul>
             ),
+            // @ts-expect-error Markdown types are not fully compatible with Preact
             ol: ({ children }) => (
               <ol className="list-decimal list-inside my-4 pl-6">{children}</ol>
             ),
+            // @ts-expect-error Markdown types are not fully compatible with Preact
             li: ({ children }) => <li className="mb-1">{children}</li>,
+            // @ts-expect-error Markdown types are not fully compatible with Preact
             p: ({ children }) => <p className="mb-4 text-lg">{children}</p>,
           }}
         >
