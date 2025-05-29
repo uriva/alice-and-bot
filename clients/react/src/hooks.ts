@@ -63,18 +63,18 @@ export const useGetOrCreateConversation =
     (creds: Credentials | null, participants: string[]): string | null => {
       const [conversation, setConversation] = useState<string | null>(null);
       const conversations = useConversations(db)(creds?.publicSignKey ?? "");
+      const fixedParticipants = creds && unique([creds.publicSignKey, ...participants]);
       useEffect(() => {
-        if (conversation) return;
-        const existingConversation = conversations.find(matchesParticipants(participants));
+        if (!creds || conversation || !fixedParticipants) return;
+        const existingConversation = conversations.find(matchesParticipants(fixedParticipants));
         if (existingConversation) {
           setConversation(existingConversation.id);
           return;
         }
-        if (!creds) return;
-        if (participants.length) {
-          createConversation(db)(unique([creds.publicSignKey, ...participants]), "Chat");
+        if (fixedParticipants.length) {
+          createConversation(db)(fixedParticipants, "Chat");
         }
-      }, [conversation, conversations, participants]);
+      }, [conversation, conversations, fixedParticipants]);
       return conversation;
     };
 
