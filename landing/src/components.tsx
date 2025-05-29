@@ -1,7 +1,9 @@
 import { useState } from "preact/hooks";
 import type { JSX } from "preact/jsx-runtime";
 
-export const Button = (props: JSX.IntrinsicElements["button"]) => {
+type ButtonProps = JSX.IntrinsicElements["button"];
+
+export const Button = (props: ButtonProps) => {
   const { className = "", children, disabled, ...rest } = props;
   const base = "px-4 py-2 font-medium rounded transition " +
     (disabled
