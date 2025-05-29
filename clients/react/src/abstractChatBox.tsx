@@ -23,7 +23,6 @@ const Message = (
   const isDark = useDarkMode();
   const bubbleColor = stringToColor(authorId, isDark);
   const showAvatar = isFirstOfSequence;
-  // In dark mode, use light text; in light mode, use dark text
   const textColor = isLightColor(bubbleColor)
     ? (isDark ? "#fff" : "#222")
     : (isDark ? "#fff" : "#fff");
