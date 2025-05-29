@@ -96,19 +96,33 @@ export const LandingPage = () => {
           <li>White label and embed anywhere</li>
         </ul>
       </section>
-      <div class="flex justify-center mb-12">
-        <button
+      <div class="flex justify-center mb-12 gap-4">
+        <a
           type="button"
-          disabled
-          class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg cursor-not-allowed opacity-70 hover:opacity-80 transition"
+          href="https://github.com/uriva/alice-and-bot"
+          class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
         >
-          Get Early Access (Coming Soon)
-        </button>
+          Start building
+        </a>
+        <a
+          type="button"
+          href={chatPath}
+          class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
+        >
+          Live demo
+        </a>
       </div>
       <footer class="w-full text-center text-gray-400 dark:text-gray-500 text-base py-8 mt-auto">
-        &copy; {new Date().getFullYear()} Alice&Bot. Built for the next era of chat. |
-        <a href="/manifesto" class="underline text-blue-700 dark:text-blue-300 hover:text-blue-900 ml-2">Manifesto</a>
-        |
+        &copy; {new Date().getFullYear()}{"  "}
+        <span>Alice&Bot. Built for the next era of chat.</span>
+        <span class="mx-2">|</span>
+        <a
+          href="/manifesto"
+          class="underline text-blue-700 dark:text-blue-300 hover:text-blue-900 ml-2"
+        >
+          Manifesto
+        </a>
+        <span class="mx-2">|</span>
         <a
           href="https://github.com/uriva/alice-and-bot"
           target="_blank"
@@ -117,7 +131,7 @@ export const LandingPage = () => {
         >
           GitHub
         </a>
-        |
+        <span class="mx-2">|</span>
         <a
           href="https://github.com/uriva/alice-and-bot"
           target="_blank"
@@ -127,13 +141,6 @@ export const LandingPage = () => {
           API Docs
         </a>
       </footer>
-      <Button
-        onClick={() => {
-          route(chatPath);
-        }}
-      >
-        Start chatting!
-      </Button>
     </main>
   );
 };
