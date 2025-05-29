@@ -38,7 +38,13 @@ export const useGetOrCreateConversation = useGetOrCreateConversationNoDb(
   accessDb,
 );
 
-export const useConversations = useConversationsNoDb(accessDb);
+export const useConversations: (publicSignKey: string) => {
+  id: string;
+  title: string;
+  participants: {
+    publicSignKey: string;
+  }[];
+}[] = useConversationsNoDb(accessDb);
 export const Chat = ChatNoDb(accessDb);
 
 export const createConversation: (
