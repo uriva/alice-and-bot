@@ -1,7 +1,7 @@
 export const chatContainerStyle = (isDarkMode: boolean) => ({
   border: "1px solid #ccc",
-  padding: 8,
   display: "flex",
+  overflow: "hidden",
   flexDirection: "column",
   background: isDarkMode ? "#22232a" : "#fff",
   color: isDarkMode ? "#f4f4f4" : "#222",
@@ -9,16 +9,6 @@ export const chatContainerStyle = (isDarkMode: boolean) => ({
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
 });
 
-export const messageContainerStyle = (isDarkMode: boolean) => ({
-  display: "flex",
-  flexGrow: 1,
-  overflowY: "auto",
-  scrollbarGutter: "stable",
-  gap: 8,
-  background: isDarkMode ? "#282a36" : "#f9fafb",
-  transition: "background 0.2s",
-  flexDirection: "column-reverse",
-});
 
 export const loadingStyle = { fontSize: 12, color: "#bbb" };
 

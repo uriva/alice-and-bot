@@ -6,7 +6,6 @@ import {
   chatContainerStyle,
   isLightColor,
   loadingStyle,
-  messageContainerStyle,
   stringToColor,
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
@@ -31,7 +30,6 @@ const Message = (
       style={{
         display: "flex",
         gap: 6,
-        padding: 8,
         flexDirection: isOwn ? "row-reverse" : "row",
       }}
     >
@@ -142,7 +140,6 @@ const CloseButton = ({ onClose }: { onClose: () => void }) => {
         color,
         zIndex: 10,
         transition: "background 0.2s, color 0.2s",
-        padding: 0,
         fontWeight: 700,
         lineHeight: 1,
       }}
@@ -155,6 +152,33 @@ const CloseButton = ({ onClose }: { onClose: () => void }) => {
     </button>
   );
 };
+
+const titleStyle = (isDark: boolean) => ({
+  textAlign: "center",
+  fontWeight: "bold",
+  fontSize: "1.2em",
+  padding: "0.7em 0 0.5em 0",
+  background: isDark ? "#23272f" : "#fff",
+  color: isDark ? "#f3f4f6" : "#222",
+  boxShadow: isDark
+    ? "0 1px 0 0 #23272f, 0 2px 8px 0 #0002"
+    : "0 1px 0 0 #e5e7eb, 0 2px 8px 0 #0001",
+  borderBottom: "none",
+  borderTopLeftRadius: isDark ? 0 : 16,
+  borderTopRightRadius: isDark ? 0 : 16,
+});
+
+const messageContainerStyle = (isDark: boolean) => ({
+  display: "flex",
+  flexGrow: 1,
+  overflowY: "auto",
+  scrollbarGutter: "stable",
+  gap: 8,
+  transition: "background 0.2s",
+  flexDirection: "column-reverse",
+  background: isDark ? "#181c23" : "#f8fafc", // Added background for gutter fit
+  scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc", // Custom scrollbar for dark/light
+});
 
 export const AbstractChatBox = (
   { limit, loadMore, userId, onSend, messages, onClose, title }: {
@@ -201,6 +225,7 @@ export const AbstractChatBox = (
       style={{
         ...chatContainerStyle(isDark),
         position: "relative",
+        borderRadius: 16,
         fontFamily:
           "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
         ...(isMobile
@@ -209,9 +234,6 @@ export const AbstractChatBox = (
             height: "100vh",
             maxWidth: "100vw",
             maxHeight: "100vh",
-            borderRadius: 0,
-            border: "none",
-            padding: 0,
           }
           : {
             height: 700,
@@ -219,24 +241,7 @@ export const AbstractChatBox = (
           }),
       }}
     >
-      <div
-        style={{
-          textAlign: "center",
-          fontWeight: "bold",
-          fontSize: "1.2em",
-          padding: "0.7em 0 0.5em 0",
-          background: isDark ? "#23272f" : "#fff",
-          color: isDark ? "#f3f4f6" : "#222",
-          boxShadow: isDark
-            ? "0 1px 0 0 #23272f, 0 2px 8px 0 #0002"
-            : "0 1px 0 0 #e5e7eb, 0 2px 8px 0 #0001",
-          borderBottom: "none",
-          borderTopLeftRadius: isDark ? 0 : 16,
-          borderTopRightRadius: isDark ? 0 : 16,
-        }}
-      >
-        {title}
-      </div>
+      <div style={titleStyle(isDark)}>{title}</div>
       {onClose && <CloseButton onClose={onClose} />}
       <div
         ref={messagesContainerRef}
