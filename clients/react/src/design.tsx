@@ -40,20 +40,11 @@ export const isLightColor = (hsl: string) => {
 };
 
 export const bubbleStyle = (
-  { bubbleColor, textColor, isOwn, showAvatar, align }: {
-    bubbleColor: string;
-    textColor: string;
-    isOwn: boolean;
-    showAvatar: boolean;
-    align: "flex-start" | "flex-end";
-  },
+  { isOwn, showAvatar }: { isOwn: boolean; showAvatar: boolean },
 ) => ({
-  background: bubbleColor,
-  color: textColor,
   borderRadius: 16,
   padding: "6px 12px",
   maxWidth: 220,
   marginLeft: isOwn ? 0 : (!isOwn && showAvatar ? 0 : 36),
   marginRight: isOwn ? (showAvatar ? 0 : 36) : 0,
-  alignSelf: align,
 });

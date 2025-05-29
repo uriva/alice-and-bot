@@ -85,18 +85,15 @@ const Message = (
       )}
       <div
         dir="auto"
-        style={bubbleStyle({
-          textColor,
-          bubbleColor,
-          isOwn,
-          showAvatar,
-          align: isOwn ? "flex-end" : "flex-start",
-        })}
+        style={{
+          background: bubbleColor,
+          color: textColor,
+          alignSelf: isOwn ? "flex-end" : "flex-start",
+          ...bubbleStyle({ isOwn, showAvatar }),
+        }}
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>
-        <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-          <ReactMarkdown>{text}</ReactMarkdown>
-        </div>
+        <ReactMarkdown>{text}</ReactMarkdown>
         <span
           style={{
             color: isDark ? "#bbb" : (textColor === "#222" ? "#555" : "#eee"),
