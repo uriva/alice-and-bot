@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
-import { timeAgo } from "time-ago";
 import ReactMarkdown from "react-markdown";
+import { timeAgo } from "time-ago";
 import {
-  bubbleStyle,
   chatContainerStyle,
   isLightColor,
   loadingStyle,
@@ -39,17 +38,14 @@ const Message = (
       {showAvatar && (
         <div
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            marginRight: 8,
-            background: bubbleColor,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            overflow: "hidden",
+            width: 40,
+            height: 40,
             padding: 4,
-            boxSizing: "border-box",
+            borderRadius: "50%",
+            background: bubbleColor,
             boxShadow: isDark ? "0 1px 4px #0004" : "0 1px 4px #0001",
             transition: "background 0.2s, box-shadow 0.2s",
           }}
@@ -60,8 +56,6 @@ const Message = (
                 src={authorAvatar}
                 alt={authorName}
                 style={{
-                  width: 24,
-                  height: 24,
                   objectFit: "cover",
                   borderRadius: "50%",
                 }}
@@ -89,7 +83,10 @@ const Message = (
           background: bubbleColor,
           color: textColor,
           alignSelf: isOwn ? "flex-end" : "flex-start",
-          ...bubbleStyle({ isOwn, showAvatar }),
+          borderRadius: 16,
+          padding: "6px 12px",
+          marginLeft: isOwn ? 0 : (!isOwn && showAvatar ? 0 : 36),
+          marginRight: isOwn ? (showAvatar ? 0 : 36) : 0,
         }}
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>

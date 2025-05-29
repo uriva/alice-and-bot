@@ -38,13 +38,3 @@ export const isLightColor = (hsl: string) => {
   const lightness = parseInt(match[1], 10);
   return lightness > 60;
 };
-
-export const bubbleStyle = (
-  { isOwn, showAvatar }: { isOwn: boolean; showAvatar: boolean },
-) => ({
-  borderRadius: 16,
-  padding: "6px 12px",
-  maxWidth: 220,
-  marginLeft: isOwn ? 0 : (!isOwn && showAvatar ? 0 : 36),
-  marginRight: isOwn ? (showAvatar ? 0 : 36) : 0,
-});
