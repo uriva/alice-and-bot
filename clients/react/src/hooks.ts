@@ -26,7 +26,13 @@ export const useDarkMode = () => {
 
 export const useConversations =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  (publicSignKey: string): { id: string; title: string }[] => {
+  (
+    publicSignKey: string,
+  ): {
+    id: string;
+    title: string;
+    participants: { publicSignKey: string }[];
+  }[] => {
     const { data, error } = db().useQuery({
       conversations: {
         participants: {},
