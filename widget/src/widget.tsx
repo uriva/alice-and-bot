@@ -1,3 +1,4 @@
+import { signal } from "@preact/signals";
 import { coerce } from "gamla";
 import { useState } from "preact/hooks";
 import {
@@ -5,7 +6,11 @@ import {
   useDarkMode,
   useIsMobile,
 } from "../../clients/react/src/hooks.ts";
-import { Chat, useGetOrCreateConversation } from "../../mod.ts";
+import {
+  Chat,
+  type Credentials,
+  useGetOrCreateConversation,
+} from "../../mod.ts";
 
 const getStartButtonStyle = (isDark: boolean): preact.JSX.CSSProperties => ({
   background: isDark
@@ -27,81 +32,49 @@ const getStartButtonStyle = (isDark: boolean): preact.JSX.CSSProperties => ({
   display: "inline-block",
 });
 
-const InternalWidget = ({ dialTo }: { dialTo: string }) => {
-  const [chatOpen, setChatOpen] = useState(false);
-  const [name, setName] = useState<string | null>(null);
-  const credentials = useCredentials(name, "aliceAndBotCredentials");
-  const conversation = useGetOrCreateConversation(credentials, dialTo);
-  const isDark = useDarkMode();
+const chatOpen = signal(false);
 
-  if (chatOpen) {
-    if (conversation) {
-      return (
-        <Chat
-          onClose={() => {
-            setChatOpen(false);
-          }}
-          credentials={coerce(credentials)}
-          conversationId={conversation}
-        />
-      );
-    }
-    if (credentials) {
-      return (
-        <div>
-          <p>Getting/creating conversation...</p>
-        </div>
-      );
-    }
-    return (
-      <div>
-        <p>Loading credentials...</p>
+const WithCredentials = (
+  { dialTo, credentials }: { dialTo: string; credentials: Credentials },
+) => {
+  const conversation = useGetOrCreateConversation(credentials, [dialTo]);
+  const isDark = useDarkMode();
+  return conversation
+    ? (
+      <Chat
+        onClose={() => {
+          chatOpen.value = false;
+        }}
+        credentials={coerce(credentials)}
+        conversationId={conversation}
+      />
+    )
+    : (
+      <div style={getStartButtonStyle(isDark)}>
+        <p>Getting/creating conversation...</p>
       </div>
     );
-  }
+};
 
-  if (!chatOpen) {
-    if (conversation) {
-      return (
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <button
-            type="button"
-            style={getStartButtonStyle(isDark)}
-            onClick={() => setChatOpen(true)}
-          >
-            Open Chat
-          </button>
-        </div>
-      );
-    }
-    if (!credentials) {
-      return (
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <button
-            type="button"
-            style={getStartButtonStyle(isDark)}
-            onClick={() => {
-              const userName = prompt("Enter your name:");
-              if (userName) {
-                setName(userName);
-                setChatOpen(true);
-              } else {
-                alert("Name is required to start a chat.");
-              }
-            }}
-          >
-            Start Chat
-          </button>
-        </div>
-      );
-    }
+export const Widget = ({ dialTo }: { dialTo: string }) => {
+  const isMobile = useIsMobile();
+  const [name, setName] = useState<string | null>(null);
+  const isDark = useDarkMode();
+  const credentials = useCredentials(name, "aliceAndBotCredentials");
+  if (!credentials && !chatOpen.value) {
     return (
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
-          style={getStartButtonStyle(isDark)}
           type="button"
+          style={getStartButtonStyle(isDark)}
           onClick={() => {
-            setChatOpen(true);
+            const userName = prompt("Enter your name:");
+            if (userName) {
+              setName(userName);
+              chatOpen.value = true;
+            } else {
+              alert("Name is required to start a chat.");
+            }
           }}
         >
           Start Chat
@@ -109,19 +82,36 @@ const InternalWidget = ({ dialTo }: { dialTo: string }) => {
       </div>
     );
   }
-
-  return null;
-};
-
-export const Widget = ({ dialTo }: { dialTo: string }) => {
-  const isMobile = useIsMobile();
-  return (
-    <div
-      style={isMobile
-        ? { position: "fixed", inset: 0, zIndex: 10000 }
-        : { position: "fixed", bottom: 24, right: 24, zIndex: 10000 }}
-    >
-      <InternalWidget dialTo={dialTo} />
-    </div>
-  );
+  if (!credentials && chatOpen.value) {
+    return (
+      <div>
+        <p>Loading credentials...</p>
+      </div>
+    );
+  }
+  return chatOpen.value
+    ? (
+      <div
+        style={isMobile
+          ? { position: "fixed", inset: 0, zIndex: 10000 }
+          : { position: "fixed", bottom: 24, right: 24, zIndex: 10000 }}
+      >
+        {credentials && chatOpen.value && (
+          <WithCredentials dialTo={dialTo} credentials={credentials} />
+        )}
+      </div>
+    )
+    : (
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <button
+          type="button"
+          style={getStartButtonStyle(isDark)}
+          onClick={() => {
+            chatOpen.value = true;
+          }}
+        >
+          Chat
+        </button>
+      </div>
+    );
 };
