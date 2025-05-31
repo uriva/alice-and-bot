@@ -78,27 +78,6 @@ export const Widget = ({ dialTo }: { dialTo: string }) => {
   const [name, setName] = useState<string | null>(null);
   const isDark = useDarkMode();
   const credentials = useCredentials(name, "aliceAndBotCredentials");
-  if (!credentials && !chatOpen.value) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center" }}>
-        <button
-          type="button"
-          style={getStartButtonStyle(isDark)}
-          onClick={() => {
-            const userName = prompt("Enter your name:");
-            if (userName) {
-              setName(userName);
-              chatOpen.value = true;
-            } else {
-              alert("Name is required to start a chat.");
-            }
-          }}
-        >
-          Start Chat
-        </button>
-      </div>
-    );
-  }
   return (
     <>
       {isMobile && chatOpen.value && <Overlay />}
@@ -121,9 +100,18 @@ export const Widget = ({ dialTo }: { dialTo: string }) => {
               style={getStartButtonStyle(isDark)}
               onClick={() => {
                 chatOpen.value = true;
+                if (credentials) return;
+                const userName = prompt("Enter your name:");
+                if (userName) {
+                  setName(userName);
+                  chatOpen.value = true;
+                } else {
+                  alert("Name is required to start a chat.");
+                  chatOpen.value = false;
+                }
               }}
             >
-              Chat
+              {credentials ? "Chat" : "Start Chat"}
             </button>
           )}
       </div>
