@@ -75,9 +75,6 @@ const Overlay = () => (
 
 export const Widget = ({ dialTo }: { dialTo: string }) => {
   const isMobile = useIsMobile();
-  const containerPositioning = isMobile
-    ? { inset: 0 }
-    : { bottom: 24, right: 24 };
   const [name, setName] = useState<string | null>(null);
   const isDark = useDarkMode();
   const credentials = useCredentials(name, "aliceAndBotCredentials");
@@ -109,7 +106,9 @@ export const Widget = ({ dialTo }: { dialTo: string }) => {
         style={{
           position: "fixed",
           zIndex: overlayZIndex + 1,
-          ...containerPositioning,
+          ...isMobile && chatOpen.value
+            ? { inset: 0 }
+            : { bottom: 24, right: 24 },
         }}
       >
         {chatOpen.value
