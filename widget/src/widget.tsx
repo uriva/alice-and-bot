@@ -56,11 +56,28 @@ const WithCredentials = (
     );
 };
 
+const overlayZIndex = 10000;
+
+const Overlay = () => (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: overlayZIndex,
+      background: "transparent",
+      touchAction: "none",
+      pointerEvents: "auto",
+    }}
+    onTouchMove={(e) => e.preventDefault()}
+    onWheel={(e) => e.preventDefault()}
+  />
+);
+
 export const Widget = ({ dialTo }: { dialTo: string }) => {
   const isMobile = useIsMobile();
   const containerPositioning = isMobile
-    ? { position: "fixed", inset: 0, zIndex: 10000 }
-    : { position: "fixed", bottom: 24, right: 24, zIndex: 10000 };
+    ? { inset: 0 }
+    : { bottom: 24, right: 24 };
   const [name, setName] = useState<string | null>(null);
   const isDark = useDarkMode();
   const credentials = useCredentials(name, "aliceAndBotCredentials");
@@ -86,22 +103,31 @@ export const Widget = ({ dialTo }: { dialTo: string }) => {
     );
   }
   return (
-    <div style={containerPositioning}>
-      {chatOpen.value
-        ? (credentials
-          ? <WithCredentials dialTo={dialTo} credentials={credentials} />
-          : <p>Loading credentials...</p>)
-        : (
-          <button
-            type="button"
-            style={getStartButtonStyle(isDark)}
-            onClick={() => {
-              chatOpen.value = true;
-            }}
-          >
-            Chat
-          </button>
-        )}
-    </div>
+    <>
+      {isMobile && chatOpen.value && <Overlay />}
+      <div
+        style={{
+          position: "fixed",
+          zIndex: overlayZIndex + 1,
+          ...containerPositioning,
+        }}
+      >
+        {chatOpen.value
+          ? (credentials
+            ? <WithCredentials dialTo={dialTo} credentials={credentials} />
+            : <p>Loading credentials...</p>)
+          : (
+            <button
+              type="button"
+              style={getStartButtonStyle(isDark)}
+              onClick={() => {
+                chatOpen.value = true;
+              }}
+            >
+              Chat
+            </button>
+          )}
+      </div>
+    </>
   );
 };
