@@ -227,7 +227,7 @@ export const AbstractChatBox = (
       style={{
         ...chatContainerStyle(isDark),
         position: "relative",
-        borderRadius: isMobile ? 16 : 0,
+        borderRadius: isMobile ? 0 : 16,
         fontFamily:
           "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
         ...(isMobile
