@@ -1,6 +1,6 @@
 # Alice&Bot 👧🤖
 
-**tldr; it's time to kill Whatsapp by building a competitor oriented to bots,
+**tldr; it's time to kill WhatsApp by building a competitor oriented to bots,
 not tied to a phone number, and allows easy white labeling.**
 
 ## Let's unbreak chat for the AI era.
