@@ -1,5 +1,6 @@
 import { signal } from "@preact/signals";
 import { coerce } from "gamla";
+import type { JSX } from "preact";
 import { createPortal } from "preact/compat";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useDarkMode, useIsMobile } from "../../clients/react/src/hooks.ts";
@@ -156,7 +157,7 @@ const InnerWidget = (
   );
 };
 
-export const Widget = (props: WidgetProps) => {
+export const Widget = (props: WidgetProps): JSX.Element => {
   const hostRef = useRef<HTMLDivElement>(null);
   const [shadowRoot, setShadowRoot] = useState<ShadowRoot | null>(null);
   useEffect(() => {
