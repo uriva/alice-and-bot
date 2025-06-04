@@ -266,8 +266,11 @@ export const AbstractChatBox = (
         borderRadius: isMobile ? 0 : 16,
         fontFamily:
           "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         ...(isMobile
-          ? { width: "100vw", height: viewportHeight }
+          ? { width: "100vw" }
           : { height: 700, width: 400 }),
       }}
     >
@@ -275,7 +278,12 @@ export const AbstractChatBox = (
       {onClose && <CloseButton onClose={onClose} />}
       <div
         ref={messagesContainerRef}
-        style={messageContainerStyle(isDark)}
+        style={{
+          ...messageContainerStyle(isDark),
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+        }}
       >
         {messages.length === 0
           ? (
@@ -295,12 +303,12 @@ export const AbstractChatBox = (
           )
           : (
             <>
-              {messages.slice().reverse().map((msg, i, arr) => (
+              {messages.map((msg, i, arr) => (
                 <Message
                   key={i}
                   isOwn={msg.authorId === userId}
                   msg={msg}
-                  next={arr[i - 1]}
+                  next={arr[i + 1]}
                 />
               ))}
               <div ref={messagesEndRef} />

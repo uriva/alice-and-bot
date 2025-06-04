@@ -39,13 +39,15 @@ const WithCredentials = (
   const isDark = useDarkMode();
   return conversation
     ? (
-      <Chat
-        onClose={() => {
-          chatOpen.value = false;
-        }}
-        credentials={coerce(credentials)}
-        conversationId={conversation}
-      />
+      <div style={{ flex: 1, display: "flex", minHeight: 0, height: "100%" }}>
+        <Chat
+          onClose={() => {
+            chatOpen.value = false;
+          }}
+          credentials={coerce(credentials)}
+          conversationId={conversation}
+        />
+      </div>
     )
     : (
       <div style={getStartButtonStyle(isDark)}>
@@ -64,7 +66,7 @@ const Overlay = () => (
       zIndex: overlayZIndex,
       background: "transparent",
       touchAction: "none",
-      pointerEvents: "auto",
+      pointerEvents: "none",
     }}
     onTouchMove={(e) => e.preventDefault()}
     onWheel={(e) => e.preventDefault()}
@@ -82,7 +84,6 @@ const InnerWidget = (
 ) => {
   const isMobile = useIsMobile();
   const isDark = useDarkMode();
-  const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (isMobile && chatOpen.value) {
       const originalOverflow = document.body.style.overflow;
@@ -92,67 +93,26 @@ const InnerWidget = (
       };
     }
   }, [isMobile, chatOpen.value]);
-  useEffect(() => {
-    if (isMobile && chatOpen.value && containerRef.current) {
-      const setHeight = () => {
-        if (containerRef.current) {
-          containerRef.current.style.height = globalThis.innerHeight + "px";
-          containerRef.current.style.width = "100vw";
-        }
-      };
-      setHeight();
-      globalThis.addEventListener("resize", setHeight);
-      return () => {
-        globalThis.removeEventListener("resize", setHeight);
-      };
-    }
-  }, [isMobile, chatOpen.value]);
-  useEffect(() => {
-    if (!isMobile && containerRef.current) {
-      containerRef.current.style.height = "";
-      containerRef.current.style.width = "";
-    }
-  }, [isMobile, chatOpen.value]);
   return (
     <>
       {isMobile && chatOpen.value && <Overlay />}
-      <div
-        ref={containerRef}
-        style={{
-          position: "fixed",
-          zIndex: overlayZIndex + 1,
-          ...(isMobile && chatOpen.value
-            ? {
-              inset: 0,
-              width: "100vw",
-              height: "100dvh",
-              maxHeight: "100dvh",
-              background: isDark ? "#232526" : "#fff",
-              transition: "height 0.2s",
-            }
-            : { bottom: 24, right: 24 }),
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {chatOpen.value
-          ? (credentials
-            ? <WithCredentials dialTo={dialTo} credentials={credentials} />
-            : <p>Loading credentials...</p>)
-          : (
-            <button
-              type="button"
-              style={getStartButtonStyle(isDark)}
-              onClick={() => {
-                chatOpen.value = true;
-                if (credentials) return;
-                generateCredentials();
-              }}
-            >
-              {credentials ? "Chat" : "Start Chat"}
-            </button>
-          )}
-      </div>
+      {chatOpen.value
+        ? (credentials
+          ? <WithCredentials dialTo={dialTo} credentials={credentials} />
+          : <p>Loading credentials...</p>)
+        : (
+          <button
+            type="button"
+            style={getStartButtonStyle(isDark)}
+            onClick={() => {
+              chatOpen.value = true;
+              if (credentials) return;
+              generateCredentials();
+            }}
+          >
+            {credentials ? "Chat" : "Start Chat"}
+          </button>
+        )}
     </>
   );
 };
@@ -160,19 +120,67 @@ const InnerWidget = (
 export const Widget = (props: WidgetProps): JSX.Element => {
   const hostRef = useRef<HTMLDivElement>(null);
   const [shadowRoot, setShadowRoot] = useState<ShadowRoot | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
+  const isDark = useDarkMode();
   useEffect(() => {
     if (hostRef.current && !shadowRoot) {
       setShadowRoot(hostRef.current.attachShadow({ mode: "open" }));
     }
   }, [hostRef.current, !shadowRoot]);
+  useEffect(() => {
+    if (isMobile && chatOpen.value && containerRef.current) {
+      const setHeight = () => {
+        const height = globalThis.visualViewport?.height ||
+          globalThis.innerHeight;
+        containerRef.current!.style.height = height + "px";
+        containerRef.current!.style.width = "100vw";
+      };
+      setHeight();
+      globalThis.addEventListener("resize", setHeight);
+      if (globalThis.visualViewport) {
+        globalThis.visualViewport.addEventListener("resize", setHeight);
+      }
+      return () => {
+        globalThis.removeEventListener("resize", setHeight);
+        if (globalThis.visualViewport) {
+          globalThis.visualViewport.removeEventListener("resize", setHeight);
+        }
+      };
+    } else if (containerRef.current) {
+      containerRef.current.style.height = "";
+      containerRef.current.style.width = "";
+    }
+  }, [isMobile, shadowRoot, chatOpen.value]);
   return (
     <div ref={hostRef}>
       {shadowRoot && createPortal(
-        <InnerWidget
-          dialTo={props.dialTo}
-          credentials={props.credentials}
-          generateCredentials={props.generateCredentials}
-        />,
+        <div
+          ref={containerRef}
+          style={{
+            position: "fixed",
+            zIndex: 10001,
+            inset: isMobile && chatOpen.value ? 0 : undefined,
+            width: isMobile && chatOpen.value ? "100vw" : undefined,
+            height: isMobile && chatOpen.value ? undefined : undefined,
+            background: isMobile && chatOpen.value
+              ? (isDark ? "#232526" : "#fff")
+              : undefined,
+            transition: "height 0.2s",
+            display: "flex",
+            flexDirection: "column",
+            bottom: !isMobile || !chatOpen.value ? 24 : undefined,
+            right: !isMobile || !chatOpen.value ? 24 : undefined,
+            minHeight: 0,
+          }}
+        >
+          {/* debug overlay removed */}
+          <InnerWidget
+            dialTo={props.dialTo}
+            credentials={props.credentials}
+            generateCredentials={props.generateCredentials}
+          />
+        </div>,
         shadowRoot,
       )}
     </div>

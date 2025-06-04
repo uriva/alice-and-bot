@@ -8,7 +8,7 @@ import { Widget } from "../../widget/src/widget.tsx";
 import { useCredentials, useGetOrCreateConversation } from "./src/hooks.ts";
 import { Chat } from "./src/main.tsx";
 
-const widgetMode = signal(false);
+const widgetMode = signal(true);
 
 const WithCredentials = (
   { participants, db }: {
