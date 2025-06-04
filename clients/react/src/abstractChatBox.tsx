@@ -199,6 +199,22 @@ export const AbstractChatBox = (
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  // Track viewport height for mobile keyboard handling
+  const [viewportHeight, setViewportHeight] = useState(
+    typeof globalThis !== "undefined" && "innerHeight" in globalThis
+      ? globalThis.innerHeight
+      : 0,
+  );
+  useEffect(() => {
+    if (!isMobile) return;
+    const handleResize = () => {
+      setViewportHeight(globalThis.innerHeight);
+    };
+    globalThis.addEventListener("resize", handleResize);
+    return () => {
+      globalThis.removeEventListener("resize", handleResize);
+    };
+  }, [isMobile]);
   const handleScroll = () => {
     if (
       messagesContainerRef.current &&
@@ -243,7 +259,7 @@ export const AbstractChatBox = (
         fontFamily:
           "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
         ...(isMobile
-          ? { width: "100vw", height: "100vh" }
+          ? { width: "100vw", height: viewportHeight }
           : { height: 700, width: 400 }),
       }}
     >
