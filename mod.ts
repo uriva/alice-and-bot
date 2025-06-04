@@ -21,6 +21,7 @@ export {
   sendMessage,
   type WebhookUpdate,
 } from "./protocol/src/api.ts";
+export { Widget } from "./widget/src/widget.tsx";
 
 let db: InstantReactWebDatabase<typeof schema> | null = null;
 

@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { useState } from "preact/hooks";
 import { useCredentials } from "../../clients/react/src/hooks.ts";
-import { ShadowWidget } from "./widget.tsx";
+import { Widget } from "./widget.tsx";
 
 const elementId = "alice-and-bot-widget-root";
 
@@ -9,7 +9,7 @@ const Entry = ({ dialTo }: { dialTo: string }) => {
   const [name, setName] = useState<string | null>(null);
   const credentials = useCredentials(name, "aliceAndBotCredentials");
   return (
-    <ShadowWidget
+    <Widget
       dialTo={[dialTo]}
       generateCredentials={() => {
         if (credentials) return;

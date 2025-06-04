@@ -76,7 +76,7 @@ type WidgetProps = {
   generateCredentials: () => void;
 };
 
-const Widget = (
+const InnerWidget = (
   { dialTo, credentials, generateCredentials }: WidgetProps,
 ) => {
   const isMobile = useIsMobile();
@@ -156,7 +156,7 @@ const Widget = (
   );
 };
 
-export const ShadowWidget = (props: WidgetProps) => {
+export const Widget = (props: WidgetProps) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const [shadowRoot, setShadowRoot] = useState<ShadowRoot | null>(null);
   useEffect(() => {
@@ -167,7 +167,7 @@ export const ShadowWidget = (props: WidgetProps) => {
   return (
     <div ref={hostRef}>
       {shadowRoot && createPortal(
-        <Widget
+        <InnerWidget
           dialTo={props.dialTo}
           credentials={props.credentials}
           generateCredentials={props.generateCredentials}
