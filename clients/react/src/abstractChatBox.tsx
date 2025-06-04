@@ -212,6 +212,18 @@ export const AbstractChatBox = (
     }
   };
   useEffect(() => {
+    if (!onClose) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    globalThis.addEventListener("keydown", handleKeyDown);
+    return () => {
+      globalThis.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+  useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.addEventListener("scroll", handleScroll);
       return () =>
