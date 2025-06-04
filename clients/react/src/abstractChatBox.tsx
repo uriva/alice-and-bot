@@ -387,6 +387,7 @@ export const AbstractChatBox = (
         <button
           type="button"
           disabled={!input.trim()}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             if (!input.trim()) return;
             onSend(input.trim());
