@@ -176,7 +176,7 @@ const messageContainerStyle = (isDark: boolean) => ({
   scrollbarGutter: "stable",
   gap: 8,
   transition: "background 0.2s",
-  flexDirection: "column-reverse",
+  flexDirection: "column",
   background: isDark ? "#181c23" : "#f8fafc",
   scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
   padding: 4,
@@ -250,6 +250,14 @@ export const AbstractChatBox = (
     }
   }, [limit, messages, fetchingMore]);
   const isDark = useDarkMode();
+
+  // Scroll to bottom when messages change (new message sent/received)
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages.length]);
+
   return (
     <div
       style={{
@@ -287,12 +295,12 @@ export const AbstractChatBox = (
           )
           : (
             <>
-              {messages.map((msg, i) => (
+              {messages.slice().reverse().map((msg, i, arr) => (
                 <Message
                   key={i}
                   isOwn={msg.authorId === userId}
                   msg={msg}
-                  next={messages[i + 1]}
+                  next={arr[i - 1]}
                 />
               ))}
               <div ref={messagesEndRef} />
