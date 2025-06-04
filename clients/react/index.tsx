@@ -1,10 +1,14 @@
 import { init, type InstantReactWebDatabase } from "@instantdb/react";
+import { signal } from "@preact/signals";
 import { coerce } from "gamla";
 import { render } from "preact";
 import schema from "../../instant.schema.ts";
 import { type Credentials, instantAppId } from "../../protocol/src/api.ts";
 import { useCredentials, useGetOrCreateConversation } from "./src/hooks.ts";
 import { Chat } from "./src/main.tsx";
+import { Widget } from "../../widget/src/widget.tsx";
+
+const widgetMode = signal(false);
 
 const WithCredentials = (
   { participants, db }: {
@@ -17,13 +21,32 @@ const WithCredentials = (
     participants[0],
     participants.map((p) => p.publicSignKey),
   );
+  if (widgetMode.value) {
+    return (
+      <Widget
+        generateCredentials={() => {}}
+        credentials={participants[0]}
+        dialTo={participants.map((x) => x.publicSignKey)}
+      />
+    );
+  }
   return conversation
     ? (
-      <div style={{ display: "flex", gap: 10 }}>
-        {participants.map((p) => (
-          <ChatWithDb credentials={p} conversationId={conversation} />
-        ))}
-      </div>
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            widgetMode.value = true;
+          }}
+        >
+          widget mode
+        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          {participants.slice(0, 1).map((p) => (
+            <ChatWithDb credentials={p} conversationId={conversation} />
+          ))}
+        </div>
+      </>
     )
     : <div>preparing conversation</div>;
 };

@@ -1,11 +1,7 @@
 import { signal } from "@preact/signals";
 import { coerce } from "gamla";
-import { useState } from "preact/hooks";
-import {
-  useCredentials,
-  useDarkMode,
-  useIsMobile,
-} from "../../clients/react/src/hooks.ts";
+import { useEffect, useRef } from "preact/hooks";
+import { useDarkMode, useIsMobile } from "../../clients/react/src/hooks.ts";
 import {
   Chat,
   type Credentials,
@@ -35,9 +31,9 @@ const getStartButtonStyle = (isDark: boolean): preact.JSX.CSSProperties => ({
 const chatOpen = signal(false);
 
 const WithCredentials = (
-  { dialTo, credentials }: { dialTo: string; credentials: Credentials },
+  { dialTo, credentials }: { dialTo: string[]; credentials: Credentials },
 ) => {
-  const conversation = useGetOrCreateConversation(credentials, [dialTo]);
+  const conversation = useGetOrCreateConversation(credentials, dialTo);
   const isDark = useDarkMode();
   return conversation
     ? (
@@ -73,21 +69,72 @@ const Overlay = () => (
   />
 );
 
-export const Widget = ({ dialTo }: { dialTo: string }) => {
+export const Widget = (
+  { dialTo, generateCredentials, credentials }: {
+    dialTo: string[];
+    credentials: Credentials | null;
+    generateCredentials: () => void;
+  },
+) => {
   const isMobile = useIsMobile();
-  const [name, setName] = useState<string | null>(null);
   const isDark = useDarkMode();
-  const credentials = useCredentials(name, "aliceAndBotCredentials");
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Prevent background scroll on mobile when chat is open
+  useEffect(() => {
+    if (isMobile && chatOpen.value) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isMobile, chatOpen.value]);
+
+  // Handle dynamic height for keyboard (mobile)
+  useEffect(() => {
+    if (isMobile && chatOpen.value && containerRef.current) {
+      const setHeight = () => {
+        if (containerRef.current) {
+          containerRef.current.style.height = globalThis.innerHeight + "px";
+          containerRef.current.style.width = "100vw";
+        }
+      };
+      setHeight();
+      globalThis.addEventListener("resize", setHeight);
+      return () => {
+        globalThis.removeEventListener("resize", setHeight);
+      };
+    }
+  }, [isMobile, chatOpen.value]);
+
+  // Reset inline styles when leaving mobile mode
+  useEffect(() => {
+    if (!isMobile && containerRef.current) {
+      containerRef.current.style.height = "";
+      containerRef.current.style.width = "";
+    }
+  }, [isMobile, chatOpen.value]);
+
   return (
     <>
       {isMobile && chatOpen.value && <Overlay />}
       <div
+        ref={containerRef}
         style={{
           position: "fixed",
           zIndex: overlayZIndex + 1,
-          ...isMobile && chatOpen.value
-            ? { inset: 0 }
-            : { bottom: 24, right: 24 },
+          ...(isMobile && chatOpen.value
+            ? {
+              inset: 0,
+              width: "100vw",
+              height: "100dvh",
+              maxHeight: "100dvh",
+              background: isDark ? "#232526" : "#fff",
+              transition: "height 0.2s",
+            }
+            : { bottom: 24, right: 24 }),
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {chatOpen.value
@@ -101,14 +148,7 @@ export const Widget = ({ dialTo }: { dialTo: string }) => {
               onClick={() => {
                 chatOpen.value = true;
                 if (credentials) return;
-                const userName = prompt("Enter your name:");
-                if (userName) {
-                  setName(userName);
-                  chatOpen.value = true;
-                } else {
-                  alert("Name is required to start a chat.");
-                  chatOpen.value = false;
-                }
+                generateCredentials();
               }}
             >
               {credentials ? "Chat" : "Start Chat"}
