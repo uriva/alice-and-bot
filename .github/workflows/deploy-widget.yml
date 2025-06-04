@@ -1,0 +1,30 @@
+name: Deploy Widget
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: actions/checkout@v4
+      - run: deno task widget
+      - name: Confirm widget is built
+        run: ls -l widget/dist
+      - name: Set up Google Cloud credentials
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Upload widget/dist to Google Cloud Storage
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: widget/dist
+          destination: alice-and-bot/widget/
+          process_gcloudignore: false
