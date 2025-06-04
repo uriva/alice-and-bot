@@ -75,7 +75,7 @@ export const Widget = (
     credentials: Credentials | null;
     generateCredentials: () => void;
   },
-) => {
+): preact.JSX.Element => {
   const isMobile = useIsMobile();
   const isDark = useDarkMode();
   const containerRef = useRef<HTMLDivElement>(null);
