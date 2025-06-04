@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals";
 import { coerce } from "gamla";
-import { useEffect, useRef } from "preact/hooks";
+import { createPortal } from "preact/compat";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { useDarkMode, useIsMobile } from "../../clients/react/src/hooks.ts";
 import {
   Chat,
@@ -69,17 +70,18 @@ const Overlay = () => (
   />
 );
 
-export const Widget = (
-  { dialTo, generateCredentials, credentials }: {
-    dialTo: string[];
-    credentials: Credentials | null;
-    generateCredentials: () => void;
-  },
-): preact.JSX.Element => {
+type WidgetProps = {
+  dialTo: string[];
+  credentials: Credentials | null;
+  generateCredentials: () => void;
+};
+
+const Widget = (
+  { dialTo, credentials, generateCredentials }: WidgetProps,
+) => {
   const isMobile = useIsMobile();
   const isDark = useDarkMode();
   const containerRef = useRef<HTMLDivElement>(null);
-  // Prevent background scroll on mobile when chat is open
   useEffect(() => {
     if (isMobile && chatOpen.value) {
       const originalOverflow = document.body.style.overflow;
@@ -89,8 +91,6 @@ export const Widget = (
       };
     }
   }, [isMobile, chatOpen.value]);
-
-  // Handle dynamic height for keyboard (mobile)
   useEffect(() => {
     if (isMobile && chatOpen.value && containerRef.current) {
       const setHeight = () => {
@@ -106,15 +106,12 @@ export const Widget = (
       };
     }
   }, [isMobile, chatOpen.value]);
-
-  // Reset inline styles when leaving mobile mode
   useEffect(() => {
     if (!isMobile && containerRef.current) {
       containerRef.current.style.height = "";
       containerRef.current.style.width = "";
     }
   }, [isMobile, chatOpen.value]);
-
   return (
     <>
       {isMobile && chatOpen.value && <Overlay />}
@@ -156,5 +153,27 @@ export const Widget = (
           )}
       </div>
     </>
+  );
+};
+
+export const ShadowWidget = (props: WidgetProps) => {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [shadowRoot, setShadowRoot] = useState<ShadowRoot | null>(null);
+  useEffect(() => {
+    if (hostRef.current && !shadowRoot) {
+      setShadowRoot(hostRef.current.attachShadow({ mode: "open" }));
+    }
+  }, [hostRef.current, !shadowRoot]);
+  return (
+    <div ref={hostRef}>
+      {shadowRoot && createPortal(
+        <Widget
+          dialTo={props.dialTo}
+          credentials={props.credentials}
+          generateCredentials={props.generateCredentials}
+        />,
+        shadowRoot,
+      )}
+    </div>
   );
 };

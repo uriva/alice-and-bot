@@ -4,9 +4,9 @@ import { coerce } from "gamla";
 import { render } from "preact";
 import schema from "../../instant.schema.ts";
 import { type Credentials, instantAppId } from "../../protocol/src/api.ts";
+import { ShadowWidget } from "../../widget/src/widget.tsx";
 import { useCredentials, useGetOrCreateConversation } from "./src/hooks.ts";
 import { Chat } from "./src/main.tsx";
-import { Widget } from "../../widget/src/widget.tsx";
 
 const widgetMode = signal(false);
 
@@ -23,7 +23,7 @@ const WithCredentials = (
   );
   if (widgetMode.value) {
     return (
-      <Widget
+      <ShadowWidget
         generateCredentials={() => {}}
         credentials={participants[0]}
         dialTo={participants.map((x) => x.publicSignKey)}
@@ -42,9 +42,14 @@ const WithCredentials = (
           widget mode
         </button>
         <div style={{ display: "flex", gap: 10 }}>
-          {participants.slice(0, 1).map((p) => (
-            <ChatWithDb credentials={p} conversationId={conversation} />
-          ))}
+          {participants.slice(0, widgetMode.value ? 1 : participants.length)
+            .map((p) => (
+              <ChatWithDb
+                key={p.publicSignKey}
+                credentials={p}
+                conversationId={conversation}
+              />
+            ))}
         </div>
       </>
     )
