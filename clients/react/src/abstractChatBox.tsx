@@ -340,7 +340,10 @@ export const AbstractChatBox = (
                 onSend(input.trim());
                 setInput("");
                 setTimeout(() => {
-                  if (inputRef.current) inputRef.current.style.height = "auto";
+                  if (inputRef.current) {
+                    inputRef.current.style.height = "auto";
+                    inputRef.current.focus();
+                  }
                 }, 0);
               }
               e.preventDefault();
@@ -372,6 +375,12 @@ export const AbstractChatBox = (
             if (!input.trim()) return;
             onSend(input.trim());
             setInput("");
+            setTimeout(() => {
+              if (inputRef.current) {
+                inputRef.current.focus();
+                inputRef.current.style.height = "auto";
+              }
+            }, 0);
           }}
           style={{
             display: "flex",

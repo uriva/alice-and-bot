@@ -10,7 +10,7 @@ import {
   useGetOrCreateConversation,
 } from "../../mod.ts";
 
-const getStartButtonStyle = (isDark: boolean): preact.JSX.CSSProperties => ({
+const getStartButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
   background: isDark
     ? "linear-gradient(90deg, #232526 0%, #414345 100%)"
     : "linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%)",
