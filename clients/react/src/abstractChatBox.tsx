@@ -10,6 +10,7 @@ import {
   stringToColor,
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
+import { send } from "node:process";
 
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
@@ -183,6 +184,33 @@ const messageContainerStyle = (isDark: boolean) => ({
   padding: 4,
 });
 
+const sendButtonStyle = (isDark: boolean, disabled: boolean) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "0 22px 0 16px",
+  height: 44,
+  borderRadius: 32,
+  border: "none",
+  background: !disabled
+    ? (isDark
+      ? "linear-gradient(90deg,#2563eb 60%,#60a5fa 100%)"
+      : "linear-gradient(90deg,#3182ce 60%,#60a5fa 100%)")
+    : (isDark ? "#23272f" : "#cbd5e1"),
+  color: !disabled ? "#fff" : (isDark ? "#aaa" : "#64748b"),
+  fontWeight: 700,
+  fontSize: 17,
+  cursor: !disabled ? "pointer" : "not-allowed",
+  boxShadow: isDark
+    ? "0 2px 8px rgba(0,0,0,0.18)"
+    : "0 2px 8px rgba(0,0,0,0.08)",
+  transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
+  opacity: !disabled ? 1 : 0.7,
+  borderTopLeftRadius: 12,
+  borderBottomLeftRadius: 12,
+  gap: 7,
+});
+
 export const AbstractChatBox = (
   { limit, loadMore, userId, onSend, messages, onClose, title }: {
     userId: string;
@@ -267,7 +295,7 @@ export const AbstractChatBox = (
         borderRadius: isMobile ? 0 : 16,
         fontFamily:
           "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
-        height: "100%",
+        height: isMobile ? viewportHeight : "auto",
         display: "flex",
         flexDirection: "column",
         ...(isMobile ? { width: "100vw" } : { height: 700, width: 400 }),
@@ -280,7 +308,6 @@ export const AbstractChatBox = (
         style={{
           ...messageContainerStyle(isDark),
           flex: 1,
-          minHeight: 0,
           overflowY: "auto",
         }}
       >
@@ -418,32 +445,7 @@ export const AbstractChatBox = (
               }
             }, 0);
           }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "0 22px 0 16px",
-            height: 44,
-            borderRadius: 32,
-            border: "none",
-            background: input.trim()
-              ? (isDark
-                ? "linear-gradient(90deg,#2563eb 60%,#60a5fa 100%)"
-                : "linear-gradient(90deg,#3182ce 60%,#60a5fa 100%)")
-              : (isDark ? "#23272f" : "#cbd5e1"),
-            color: input.trim() ? "#fff" : (isDark ? "#aaa" : "#64748b"),
-            fontWeight: 700,
-            fontSize: 17,
-            cursor: input.trim() ? "pointer" : "not-allowed",
-            boxShadow: isDark
-              ? "0 2px 8px rgba(0,0,0,0.18)"
-              : "0 2px 8px rgba(0,0,0,0.08)",
-            transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
-            opacity: input.trim() ? 1 : 0.7,
-            borderTopLeftRadius: 12,
-            borderBottomLeftRadius: 12,
-            gap: 7,
-          }}
+          style={sendButtonStyle(isDark, !input.trim())}
           title="Send"
         >
           <span
