@@ -400,6 +400,8 @@ export const AbstractChatBox = (
               : "0 2px 8px rgba(0,0,0,0.08)",
             fontFamily: "inherit",
             letterSpacing: 0.1,
+            scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f1f5f9",
+            scrollbarWidth: "thin",
           }}
           onKeyDown={(e) => {
             // Allow PageUp/PageDown to scroll the textarea if possible
