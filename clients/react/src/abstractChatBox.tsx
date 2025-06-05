@@ -1,3 +1,4 @@
+import { sortKey } from "gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
@@ -269,9 +270,7 @@ export const AbstractChatBox = (
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        ...(isMobile
-          ? { width: "100vw" }
-          : { height: 700, width: 400 }),
+        ...(isMobile ? { width: "100vw" } : { height: 700, width: 400 }),
       }}
     >
       <div style={titleStyle(isDark)}>{title}</div>
@@ -303,7 +302,11 @@ export const AbstractChatBox = (
           )
           : (
             <>
-              {messages.map((msg, i, arr) => (
+              {sortKey((x: AbstracChatMessage) => x.timestamp)(messages).map((
+                msg,
+                i,
+                arr,
+              ) => (
                 <Message
                   key={i}
                   isOwn={msg.authorId === userId}
