@@ -297,8 +297,10 @@ export const AbstractChatBox = (
       } else {
         textarea.style.height = "1.5em";
       }
+      textarea.style.overflowY = "hidden"; // Hide vertical scrollbar for single line
     } else {
       textarea.style.height = textarea.scrollHeight + "px";
+      textarea.style.overflowY = "auto"; // Allow vertical scroll for multiline
     }
   };
 
@@ -373,7 +375,7 @@ export const AbstractChatBox = (
           value={input}
           rows={1}
           placeholder="Type a message..."
-          onKeyDownCapture={(e) => {
+          onInput={(e) => {
             setInput(e.currentTarget.value);
             resizeTextarea(e.currentTarget);
           }}
@@ -388,7 +390,8 @@ export const AbstractChatBox = (
             outline: "none",
             resize: "none",
             minHeight: "1.5em",
-            overflow: "auto", // changed from hidden to auto
+            overflowY: "auto",
+            overflowX: "hidden",
             maxHeight: 200,
             lineHeight: 1.5,
             transition: "border 0.2s, background 0.2s, color 0.2s",
@@ -400,11 +403,17 @@ export const AbstractChatBox = (
           }}
           onKeyDown={(e) => {
             // Allow PageUp/PageDown to scroll the textarea if possible
-            if ((e.key === "PageUp" || e.key === "PageDown") && e.currentTarget) {
+            if (
+              (e.key === "PageUp" || e.key === "PageDown") && e.currentTarget
+            ) {
               const ta = e.currentTarget;
               const canScrollUp = ta.scrollTop > 0;
-              const canScrollDown = ta.scrollTop + ta.clientHeight < ta.scrollHeight;
-              if ((e.key === "PageUp" && canScrollUp) || (e.key === "PageDown" && canScrollDown)) {
+              const canScrollDown =
+                ta.scrollTop + ta.clientHeight < ta.scrollHeight;
+              if (
+                (e.key === "PageUp" && canScrollUp) ||
+                (e.key === "PageDown" && canScrollDown)
+              ) {
                 e.stopPropagation();
                 // Let the textarea handle the scroll
                 return;
@@ -426,9 +435,11 @@ export const AbstractChatBox = (
             } else if (
               e.key === "Enter" && (e.shiftKey || e.ctrlKey)
             ) {
-              const selectionStart = e.currentTarget.selectionStart ?? input.length;
+              const selectionStart = e.currentTarget.selectionStart ??
+                input.length;
               const selectionEnd = e.currentTarget.selectionEnd ?? input.length;
-              const newValue = input.slice(0, selectionStart) + "\n" + input.slice(selectionEnd);
+              const newValue = input.slice(0, selectionStart) + "\n" +
+                input.slice(selectionEnd);
               // Update the DOM value directly so resizeTextarea sees the new value immediately
               e.currentTarget.value = newValue;
               resizeTextarea(e.currentTarget);
