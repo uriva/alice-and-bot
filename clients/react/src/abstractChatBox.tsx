@@ -10,7 +10,6 @@ import {
   stringToColor,
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
-import { send } from "node:process";
 
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
@@ -358,21 +357,9 @@ export const AbstractChatBox = (
           value={input}
           rows={1}
           placeholder="Type a message..."
-          onChange={(e) => {
-            setInput(e.currentTarget.value);
-            const textarea = e.currentTarget;
-            textarea.style.height = "auto";
-            const singleLine = textarea.value.split("\n").length === 1;
-            if (singleLine) {
-              textarea.style.height = textarea.scrollHeight + "px";
-              if (textarea.scrollHeight > textarea.clientHeight) {
-                textarea.style.height = textarea.scrollHeight + "px";
-              } else {
-                textarea.style.height = "1.5em";
-              }
-            } else {
-              textarea.style.height = textarea.scrollHeight + "px";
-            }
+          onChange={({ currentTarget: { value, scrollHeight, style } }) => {
+            setInput(value);
+            style.height = scrollHeight + "px";
           }}
           style={{
             flexGrow: 1,
@@ -385,6 +372,7 @@ export const AbstractChatBox = (
             outline: "none",
             resize: "none",
             minHeight: "1.5em",
+            overflow: "hidden",
             maxHeight: 200,
             lineHeight: 1.5,
             transition: "border 0.2s, background 0.2s, color 0.2s",
@@ -393,7 +381,6 @@ export const AbstractChatBox = (
               : "0 2px 8px rgba(0,0,0,0.08)",
             fontFamily: "inherit",
             letterSpacing: 0.1,
-            overflow: "auto",
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
