@@ -149,7 +149,7 @@ const CloseButton = ({ onClose }: { onClose: () => void }) => {
       onMouseOut={(e) => (e.currentTarget.style.background = baseBg)}
     >
       <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1, color }}>
-        ×
+        &times;
       </span>
     </button>
   );
