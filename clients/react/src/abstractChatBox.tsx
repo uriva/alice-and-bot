@@ -79,7 +79,6 @@ const Message = (
         </div>
       )}
       <div
-        dir="auto"
         style={{
           background: bubbleColor,
           color: textColor,
@@ -91,7 +90,9 @@ const Message = (
         }}
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>
-        <ReactMarkdown>{text}</ReactMarkdown>
+        <div dir="auto">
+          <ReactMarkdown>{text}</ReactMarkdown>
+        </div>
         <span
           style={{
             color: isDark ? "#bbb" : (textColor === "#222" ? "#555" : "#eee"),
