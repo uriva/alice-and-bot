@@ -5,7 +5,7 @@ import {
   endpoint,
   httpCommunication,
 } from "typed-api";
-import { z } from "zod";
+import { z } from "zod/v4";
 import type { Credentials } from "../../protocol/src/api.ts";
 
 export const backendApiSchema = {

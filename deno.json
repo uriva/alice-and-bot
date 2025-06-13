@@ -27,9 +27,9 @@
     "react-markdown": "npm:react-markdown@10.1.0",
     "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
     "time-ago": "jsr:@egamagz/time-ago@2025.4.9",
-    "typed-api": "jsr:@uri/typed-api@0.0.9",
+    "typed-api": "jsr:@uri/typed-api@0.0.10",
     "vite": "npm:vite@^6.3.5",
-    "zod": "npm:zod@3.24.4"
+    "zod": "npm:zod@3.25.57"
   },
   "unstable": ["cron"],
   "compilerOptions": {
@@ -39,6 +39,6 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.58",
+  "version": "0.0.59",
   "exports": "./mod.ts"
 }
