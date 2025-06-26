@@ -11,15 +11,25 @@ export const chatContainerStyle = (isDarkMode: boolean) => ({
 
 export const loadingStyle = { fontSize: 12, color: "#bbb" };
 
+const participantColors = [
+  { h: 195, s: 65 }, // blue
+  { h: 105, s: 65 }, // green
+  { h: 30, s: 65 }, // orange
+  { h: 300, s: 65 }, // magenta
+  { h: 270, s: 65 }, // purple
+  { h: 0, s: 65 }, // red
+  { h: 210, s: 65 }, // another blue
+  { h: 150, s: 65 }, // teal-green
+];
+
 export const stringToColor = (str: string, isDarkMode: boolean) => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const h = Math.abs(hash * 31 + 137) % 360;
-  const s = 70;
+  const color = participantColors[Math.abs(hash) % participantColors.length];
   const lightness = isDarkMode ? 32 : 70;
-  return `hsl(${h}, ${s}%, ${lightness}%)`;
+  return `hsl(${color.h}, ${color.s}%, ${lightness}%)`;
 };
 
 export const isLightColor = (hsl: string) => {

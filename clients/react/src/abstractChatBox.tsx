@@ -21,10 +21,11 @@ const Message = (
 ) => {
   const isFirstOfSequence = !next || next.authorId !== authorId;
   const isDark = useDarkMode();
-  const baseColor = stringToColor(authorId, isDark);
-  const bubbleColor = baseColor;
+  const baseColor = isOwn
+    ? isDark ? "#2563eb" : "#3182ce"
+    : stringToColor(authorId, isDark);
   const showAvatar = isFirstOfSequence;
-  const textColor = isLightColor(bubbleColor)
+  const textColor = isLightColor(baseColor)
     ? (isDark ? "#fff" : "#222")
     : (isDark ? "#fff" : "#fff");
   return (
@@ -46,7 +47,7 @@ const Message = (
             height: 32,
             padding: 4,
             borderRadius: "50%",
-            background: bubbleColor,
+            background: baseColor,
             boxShadow: isDark ? "0 1px 4px #0004" : "0 1px 4px #0001",
             transition: "background 0.2s, box-shadow 0.2s",
           }}
@@ -65,7 +66,7 @@ const Message = (
             : (
               <span
                 style={{
-                  color: isLightColor(bubbleColor)
+                  color: isLightColor(baseColor)
                     ? (isDark ? "#fff" : "#222")
                     : (isDark ? "#fff" : "#fff"),
                   fontWeight: 700,
@@ -80,13 +81,15 @@ const Message = (
       )}
       <div
         style={{
-          background: bubbleColor,
+          background: baseColor,
           color: textColor,
           alignSelf: isOwn ? "flex-end" : "flex-start",
           borderRadius: 16,
           padding: "6px 12px",
-          marginLeft: isOwn ? 0 : (!isOwn && showAvatar ? 0 : 36),
+          marginLeft: isOwn ? 0 : !isOwn && showAvatar ? 0 : 36,
           marginRight: isOwn ? (showAvatar ? 0 : 36) : 0,
+          maxWidth: "80%",
+          overflowWrap: "break-word",
         }}
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>
