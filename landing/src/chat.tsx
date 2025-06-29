@@ -3,7 +3,7 @@ import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
 import { useEffect, useState } from "preact/hooks";
 import {
-  Conversation,
+  type Conversation,
   useConversations,
 } from "../..//clients/react/src/hooks.ts";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
