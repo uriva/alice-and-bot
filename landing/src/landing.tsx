@@ -117,7 +117,7 @@ export const LandingPage = () => (
     </div>
     <footer class="w-full text-center text-gray-400 dark:text-gray-500 text-base py-8 mt-auto">
       &copy; {new Date().getFullYear()}{"  "}
-      <span>Alice&Bot. Built for the next era of chat.</span>
+      <span>Alice&Bot. Built for the next era of AI.</span>
       <span class="mx-2">|</span>
       <a
         href={manifestoPath}
