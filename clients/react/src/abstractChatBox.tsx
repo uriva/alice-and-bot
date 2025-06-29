@@ -28,6 +28,13 @@ const Message = (
   const textColor = isLightColor(baseColor)
     ? (isDark ? "#fff" : "#222")
     : (isDark ? "#fff" : "#fff");
+
+  let timeagoStr: string | undefined = "";
+  try {
+    timeagoStr = timeAgo(timestamp);
+  } catch (e) {
+    console.error(e);
+  }
   return (
     <div
       style={{
@@ -103,7 +110,7 @@ const Message = (
             float: "right",
           }}
         >
-          {timeAgo(timestamp)}
+          {timeagoStr}
         </span>
       </div>
     </div>
