@@ -1,6 +1,7 @@
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useEffect, useState } from "preact/hooks";
+import { useLocation } from "preact-iso";
 import { useConversations } from "../..//clients/react/src/hooks.ts";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
@@ -184,10 +185,10 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
 };
 
 export const ChatDemo = () => {
+  const location = useLocation();
   const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [storeInBrowser, setStoreInBrowser] = useState(true);
   const [showForm, setShowForm] = useState<null | "new" | "existing">(null);
-  // const [credentialsString, setCredentialsString] = useState<string | null>(null); // unused
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
   );
@@ -195,7 +196,10 @@ export const ChatDemo = () => {
     "",
   );
 
-  // On mount, check for stored credentials
+  // Store chatWith param if present
+  const [pendingChatWith, setPendingChatWith] = useState<string | null>(null);
+
+  // On mount, check for stored credentials and chatWith param
   useEffect(() => {
     try {
       const stored = localStorage.getItem("alicebot_credentials");
@@ -205,6 +209,40 @@ export const ChatDemo = () => {
       }
     } catch (_e) { /* ignore */ }
   }, []);
+
+  // Watch for chatWith param changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.query || "");
+    const chatWith = params.get("chatWith");
+    if (chatWith) {
+      setPendingChatWith(chatWith);
+    }
+  }, [location.query]);
+
+  // After login, if chatWith param is present, focus or create conversation
+  useEffect(() => {
+    if (!credentials || !pendingChatWith) return;
+    // Check if conversation exists
+    const existing = conversations.find((conv) => {
+      if (!conv.participants) return false;
+      // participants can be array of string or objects with publicSignKey
+      return conv.participants.some((p: string | { publicSignKey: string }) =>
+        typeof p === "string"
+          ? p === pendingChatWith
+          : p?.publicSignKey === pendingChatWith
+      );
+    });
+    if (existing) {
+      selectedConversation.value = existing.id;
+      setPendingChatWith(null);
+    } else {
+      // Create conversation and focus
+      (async () => {
+        await startConversation(credentials, pendingChatWith)();
+        setPendingChatWith(null);
+      })();
+    }
+  }, [credentials, pendingChatWith, conversations]);
 
   return (
     <section class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20 w-full max-w-2xl mx-auto">
@@ -263,6 +301,21 @@ export const ChatDemo = () => {
             <div>
               You can share it with others to start a conversation. It's like a
               phone number, but for secure messaging.
+            </div>
+            <div class="mt-2">
+              <label class={labelSmallStyle}>Share a chat-with-me link:</label>
+              <div class="flex items-center gap-2">
+                <input
+                  class={inputStyle}
+                  readOnly
+                  value={`${globalThis.location.origin}${globalThis.location.pathname}?chatWith=${credentials.publicSignKey}`}
+                  style={{ maxWidth: "100%" }}
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+              </div>
+              <div class={hintStyle}>
+                Send this link to someone so they can start a chat with you.
+              </div>
             </div>
           </div>
           <div
