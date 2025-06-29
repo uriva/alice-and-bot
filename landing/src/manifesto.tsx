@@ -1,11 +1,10 @@
 import { toast } from "react-hot-toast";
 import Markdown from "react-markdown";
+import { baseUrl } from "../../protocol/src/api.ts";
 import manifestoText from "./manifesto.md?raw";
 
 export const Manifesto = () => {
-  const manifestoUrl = typeof globalThis !== "undefined" && globalThis.location
-    ? globalThis.location.origin + "/manifesto"
-    : "https://aliceandbot.com/manifesto";
+  const manifestoUrl = baseUrl + "/";
 
   const shareText = encodeURIComponent(
     "Check out the Alice&Bot Manifesto! 👧🤖 It's time to unbreak chat for the AI era.",

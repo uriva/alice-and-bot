@@ -211,7 +211,7 @@ export const createIdentity = async (name: string): Promise<Credentials> => {
   };
 };
 
-const baseUrl = "https://alice-and-bot.onrender.com";
+export const baseUrl = "https://aliceandbot.com";
 
 export const chatWithMeLink = (
   publicSignKey: string,
