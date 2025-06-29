@@ -206,6 +206,7 @@ const YourKey = ({ publicSignKey }: { publicSignKey: string }) => (
         />
       </div>
     </div>
+    <DeleteCredentialsButton />
   </div>
 );
 
@@ -271,7 +272,7 @@ export const ChatDemo = () => {
   }, [credentials, pendingChatWith, conversations]);
 
   return (
-    <section class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20 w-full max-w-2xl mx-auto">
+    <div class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20 w-full max-w-2xl mx-auto">
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
         Alice&Bot encrypted chat
       </h2>
@@ -313,7 +314,6 @@ export const ChatDemo = () => {
           )}
         </div>
       )}
-
       {credentials && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div
@@ -338,7 +338,6 @@ export const ChatDemo = () => {
               Start New Conversation
             </button>
           </div>
-          <DeleteCredentialsButton />
           <h3 class={labelStyle + " mb-2"}>Open Chats</h3>
           {conversations.length === 0
             ? <div class={emptyStyle}>No conversations yet.</div>
@@ -373,7 +372,7 @@ export const ChatDemo = () => {
         </div>
       )}
       {credentials && <YourKey publicSignKey={credentials.publicSignKey} />}
-    </section>
+    </div>
   );
 };
 
@@ -381,7 +380,7 @@ const DeleteCredentialsButton = () => (
   <div class="mb-4">
     <button
       type="button"
-      class={buttonBlueStyle}
+      class={buttonRedStyle}
       onClick={() => {
         if (
           confirm(
@@ -423,3 +422,5 @@ const chatButtonStyle =
   "px-3 py-2 rounded-lg border transition-colors w-full sm:w-auto mt-1 sm:mt-0 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700";
 const chatButtonActiveStyle =
   "bg-blue-100 dark:bg-blue-700 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-500";
+const buttonRedStyle =
+  `${buttonBaseStyle} bg-red-600 hover:bg-red-700 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800`;
