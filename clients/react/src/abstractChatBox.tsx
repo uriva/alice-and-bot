@@ -28,7 +28,6 @@ const Message = (
   const textColor = isLightColor(baseColor)
     ? (isDark ? "#fff" : "#222")
     : (isDark ? "#fff" : "#fff");
-
   let timeagoStr: string | undefined = "";
   try {
     timeagoStr = timeAgo(timestamp);
