@@ -216,4 +216,4 @@ export const chatWithMeLink = (
   publicSignKey: string,
   url: string = baseUrl,
 ): string =>
-  `${url.replace(/\/$/, "")}?chatWith=${encodeURIComponent(publicSignKey)}`;
+  `${url.replace(/\/$/, "")}chat?chatWith=${encodeURIComponent(publicSignKey)}`;
