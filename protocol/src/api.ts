@@ -18,6 +18,7 @@ import {
   sign,
   verify,
 } from "./crypto.ts";
+import { chatPath } from "../../landing/src/paths.ts";
 
 export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
 
@@ -210,10 +211,9 @@ export const createIdentity = async (name: string): Promise<Credentials> => {
   };
 };
 
-export const baseUrl = "https://alice-and-bot.onrender.com";
+const baseUrl = "https://alice-and-bot.onrender.com";
 
 export const chatWithMeLink = (
   publicSignKey: string,
-  url: string = baseUrl,
 ): string =>
-  `${url.replace(/\/$/, "")}chat?chatWith=${encodeURIComponent(publicSignKey)}`;
+  `${baseUrl}${chatPath}?chatWith=${encodeURIComponent(publicSignKey)}`;
