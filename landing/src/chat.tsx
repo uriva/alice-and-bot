@@ -247,21 +247,22 @@ export const ChatDemo = () => {
   // After login, if chatWith param is present, focus or create conversation
   useEffect(() => {
     if (!credentials || !pendingChatWith) return;
-    // Check if conversation exists
-    const existing = conversations.find((conv) => {
+    const myKey = credentials.publicSignKey;
+    const isMatch = (
+      conv: { participants?: (string | { publicSignKey: string })[] },
+    ) => {
       if (!conv.participants) return false;
-      // participants can be array of string or objects with publicSignKey
-      return conv.participants.some((p: string | { publicSignKey: string }) =>
-        typeof p === "string"
-          ? p === pendingChatWith
-          : p?.publicSignKey === pendingChatWith
-      );
-    });
+      const keys = conv.participants.map((
+        p: string | { publicSignKey: string },
+      ) => typeof p === "string" ? p : p.publicSignKey);
+      return keys.length === 2 && keys.includes(myKey) &&
+        keys.includes(pendingChatWith);
+    };
+    const existing = conversations.find(isMatch);
     if (existing) {
       selectedConversation.value = existing.id;
       setPendingChatWith(null);
     } else {
-      // Create conversation and focus
       (async () => {
         await startConversation(credentials, pendingChatWith)();
         setPendingChatWith(null);
@@ -337,32 +338,31 @@ export const ChatDemo = () => {
               Start New Conversation
             </button>
           </div>
-          <div class="mb-4">
-            <h3 class={labelStyle + " mb-2"}>Open Chats</h3>
-            {conversations.length === 0
-              ? <div class={emptyStyle}>No conversations yet.</div>
-              : (
-                <ul class="flex gap-2 flex-wrap">
-                  {conversations.map((conv) => (
-                    <li key={conv.id}>
-                      <button
-                        type="button"
-                        class={chatButtonStyle +
-                          (selectedConversation.value === conv.id
-                            ? " " + chatButtonActiveStyle
-                            : "")}
-                        onClick={() => {
-                          selectedConversation.value = conv.id;
-                        }}
-                      >
-                        {conv.title || conv.id}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-          </div>
-          {selectedConversation.value && (
+          <DeleteCredentialsButton />
+          <h3 class={labelStyle + " mb-2"}>Open Chats</h3>
+          {conversations.length === 0
+            ? <div class={emptyStyle}>No conversations yet.</div>
+            : (
+              <ul class="flex gap-2 flex-wrap">
+                {conversations.map((conv) => (
+                  <li key={conv.id}>
+                    <button
+                      type="button"
+                      class={chatButtonStyle +
+                        (selectedConversation.value === conv.id
+                          ? " " + chatButtonActiveStyle
+                          : "")}
+                      onClick={() => {
+                        selectedConversation.value = conv.id;
+                      }}
+                    >
+                      {conv.title || conv.id}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          {selectedConversation.value && credentials && (
             <div class="mt-6 overflow-x-auto">
               <Chat
                 credentials={credentials}
@@ -372,10 +372,35 @@ export const ChatDemo = () => {
           )}
         </div>
       )}
-      <YourKey publicSignKey={credentials.publicSignKey} />
+      {credentials && <YourKey publicSignKey={credentials.publicSignKey} />}
     </section>
   );
 };
+
+const DeleteCredentialsButton = () => (
+  <div class="mb-4">
+    <button
+      type="button"
+      class={buttonBlueStyle}
+      onClick={() => {
+        if (
+          confirm(
+            "Are you sure? If you delete your credentials from this browser, you will lose access unless you have saved them elsewhere.",
+          )
+        ) {
+          localStorage.removeItem("alicebot_credentials");
+          globalThis.location.reload();
+        }
+      }}
+    >
+      Delete credentials from this browser
+    </button>
+    <div class={hintStyle}>
+      Warning: Your key is not stored anywhere else. If you delete it and
+      haven't saved it, you will lose access to your identity.
+    </div>
+  </div>
+);
 
 const sectionSpacing = "mb-6";
 const labelStyle =
