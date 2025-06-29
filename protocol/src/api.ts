@@ -209,3 +209,11 @@ export const createIdentity = async (name: string): Promise<Credentials> => {
     privateEncryptKey: encryptKey.privateKey,
   };
 };
+
+export const baseUrl = "https://alice-and-bot.onrender.com";
+
+export const chatWithMeLink = (
+  publicSignKey: string,
+  url: string = baseUrl,
+): string =>
+  `${url.replace(/\/$/, "")}?chatWith=${encodeURIComponent(publicSignKey)}`;

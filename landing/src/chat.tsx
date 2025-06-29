@@ -1,17 +1,18 @@
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
-import { useEffect, useState } from "preact/hooks";
 import { useLocation } from "preact-iso";
+import { useEffect, useState } from "preact/hooks";
 import { useConversations } from "../..//clients/react/src/hooks.ts";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import {
+  chatWithMeLink,
   createConversation,
   createIdentity,
   type Credentials,
   instantAppId,
 } from "../../protocol/src/api.ts";
-import { PublicKey } from "./components.tsx";
+import { CopyableString } from "./components.tsx";
 
 const db = init({ appId: instantAppId, schema });
 
@@ -184,6 +185,30 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
   );
 };
 
+const YourKey = ({ publicSignKey }: { publicSignKey: string }) => (
+  <div
+    style={{ display: "flex", flexDirection: "column", gap: 8 }}
+    class="text-gray-900 dark:text-gray-100 mb-2"
+  >
+    <h3 class={labelStyle + " mb-2"}>Your identity</h3>
+    <div>
+      Your public key is <CopyableString str={publicSignKey} />
+    </div>
+    <div>
+      You can share it with others to start a conversation. It's like a phone
+      number, but for secure messaging.
+    </div>
+    <div>
+      Or you can share a chat-with-me link:
+      <div class="flex items-center gap-2">
+        <CopyableString
+          str={chatWithMeLink(publicSignKey)}
+        />
+      </div>
+    </div>
+  </div>
+);
+
 export const ChatDemo = () => {
   const location = useLocation();
   const [credentials, setCredentials] = useState<Credentials | null>(null);
@@ -292,34 +317,6 @@ export const ChatDemo = () => {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div
             style={{ display: "flex", flexDirection: "column", gap: 8 }}
-            class="text-gray-900 dark:text-gray-100 mb-2"
-          >
-            <div>
-              Your public key is{" "}
-              <PublicKey pubkey={credentials.publicSignKey} />
-            </div>
-            <div>
-              You can share it with others to start a conversation. It's like a
-              phone number, but for secure messaging.
-            </div>
-            <div class="mt-2">
-              <label class={labelSmallStyle}>Share a chat-with-me link:</label>
-              <div class="flex items-center gap-2">
-                <input
-                  class={inputStyle}
-                  readOnly
-                  value={`${globalThis.location.origin}${globalThis.location.pathname}?chatWith=${credentials.publicSignKey}`}
-                  style={{ maxWidth: "100%" }}
-                  onFocus={(e) => e.currentTarget.select()}
-                />
-              </div>
-              <div class={hintStyle}>
-                Send this link to someone so they can start a chat with you.
-              </div>
-            </div>
-          </div>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: 8 }}
             class={inputRowStyle + " mb-4"}
           >
             <input
@@ -375,6 +372,7 @@ export const ChatDemo = () => {
           )}
         </div>
       )}
+      <YourKey publicSignKey={credentials.publicSignKey} />
     </section>
   );
 };

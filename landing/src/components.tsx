@@ -21,23 +21,22 @@ export const Button = (props: ButtonProps) => {
   );
 };
 
-export const PublicKey = ({ pubkey }: { pubkey: string }) => {
-  const [copied, setCopied] = useState(false);
-  const truncateKey = (key: string) => {
-    if (key.length <= 10) return key;
-    return `${key.slice(0, 6)}...${key.slice(-4)}`;
-  };
+const truncateStr = (str: string) => {
+  if (str.length <= 10) return str;
+  return `${str.slice(0, 6)}...${str.slice(-4)}`;
+};
 
+export const CopyableString = ({ str }: { str: string }) => {
+  const [copied, setCopied] = useState(false);
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(pubkey).then(() => {
+    navigator.clipboard.writeText(str).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   };
-
   return (
     <span class="inline-flex items-center gap-2 font-mono text-sm">
-      <span>{truncateKey(pubkey)}</span>
+      <span>{truncateStr(str)}</span>
       <button
         type="button"
         onClick={copyToClipboard}
