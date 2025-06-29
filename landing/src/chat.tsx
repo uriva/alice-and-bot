@@ -320,7 +320,7 @@ export const Messenger = () => {
   }, [credentials, pendingChatWith, conversations]);
 
   return (
-    <div class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20 w-full max-w-2xl mx-auto">
+    <div>
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
         Alice&Bot encrypted chat
       </h2>

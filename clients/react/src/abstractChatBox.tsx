@@ -319,7 +319,7 @@ export const AbstractChatBox = (
         height: isMobile ? viewportHeight : "auto",
         display: "flex",
         flexDirection: "column",
-        ...(isMobile ? { width: "100vw" } : { height: 700, width: 400 }),
+        ...(isMobile ? { flexGrow: 1 } : { height: 700, width: 400 }),
       }}
     >
       <div style={titleStyle(isDark)}>{title}</div>
