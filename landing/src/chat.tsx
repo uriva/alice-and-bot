@@ -129,7 +129,7 @@ export const ChatDemo = () => {
               class={buttonBlueStyle}
               onClick={onClickCreateIdentity}
             >
-              Create Identity
+              Sign up
             </button>
           </div>
           <div class="flex items-center mb-2">
@@ -161,8 +161,8 @@ export const ChatDemo = () => {
             </div>
           )}
           <div class="mt-4">
-            <label class={labelSmallStyle + " mb-1"}>
-              Or paste credentials string to identify:
+            <label class={labelStyle}>
+              Or paste credentials string if you already have one
             </label>
             <div class={inputRowStyle}>
               <input
@@ -173,10 +173,10 @@ export const ChatDemo = () => {
               />
               <button
                 type="button"
-                class={buttonGreenStyle}
+                class={buttonBlueStyle}
                 onClick={identify}
               >
-                Identify
+                Sign in
               </button>
             </div>
             <div class="flex items-center mt-1">
@@ -267,10 +267,12 @@ const labelSmallStyle = "block text-xs text-gray-700 dark:text-gray-400";
 const inputRowStyle = "flex gap-2 mb-2";
 const inputStyle =
   "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 w-full";
+const buttonBaseStyle =
+  "px-4 py-2 text-white rounded-lg focus:ring-4 focus:outline-none whitespace-nowrap";
 const buttonBlueStyle =
-  "px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800";
+  `${buttonBaseStyle} bg-blue-600 hover:bg-blue-700 focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800`;
 const buttonGreenStyle =
-  "px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800";
+  `${buttonBaseStyle} bg-green-600 hover:bg-green-700 focus:ring-green-300 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800`;
 const textareaStyle =
   "w-full border rounded-lg p-2.5 text-sm bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white";
 const hintStyle = "text-xs text-gray-600 dark:text-gray-400 mt-1";
