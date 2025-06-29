@@ -1,6 +1,6 @@
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { useConversations } from "../..//clients/react/src/hooks.ts";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
@@ -55,6 +55,7 @@ export const ChatDemo = () => {
   );
   const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [inputCredentials, setInputCredentials] = useState("");
+  const [storeInBrowser, setStoreInBrowser] = useState(true);
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
   );
@@ -66,16 +67,43 @@ export const ChatDemo = () => {
     const creds = await createIdentity(identityName);
     setCredentialsString(JSON.stringify(creds));
     setCredentials(creds);
+    if (storeInBrowser) {
+      try {
+        localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
+      } catch (_e) {
+        // ignore
+      }
+    }
   };
 
   const identify = () => {
     try {
       const creds = JSON.parse(inputCredentials);
       setCredentials(creds);
+      try {
+        if (storeInBrowser) {
+          localStorage.setItem("alicebot_credentials", inputCredentials);
+        }
+      } catch (_e) {
+        // ignore
+      }
     } catch {
       alert("Invalid credentials string");
     }
   };
+
+  // On mount, check for stored credentials
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("alicebot_credentials");
+      if (stored) {
+        const creds = JSON.parse(stored);
+        setCredentials(creds);
+      }
+    } catch (_e) {
+      // ignore
+    }
+  }, []);
 
   const [otherParticipantPublicKey, setOtherParticipantPublicKey] = useState(
     "",
@@ -103,6 +131,18 @@ export const ChatDemo = () => {
             >
               Create Identity
             </button>
+          </div>
+          <div class="flex items-center mb-2">
+            <input
+              id="storeInBrowser"
+              type="checkbox"
+              checked={storeInBrowser}
+              onChange={(e) => setStoreInBrowser(e.currentTarget.checked)}
+              class="mr-2"
+            />
+            <label for="storeInBrowser" class={labelSmallStyle}>
+              Store credentials in this browser (recommended)
+            </label>
           </div>
           {credentialsString && (
             <div class="mt-2">
@@ -138,6 +178,18 @@ export const ChatDemo = () => {
               >
                 Identify
               </button>
+            </div>
+            <div class="flex items-center mt-1">
+              <input
+                id="storeInBrowser2"
+                type="checkbox"
+                checked={storeInBrowser}
+                onChange={(e) => setStoreInBrowser(e.currentTarget.checked)}
+                class="mr-2"
+              />
+              <label for="storeInBrowser2" class={labelSmallStyle}>
+                Store credentials in this browser (recommended)
+              </label>
             </div>
           </div>
         </div>
