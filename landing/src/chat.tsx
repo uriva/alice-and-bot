@@ -1,8 +1,11 @@
-import { useEffect, useState } from "preact/hooks";
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
-import { useConversations } from "../..//clients/react/src/hooks.ts";
+import { useEffect, useState } from "preact/hooks";
+import {
+  Conversation,
+  useConversations,
+} from "../..//clients/react/src/hooks.ts";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import {
@@ -13,6 +16,7 @@ import {
   instantAppId,
 } from "../../protocol/src/api.ts";
 import { CopyableString } from "./components.tsx";
+import { chatPath } from "./paths.ts";
 
 const db = init({ appId: instantAppId, schema });
 
@@ -264,17 +268,16 @@ const OpenChats = ({ credentials }: { credentials: Credentials | null }) => {
   );
 };
 
-const isMatch = (myKey: string, chatWithKey: string) =>
-(
-  conv: { participants?: (string | { publicSignKey: string })[] },
-) => {
-  if (!conv.participants) return false;
-  const keys = conv.participants.map((
-    p: string | { publicSignKey: string },
-  ) => typeof p === "string" ? p : p.publicSignKey);
-  return keys.length === 2 && keys.includes(myKey) &&
-    keys.includes(chatWithKey);
-};
+const isMatch =
+  (myKey: string, chatWithKey: string) => ({ participants }: Conversation) => {
+    if (!participants) return false;
+    const keys = participants.map(({ publicSignKey }) => publicSignKey);
+    return (
+      keys.length === 2 &&
+      ((keys[0] === myKey && keys[1] === chatWithKey) ||
+        (keys[1] === myKey && keys[0] === chatWithKey))
+    );
+  };
 
 export const Messenger = () => {
   const location = useLocation();
@@ -284,12 +287,7 @@ export const Messenger = () => {
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
   );
-  const [otherParticipantPublicKey, setOtherParticipantPublicKey] = useState(
-    "",
-  );
-
-  const [pendingChatWith, setPendingChatWith] = useState<string | null>(null);
-
+  const [otherParticipantPubKey, setOtherParticipantPubKey] = useState("");
   useEffect(() => {
     try {
       const stored = localStorage.getItem("alicebot_credentials");
@@ -298,30 +296,20 @@ export const Messenger = () => {
       console.error("Failed to parse stored credentials", e);
     }
   }, []);
-
   const chatWith = location.query["chatWith"];
+  const route = useLocation().route;
   useEffect(() => {
-    if (chatWith) {
-      setPendingChatWith(chatWith);
-    }
-  }, [chatWith]);
-
-  // After login, if chatWith param is present, focus or create conversation
-  useEffect(() => {
-    if (!credentials || !pendingChatWith) return;
-    // Prevent double handling by clearing immediately
-    const chatWithKey = pendingChatWith;
-    setPendingChatWith(null);
+    if (!credentials) return;
+    route(chatPath, true);
     const existing = conversations.find(
-      isMatch(credentials.publicSignKey, chatWithKey),
+      isMatch(credentials.publicSignKey, chatWith),
     );
     if (existing) {
       selectedConversation.value = existing.id;
     } else {
-      startConversation(credentials, chatWithKey);
+      startConversation(credentials, chatWith);
     }
-  }, [credentials, pendingChatWith, conversations]);
-
+  }, [credentials, chatWith, conversations]);
   return (
     <div>
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
@@ -376,7 +364,7 @@ export const Messenger = () => {
               class={inputStyle}
               placeholder="Recipient public key"
               onInput={(e) => {
-                setOtherParticipantPublicKey(e.currentTarget.value);
+                setOtherParticipantPubKey(e.currentTarget.value);
               }}
             />
             <div>
@@ -386,7 +374,7 @@ export const Messenger = () => {
                 onClick={() =>
                   startConversation(
                     credentials,
-                    otherParticipantPublicKey,
+                    otherParticipantPubKey,
                   )}
               >
                 Start New Conversation
