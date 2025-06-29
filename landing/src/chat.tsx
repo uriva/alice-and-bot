@@ -1,3 +1,4 @@
+import { useEffect, useState } from "preact/hooks";
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
@@ -184,7 +185,7 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
   );
 };
 
-import { useEffect, useState } from "preact/hooks";
+const headlineStyle = "text-lg font-bold text-gray-900 dark:text-gray-100";
 
 const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
   const [publicName, setPublicName] = useState<string | null>(null);
@@ -198,15 +199,14 @@ const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
       cancelled = true;
     };
   }, [publicSignKey]);
-
   return (
     <div
       style={{ display: "flex", flexDirection: "column", gap: 8 }}
       class="text-gray-900 dark:text-gray-100 mb-2"
     >
-      <h3 class={labelStyle + " mb-2"}>Your identity</h3>
+      <h3 class={headlineStyle + " mb-2"}>Your identity</h3>
       <div>
-        Your public name:{" "}
+        Your public name:{"  "}
         <span style={{ fontWeight: "bold" }} class="text-gray-400">
           {publicName ?? "loading..."}
         </span>
@@ -227,6 +227,39 @@ const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
         </div>
       </div>
       <DeleteCredentialsButton />
+    </div>
+  );
+};
+
+const OpenChats = ({ credentials }: { credentials: Credentials | null }) => {
+  const conversations = useConversations(() => db)(
+    credentials?.publicSignKey ?? "",
+  );
+  return (
+    <div>
+      <h3 class={headlineStyle + " mb-2"}>Open Chats</h3>
+      {conversations.length === 0
+        ? <div class={emptyStyle}>No conversations yet.</div>
+        : (
+          <ul class="flex gap-2 flex-wrap">
+            {conversations.map((conv) => (
+              <li key={conv.id}>
+                <button
+                  type="button"
+                  class={chatButtonStyle +
+                    (selectedConversation.value === conv.id
+                      ? " " + chatButtonActiveStyle
+                      : "")}
+                  onClick={() => {
+                    selectedConversation.value = conv.id;
+                  }}
+                >
+                  {conv.title || conv.id}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
     </div>
   );
 };
@@ -331,6 +364,7 @@ export const Messenger = () => {
       )}
       {credentials && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <h3 class={headlineStyle + " mb-2"}>New chat</h3>
           <div
             style={{ display: "flex", flexDirection: "column", gap: 8 }}
             class={inputRowStyle + " mb-4"}
@@ -354,29 +388,7 @@ export const Messenger = () => {
               Start New Conversation
             </button>
           </div>
-          <h3 class={labelStyle + " mb-2"}>Open Chats</h3>
-          {conversations.length === 0
-            ? <div class={emptyStyle}>No conversations yet.</div>
-            : (
-              <ul class="flex gap-2 flex-wrap">
-                {conversations.map((conv) => (
-                  <li key={conv.id}>
-                    <button
-                      type="button"
-                      class={chatButtonStyle +
-                        (selectedConversation.value === conv.id
-                          ? " " + chatButtonActiveStyle
-                          : "")}
-                      onClick={() => {
-                        selectedConversation.value = conv.id;
-                      }}
-                    >
-                      {conv.title || conv.id}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <OpenChats credentials={credentials} />
           {selectedConversation.value && credentials && (
             <div class="mt-6 overflow-x-auto">
               <Chat
