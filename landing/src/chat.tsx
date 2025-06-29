@@ -33,22 +33,22 @@ const selectedConversation = signal<string | null>(null);
 
 const Chat = ChatNoDb(() => db);
 
-const startConversation =
-  (credentials: Credentials, publicSignKey: string) => async () => {
-    const title = `${await nameFromPublicSignKey(
+const startConversation = async (
+  credentials: Credentials,
+  publicSignKey: string,
+) =>
+  createConversation(() => db)(
+    [publicSignKey, credentials.publicSignKey],
+    `${await nameFromPublicSignKey(
       credentials.publicSignKey,
-    )} & ${await nameFromPublicSignKey(publicSignKey)}`;
-    await createConversation(() => db)(
-      [publicSignKey, credentials.publicSignKey],
-      title,
-    ).then((response) => {
-      if (!("conversationId" in response)) {
-        alert("Failed to create conversation");
-        return;
-      }
-      selectedConversation.value = response.conversationId;
-    });
-  };
+    )} & ${await nameFromPublicSignKey(publicSignKey)}`,
+  ).then((response) => {
+    if (!("conversationId" in response)) {
+      alert("Failed to create conversation");
+      return;
+    }
+    selectedConversation.value = response.conversationId;
+  });
 
 // NewUserForm component
 const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
@@ -210,7 +210,7 @@ const YourKey = ({ publicSignKey }: { publicSignKey: string }) => (
   </div>
 );
 
-export const ChatDemo = () => {
+export const Messenger = () => {
   const location = useLocation();
   const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [storeInBrowser, setStoreInBrowser] = useState(true);
@@ -222,28 +222,23 @@ export const ChatDemo = () => {
     "",
   );
 
-  // Store chatWith param if present
   const [pendingChatWith, setPendingChatWith] = useState<string | null>(null);
 
-  // On mount, check for stored credentials and chatWith param
   useEffect(() => {
     try {
       const stored = localStorage.getItem("alicebot_credentials");
-      if (stored) {
-        const creds = JSON.parse(stored);
-        setCredentials(creds);
-      }
-    } catch (_e) { /* ignore */ }
+      if (stored) setCredentials(JSON.parse(stored));
+    } catch (e) {
+      console.error("Failed to parse stored credentials", e);
+    }
   }, []);
 
-  // Watch for chatWith param changes
+  const chatWith = location.query["chatWith"];
   useEffect(() => {
-    const params = new URLSearchParams(location.query || "");
-    const chatWith = params.get("chatWith");
     if (chatWith) {
       setPendingChatWith(chatWith);
     }
-  }, [location.query]);
+  }, [chatWith]);
 
   // After login, if chatWith param is present, focus or create conversation
   useEffect(() => {
@@ -264,10 +259,9 @@ export const ChatDemo = () => {
       selectedConversation.value = existing.id;
       setPendingChatWith(null);
     } else {
-      (async () => {
-        await startConversation(credentials, pendingChatWith)();
+      startConversation(credentials, pendingChatWith).then(() => {
         setPendingChatWith(null);
-      })();
+      });
     }
   }, [credentials, pendingChatWith, conversations]);
 
@@ -330,10 +324,11 @@ export const ChatDemo = () => {
             <button
               type="button"
               class={buttonGreenStyle}
-              onClick={startConversation(
-                credentials,
-                otherParticipantPublicKey,
-              )}
+              onClick={() =>
+                startConversation(
+                  credentials,
+                  otherParticipantPublicKey,
+                )}
             >
               Start New Conversation
             </button>

@@ -1,7 +1,7 @@
 import { type AnyComponent, render } from "preact";
 import { ErrorBoundary, LocationProvider, Route, Router } from "preact-iso";
 import { Toaster } from "react-hot-toast";
-import { ChatDemo } from "./chat.tsx";
+import { Messenger } from "./chat.tsx";
 import { LandingPage } from "./landing.tsx";
 import { Legal } from "./legal.tsx";
 import { chatPath, homePath, manifestoPath } from "./paths.ts";
@@ -9,7 +9,7 @@ import { Manifesto } from "./manifesto.tsx";
 
 export const routes: { path: string; component: AnyComponent }[] = [
   { path: homePath, component: LandingPage },
-  { path: chatPath, component: ChatDemo },
+  { path: chatPath, component: Messenger },
   { path: "/legal", component: Legal },
   { path: manifestoPath, component: Manifesto },
 ];
