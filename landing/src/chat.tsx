@@ -1,7 +1,6 @@
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
-import { useEffect, useState } from "preact/hooks";
 import { useConversations } from "../..//clients/react/src/hooks.ts";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
@@ -185,30 +184,52 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
   );
 };
 
-const YourKey = ({ publicSignKey }: { publicSignKey: string }) => (
-  <div
-    style={{ display: "flex", flexDirection: "column", gap: 8 }}
-    class="text-gray-900 dark:text-gray-100 mb-2"
-  >
-    <h3 class={labelStyle + " mb-2"}>Your identity</h3>
-    <div>
-      Your public key is <CopyableString str={publicSignKey} />
-    </div>
-    <div>
-      You can share it with others to start a conversation. It's like a phone
-      number, but for secure messaging.
-    </div>
-    <div>
-      Or you can share a chat-with-me link:
-      <div class="flex items-center gap-2">
-        <CopyableString
-          str={chatWithMeLink(publicSignKey)}
-        />
+import { useEffect, useState } from "preact/hooks";
+
+const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
+  const [publicName, setPublicName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    nameFromPublicSignKey(publicSignKey).then((name) => {
+      if (!cancelled) setPublicName(name);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [publicSignKey]);
+
+  return (
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: 8 }}
+      class="text-gray-900 dark:text-gray-100 mb-2"
+    >
+      <h3 class={labelStyle + " mb-2"}>Your identity</h3>
+      <div>
+        Your public name:{" "}
+        <span style={{ fontWeight: "bold" }} class="text-gray-400">
+          {publicName ?? "loading..."}
+        </span>
       </div>
+      <div>
+        Your public key is <CopyableString str={publicSignKey} />
+      </div>
+      <div>
+        You can share it with others to start a conversation. It's like a phone
+        number, but for secure messaging.
+      </div>
+      <div>
+        Or you can share a chat-with-me link:
+        <div class="flex items-center gap-2">
+          <CopyableString
+            str={chatWithMeLink(publicSignKey)}
+          />
+        </div>
+      </div>
+      <DeleteCredentialsButton />
     </div>
-    <DeleteCredentialsButton />
-  </div>
-);
+  );
+};
 
 export const Messenger = () => {
   const location = useLocation();
