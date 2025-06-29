@@ -379,17 +379,19 @@ export const Messenger = () => {
                 setOtherParticipantPublicKey(e.currentTarget.value);
               }}
             />
-            <button
-              type="button"
-              class={buttonGreenStyle}
-              onClick={() =>
-                startConversation(
-                  credentials,
-                  otherParticipantPublicKey,
-                )}
-            >
-              Start New Conversation
-            </button>
+            <div>
+              <button
+                type="button"
+                class={buttonGreenStyle}
+                onClick={() =>
+                  startConversation(
+                    credentials,
+                    otherParticipantPublicKey,
+                  )}
+              >
+                Start New Conversation
+              </button>
+            </div>
           </div>
           <OpenChats credentials={credentials} />
           {selectedConversation.value && credentials && (
@@ -438,7 +440,7 @@ const labelStyle =
 const labelSmallStyle = "block text-xs text-gray-700 dark:text-gray-400";
 const inputRowStyle = "flex gap-2 mb-2";
 const inputStyle =
-  "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 w-full";
+  "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 max-w-md";
 const buttonBaseStyle =
   "px-4 py-2 text-white rounded-lg focus:ring-4 focus:outline-none whitespace-nowrap";
 const buttonBlueStyle =
