@@ -15,6 +15,7 @@ import {
 
 export { setWebhook } from "./backend/src/api.ts";
 export {
+  chatWithMeLink,
   createIdentity,
   type Credentials,
   handleWebhookUpdate,
