@@ -48,49 +48,152 @@ const startConversation =
     });
   };
 
-export const ChatDemo = () => {
+// NewUserForm component
+const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
+  onCreated: (creds: Credentials, credsString: string) => void;
+  storeInBrowser: boolean;
+  setStoreInBrowser: (v: boolean) => void;
+}) => {
   const [identityName, setIdentityName] = useState("");
   const [credentialsString, setCredentialsString] = useState<string | null>(
     null,
   );
-  const [credentials, setCredentials] = useState<Credentials | null>(null);
-  const [inputCredentials, setInputCredentials] = useState("");
-  const [storeInBrowser, setStoreInBrowser] = useState(true);
-  const conversations = useConversations(() => db)(
-    credentials?.publicSignKey ?? "",
-  );
+
   const onClickCreateIdentity = async () => {
     if (!identityName.trim()) {
       alert("Please enter a name for your identity.");
       return;
     }
     const creds = await createIdentity(identityName);
-    setCredentialsString(JSON.stringify(creds));
-    setCredentials(creds);
+    const credsStr = JSON.stringify(creds);
+    setCredentialsString(credsStr);
+    onCreated(creds, credsStr);
     if (storeInBrowser) {
       try {
-        localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
-      } catch (_e) {
-        // ignore
-      }
+        localStorage.setItem("alicebot_credentials", credsStr);
+      } catch (_e) { /* ignore */ }
     }
   };
+
+  return (
+    <div class={sectionSpacing}>
+      <label class={labelStyle}>Create a new identity</label>
+      <div class={inputRowStyle}>
+        <input
+          class={inputStyle}
+          placeholder="Enter your name"
+          value={identityName}
+          onInput={(e) => setIdentityName(e.currentTarget.value)}
+        />
+        <button
+          type="button"
+          class={buttonBlueStyle}
+          onClick={onClickCreateIdentity}
+        >
+          Sign up
+        </button>
+      </div>
+      <div class="flex items-center mb-2">
+        <input
+          id="storeInBrowser"
+          type="checkbox"
+          checked={storeInBrowser}
+          onChange={(e) => setStoreInBrowser(e.currentTarget.checked)}
+          class="mr-2"
+        />
+        <label for="storeInBrowser" class={labelSmallStyle}>
+          Store credentials in this browser (recommended)
+        </label>
+      </div>
+      {credentialsString && (
+        <div class="mt-2">
+          <label class={labelSmallStyle}>
+            Save your credentials string:
+          </label>
+          <textarea
+            class={textareaStyle}
+            value={credentialsString}
+            readOnly
+            rows={3}
+          />
+          <div class={hintStyle}>
+            Copy and save this string to identify as this user later.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ExistingUserForm component
+const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
+  onIdentified: (creds: Credentials) => void;
+  storeInBrowser: boolean;
+  setStoreInBrowser: (v: boolean) => void;
+}) => {
+  const [inputCredentials, setInputCredentials] = useState("");
 
   const identify = () => {
     try {
       const creds = JSON.parse(inputCredentials);
-      setCredentials(creds);
-      try {
-        if (storeInBrowser) {
+      onIdentified(creds);
+      if (storeInBrowser) {
+        try {
           localStorage.setItem("alicebot_credentials", inputCredentials);
-        }
-      } catch (_e) {
-        // ignore
+        } catch (_e) { /* ignore */ }
       }
     } catch {
       alert("Invalid credentials string");
     }
   };
+
+  return (
+    <div class={sectionSpacing}>
+      <label class={labelStyle}>
+        Paste your credentials string
+      </label>
+      <div class={inputRowStyle}>
+        <input
+          class={inputStyle}
+          placeholder="Paste credentials string here"
+          value={inputCredentials}
+          onInput={(e) => setInputCredentials(e.currentTarget.value)}
+        />
+        <button
+          type="button"
+          class={buttonBlueStyle}
+          onClick={identify}
+        >
+          Sign in
+        </button>
+      </div>
+      <div class="flex items-center mt-1">
+        <input
+          id="storeInBrowser2"
+          type="checkbox"
+          checked={storeInBrowser}
+          onChange={(e) => setStoreInBrowser(e.currentTarget.checked)}
+          class="mr-2"
+        />
+        <label for="storeInBrowser2" class={labelSmallStyle}>
+          Store credentials in this browser (recommended)
+        </label>
+      </div>
+    </div>
+  );
+};
+
+export const ChatDemo = () => {
+  const [credentials, setCredentials] = useState<Credentials | null>(null);
+  const [storeInBrowser, setStoreInBrowser] = useState(true);
+  const [showForm, setShowForm] = useState<null | "new" | "existing">(null);
+  // const [credentialsString, setCredentialsString] = useState<string | null>(null); // unused
+  const conversations = useConversations(() => db)(
+    credentials?.publicSignKey ?? "",
+  );
+  const [otherParticipantPublicKey, setOtherParticipantPublicKey] = useState(
+    "",
+  );
 
   // On mount, check for stored credentials
   useEffect(() => {
@@ -100,14 +203,8 @@ export const ChatDemo = () => {
         const creds = JSON.parse(stored);
         setCredentials(creds);
       }
-    } catch (_e) {
-      // ignore
-    }
+    } catch (_e) { /* ignore */ }
   }, []);
-
-  const [otherParticipantPublicKey, setOtherParticipantPublicKey] = useState(
-    "",
-  );
 
   return (
     <section class="my-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow dark:shadow-blue-900/20 w-full max-w-2xl mx-auto">
@@ -115,97 +212,66 @@ export const ChatDemo = () => {
         Alice&Bot encrypted chat
       </h2>
       {!credentials && (
-        <div class={sectionSpacing}>
-          <label class={labelStyle}>Create a new identity</label>
-          <div class={inputRowStyle}>
-            <input
-              class={inputStyle}
-              placeholder="Enter your name"
-              value={identityName}
-              onInput={(e) => setIdentityName(e.currentTarget.value)}
-            />
-            <button
-              type="button"
-              class={buttonBlueStyle}
-              onClick={onClickCreateIdentity}
-            >
-              Sign up
-            </button>
-          </div>
-          <div class="flex items-center mb-2">
-            <input
-              id="storeInBrowser"
-              type="checkbox"
-              checked={storeInBrowser}
-              onChange={(e) => setStoreInBrowser(e.currentTarget.checked)}
-              class="mr-2"
-            />
-            <label for="storeInBrowser" class={labelSmallStyle}>
-              Store credentials in this browser (recommended)
-            </label>
-          </div>
-          {credentialsString && (
-            <div class="mt-2">
-              <label class={labelSmallStyle}>
-                Save your credentials string:
-              </label>
-              <textarea
-                class={textareaStyle}
-                value={credentialsString}
-                readOnly
-                rows={3}
-              />
-              <div class={hintStyle}>
-                Copy and save this string to identify as this user later.
-              </div>
-            </div>
-          )}
-          <div class="mt-4">
-            <label class={labelStyle}>
-              Or paste credentials string if you already have one
-            </label>
-            <div class={inputRowStyle}>
-              <input
-                class={inputStyle}
-                placeholder="Paste credentials string here"
-                value={inputCredentials}
-                onInput={(e) => setInputCredentials(e.currentTarget.value)}
-              />
+        <div>
+          {showForm === null && (
+            <div class="flex flex-col gap-4 mb-6">
               <button
                 type="button"
                 class={buttonBlueStyle}
-                onClick={identify}
+                onClick={() => setShowForm("new")}
               >
-                Sign in
+                I'm a new user
+              </button>
+              <button
+                type="button"
+                class={buttonBlueStyle}
+                onClick={() => setShowForm("existing")}
+              >
+                I already have an Alice&Bot identity
               </button>
             </div>
-            <div class="flex items-center mt-1">
-              <input
-                id="storeInBrowser2"
-                type="checkbox"
-                checked={storeInBrowser}
-                onChange={(e) => setStoreInBrowser(e.currentTarget.checked)}
-                class="mr-2"
-              />
-              <label for="storeInBrowser2" class={labelSmallStyle}>
-                Store credentials in this browser (recommended)
-              </label>
-            </div>
-          </div>
+          )}
+          {showForm === "new" && (
+            <NewUserForm
+              onCreated={(creds, _credsStr) => {
+                setCredentials(creds);
+              }}
+              storeInBrowser={storeInBrowser}
+              setStoreInBrowser={setStoreInBrowser}
+            />
+          )}
+          {showForm === "existing" && (
+            <ExistingUserForm
+              onIdentified={(creds) => setCredentials(creds)}
+              storeInBrowser={storeInBrowser}
+              setStoreInBrowser={setStoreInBrowser}
+            />
+          )}
         </div>
       )}
 
       {credentials && (
-        <div>
-          <div class="text-gray-900 dark:text-gray-100 mb-2 break-all">
-            Your public key is <PublicKey pubkey={credentials.publicSignKey} />
-            You can share it with others to start a conversation. It's like a
-            phone number, but for secure messaging.
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: 8 }}
+            class="text-gray-900 dark:text-gray-100 mb-2"
+          >
+            <div>
+              Your public key is{" "}
+              <PublicKey pubkey={credentials.publicSignKey} />
+            </div>
+            <div>
+              You can share it with others to start a conversation. It's like a
+              phone number, but for secure messaging.
+            </div>
           </div>
-          <div class={inputRowStyle + " mb-4"}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: 8 }}
+            class={inputRowStyle + " mb-4"}
+          >
             <input
               class={inputStyle}
-              placeholder="Enter public key of the other participant"
+              placeholder="Recipient public key"
               onInput={(e) => {
                 setOtherParticipantPublicKey(e.currentTarget.value);
               }}
