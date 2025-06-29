@@ -44,7 +44,8 @@ export const useConversations: (publicSignKey: string) => {
   participants: {
     publicSignKey: string;
   }[];
-}[] = useConversationsNoDb(accessDb);
+}[] | null = useConversationsNoDb(accessDb);
+
 export const Chat: (
   { credentials, conversationId, onClose }: ChatProps,
 ) => JSX.Element = ChatNoDb(accessDb);

@@ -238,7 +238,7 @@ const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
 const OpenChats = ({ credentials }: { credentials: Credentials | null }) => {
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
-  );
+  ) ?? [];
   return (
     <div>
       <h3 class={headlineStyle + " mb-2"}>Open Chats</h3>
@@ -270,13 +270,9 @@ const OpenChats = ({ credentials }: { credentials: Credentials | null }) => {
 
 const isMatch =
   (myKey: string, chatWithKey: string) => ({ participants }: Conversation) => {
-    if (!participants) return false;
     const keys = participants.map(({ publicSignKey }) => publicSignKey);
-    return (
-      keys.length === 2 &&
-      ((keys[0] === myKey && keys[1] === chatWithKey) ||
-        (keys[1] === myKey && keys[0] === chatWithKey))
-    );
+    return (keys.length === 2 && keys.includes(myKey) &&
+      keys.includes(chatWithKey));
   };
 
 export const Messenger = () => {
@@ -299,7 +295,7 @@ export const Messenger = () => {
   const chatWith = location.query["chatWith"];
   const route = useLocation().route;
   useEffect(() => {
-    if (!credentials) return;
+    if (!credentials || !conversations) return;
     route(chatPath, true);
     const existing = conversations.find(
       isMatch(credentials.publicSignKey, chatWith),

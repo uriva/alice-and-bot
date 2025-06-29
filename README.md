@@ -30,7 +30,7 @@ List all conversations for a user:
 ```ts
 useConversations(
   publicSignKey: string
-): { id: string; title: string; participants: { publicSignKey: string }[] }[]
+): { id: string; title: string; participants: { publicSignKey: string }[] }[] | null
 ```
 
 Create a new group conversation:

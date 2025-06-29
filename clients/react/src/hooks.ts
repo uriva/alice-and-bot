@@ -34,7 +34,7 @@ export type Conversation = {
 
 export const useConversations =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  (publicSignKey: string): Conversation[] => {
+  (publicSignKey: string): Conversation[] | null => {
     const { data, error } = db().useQuery({
       conversations: {
         participants: {},
@@ -42,7 +42,7 @@ export const useConversations =
       },
     });
     if (error) console.error("Error fetching conversations:", error);
-    return data?.conversations ?? [];
+    return data?.conversations ?? null;
   };
 
 export const useIsMobile = () => {
@@ -75,7 +75,7 @@ export const useGetOrCreateConversation =
     const conversations = useConversations(db)(publicSignKey);
     const fixedParticipants = sort(unique([publicSignKey, ...participants]));
     useEffect(() => {
-      if (conversation) return;
+      if (conversation || !conversations) return;
       const existingConversation = conversations.find(
         matchesParticipants(fixedParticipants),
       );
