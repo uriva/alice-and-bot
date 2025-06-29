@@ -264,6 +264,18 @@ const OpenChats = ({ credentials }: { credentials: Credentials | null }) => {
   );
 };
 
+const isMatch = (myKey: string, chatWithKey: string) =>
+(
+  conv: { participants?: (string | { publicSignKey: string })[] },
+) => {
+  if (!conv.participants) return false;
+  const keys = conv.participants.map((
+    p: string | { publicSignKey: string },
+  ) => typeof p === "string" ? p : p.publicSignKey);
+  return keys.length === 2 && keys.includes(myKey) &&
+    keys.includes(chatWithKey);
+};
+
 export const Messenger = () => {
   const location = useLocation();
   const [credentials, setCredentials] = useState<Credentials | null>(null);
@@ -297,25 +309,16 @@ export const Messenger = () => {
   // After login, if chatWith param is present, focus or create conversation
   useEffect(() => {
     if (!credentials || !pendingChatWith) return;
-    const myKey = credentials.publicSignKey;
-    const isMatch = (
-      conv: { participants?: (string | { publicSignKey: string })[] },
-    ) => {
-      if (!conv.participants) return false;
-      const keys = conv.participants.map((
-        p: string | { publicSignKey: string },
-      ) => typeof p === "string" ? p : p.publicSignKey);
-      return keys.length === 2 && keys.includes(myKey) &&
-        keys.includes(pendingChatWith);
-    };
-    const existing = conversations.find(isMatch);
+    // Prevent double handling by clearing immediately
+    const chatWithKey = pendingChatWith;
+    setPendingChatWith(null);
+    const existing = conversations.find(
+      isMatch(credentials.publicSignKey, chatWithKey),
+    );
     if (existing) {
       selectedConversation.value = existing.id;
-      setPendingChatWith(null);
     } else {
-      startConversation(credentials, pendingChatWith).then(() => {
-        setPendingChatWith(null);
-      });
+      startConversation(credentials, chatWithKey);
     }
   }, [credentials, pendingChatWith, conversations]);
 
