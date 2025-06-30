@@ -7,7 +7,7 @@ import { Legal } from "./legal.tsx";
 import { chatPath, homePath, manifestoPath } from "./paths.ts";
 import { Manifesto } from "./manifesto.tsx";
 
-export const routes: { path: string; component: AnyComponent }[] = [
+const routes: { path: string; component: AnyComponent }[] = [
   { path: homePath, component: LandingPage },
   { path: chatPath, component: Messenger },
   { path: "/legal", component: Legal },
@@ -34,7 +34,7 @@ const NotFound = () => (
 const App = () => (
   <LocationProvider>
     <Toaster />
-    <div className="flex flex-col flex-grow gap-3 p-3 font-sans">
+    <div className="flex flex-col flex-grow gap-3 font-sans">
       <ErrorBoundary>
         <Router>
           {routes.map(({ path, component }) => (
