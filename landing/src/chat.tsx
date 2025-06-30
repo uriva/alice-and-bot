@@ -189,8 +189,6 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
   );
 };
 
-const headlineStyle = "text-lg font-bold text-gray-900 dark:text-gray-100";
-
 const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
   const [publicName, setPublicName] = useState<string | null>(null);
 
@@ -362,7 +360,7 @@ const isMatch =
       keys.includes(chatWithKey));
   };
 
-type View = "chats" | "new_chat" | "identity" | "chat_view";
+type View = "chats" | "new_chat" | "identity";
 
 export const Messenger = () => {
   const location = useLocation();
@@ -373,7 +371,9 @@ export const Messenger = () => {
     credentials?.publicSignKey ?? "",
   );
   const [view, setView] = useState<View>("chats");
-
+  effect(() => {
+    if (selectedConversation.value) setView("chats");
+  });
   useEffect(() => {
     try {
       const stored = localStorage.getItem("alicebot_credentials");
@@ -382,16 +382,8 @@ export const Messenger = () => {
       console.error("Failed to parse stored credentials", e);
     }
   }, []);
-
   const chatWith = location.query["chatWith"];
   const route = useLocation().route;
-
-  effect(() => {
-    if (selectedConversation.value) {
-      setView("chat_view");
-    }
-  });
-
   useEffect(() => {
     if (!credentials || !conversations || !chatWith) return;
     route(chatPath, true);
@@ -457,18 +449,17 @@ export const Messenger = () => {
             style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
           >
             {view === "chats" &&
-              <OpenChats credentials={credentials} setView={setView} />}
-            {view === "new_chat" && <NewChatScreen credentials={credentials} />}
-            {view === "identity" && (
-              <YourKey publicSignKey={credentials.publicSignKey} />
-            )}
-            {view === "chat_view" && selectedConversation.value && (
-              <div class="mt-6 overflow-x-auto h-full">
+                selectedConversation.value
+              ? (
                 <Chat
                   credentials={credentials}
                   conversationId={selectedConversation.value}
                 />
-              </div>
+              )
+              : <OpenChats credentials={credentials} setView={setView} />}
+            {view === "new_chat" && <NewChatScreen credentials={credentials} />}
+            {view === "identity" && (
+              <YourKey publicSignKey={credentials.publicSignKey} />
             )}
           </div>
         </div>
