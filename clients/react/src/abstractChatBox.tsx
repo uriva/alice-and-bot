@@ -64,6 +64,30 @@ export const ChatAvatar = (
   );
 };
 
+const minute = 60000;
+const useTimeAgo = (timestamp: number) => {
+  const [str, setStr] = useState(() => {
+    try {
+      return timeAgo(timestamp);
+    } catch {
+      return "";
+    }
+  });
+  useEffect(() => {
+    const update = () => {
+      try {
+        setStr(timeAgo(timestamp));
+      } catch {
+        setStr("");
+      }
+    };
+    update();
+    const t = setInterval(update, minute);
+    return () => clearInterval(t);
+  }, [timestamp]);
+  return str;
+};
+
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
     {
@@ -81,12 +105,6 @@ const Message = (
   const textColor = isLightColor(baseColor)
     ? (isDark ? "#fff" : "#222")
     : (isDark ? "#fff" : "#fff");
-  let timeagoStr: string | undefined = "";
-  try {
-    timeagoStr = timeAgo(timestamp);
-  } catch (e) {
-    console.error(e);
-  }
   return (
     <div
       style={{
@@ -126,7 +144,7 @@ const Message = (
             float: "right",
           }}
         >
-          {timeagoStr}
+          {useTimeAgo(timestamp)}
         </span>
       </div>
     </div>
