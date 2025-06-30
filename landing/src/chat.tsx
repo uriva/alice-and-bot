@@ -58,7 +58,6 @@ const startConversation = async (
     selectedConversation.value = response.conversationId;
   });
 
-// NewUserForm component
 const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
   onCreated: (creds: Credentials, credsString: string) => void;
   storeInBrowser: boolean;
@@ -81,7 +80,9 @@ const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
     if (storeInBrowser) {
       try {
         localStorage.setItem("alicebot_credentials", credsStr);
-      } catch (_e) { /* ignore */ }
+      } catch (e) {
+        console.error("failed storing credentials in localStorage", e);
+      }
     }
   };
 
@@ -135,7 +136,6 @@ const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
   );
 };
 
-// ExistingUserForm component
 const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
   onIdentified: (creds: Credentials) => void;
   storeInBrowser: boolean;
@@ -150,7 +150,9 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
       if (storeInBrowser) {
         try {
           localStorage.setItem("alicebot_credentials", inputCredentials);
-        } catch (_e) { /* ignore */ }
+        } catch (e) {
+          console.error("failed storing credentials in localStorage", e);
+        }
       }
     } catch {
       alert("Invalid credentials string");
