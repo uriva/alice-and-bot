@@ -11,10 +11,10 @@ import {
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
 
-const ChatAvatar = (
-  { authorAvatar, authorName, baseColor }: {
-    authorAvatar?: string;
-    authorName: string;
+export const ChatAvatar = (
+  { image, name, baseColor }: {
+    image?: string;
+    name: string;
     baseColor: string;
   },
 ) => {
@@ -35,11 +35,11 @@ const ChatAvatar = (
         transition: "background 0.2s, box-shadow 0.2s",
       }}
     >
-      {authorAvatar
+      {image
         ? (
           <img
-            src={authorAvatar}
-            alt={authorName}
+            src={image}
+            alt={name}
             style={{
               objectFit: "cover",
               borderRadius: "50%",
@@ -57,7 +57,7 @@ const ChatAvatar = (
               letterSpacing: 0.5,
             }}
           >
-            {authorName.slice(0, 2).toUpperCase()}
+            {name.slice(0, 2).toUpperCase()}
           </span>
         )}
     </div>
@@ -97,8 +97,8 @@ const Message = (
     >
       {showAvatar && (
         <ChatAvatar
-          authorAvatar={authorAvatar}
-          authorName={authorName}
+          image={authorAvatar}
+          name={authorName}
           baseColor={baseColor}
         />
       )}
