@@ -244,7 +244,7 @@ const OpenChats = (
     credentials?.publicSignKey ?? "",
   ) ?? [];
   return (
-    <div class="h-full">
+    <div style={{ display: "flex", flexDirection: "column", flexGrow: 1 }}>
       {conversations.length === 0
         ? (
           <div style={{ display: "flex", flexGrow: 1 }} class={emptyStyle}>
@@ -451,9 +451,11 @@ export const Messenger = () => {
         </div>
       )}
       {credentials && (
-        <div class="flex flex-col flex-grow">
+        <div style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}>
           <Nav view={view} setView={setView} />
-          <div class="flex-grow">
+          <div
+            style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
+          >
             {view === "chats" &&
               <OpenChats credentials={credentials} setView={setView} />}
             {view === "new_chat" && <NewChatScreen credentials={credentials} />}
