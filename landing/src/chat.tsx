@@ -203,30 +203,22 @@ const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
   }, [publicSignKey]);
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", gap: 8 }}
+      style={{ display: "flex", flexDirection: "column", gap: 16 }}
       class="text-gray-900 dark:text-gray-100 mb-2"
     >
       <div>
-        Your public name:{"  "}
-        <span style={{ fontWeight: "bold" }} class="text-gray-400">
-          {publicName ?? "loading..."}
-        </span>
+        Your public name: {publicName ?? "loading..."}
       </div>
       <div>
-        Your public key is <CopyableString str={publicSignKey} />
+        Your user id is <CopyableString str={publicSignKey} />
       </div>
       <div>
-        You can share it with others to start a conversation. It's like a phone
-        number, but for secure messaging.
+        Invite others to chat with you:&nbsp;
+        <CopyableString
+          str={chatWithMeLink(publicSignKey)}
+        />
       </div>
-      <div>
-        Or you can share a chat-with-me link:
-        <div class="flex items-center gap-2">
-          <CopyableString
-            str={chatWithMeLink(publicSignKey)}
-          />
-        </div>
-      </div>
+      <CopyCredentialsButton />
       <DeleteCredentialsButton />
     </div>
   );
@@ -468,6 +460,33 @@ export const Messenger = () => {
   );
 };
 
+const CopyCredentialsButton = () => {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div class="mb-4">
+      <button
+        type="button"
+        class={buttonBlueStyle}
+        onClick={() => {
+          const creds = localStorage.getItem("alicebot_credentials");
+          if (creds) {
+            navigator.clipboard.writeText(creds);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }
+        }}
+      >
+        Copy secret credentials{" "}
+        {copied && <span class="text-sm ml-1">Copied!</span>}
+      </button>
+      <div class={hintStyle}>
+        Warning: Never share your credentials. Anyone with them has access to
+        all your chats forever.
+      </div>
+    </div>
+  );
+};
+
 const DeleteCredentialsButton = () => (
   <div class="mb-4">
     <button
@@ -484,7 +503,7 @@ const DeleteCredentialsButton = () => (
         }
       }}
     >
-      Delete credentials from this browser
+      Delete credentials and sign out
     </button>
     <div class={hintStyle}>
       Warning: Your key is not stored anywhere else. If you delete it and
