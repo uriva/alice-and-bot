@@ -5,7 +5,11 @@ import { useEffect, useState } from "preact/hooks";
 import {
   type Conversation,
   useConversations,
+  useDarkMode,
+  useUserName,
 } from "../..//clients/react/src/hooks.ts";
+import { ChatAvatar } from "../../clients/react/src/abstractChatBox.tsx";
+import { stringToColor } from "../../clients/react/src/design.tsx";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import {
@@ -190,24 +194,14 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
 };
 
 const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
-  const [publicName, setPublicName] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    nameFromPublicSignKey(publicSignKey).then((name) => {
-      if (!cancelled) setPublicName(name);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [publicSignKey]);
+  const name = useUserName(() => db)(publicSignKey);
   return (
     <div
       style={{ display: "flex", flexDirection: "column", gap: 16 }}
-      class="text-gray-900 dark:text-gray-100 mb-2"
+      class={`${textColorStyle} mb-2`}
     >
       <div>
-        Your public name: {publicName ?? "loading..."}
+        Your public name: {name ?? "loading..."}
       </div>
       <div>
         Your user id is <CopyableString str={publicSignKey} />
@@ -221,6 +215,42 @@ const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
       <CopyCredentialsButton />
       <DeleteCredentialsButton />
     </div>
+  );
+};
+
+const ConversationListItem = (
+  { conv, credentials }: { conv: Conversation; credentials: Credentials },
+) => {
+  const otherParticipant = conv.participants.find((p) =>
+    p.publicSignKey !== credentials.publicSignKey
+  );
+  const name = useUserName(() => db)(otherParticipant?.publicSignKey ?? "");
+  const isDarkMode = useDarkMode();
+  return (
+    <li key={conv.id}>
+      <button
+        type="button"
+        class={`w-full text-left p-2 rounded-lg flex items-center gap-3 ${
+          selectedConversation.value === conv.id
+            ? "bg-blue-100 dark:bg-blue-700"
+            : "hover:bg-gray-100 dark:hover:bg-gray-700"
+        }`}
+        onClick={() => {
+          selectedConversation.value = conv.id;
+        }}
+      >
+        <ChatAvatar
+          name={name}
+          baseColor={stringToColor(
+            otherParticipant?.publicSignKey ?? "",
+            isDarkMode,
+          )}
+        />
+        <div class="flex-grow overflow-hidden">
+          <div class={`font-semibold ${textColorStyle}`}>{name ?? "..."}</div>
+        </div>
+      </button>
+    </li>
   );
 };
 
@@ -249,22 +279,13 @@ const OpenChats = (
           </div>
         )
         : (
-          <ul class="flex gap-2 flex-wrap">
+          <ul class="flex flex-col gap-1">
             {conversations.map((conv) => (
-              <li key={conv.id}>
-                <button
-                  type="button"
-                  class={chatButtonStyle +
-                    (selectedConversation.value === conv.id
-                      ? " " + chatButtonActiveStyle
-                      : "")}
-                  onClick={() => {
-                    selectedConversation.value = conv.id;
-                  }}
-                >
-                  {conv.title || conv.id}
-                </button>
-              </li>
+              <ConversationListItem
+                key={conv.id}
+                conv={conv}
+                credentials={credentials!}
+              />
             ))}
           </ul>
         )}
@@ -389,10 +410,10 @@ export const Messenger = () => {
     }
   }, [credentials, chatWith, conversations]);
   return (
-    <div class="p-4 flex flex-col h-screen">
-      <div class="mb-4 text-gray-900 dark:text-gray-100">
+    <div class={`p-4 flex flex-col h-screen ${textColorStyle}`}>
+      <div class="mb-4">
         <div class="text-xl font-bold ">👧🤖 Alice&Bot</div>
-        <div class="text-gray-900 dark:text-gray-100">
+        <div>
           encrypted chat for AI era
         </div>
       </div>
@@ -518,6 +539,7 @@ const DeleteCredentialsButton = () => (
   </div>
 );
 
+const textColorStyle = "text-gray-900 dark:text-gray-100";
 const sectionSpacing = "mb-6";
 const labelStyle =
   "block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300";
@@ -536,9 +558,5 @@ const textareaStyle =
 const hintStyle = "text-xs text-gray-600 dark:text-gray-400 mt-1";
 const emptyStyle =
   "text-gray-600 dark:text-gray-400 text-sm text-center flex flex-col justify-center items-center h-64";
-const chatButtonStyle =
-  "px-3 py-2 rounded-lg border transition-colors w-full sm:w-auto mt-1 sm:mt-0 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700";
-const chatButtonActiveStyle =
-  "bg-blue-100 dark:bg-blue-700 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-500";
 const buttonRedStyle =
   `${buttonBaseStyle} bg-red-600 hover:bg-red-700 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800`;

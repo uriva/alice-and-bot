@@ -1,4 +1,5 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
+import { sort, unique } from "gamla";
 import { useEffect, useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
@@ -6,7 +7,6 @@ import {
   createIdentity,
   type Credentials,
 } from "../../../protocol/src/api.ts";
-import { sort, unique } from "gamla";
 
 export const useDarkMode = () => {
   const getPref = () =>
@@ -108,3 +108,12 @@ export const useCredentials = (name: string | null, key: string) => {
   }, [name]);
   return credentials;
 };
+
+export const useUserName =
+  (db: () => InstantReactWebDatabase<typeof schema>) =>
+  (publicSignKey: string) => {
+    const { data } = db().useQuery({
+      identities: { $: { where: { publicSignKey } } },
+    });
+    return data?.identities[0].name ?? "Anonymous";
+  };

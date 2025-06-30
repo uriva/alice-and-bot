@@ -2,6 +2,7 @@ import type { InstantReactWebDatabase } from "@instantdb/react";
 import { init } from "@instantdb/react";
 import type { JSX } from "preact";
 import {
+  type Conversation,
   useConversations as useConversationsNoDb,
   useGetOrCreateConversation as useGetOrCreateConversationNoDb,
 } from "./clients/react/src/hooks.ts";
@@ -38,13 +39,9 @@ export const useGetOrCreateConversation: (
   participants: string[],
 ) => string | null = useGetOrCreateConversationNoDb(accessDb);
 
-export const useConversations: (publicSignKey: string) => {
-  id: string;
-  title: string;
-  participants: {
-    publicSignKey: string;
-  }[];
-}[] | null = useConversationsNoDb(accessDb);
+export const useConversations: (
+  publicSignKey: string,
+) => Conversation[] | null = useConversationsNoDb(accessDb);
 
 export const Chat: (
   { credentials, conversationId, onClose }: ChatProps,
