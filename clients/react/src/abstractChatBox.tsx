@@ -11,6 +11,59 @@ import {
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
 
+const ChatAvatar = (
+  { authorAvatar, authorName, baseColor }: {
+    authorAvatar?: string;
+    authorName: string;
+    baseColor: string;
+  },
+) => {
+  const isDark = useDarkMode();
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        width: 32,
+        height: 32,
+        padding: 4,
+        borderRadius: "50%",
+        background: baseColor,
+        boxShadow: isDark ? "0 1px 4px #0004" : "0 1px 4px #0001",
+        transition: "background 0.2s, box-shadow 0.2s",
+      }}
+    >
+      {authorAvatar
+        ? (
+          <img
+            src={authorAvatar}
+            alt={authorName}
+            style={{
+              objectFit: "cover",
+              borderRadius: "50%",
+            }}
+          />
+        )
+        : (
+          <span
+            style={{
+              color: isLightColor(baseColor)
+                ? (isDark ? "#fff" : "#222")
+                : (isDark ? "#fff" : "#fff"),
+              fontWeight: 700,
+              fontSize: 15,
+              letterSpacing: 0.5,
+            }}
+          >
+            {authorName.slice(0, 2).toUpperCase()}
+          </span>
+        )}
+    </div>
+  );
+};
+
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
     {
@@ -43,47 +96,11 @@ const Message = (
       }}
     >
       {showAvatar && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            width: 32,
-            height: 32,
-            padding: 4,
-            borderRadius: "50%",
-            background: baseColor,
-            boxShadow: isDark ? "0 1px 4px #0004" : "0 1px 4px #0001",
-            transition: "background 0.2s, box-shadow 0.2s",
-          }}
-        >
-          {authorAvatar
-            ? (
-              <img
-                src={authorAvatar}
-                alt={authorName}
-                style={{
-                  objectFit: "cover",
-                  borderRadius: "50%",
-                }}
-              />
-            )
-            : (
-              <span
-                style={{
-                  color: isLightColor(baseColor)
-                    ? (isDark ? "#fff" : "#222")
-                    : (isDark ? "#fff" : "#fff"),
-                  fontWeight: 700,
-                  fontSize: 15,
-                  letterSpacing: 0.5,
-                }}
-              >
-                {authorName.slice(0, 2).toUpperCase()}
-              </span>
-            )}
-        </div>
+        <ChatAvatar
+          authorAvatar={authorAvatar}
+          authorName={authorName}
+          baseColor={baseColor}
+        />
       )}
       <div
         style={{
