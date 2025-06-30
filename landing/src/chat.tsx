@@ -397,9 +397,9 @@ export const Messenger = () => {
         </div>
       </div>
       {!credentials && (
-        <div>
+        <div class="flex flex-col flex-grow justify-center">
           {showForm === null && (
-            <div class="flex flex-col gap-4 mb-6">
+            <div class="flex flex-col items-center gap-4 mb-6">
               <button
                 type="button"
                 class={buttonBlueStyle}
