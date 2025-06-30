@@ -436,7 +436,13 @@ export const Messenger = () => {
       )}
       {credentials && (
         <div style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}>
-          <Nav view={view} setView={setView} />
+          <Nav
+            view={view}
+            setView={(view: View) => {
+              selectedConversation.value = null;
+              setView(view);
+            }}
+          />
           <div
             style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
           >
