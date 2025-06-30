@@ -208,7 +208,6 @@ const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
       style={{ display: "flex", flexDirection: "column", gap: 8 }}
       class="text-gray-900 dark:text-gray-100 mb-2"
     >
-      <h3 class={headlineStyle + " mb-2"}>Your identity</h3>
       <div>
         Your public name:{"  "}
         <span style={{ fontWeight: "bold" }} class="text-gray-400">
@@ -241,7 +240,6 @@ const OpenChats = ({ credentials }: { credentials: Credentials | null }) => {
   ) ?? [];
   return (
     <div>
-      <h3 class={headlineStyle + " mb-2"}>Open Chats</h3>
       {conversations.length === 0
         ? <div class={emptyStyle}>No conversations yet.</div>
         : (
@@ -311,7 +309,6 @@ const NewChatScreen = (
   const [otherParticipantPubKey, setOtherParticipantPubKey] = useState("");
   return (
     <div>
-      <h3 class={headlineStyle + " mb-2"}>New chat</h3>
       <div
         style={{ display: "flex", flexDirection: "column", gap: 8 }}
         class={inputRowStyle + " mb-4"}
@@ -392,7 +389,7 @@ export const Messenger = () => {
     }
   }, [credentials, chatWith, conversations]);
   return (
-    <div>
+    <div class="p-4">
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
         Alice&Bot - encrypted chat for AI era
       </h2>
@@ -497,7 +494,7 @@ const buttonGreenStyle =
 const textareaStyle =
   "w-full border rounded-lg p-2.5 text-sm bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white";
 const hintStyle = "text-xs text-gray-600 dark:text-gray-400 mt-1";
-const emptyStyle = "text-gray-600 dark:text-gray-400 text-sm";
+const emptyStyle = "text-gray-600 dark:text-gray-400 text-sm text-center";
 const chatButtonStyle =
   "px-3 py-2 rounded-lg border transition-colors w-full sm:w-auto mt-1 sm:mt-0 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700";
 const chatButtonActiveStyle =
