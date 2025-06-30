@@ -234,14 +234,30 @@ const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
   );
 };
 
-const OpenChats = ({ credentials }: { credentials: Credentials | null }) => {
+const OpenChats = (
+  { credentials, setView }: {
+    credentials: Credentials | null;
+    setView: (view: View) => void;
+  },
+) => {
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
   ) ?? [];
   return (
-    <div>
+    <div class="h-full">
       {conversations.length === 0
-        ? <div class={emptyStyle}>No conversations yet.</div>
+        ? (
+          <div style={{ display: "flex", flexGrow: 1 }} class={emptyStyle}>
+            <div>No chats yet.</div>
+            <button
+              type="button"
+              class={buttonBlueStyle + " mt-4"}
+              onClick={() => setView("new_chat")}
+            >
+              Start a new chat
+            </button>
+          </div>
+        )
         : (
           <ul class="flex gap-2 flex-wrap">
             {conversations.map((conv) => (
@@ -290,14 +306,14 @@ const Nav = (
         class={buttonClass("new_chat")}
         onClick={() => setView("new_chat")}
       >
-        New Conversation
+        New chat
       </button>
       <button
         type="button"
         class={buttonClass("identity")}
         onClick={() => setView("identity")}
       >
-        Your Identity
+        Identity
       </button>
     </nav>
   );
@@ -308,7 +324,7 @@ const NewChatScreen = (
 ) => {
   const [otherParticipantPubKey, setOtherParticipantPubKey] = useState("");
   return (
-    <div>
+    <div class="h-full">
       <div
         style={{ display: "flex", flexDirection: "column", gap: 8 }}
         class={inputRowStyle + " mb-4"}
@@ -389,10 +405,13 @@ export const Messenger = () => {
     }
   }, [credentials, chatWith, conversations]);
   return (
-    <div class="p-4">
-      <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-        Alice&Bot - encrypted chat for AI era
-      </h2>
+    <div class="p-4 flex flex-col h-screen">
+      <div class="mb-4 text-gray-900 dark:text-gray-100">
+        <div class="text-xl font-bold ">👧🤖 Alice&Bot</div>
+        <div class="text-gray-900 dark:text-gray-100">
+          encrypted chat for AI era
+        </div>
+      </div>
       {!credentials && (
         <div>
           {showForm === null && (
@@ -432,21 +451,24 @@ export const Messenger = () => {
         </div>
       )}
       {credentials && (
-        <div>
+        <div class="flex flex-col flex-grow">
           <Nav view={view} setView={setView} />
-          {view === "chats" && <OpenChats credentials={credentials} />}
-          {view === "new_chat" && <NewChatScreen credentials={credentials} />}
-          {view === "identity" && (
-            <YourKey publicSignKey={credentials.publicSignKey} />
-          )}
-          {view === "chat_view" && selectedConversation.value && (
-            <div class="mt-6 overflow-x-auto">
-              <Chat
-                credentials={credentials}
-                conversationId={selectedConversation.value}
-              />
-            </div>
-          )}
+          <div class="flex-grow">
+            {view === "chats" &&
+              <OpenChats credentials={credentials} setView={setView} />}
+            {view === "new_chat" && <NewChatScreen credentials={credentials} />}
+            {view === "identity" && (
+              <YourKey publicSignKey={credentials.publicSignKey} />
+            )}
+            {view === "chat_view" && selectedConversation.value && (
+              <div class="mt-6 overflow-x-auto h-full">
+                <Chat
+                  credentials={credentials}
+                  conversationId={selectedConversation.value}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -494,7 +516,8 @@ const buttonGreenStyle =
 const textareaStyle =
   "w-full border rounded-lg p-2.5 text-sm bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white";
 const hintStyle = "text-xs text-gray-600 dark:text-gray-400 mt-1";
-const emptyStyle = "text-gray-600 dark:text-gray-400 text-sm text-center";
+const emptyStyle =
+  "text-gray-600 dark:text-gray-400 text-sm text-center flex flex-col justify-center items-center h-64";
 const chatButtonStyle =
   "px-3 py-2 rounded-lg border transition-colors w-full sm:w-auto mt-1 sm:mt-0 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700";
 const chatButtonActiveStyle =
