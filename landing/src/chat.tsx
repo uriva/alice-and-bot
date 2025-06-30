@@ -449,14 +449,14 @@ export const Messenger = () => {
             style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
           >
             {view === "chats" &&
-                selectedConversation.value
-              ? (
-                <Chat
-                  credentials={credentials}
-                  conversationId={selectedConversation.value}
-                />
-              )
-              : <OpenChats credentials={credentials} setView={setView} />}
+              (selectedConversation.value
+                ? (
+                  <Chat
+                    credentials={credentials}
+                    conversationId={selectedConversation.value}
+                  />
+                )
+                : <OpenChats credentials={credentials} setView={setView} />)}
             {view === "new_chat" && <NewChatScreen credentials={credentials} />}
             {view === "identity" && (
               <YourKey publicSignKey={credentials.publicSignKey} />
