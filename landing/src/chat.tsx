@@ -1,5 +1,5 @@
 import { init } from "@instantdb/react";
-import { signal } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
 import { useEffect, useState } from "preact/hooks";
 import {
@@ -268,12 +268,88 @@ const OpenChats = ({ credentials }: { credentials: Credentials | null }) => {
   );
 };
 
+const Nav = (
+  { view, setView }: { view: View; setView: (view: View) => void },
+) => {
+  const buttonClass = (buttonView: View) =>
+    `px-3 py-2 rounded-md text-sm font-medium ${
+      view === buttonView
+        ? "bg-gray-900 text-white"
+        : "text-gray-700 hover:bg-gray-200"
+    }`;
+
+  return (
+    <nav class="flex space-x-4 mb-4">
+      <button
+        type="button"
+        class={buttonClass("chats")}
+        onClick={() => setView("chats")}
+      >
+        Open Chats
+      </button>
+      <button
+        type="button"
+        class={buttonClass("new_chat")}
+        onClick={() => setView("new_chat")}
+      >
+        New Conversation
+      </button>
+      <button
+        type="button"
+        class={buttonClass("identity")}
+        onClick={() => setView("identity")}
+      >
+        Your Identity
+      </button>
+    </nav>
+  );
+};
+
+const NewChatScreen = (
+  { credentials }: { credentials: Credentials },
+) => {
+  const [otherParticipantPubKey, setOtherParticipantPubKey] = useState("");
+  return (
+    <div>
+      <h3 class={headlineStyle + " mb-2"}>New chat</h3>
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        class={inputRowStyle + " mb-4"}
+      >
+        <input
+          class={inputStyle}
+          placeholder="Recipient public key"
+          value={otherParticipantPubKey}
+          onInput={(e) => {
+            setOtherParticipantPubKey(e.currentTarget.value);
+          }}
+        />
+        <div>
+          <button
+            type="button"
+            class={buttonGreenStyle}
+            onClick={() =>
+              startConversation(
+                credentials,
+                otherParticipantPubKey,
+              )}
+          >
+            Start New Conversation
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const isMatch =
   (myKey: string, chatWithKey: string) => ({ participants }: Conversation) => {
     const keys = participants.map(({ publicSignKey }) => publicSignKey);
     return (keys.length === 2 && keys.includes(myKey) &&
       keys.includes(chatWithKey));
   };
+
+type View = "chats" | "new_chat" | "identity" | "chat_view";
 
 export const Messenger = () => {
   const location = useLocation();
@@ -283,7 +359,8 @@ export const Messenger = () => {
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
   );
-  const [otherParticipantPubKey, setOtherParticipantPubKey] = useState("");
+  const [view, setView] = useState<View>("chats");
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem("alicebot_credentials");
@@ -292,10 +369,18 @@ export const Messenger = () => {
       console.error("Failed to parse stored credentials", e);
     }
   }, []);
+
   const chatWith = location.query["chatWith"];
   const route = useLocation().route;
+
+  effect(() => {
+    if (selectedConversation.value) {
+      setView("chat_view");
+    }
+  });
+
   useEffect(() => {
-    if (!credentials || !conversations) return;
+    if (!credentials || !conversations || !chatWith) return;
     route(chatPath, true);
     const existing = conversations.find(
       isMatch(credentials.publicSignKey, chatWith),
@@ -309,7 +394,7 @@ export const Messenger = () => {
   return (
     <div>
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-        Alice&Bot encrypted chat
+        Alice&Bot - encrypted chat for AI era
       </h2>
       {!credentials && (
         <div>
@@ -350,35 +435,14 @@ export const Messenger = () => {
         </div>
       )}
       {credentials && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <h3 class={headlineStyle + " mb-2"}>New chat</h3>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: 8 }}
-            class={inputRowStyle + " mb-4"}
-          >
-            <input
-              class={inputStyle}
-              placeholder="Recipient public key"
-              onInput={(e) => {
-                setOtherParticipantPubKey(e.currentTarget.value);
-              }}
-            />
-            <div>
-              <button
-                type="button"
-                class={buttonGreenStyle}
-                onClick={() =>
-                  startConversation(
-                    credentials,
-                    otherParticipantPubKey,
-                  )}
-              >
-                Start New Conversation
-              </button>
-            </div>
-          </div>
-          <OpenChats credentials={credentials} />
-          {selectedConversation.value && credentials && (
+        <div>
+          <Nav view={view} setView={setView} />
+          {view === "chats" && <OpenChats credentials={credentials} />}
+          {view === "new_chat" && <NewChatScreen credentials={credentials} />}
+          {view === "identity" && (
+            <YourKey publicSignKey={credentials.publicSignKey} />
+          )}
+          {view === "chat_view" && selectedConversation.value && (
             <div class="mt-6 overflow-x-auto">
               <Chat
                 credentials={credentials}
@@ -388,7 +452,6 @@ export const Messenger = () => {
           )}
         </div>
       )}
-      {credentials && <YourKey publicSignKey={credentials.publicSignKey} />}
     </div>
   );
 };
