@@ -12,6 +12,11 @@ Chat reimagined for the age of bots.
 Alice in bot is in its early days, API is likely to change often, but it already
 works i produciton, powering build-chatbot.com and other sites.
 
+## Community
+
+Join our [Discord](https://discord.gg/xkGMFH9RAz) for questions, feedback, and
+discussion.
+
 ## Usage
 
 ### Functions
