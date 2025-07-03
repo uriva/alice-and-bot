@@ -34,7 +34,7 @@ const features = [
 ];
 
 export const LandingPage = () => (
-  <main class="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-900 dark:via-gray-950 dark:to-blue-950 px-0 py-0">
+  <main class="text-blue-800 dark:text-blue-200 min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-900 dark:via-gray-950 dark:to-blue-950 px-0 py-0">
     <header class="w-full py-16 flex flex-col items-center justify-center bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 dark:from-blue-900 dark:via-blue-800 dark:to-blue-700 shadow-lg mb-12">
       <img src="icon.png" alt="Alice&Bot logo" style={{ width: 384 }} />
       <h1 class="text-6xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg mb-4">
@@ -50,7 +50,7 @@ export const LandingPage = () => (
       </p>
     </header>
     <section class="w-full max-w-6xl px-4 flex flex-col items-center">
-      <h2 class="text-3xl font-bold mb-8 text-blue-800 dark:text-blue-200 text-center">
+      <h2 class="text-3xl font-bold mb-8 text-center">
         Everything missing from chat today
       </h2>
       <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full mb-12">
@@ -70,7 +70,7 @@ export const LandingPage = () => (
       </ul>
     </section>
     <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
-      <h3 class="text-2xl font-bold mb-4 text-blue-800 dark:text-blue-200 text-center">
+      <h3 class="text-2xl font-bold mb-4 text-center">
         Philosophy
       </h3>
       <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-6">
@@ -82,7 +82,7 @@ export const LandingPage = () => (
       </p>
     </section>
     <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
-      <h3 class="text-2xl font-bold mb-4 text-blue-800 dark:text-blue-200 text-center">
+      <h3 class="text-2xl font-bold mb-4">
         For Developers
       </h3>
       <ul class="list-disc list-inside text-lg text-gray-700 dark:text-gray-200 space-y-2 text-center">
@@ -92,7 +92,7 @@ export const LandingPage = () => (
         <li>White label and embed anywhere</li>
       </ul>
     </section>
-    <div class="flex justify-center mb-12 gap-4">
+    <div class="flex flex-wrap justify-center mb-12 gap-4">
       <a
         type="button"
         href="https://github.com/uriva/alice-and-bot"
@@ -115,17 +115,14 @@ export const LandingPage = () => (
         Learn why
       </a>
     </div>
-    <footer class="w-full text-center text-gray-400 dark:text-gray-500 text-base py-8 mt-auto">
-      &copy; {new Date().getFullYear()}{"  "}
-      <span>Alice&Bot. Built for the next era of AI.</span>
-      <span class="mx-2">|</span>
+    <div>
+      <div>Alice&Bot. Chat for AI era.</div>
       <a
         href={manifestoPath}
         class="underline text-blue-700 dark:text-blue-300 hover:text-blue-900 ml-2"
       >
         Manifesto
       </a>
-      <span class="mx-2">|</span>
       <a
         href="https://github.com/uriva/alice-and-bot"
         target="_blank"
@@ -134,7 +131,14 @@ export const LandingPage = () => (
       >
         GitHub
       </a>
-      <span class="mx-2">|</span>
+      <a
+        href="https://discord.gg/xkGMFH9RAz"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="underline text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 ml-2"
+      >
+        Discord
+      </a>
       <a
         href="https://github.com/uriva/alice-and-bot"
         target="_blank"
@@ -143,6 +147,7 @@ export const LandingPage = () => (
       >
         API Docs
       </a>
-    </footer>
+      <div>&copy; {new Date().getFullYear()}</div>
+    </div>
   </main>
 );
