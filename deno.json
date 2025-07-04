@@ -11,9 +11,9 @@
     "@instantdb/admin": "npm:@instantdb/admin@0.19.10",
     "@instantdb/core": "npm:@instantdb/core@0.19.10",
     "@instantdb/react": "npm:@instantdb/react@0.19.10",
-    "react-icons/fa": "npm:react-icons@5.5.0/fa",
     "@preact/preset-vite": "npm:@preact/preset-vite@2.10.1",
     "@preact/signals": "npm:@preact/signals@2.1.1",
+    "@rooks/use-time-ago": "npm:@rooks/use-time-ago@4.11.2",
     "@std/assert": "jsr:@std/assert@1",
     "buffer": "npm:buffer@6.0.3",
     "epoch-timeago": "npm:epoch-timeago@1.1.9",
@@ -21,12 +21,12 @@
     "posthog-js": "npm:posthog-js@1.215.6",
     "preact-iso": "npm:preact-iso@2.9.1",
     "preact": "npm:preact@10.26.7",
-    "preact/jsx-runtime": "npm:preact@10.26.7/jsx-runtime",
     "preact/hooks": "npm:preact@10.26.7/hooks",
+    "preact/jsx-runtime": "npm:preact@10.26.7/jsx-runtime",
     "react-hot-toast": "npm:react-hot-toast@2.5.2",
+    "react-icons/fa": "npm:react-icons@5.5.0/fa",
     "react-markdown": "npm:react-markdown@10.1.0",
     "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
-    "time-ago": "jsr:@egamagz/time-ago@2025.4.9",
     "typed-api": "jsr:@uri/typed-api@0.0.10",
     "vite": "npm:vite@^6.3.5",
     "zod": "npm:zod@3.25.57"
@@ -39,6 +39,6 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.65",
+  "version": "0.0.66",
   "exports": "./mod.ts"
 }

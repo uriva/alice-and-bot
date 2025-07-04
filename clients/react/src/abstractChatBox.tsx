@@ -1,8 +1,8 @@
 import { sortKey } from "gamla";
+import useTimeAgo from "@rooks/use-time-ago";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
-import { timeAgo } from "time-ago";
 import {
   chatContainerStyle,
   isLightColor,
@@ -64,30 +64,6 @@ export const ChatAvatar = (
   );
 };
 
-const minute = 60000;
-const useTimeAgo = (timestamp: number) => {
-  const [str, setStr] = useState(() => {
-    try {
-      return timeAgo(timestamp);
-    } catch {
-      return "";
-    }
-  });
-  useEffect(() => {
-    const update = () => {
-      try {
-        setStr(timeAgo(timestamp));
-      } catch {
-        setStr("");
-      }
-    };
-    update();
-    const t = setInterval(update, minute);
-    return () => clearInterval(t);
-  }, [timestamp]);
-  return str;
-};
-
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
     {
@@ -144,7 +120,10 @@ const Message = (
             float: "right",
           }}
         >
-          {useTimeAgo(timestamp)}
+          {
+            // @ts-expect-error not sure why but it works.
+            useTimeAgo(timestamp)
+          }
         </span>
       </div>
     </div>
