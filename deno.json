@@ -13,10 +13,9 @@
     "@instantdb/react": "npm:@instantdb/react@0.19.10",
     "@preact/preset-vite": "npm:@preact/preset-vite@2.10.1",
     "@preact/signals": "npm:@preact/signals@2.1.1",
-    "@rooks/use-time-ago": "npm:@rooks/use-time-ago@4.11.2",
+    "@shined/react-use": "npm:@shined/react-use@1.12.0",
     "@std/assert": "jsr:@std/assert@1",
     "buffer": "npm:buffer@6.0.3",
-    "epoch-timeago": "npm:epoch-timeago@1.1.9",
     "gamla": "npm:gamla@124.0.0",
     "posthog-js": "npm:posthog-js@1.215.6",
     "preact-iso": "npm:preact-iso@2.9.1",
@@ -39,6 +38,6 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.66",
+  "version": "0.0.67",
   "exports": "./mod.ts"
 }

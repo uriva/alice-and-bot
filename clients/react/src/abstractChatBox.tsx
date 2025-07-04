@@ -1,8 +1,8 @@
 import { sortKey } from "gamla";
-import useTimeAgo from "@rooks/use-time-ago";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
+import { useTimeAgo } from "@shined/react-use";
 import {
   chatContainerStyle,
   isLightColor,
@@ -120,10 +120,7 @@ const Message = (
             float: "right",
           }}
         >
-          {
-            // @ts-expect-error not sure why but it works.
-            useTimeAgo(timestamp)
-          }
+          {useTimeAgo(timestamp)}
         </span>
       </div>
     </div>
