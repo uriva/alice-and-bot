@@ -51,3 +51,9 @@ export const createConversation: (
   conversationTitle: string,
 ) => Promise<{ conversationId: string } | { error: string }> =
   createConversationNoDb(accessDb);
+
+export const embedScript = ({ publicSignKey, initialMessage }: {
+  publicSignKey: string;
+  initialMessage: string;
+}): string =>
+  `<script src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js" async onload="aliceAndBot.loadChatWidget({ dialingTo: '${publicSignKey}', initialMessage: '${initialMessage}' })"></script>`;
