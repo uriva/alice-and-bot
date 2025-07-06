@@ -174,7 +174,6 @@ export const Widget = (props: WidgetProps): JSX.Element => {
             minHeight: 0,
           }}
         >
-          {/* debug overlay removed */}
           <InnerWidget
             dialTo={props.dialTo}
             credentials={props.credentials}
