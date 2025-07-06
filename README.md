@@ -106,6 +106,30 @@ Embed a chat UI in your React app:
 ></script>
 ```
 
+### Generating the embed script programmatically
+
+You can generate the widget embed script using the exported `embedScript`
+function:
+
+```ts
+embedScript({
+  publicSignKey: string,
+  initialMessage: string
+}): string
+```
+
+Example usage:
+
+```ts
+import { embedScript } from "alice-and-bot";
+
+const scriptTag = embedScript({
+  publicSignKey: "<public sign key here>",
+  initialMessage: "Hi!",
+});
+// Insert scriptTag into your HTML
+```
+
 ## Known security weaknesses
 
 As discussed, we are at the early days, and beyond the encryption on the
