@@ -18,41 +18,43 @@ const useTimeAgo = (timestamp: number) => {
     const updateTimeAgo = () => {
       const now = Date.now();
       const diff = now - timestamp;
-      const seconds = Math.floor(diff / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
+      const date = new Date(timestamp);
+      const nowDate = new Date(now);
 
-      if (diff < 5000) {
+      if (diff < 60000) {
         setTimeAgo("just now");
-      } else if (days > 0) {
-        setTimeAgo(`${days} days ago`);
-      } else if (hours > 0) {
-        setTimeAgo(`${hours} hours ago`);
-      } else if (minutes > 0) {
-        setTimeAgo(`${minutes} minutes ago`);
+      } else if (diff < 3600000) {
+        const minutes = Math.floor(diff / 60000);
+        setTimeAgo(`${minutes} minute${minutes !== 1 ? "s" : ""} ago`);
+      } else if (
+        date.getDate() === nowDate.getDate() &&
+        date.getMonth() === nowDate.getMonth() &&
+        date.getFullYear() === nowDate.getFullYear()
+      ) {
+        const hours = Math.floor(diff / 3600000);
+        setTimeAgo(`${hours} hour${hours !== 1 ? "s" : ""} ago`);
       } else {
-        setTimeAgo(`${seconds} seconds ago`);
+        // Show date, e.g. "Jul 5" or "Jul 5, 2025" if not this year
+        const showYear = date.getFullYear() !== nowDate.getFullYear();
+        setTimeAgo(
+          date.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+            ...(showYear ? { year: "numeric" } : {}),
+          }),
+        );
       }
     };
 
     updateTimeAgo();
 
-    // Start with a fast interval, then slow down after 1 minute
-    const interval = 1000;
+    // Fast update for the first minute, then slow down
     let timeoutId: number | null = null;
     function setSlowInterval() {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(
-        updateTimeAgo,
-        60000,
-      );
+      intervalRef.current = setInterval(updateTimeAgo, 60000);
     }
-    intervalRef.current = setInterval(
-      updateTimeAgo,
-      interval,
-    );
-    // After 1 minute, switch to slow interval
+    intervalRef.current = setInterval(updateTimeAgo, 1000);
     timeoutId = setTimeout(setSlowInterval, 60000) as unknown as number;
 
     return () => {
