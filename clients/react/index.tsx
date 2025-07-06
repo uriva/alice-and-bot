@@ -32,26 +32,16 @@ const WithCredentials = (
   }
   return conversation
     ? (
-      <>
-        <button
-          type="button"
-          onClick={() => {
-            widgetMode.value = true;
-          }}
-        >
-          widget mode
-        </button>
-        <div style={{ display: "flex", gap: 10 }}>
-          {participants.slice(0, widgetMode.value ? 1 : participants.length)
-            .map((p) => (
-              <ChatWithDb
-                key={p.publicSignKey}
-                credentials={p}
-                conversationId={conversation}
-              />
-            ))}
-        </div>
-      </>
+      <div style={{ display: "flex", gap: 10 }}>
+        {participants.slice(0, widgetMode.value ? 1 : participants.length)
+          .map((p) => (
+            <ChatWithDb
+              key={p.publicSignKey}
+              credentials={p}
+              conversationId={conversation}
+            />
+          ))}
+      </div>
     )
     : <div>preparing conversation</div>;
 };
@@ -61,8 +51,24 @@ const Main = ({ db }: { db: () => InstantReactWebDatabase<typeof schema> }) => {
   const bot = useCredentials("bot", "demo-bot");
   const eve = useCredentials("eve", "demo-eve");
   return !alice || !bot || !eve
-    ? <div>Preparing credentials</div>
-    : <WithCredentials db={db} participants={[alice, bot, eve]} />;
+    ? (
+      <div>
+        Preparing credentials
+      </div>
+    )
+    : (
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            widgetMode.value = !widgetMode.value;
+          }}
+        >
+          toggle mode
+        </button>
+        <WithCredentials db={db} participants={[alice, bot, eve]} />
+      </>
+    );
 };
 
 render(
