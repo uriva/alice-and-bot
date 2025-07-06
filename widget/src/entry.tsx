@@ -5,12 +5,15 @@ import { Widget } from "./widget.tsx";
 
 const elementId = "alice-and-bot-widget-root";
 
-const Entry = ({ dialTo }: { dialTo: string }) => {
+const Entry = (
+  { dialTo, initialMessage }: { dialTo: string; initialMessage?: string },
+) => {
   const [name, setName] = useState<string | null>(null);
   const credentials = useCredentials(name, "aliceAndBotCredentials");
   return (
     <Widget
       dialTo={[dialTo]}
+      initialMessage={initialMessage}
       generateCredentials={() => {
         if (credentials) return;
         const userName = prompt("Enter your name:");
@@ -25,11 +28,13 @@ const Entry = ({ dialTo }: { dialTo: string }) => {
   );
 };
 
-export const loadChatWidget = ({ dialingTo }: { dialingTo: string }) => {
+export const loadChatWidget = (
+  { dialingTo, initialMessage }: { dialingTo: string; initialMessage?: string },
+) => {
   const existing = document.getElementById(elementId);
   if (existing) return;
   const div = document.createElement("div");
   div.id = elementId;
   document.body.appendChild(div);
-  render(<Entry dialTo={dialingTo} />, div);
+  render(<Entry dialTo={dialingTo} initialMessage={initialMessage} />, div);
 };

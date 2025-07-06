@@ -35,7 +35,10 @@ const chatOpen = signal(false);
 const WithCredentials = (
   { dialTo, credentials }: { dialTo: string[]; credentials: Credentials },
 ) => {
-  const conversation = useGetOrCreateConversation(credentials, dialTo);
+  const conversation = useGetOrCreateConversation({
+    credentials,
+    participants: dialTo,
+  });
   const isDark = useDarkMode();
   return conversation
     ? (
@@ -75,6 +78,7 @@ const Overlay = () => (
 
 type WidgetProps = {
   dialTo: string[];
+  initialMessage?: string;
   credentials: Credentials | null;
   generateCredentials: () => void;
 };

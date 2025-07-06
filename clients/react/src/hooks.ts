@@ -1,12 +1,16 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
-import { sort, unique } from "gamla";
+import { map, pipe, sort, unique } from "gamla";
 import { useEffect, useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
   createConversation,
   createIdentity,
   type Credentials,
+  type DecipheredMessage,
+  decryptMessage,
+  sendMessage,
 } from "../../../protocol/src/api.ts";
+import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
 
 export const useDarkMode = () => {
   const getPref = () =>
@@ -68,12 +72,50 @@ const matchesParticipants =
       ({ publicSignKey }) => participants.includes(publicSignKey),
     );
 
+const initialMessageLogic = (
+  db: InstantReactWebDatabase<typeof schema>,
+  conversationId: string | null,
+  credentials: Credentials,
+  initialMessage: string | undefined,
+) => {
+  const conversationKey = useConversationKey(db)(
+    conversationId ?? "",
+    credentials,
+  );
+  const messages = useDecryptedMessages(
+    db,
+    1,
+    conversationKey,
+    conversationId ?? "",
+  );
+  useEffect(() => {
+    if (
+      !conversationId || !messages || messages.length || !conversationKey ||
+      !initialMessage
+    ) return;
+    sendMessage({
+      conversation: conversationId,
+      conversationKey,
+      credentials,
+      message: { type: "text", text: initialMessage },
+    }).catch((e) => {
+      console.error("failed sending initial message", e);
+    });
+  }, [initialMessage, messages, conversationId, conversationKey]);
+};
+
 export const useGetOrCreateConversation =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  ({ publicSignKey }: Credentials, participants: string[]): string | null => {
+  ({ credentials, participants, initialMessage }: {
+    credentials: Credentials;
+    participants: string[];
+    initialMessage?: string;
+  }): string | null => {
     const [conversation, setConversation] = useState<string | null>(null);
-    const conversations = useConversations(db)(publicSignKey);
-    const fixedParticipants = sort(unique([publicSignKey, ...participants]));
+    const conversations = useConversations(db)(credentials.publicSignKey);
+    const fixedParticipants = sort(
+      unique([credentials.publicSignKey, ...participants]),
+    );
     useEffect(() => {
       if (conversation || !conversations) return;
       const existingConversation = conversations.find(
@@ -89,6 +131,7 @@ export const useGetOrCreateConversation =
         }
       });
     }, [conversation, conversations, fixedParticipants]);
+    initialMessageLogic(db(), conversation, credentials, initialMessage);
     return conversation;
   };
 
@@ -117,3 +160,59 @@ export const useUserName =
     });
     return data?.identities[0].name ?? "Anonymous";
   };
+
+export const useConversationKey =
+  ({ useQuery }: Pick<InstantReactWebDatabase<typeof schema>, "useQuery">) =>
+  (
+    conversation: string,
+    { publicSignKey, privateEncryptKey }: Credentials,
+  ): string | null => {
+    const [key, setKey] = useState<string | null>(null);
+    const { error, data } = useQuery({
+      keys: {
+        $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
+      },
+    });
+    if (error) {
+      console.error("Failed to fetch conversation key", error);
+    }
+    const encryptedKey = data?.keys[0]?.key;
+    useEffect(() => {
+      if (!encryptedKey) return;
+      decryptAsymmetric<string>(privateEncryptKey, encryptedKey)
+        .then((key: string) => {
+          setKey(key);
+        });
+    }, [encryptedKey, privateEncryptKey]);
+    return key;
+  };
+
+export const useDecryptedMessages = (
+  db: InstantReactWebDatabase<typeof schema>,
+  limit: number,
+  conversationKey: string | null,
+  conversationId: string,
+) => {
+  const [messages, setMessages] = useState<null | DecipheredMessage[]>(null);
+  const { data, error } = db.useQuery({
+    messages: {
+      conversation: {},
+      $: {
+        where: { conversation: conversationId },
+        order: { timestamp: "desc" },
+        limit,
+      },
+    },
+  });
+  if (error) console.error("error fetching alice and bot messages", error);
+  const encryptedMessages = data?.messages;
+  useEffect(() => {
+    if (conversationKey && encryptedMessages) {
+      const sorted = [...encryptedMessages].sort((a, b) =>
+        b.timestamp - a.timestamp
+      );
+      pipe(map(decryptMessage(conversationKey)), setMessages)(sorted);
+    }
+  }, [conversationKey, encryptedMessages]);
+  return messages;
+};

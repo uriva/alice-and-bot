@@ -17,10 +17,10 @@ const WithCredentials = (
   },
 ) => {
   const ChatWithDb = Chat(db);
-  const conversation = useGetOrCreateConversation(db)(
-    participants[0],
-    participants.map((p) => p.publicSignKey),
-  );
+  const conversation = useGetOrCreateConversation(db)({
+    credentials: participants[0],
+    participants: participants.map((p) => p.publicSignKey),
+  });
   if (widgetMode.value) {
     return (
       <Widget

@@ -51,14 +51,12 @@ type SendMessageParams = {
   conversation: string;
 };
 
-export const sendMessage = async (
-  {
-    conversationKey,
-    conversation,
-    credentials: { privateSignKey, publicSignKey },
-    message,
-  }: SendMessageParams,
-): Promise<{ messageId: string }> => {
+export const sendMessage = async ({
+  conversationKey,
+  conversation,
+  credentials: { privateSignKey, publicSignKey },
+  message,
+}: SendMessageParams): Promise<{ messageId: string }> => {
   const encryptedMessage = await encryptSymmetric(
     conversationKey,
     {

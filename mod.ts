@@ -10,7 +10,6 @@ import { Chat as ChatNoDb, type ChatProps } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
 import {
   createConversation as createConversationNoDb,
-  type Credentials,
   instantAppId,
 } from "./protocol/src/api.ts";
 
@@ -34,10 +33,9 @@ const accessDb = (): InstantReactWebDatabase<typeof schema> => {
   return db;
 };
 
-export const useGetOrCreateConversation: (
-  { publicSignKey }: Credentials,
-  participants: string[],
-) => string | null = useGetOrCreateConversationNoDb(accessDb);
+export const useGetOrCreateConversation = useGetOrCreateConversationNoDb(
+  accessDb,
+);
 
 export const useConversations: (
   publicSignKey: string,
