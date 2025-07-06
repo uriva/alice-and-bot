@@ -2,7 +2,6 @@ import { sortKey } from "gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
-import { useTimeAgo } from "@shined/react-use";
 import {
   chatContainerStyle,
   isLightColor,
@@ -10,6 +9,60 @@ import {
   stringToColor,
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
+
+const useTimeAgo = (timestamp: number) => {
+  const [timeAgo, setTimeAgo] = useState("");
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const updateTimeAgo = () => {
+      const now = Date.now();
+      const diff = now - timestamp;
+      const seconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (diff < 5000) {
+        setTimeAgo("just now");
+      } else if (days > 0) {
+        setTimeAgo(`${days} days ago`);
+      } else if (hours > 0) {
+        setTimeAgo(`${hours} hours ago`);
+      } else if (minutes > 0) {
+        setTimeAgo(`${minutes} minutes ago`);
+      } else {
+        setTimeAgo(`${seconds} seconds ago`);
+      }
+    };
+
+    updateTimeAgo();
+
+    // Start with a fast interval, then slow down after 1 minute
+    const interval = 1000;
+    let timeoutId: number | null = null;
+    function setSlowInterval() {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(
+        updateTimeAgo,
+        60000,
+      );
+    }
+    intervalRef.current = setInterval(
+      updateTimeAgo,
+      interval,
+    );
+    // After 1 minute, switch to slow interval
+    timeoutId = setTimeout(setSlowInterval, 60000) as unknown as number;
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [timestamp]);
+
+  return timeAgo;
+};
 
 export const ChatAvatar = (
   { image, name, baseColor }: {
