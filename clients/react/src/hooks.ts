@@ -74,20 +74,12 @@ const matchesParticipants =
 
 const initialMessageLogic = (
   db: InstantReactWebDatabase<typeof schema>,
-  conversationId: string | null,
+  conversationId: string,
   credentials: Credentials,
-  initialMessage: string | undefined,
+  initialMessage: string,
 ) => {
-  const conversationKey = useConversationKey(db)(
-    conversationId ?? "",
-    credentials,
-  );
-  const messages = useDecryptedMessages(
-    db,
-    1,
-    conversationKey,
-    conversationId ?? "",
-  );
+  const conversationKey = useConversationKey(db)(conversationId, credentials);
+  const messages = useDecryptedMessages(db, 1, conversationKey, conversationId);
   useEffect(() => {
     if (
       !conversationId || !messages || messages.length || !conversationKey ||
@@ -131,7 +123,9 @@ export const useGetOrCreateConversation =
         }
       });
     }, [conversation, conversations, fixedParticipants]);
-    initialMessageLogic(db(), conversation, credentials, initialMessage);
+    if (conversation && initialMessage) {
+      initialMessageLogic(db(), conversation, credentials, initialMessage);
+    }
     return conversation;
   };
 
