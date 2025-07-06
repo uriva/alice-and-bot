@@ -123,9 +123,12 @@ export const useGetOrCreateConversation =
         }
       });
     }, [conversation, conversations, fixedParticipants]);
-    if (conversation && initialMessage) {
-      initialMessageLogic(db(), conversation, credentials, initialMessage);
-    }
+    initialMessageLogic(
+      db(),
+      conversation ?? crypto.randomUUID(),
+      credentials,
+      initialMessage ?? "",
+    );
     return conversation;
   };
 
