@@ -2,6 +2,24 @@
 
 Chat reimagined for the age of bots.
 
+## Installation
+
+### Using Deno (via JSR)
+
+```ts
+import aliceAndBot from "jsr:@alice-and-bot/core";
+```
+
+### Using Node.js (via npm)
+
+```sh
+npm install @jsr/alice-and-bot__core
+```
+
+```js
+import aliceAndBot from "@jsr/alice-and-bot__core";
+```
+
 ## Features
 
 1. e2e encryption
