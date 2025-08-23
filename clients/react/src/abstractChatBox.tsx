@@ -119,6 +119,16 @@ export const ChatAvatar = (
   );
 };
 
+// Transform markdown so that a single newline becomes a hard line break (<br />),
+// while a double newline (blank line) remains a paragraph break, producing a
+// visibly larger gap. This matches typical chat expectations where pressing Enter
+// (or Shift+Enter) creates a new line, and an empty line creates a blank spacer.
+const convertSingleNewlines = (input: string) =>
+  input
+    .split(/\n\n+/) // split on one or more blank lines to retain paragraph breaks
+    .map((block) => block.replace(/\n/g, "  \n")) // within paragraphs, make single newlines hard breaks
+    .join("\n\n"); // rejoin with a single blank line (Markdown collapses multiples anyway)
+
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
     {
@@ -166,7 +176,9 @@ const Message = (
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>
         <div dir="auto">
-          <ReactMarkdown>{text}</ReactMarkdown>
+          <ReactMarkdown>
+            {convertSingleNewlines(text)}
+          </ReactMarkdown>
         </div>
         <span
           style={{
