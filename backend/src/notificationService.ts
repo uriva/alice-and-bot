@@ -5,7 +5,7 @@ import { query } from "./db.ts";
 export const callWebhooks = async ({ messageId }: { messageId: string }) => {
   const { messages } = await query({
     messages: {
-      conversation: { participants: { webhooks: {} } },
+      conversation: { participants: {} },
       $: { where: { id: messageId } },
     },
   });

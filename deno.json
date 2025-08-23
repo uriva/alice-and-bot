@@ -8,9 +8,9 @@
   },
   "imports": {
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.5",
-    "@instantdb/admin": "npm:@instantdb/admin@0.19.10",
-    "@instantdb/core": "npm:@instantdb/core@0.19.10",
-    "@instantdb/react": "npm:@instantdb/react@0.19.10",
+    "@instantdb/admin": "npm:@instantdb/admin@0.21.5",
+    "@instantdb/core": "npm:@instantdb/core@0.21.5",
+    "@instantdb/react": "npm:@instantdb/react@0.21.5",
     "@preact/preset-vite": "npm:@preact/preset-vite@2.10.2",
     "@preact/signals": "npm:@preact/signals@2.1.1",
     "@std/assert": "jsr:@std/assert@1",
