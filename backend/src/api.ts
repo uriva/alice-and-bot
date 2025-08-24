@@ -9,6 +9,30 @@ import { z } from "zod/v4";
 import type { Credentials } from "../../protocol/src/api.ts";
 
 export const backendApiSchema = {
+  aliasToPublicSignKey: endpoint({
+    authRequired: false,
+    input: z.object({ alias: z.string() }),
+    output: z.union([
+      z.object({ publicSignKey: z.string() }),
+      z.object({ error: z.enum(["no-such-alias"]) }),
+    ]),
+  }),
+  setAlias: endpoint({
+    authRequired: true,
+    input: z.object({ alias: z.string(), publicSignKey: z.string() }),
+    output: z.union([
+      z.object({ success: z.literal(true) }),
+      z.object({
+        success: z.literal(false),
+        error: z.enum([
+          "alias-taken",
+          "invalid-alias",
+          "not-owner",
+          "not-found",
+        ]),
+      }),
+    ]),
+  }),
   conversationKey: endpoint({
     authRequired: false,
     input: z.object({

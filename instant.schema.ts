@@ -27,6 +27,7 @@ const _schema = i.schema({
       publicEncryptKey: i.string().unique().indexed(),
       publicSignKey: i.string().unique().indexed(),
       webhook: i.string().indexed().optional(),
+      alias: i.string().unique().indexed().optional(),
     }),
     conversations: i.entity({ title: i.string() }),
     keys: i.entity({ key: i.json<EncryptedConversationKey>() }),

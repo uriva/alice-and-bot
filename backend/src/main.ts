@@ -6,6 +6,9 @@ import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import { callWebhooks } from "./notificationService.ts";
 
+const normalizeAlias = (alias: string): string =>
+  alias.trim().toLowerCase().slice(0, 25);
+
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
     publicSignKey: string;
@@ -91,6 +94,38 @@ const endpoints: BackendApiImpl = {
       }
       const identity = identities[0];
       await transact(tx.identities[identity.id].update({ webhook: url }));
+      return { success: true };
+    },
+    aliasToPublicSignKey: async ({ alias }) => {
+      const { identities } = await query({
+        identities: { $: { where: { alias: normalizeAlias(alias) } } },
+      });
+      if (identities.length === 0) return { error: "no-such-alias" };
+      return { publicSignKey: identities[0].publicSignKey };
+    },
+    setAlias: async (authUser, { alias, publicSignKey }) => {
+      if (normalizeAlias(alias) !== alias) {
+        return { success: false, error: "invalid-alias" };
+      }
+      const normalized = normalizeAlias(alias);
+      const { identities: identityMatches } = await query({
+        identities: { account: {}, $: { where: { publicSignKey } } },
+      });
+      if (identityMatches.length === 0) {
+        return { success: false, error: "not-found" };
+      }
+      if (identityMatches[0].account?.email !== authUser.email) {
+        return { success: false, error: "not-owner" };
+      }
+      const { identities: taken } = await query({
+        identities: { $: { where: { alias: normalized } } },
+      });
+      if (taken.length > 0 && taken[0].id !== identityMatches[0].id) {
+        return { success: false, error: "alias-taken" };
+      }
+      await transact(
+        tx.identities[identityMatches[0].id].update({ alias: normalized }),
+      );
       return { success: true };
     },
   },
