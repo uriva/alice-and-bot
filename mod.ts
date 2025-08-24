@@ -14,6 +14,8 @@ import {
   instantAppId,
 } from "./protocol/src/api.ts";
 export { setWebhook } from "./backend/src/api.ts";
+export { aliasToPublicSignKey } from "./backend/src/api.ts";
+export { setAlias } from "./protocol/src/api.ts";
 export {
   chatWithMeLink,
   createIdentity,

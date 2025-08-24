@@ -2,7 +2,11 @@ import type { InstaQLEntity } from "@instantdb/core";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import stringify from "safe-stable-stringify";
-import { apiClient } from "../../backend/src/api.ts";
+import {
+  apiClient,
+  canonicalStringForAuthSign,
+  issueNonce,
+} from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
 import { chatPath } from "../../landing/src/paths.ts";
 import {
@@ -202,19 +206,19 @@ export type Credentials = {
 };
 
 export const createIdentity = async (name: string): Promise<Credentials> => {
-  const signKey = await generateKeyPair("sign");
+  const { publicKey, privateKey } = await generateKeyPair("sign");
   const encryptKey = await generateKeyPair("encrypt");
   await apiClient({
     endpoint: "createAnonymousIdentity",
     payload: {
       name,
-      publicSignKey: signKey.publicKey,
+      publicSignKey: publicKey,
       publicEncryptKey: encryptKey.publicKey,
     },
   });
   return {
-    publicSignKey: signKey.publicKey,
-    privateSignKey: signKey.privateKey,
+    publicSignKey: publicKey,
+    privateSignKey: privateKey,
     privateEncryptKey: encryptKey.privateKey,
   };
 };
@@ -225,3 +229,37 @@ export const chatWithMeLink = (
   publicSignKey: string,
 ): string =>
   `${baseUrl}${chatPath}?chatWith=${encodeURIComponent(publicSignKey)}`;
+
+const normalizeAlias = (alias: string): string =>
+  alias.trim().toLowerCase().slice(0, 25).replace(/\s+/g, "");
+
+export const setAlias = async ({
+  alias,
+  credentials,
+}: { alias: string; credentials: Credentials }): Promise<
+  | { success: true }
+  | {
+    success: false;
+    error: "alias-taken" | "invalid-alias" | "not-found" | "invalid-auth";
+  }
+> => {
+  const { nonce } = await issueNonce(credentials.publicSignKey);
+  const payload = { alias: normalizeAlias(alias) };
+  return apiClient({
+    endpoint: "setAlias",
+    payload: {
+      payload,
+      publicSignKey: credentials.publicSignKey,
+      nonce,
+      authToken: await sign(
+        credentials.privateSignKey,
+        canonicalStringForAuthSign({
+          action: "setAlias",
+          publicSignKey: credentials.publicSignKey,
+          payload,
+          nonce,
+        }),
+      ),
+    },
+  });
+};

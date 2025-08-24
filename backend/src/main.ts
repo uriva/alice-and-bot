@@ -2,12 +2,13 @@ import { id } from "@instantdb/admin";
 import { apiHandler } from "typed-api";
 import type { EncryptedMessage } from "../../protocol/src/api.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
+import { issueNonceHelper, verifyAuthToken } from "./auth.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import { callWebhooks } from "./notificationService.ts";
 
 const normalizeAlias = (alias: string): string =>
-  alias.trim().toLowerCase().slice(0, 25);
+  alias.trim().toLowerCase().slice(0, 25).replaceAll(/\s+/g, "");
 
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
@@ -96,6 +97,9 @@ const endpoints: BackendApiImpl = {
       await transact(tx.identities[identity.id].update({ webhook: url }));
       return { success: true };
     },
+    issueNonce: async ({ publicSignKey }) => ({
+      nonce: await issueNonceHelper(publicSignKey),
+    }),
     aliasToPublicSignKey: async ({ alias }) => {
       const { identities } = await query({
         identities: { $: { where: { alias: normalizeAlias(alias) } } },
@@ -103,20 +107,26 @@ const endpoints: BackendApiImpl = {
       if (identities.length === 0) return { error: "no-such-alias" };
       return { publicSignKey: identities[0].publicSignKey };
     },
-    setAlias: async (authUser, { alias, publicSignKey }) => {
+    setAlias: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authOk = await verifyAuthToken({
+        action: "setAlias",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      const { alias } = payload;
       if (normalizeAlias(alias) !== alias) {
         return { success: false, error: "invalid-alias" };
       }
       const normalized = normalizeAlias(alias);
       const { identities: identityMatches } = await query({
-        identities: { account: {}, $: { where: { publicSignKey } } },
+        identities: { $: { where: { publicSignKey } } },
       });
       if (identityMatches.length === 0) {
         return { success: false, error: "not-found" };
       }
-      if (identityMatches[0].account?.email !== authUser.email) {
-        return { success: false, error: "not-owner" };
-      }
+      if (!authOk) return { success: false, error: "invalid-auth" };
       const { identities: taken } = await query({
         identities: { $: { where: { alias: normalized } } },
       });

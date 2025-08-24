@@ -7,8 +7,14 @@ import {
 } from "typed-api";
 import { z } from "zod/v4";
 import type { Credentials } from "../../protocol/src/api.ts";
+import { hash } from "gamla";
 
 export const backendApiSchema = {
+  issueNonce: endpoint({
+    authRequired: false,
+    input: z.object({ publicSignKey: z.string() }),
+    output: z.object({ nonce: z.string() }),
+  }),
   aliasToPublicSignKey: endpoint({
     authRequired: false,
     input: z.object({ alias: z.string() }),
@@ -18,8 +24,13 @@ export const backendApiSchema = {
     ]),
   }),
   setAlias: endpoint({
-    authRequired: true,
-    input: z.object({ alias: z.string(), publicSignKey: z.string() }),
+    authRequired: false,
+    input: z.object({
+      payload: z.object({ alias: z.string() }),
+      publicSignKey: z.string(),
+      nonce: z.string(),
+      authToken: z.string(),
+    }),
     output: z.union([
       z.object({ success: z.literal(true) }),
       z.object({
@@ -27,8 +38,8 @@ export const backendApiSchema = {
         error: z.enum([
           "alias-taken",
           "invalid-alias",
-          "not-owner",
           "not-found",
+          "invalid-auth",
         ]),
       }),
     ]),
@@ -122,3 +133,34 @@ export const setWebhook = (
     error: "identity-does-not-exist";
   } | { success: true }
 > => apiClient({ endpoint: "setWebhook", payload: { url, publicSignKey } });
+
+export const aliasToPublicSignKey = (
+  alias: string,
+): Promise<{ publicSignKey: string } | { error: "no-such-alias" }> =>
+  apiClient({ endpoint: "aliasToPublicSignKey", payload: { alias } });
+
+export const issueNonce = (publicSignKey: string): Promise<{ nonce: string }> =>
+  apiClient({ endpoint: "issueNonce", payload: { publicSignKey } });
+
+export const setAlias = (
+  { alias, publicSignKey, nonce, authToken }: {
+    alias: string;
+    publicSignKey: string;
+    nonce: string;
+    authToken: string; // signature over canonical string
+  },
+): Promise<
+  | { success: true }
+  | {
+    success: false;
+    error: "alias-taken" | "invalid-alias" | "not-found" | "invalid-auth";
+  }
+> =>
+  apiClient({
+    endpoint: "setAlias",
+    payload: { payload: { alias }, publicSignKey, nonce, authToken },
+  });
+
+export const canonicalStringForAuthSign = <T>(
+  params: { action: string; publicSignKey: string; payload: T; nonce: string },
+): string => hash(params, 10);

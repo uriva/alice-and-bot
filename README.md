@@ -114,6 +114,27 @@ sendMessageWithKey({
 }): Promise<{ messageId: string }>
 ```
 
+Look up a public sign key by alias (public):
+
+```ts
+aliasToPublicSignKey(
+  alias: string
+): Promise<{ publicSignKey: string } | { error: "no-such-alias" }>
+```
+
+Set or update an alias (signature-based auth handled internally, no session
+required):
+
+```ts
+setAlias({
+  alias: string,
+  credentials: Credentials,
+}): Promise<
+  | { success: true }
+  | { success: false; error: "alias-taken" | "invalid-alias" | "not-found" | "invalid-auth" }
+>
+```
+
 ### React component
 
 Embed a chat UI in your React app:
