@@ -97,6 +97,32 @@ const endpoints: BackendApiImpl = {
       await transact(tx.identities[identity.id].update({ webhook: url }));
       return { success: true };
     },
+    getProfile: async ({ publicSignKey }) => {
+      const { identities } = await query({
+        identities: { $: { where: { publicSignKey } } },
+      });
+      if (identities.length === 0) return { profile: null };
+      const { name, avatar, alias } = identities[0];
+      return { profile: { name, avatar, alias } };
+    },
+    getConversations: async ({ publicSignKeys }) => {
+      const { conversations } = await query({
+        conversations: {
+          participants: {},
+          $: {
+            where: { "participants.publicSignKey": { $in: publicSignKeys } },
+          },
+        },
+      });
+      const filtered = conversations.filter((c) => {
+        const participantKeys = c.participants.map((p: { publicSignKey: string }) => p.publicSignKey);
+        return (
+          publicSignKeys.every((k: string) => participantKeys.includes(k)) &&
+          participantKeys.length === publicSignKeys.length
+        );
+      });
+      return { conversations: filtered };
+    },
     issueNonce: async ({ publicSignKey }) => ({
       nonce: await issueNonceHelper(publicSignKey),
     }),

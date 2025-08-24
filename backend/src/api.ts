@@ -113,6 +113,34 @@ export const backendApiSchema = {
       }),
     ]),
   }),
+  getProfile: endpoint({
+    authRequired: false,
+    input: z.object({ publicSignKey: z.string() }),
+    output: z.object({
+      profile: z
+        .union([
+          z.object({
+            name: z.string().optional(),
+            avatar: z.string().optional(),
+            alias: z.string().optional(),
+          }),
+          z.null(),
+        ]),
+    }),
+  }),
+  getConversations: endpoint({
+    authRequired: false,
+    input: z.object({ publicSignKeys: z.array(z.string()) }),
+    output: z.object({
+      conversations: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string(),
+          participants: z.array(z.object({ publicSignKey: z.string() })),
+        }),
+      ),
+    }),
+  }),
 } as const;
 
 export const apiClient = apiClientMaker(
@@ -164,3 +192,21 @@ export const setAlias = (
 export const canonicalStringForAuthSign = <T>(
   params: { action: string; publicSignKey: string; payload: T; nonce: string },
 ): string => hash(params, 10);
+
+export const getProfile = (
+  publicSignKey: string,
+): Promise<
+  { profile: { name?: string; avatar?: string; alias?: string } | null }
+> => apiClient({ endpoint: "getProfile", payload: { publicSignKey } });
+
+export const getConversations = (
+  publicSignKeys: string[],
+): Promise<
+  {
+    conversations: {
+      id: string;
+      title: string;
+      participants: { publicSignKey: string }[];
+    }[];
+  }
+> => apiClient({ endpoint: "getConversations", payload: { publicSignKeys } });

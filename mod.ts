@@ -2,6 +2,10 @@ import type { InstantReactWebDatabase } from "@instantdb/react";
 import { init } from "@instantdb/react";
 import type { JSX } from "preact";
 import {
+  getConversations as backendGetConversations,
+  getProfile as backendGetProfile,
+} from "./backend/src/api.ts";
+import {
   type Conversation,
   useConversations as useConversationsNoDb,
   useGetOrCreateConversation as useGetOrCreateConversationNoDb,
@@ -54,15 +58,9 @@ export const useIdentityProfile: (
 ) => { name?: string; avatar?: string; alias?: string } | null =
   useIdentityProfileNoDb(accessDb);
 
-export const getProfile = async (
-  publicSignKey: string,
-): Promise<{ name?: string; avatar?: string; alias?: string } | null> => {
-  const { data: { identities } } = await accessDb().queryOnce({
-    identities: { $: { where: { publicSignKey } } },
-  });
-  if (!identities.length) return null;
-  const { name, avatar, alias } = identities[0];
-  return { name, avatar, alias };
+export const getProfile = async (publicSignKey: string) => {
+  const { profile } = await backendGetProfile(publicSignKey);
+  return profile;
 };
 
 export const Chat: (
@@ -75,20 +73,9 @@ export const createConversation: (
 ) => Promise<{ conversationId: string } | { error: string }> =
   createConversationNoDb(accessDb);
 
-export const getConversations = async (
-  publicSignKeys: string[],
-): Promise<Conversation[]> => {
-  const { data } = await accessDb().queryOnce({
-    conversations: {
-      participants: {},
-      $: { where: { "participants.publicSignKey": { $in: publicSignKeys } } },
-    },
-  });
-  return data.conversations.filter((c) => {
-    const participantKeys = c.participants.map((p) => p.publicSignKey);
-    return publicSignKeys.every((k) => participantKeys.includes(k)) &&
-      participantKeys.length === publicSignKeys.length;
-  });
+export const getConversations = async (publicSignKeys: string[]) => {
+  const { conversations } = await backendGetConversations(publicSignKeys);
+  return conversations;
 };
 
 export const embedScript = ({ publicSignKey, initialMessage }: {
