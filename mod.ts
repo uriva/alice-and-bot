@@ -5,6 +5,7 @@ import {
   type Conversation,
   useConversations as useConversationsNoDb,
   useGetOrCreateConversation as useGetOrCreateConversationNoDb,
+  useIdentityProfile as useIdentityProfileNoDb,
 } from "./clients/react/src/hooks.ts";
 import { Chat as ChatNoDb, type ChatProps } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
@@ -47,6 +48,11 @@ export const useGetOrCreateConversation: (
 export const useConversations: (
   publicSignKey: string,
 ) => Conversation[] | null = useConversationsNoDb(accessDb);
+
+export const useIdentityProfile: (
+  publicSignKey: string,
+) => { name?: string; avatar?: string; alias?: string } | null =
+  useIdentityProfileNoDb(accessDb);
 
 export const Chat: (
   { credentials, conversationId, onClose }: ChatProps,

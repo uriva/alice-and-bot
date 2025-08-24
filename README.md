@@ -132,6 +132,14 @@ publicSignKeyToAlias(publicSignKey: string): Promise<
 >
 ```
 
+Fetch basic profile (name / avatar / alias) for an identity (null if not found):
+
+```ts
+useIdentityProfile(
+  publicSignKey: string
+): { name?: string; avatar?: string; alias?: string } | null
+```
+
 Set or update an alias (signature-based auth handled internally, no session
 required):
 
@@ -209,4 +217,4 @@ TODO:
 1. one can choose not to notify - adding messages
 1. everyone can see all metadata - groups, who sent when
 1. anyone can check if two people has a conversation
-1. webhooks are exposed to anyone seeing participants
+1. webhooks are exposed to anyone seeing participants, so people can send requests at them

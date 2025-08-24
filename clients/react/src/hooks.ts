@@ -158,6 +158,19 @@ export const useUserName =
     return data?.identities[0].name ?? "Anonymous";
   };
 
+export const useIdentityProfile =
+  (db: () => InstantReactWebDatabase<typeof schema>) =>
+  (publicSignKey: string) => {
+    const { data, error } = db().useQuery({
+      identities: { $: { where: { publicSignKey } } },
+    });
+    if (error) console.error("Error fetching identity profile", error);
+    const identity = data?.identities?.[0];
+    if (!identity) return null;
+    const { name, avatar, alias } = identity;
+    return { name, avatar, alias };
+  };
+
 export const useConversationKey =
   ({ useQuery }: Pick<InstantReactWebDatabase<typeof schema>, "useQuery">) =>
   (
