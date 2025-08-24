@@ -4,6 +4,7 @@ import { map, pipe } from "gamla";
 import stringify from "safe-stable-stringify";
 import { apiClient } from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
+import { chatPath } from "../../landing/src/paths.ts";
 import {
   encryptAsymmetric,
   generateKeyPair,
@@ -18,7 +19,6 @@ import {
   sign,
   verify,
 } from "./crypto.ts";
-import { chatPath } from "../../landing/src/paths.ts";
 
 export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
 
