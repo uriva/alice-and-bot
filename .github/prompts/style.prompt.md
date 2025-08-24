@@ -1,5 +1,5 @@
 ---
-mode: 'agent'
+mode: "agent"
 ---
 
 Keep comments to a minimum. Be concise, use functional programming style. Put

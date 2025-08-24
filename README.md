@@ -91,7 +91,8 @@ handleWebhookUpdate(
 ): Promise<{ conversationId: string; message: DecipheredMessage; conversationKey: string }>
 ```
 
-Send a message to a conversation (have the library fetch/decrypt the conversation key for you):
+Send a message to a conversation (have the library fetch/decrypt the
+conversation key for you):
 
 ```ts
 sendMessage({
@@ -101,7 +102,8 @@ sendMessage({
 }): Promise<{ messageId: string }>
 ```
 
-Send a message if you already possess the decrypted `conversationKey` (e.g. after handling a webhook update) to avoid the extra key fetch:
+Send a message if you already possess the decrypted `conversationKey` (e.g.
+after handling a webhook update) to avoid the extra key fetch:
 
 ```ts
 sendMessageWithKey({
