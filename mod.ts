@@ -13,7 +13,6 @@ import {
   type Credentials,
   instantAppId,
 } from "./protocol/src/api.ts";
-
 export { setWebhook } from "./backend/src/api.ts";
 export {
   chatWithMeLink,
@@ -21,6 +20,7 @@ export {
   type Credentials,
   handleWebhookUpdate,
   sendMessage,
+  sendMessageWithKey,
   type WebhookUpdate,
 } from "./protocol/src/api.ts";
 export { Widget } from "./widget/src/widget.tsx";

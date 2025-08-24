@@ -6,7 +6,7 @@ import type schema from "../../../instant.schema.ts";
 import {
   type Credentials,
   type DecipheredMessage,
-  sendMessage,
+  sendMessageWithKey,
 } from "../../../protocol/src/api.ts";
 import {
   type AbstracChatMessage,
@@ -82,7 +82,7 @@ export const Chat =
           if (!convoKey) {
             return null;
           }
-          sendMessage({
+          sendMessageWithKey({
             conversationKey: convoKey,
             credentials,
             message: { type: "text", text: input },

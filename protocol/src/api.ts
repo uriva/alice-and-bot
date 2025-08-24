@@ -51,7 +51,20 @@ type SendMessageParams = {
   conversation: string;
 };
 
-export const sendMessage = async ({
+export const sendMessage = async (params: {
+  credentials: Credentials;
+  conversation: string;
+  message: InternalMessage;
+}): Promise<{ messageId: string }> =>
+  sendMessageWithKey({
+    ...params,
+    conversationKey: await getConversationKey(
+      params.credentials,
+      params.conversation,
+    ),
+  });
+
+export const sendMessageWithKey = async ({
   conversationKey,
   conversation,
   credentials: { privateSignKey, publicSignKey },
@@ -73,10 +86,10 @@ export const sendMessage = async ({
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
-const getConversationKeyForWebhookHandling = async (
+const getConversationKey = async (
   credentials: Credentials,
   conversation: string,
-) => {
+): Promise<string> => {
   const result = await apiClient({
     endpoint: "conversationKey",
     payload: {
@@ -101,10 +114,7 @@ export const handleWebhookUpdate = async (
   message: DecipheredMessage;
   conversationKey: string;
 }> => {
-  const key = await getConversationKeyForWebhookHandling(
-    credentials,
-    whUpdate.conversationId,
-  );
+  const key = await getConversationKey(credentials, whUpdate.conversationId);
   return {
     conversationId: whUpdate.conversationId,
     message: await decryptMessage(key)(whUpdate),

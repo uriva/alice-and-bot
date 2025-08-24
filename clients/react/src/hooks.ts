@@ -8,7 +8,7 @@ import {
   type Credentials,
   type DecipheredMessage,
   decryptMessage,
-  sendMessage,
+  sendMessageWithKey,
 } from "../../../protocol/src/api.ts";
 import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
 
@@ -85,7 +85,7 @@ const initialMessageLogic = (
       !conversationId || !messages || messages.length || !conversationKey ||
       !initialMessage
     ) return;
-    sendMessage({
+    sendMessageWithKey({
       conversation: conversationId,
       conversationKey,
       credentials,
