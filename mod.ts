@@ -58,7 +58,13 @@ export const useIdentityProfile: (
 ) => { name?: string; avatar?: string; alias?: string } | null =
   useIdentityProfileNoDb(accessDb);
 
-export const getProfile = async (publicSignKey: string) => {
+export const getProfile = async (publicSignKey: string): Promise<
+  {
+    name?: string;
+    avatar?: string;
+    alias?: string;
+  } | null
+> => {
   const { profile } = await backendGetProfile(publicSignKey);
   return profile;
 };
@@ -73,7 +79,13 @@ export const createConversation: (
 ) => Promise<{ conversationId: string } | { error: string }> =
   createConversationNoDb(accessDb);
 
-export const getConversations = async (publicSignKeys: string[]) => {
+export const getConversations = async (publicSignKeys: string[]): Promise<{
+  id: string;
+  title: string;
+  participants: {
+    publicSignKey: string;
+  }[];
+}[]> => {
   const { conversations } = await backendGetConversations(publicSignKeys);
   return conversations;
 };
