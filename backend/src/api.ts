@@ -6,7 +6,7 @@ import {
   httpCommunication,
 } from "typed-api";
 import { z } from "zod/v4";
-import type { Credentials } from "../../protocol/src/api.ts";
+import type { Credentials } from "../../protocol/src/clientApi.ts";
 import { hash } from "gamla";
 
 export const backendApiSchema = {

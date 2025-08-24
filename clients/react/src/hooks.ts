@@ -9,7 +9,7 @@ import {
   type DecipheredMessage,
   decryptMessage,
   sendMessageWithKey,
-} from "../../../protocol/src/api.ts";
+} from "../../../protocol/src/clientApi.ts";
 import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
 
 export const useDarkMode = () => {

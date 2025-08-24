@@ -2,7 +2,7 @@ import { i } from "@instantdb/core";
 import type {
   EncryptedConversationKey,
   EncryptedMessage,
-} from "./protocol/src/api.ts";
+} from "./protocol/src/clientApi.ts";
 
 const _schema = i.schema({
   entities: {

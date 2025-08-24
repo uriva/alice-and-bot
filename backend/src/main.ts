@@ -1,6 +1,6 @@
 import { id } from "@instantdb/admin";
 import { apiHandler } from "typed-api";
-import type { EncryptedMessage } from "../../protocol/src/api.ts";
+import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
 import { issueNonceHelper, verifyAuthToken } from "./auth.ts";
 import { createConversation } from "./createConversation.ts";

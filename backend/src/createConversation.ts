@@ -1,6 +1,6 @@
 import { id } from "@instantdb/core";
 import { map } from "gamla";
-import type { EncryptedConversationKey } from "../../protocol/src/api.ts";
+import type { EncryptedConversationKey } from "../../protocol/src/clientApi.ts";
 import type { BackendApiImpl } from "./api.ts";
 import { query, transact, tx } from "./db.ts";
 

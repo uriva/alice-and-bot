@@ -1,6 +1,6 @@
 import { toast } from "react-hot-toast";
 import Markdown from "react-markdown";
-import { baseUrl } from "../../protocol/src/api.ts";
+import { baseUrl } from "../../protocol/src/clientApi.ts";
 import manifestoText from "./manifesto.md?raw";
 
 export const Manifesto = () => {

@@ -18,7 +18,7 @@ import {
   createIdentity,
   type Credentials,
   instantAppId,
-} from "../../protocol/src/api.ts";
+} from "../../protocol/src/clientApi.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath } from "./paths.ts";
 

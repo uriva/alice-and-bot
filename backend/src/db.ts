@@ -1,7 +1,7 @@
 import { init } from "@instantdb/admin";
 import { coerce } from "gamla";
 import schema from "../../instant.schema.ts";
-import { instantAppId } from "../../protocol/src/api.ts";
+import { instantAppId } from "../../protocol/src/clientApi.ts";
 
 export const { auth, query, tx, transact } = init({
   appId: instantAppId,

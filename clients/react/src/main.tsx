@@ -7,7 +7,7 @@ import {
   type Credentials,
   type DecipheredMessage,
   sendMessageWithKey,
-} from "../../../protocol/src/api.ts";
+} from "../../../protocol/src/clientApi.ts";
 import {
   type AbstracChatMessage,
   AbstractChatBox,

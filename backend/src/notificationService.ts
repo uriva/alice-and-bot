@@ -1,5 +1,5 @@
 import { coerce } from "gamla";
-import type { WebhookUpdate } from "../../protocol/src/api.ts";
+import type { WebhookUpdate } from "../../protocol/src/clientApi.ts";
 import { query } from "./db.ts";
 
 export const callWebhooks = async ({ messageId }: { messageId: string }) => {
