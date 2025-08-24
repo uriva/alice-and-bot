@@ -59,7 +59,7 @@ const startConversation = async (
   });
 
 const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
-  onCreated: (creds: Credentials, credsString: string) => void;
+  onCreated: (creds: Credentials) => void;
   storeInBrowser: boolean;
   setStoreInBrowser: (v: boolean) => void;
 }) => {
@@ -76,7 +76,7 @@ const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
     const creds = await createIdentity(identityName);
     const credsStr = JSON.stringify(creds);
     setCredentialsString(credsStr);
-    onCreated(creds, credsStr);
+    onCreated(creds);
     if (storeInBrowser) {
       try {
         localStorage.setItem("alicebot_credentials", credsStr);
@@ -377,6 +377,43 @@ const isMatch =
 
 type View = "chats" | "new_chat" | "identity";
 
+const LoggedInMessenger = (
+  { view, setView, credentials }: {
+    view: View;
+    setView: (view: View) => void;
+    credentials: Credentials;
+  },
+) => (
+  <div
+    style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
+  >
+    <Nav
+      view={view}
+      setView={(view: View) => {
+        selectedConversation.value = null;
+        setView(view);
+      }}
+    />
+    <div
+      style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
+    >
+      {view === "chats" &&
+        (selectedConversation.value
+          ? (
+            <Chat
+              credentials={credentials}
+              conversationId={selectedConversation.value}
+            />
+          )
+          : <OpenChats credentials={credentials} setView={setView} />)}
+      {view === "new_chat" && <NewChatScreen credentials={credentials} />}
+      {view === "identity" && (
+        <YourKey publicSignKey={credentials.publicSignKey} />
+      )}
+    </div>
+  </div>
+);
+
 export const Messenger = () => {
   const location = useLocation();
   const [credentials, setCredentials] = useState<Credentials | null>(null);
@@ -412,79 +449,59 @@ export const Messenger = () => {
     }
   }, [credentials, chatWith, conversations]);
   return (
-    <div class={`p-4 flex flex-col h-screen ${textColorStyle}`}>
-      <div class="mb-4">
-        <div class="text-xl font-bold ">👧🤖 Alice&Bot</div>
-        <div>
-          encrypted chat for AI era
-        </div>
-      </div>
-      {!credentials && (
-        <div class="flex flex-col flex-grow justify-center">
-          {showForm === null && (
-            <div class="flex flex-col items-center gap-4 mb-6">
-              <button
-                type="button"
-                class={buttonBlueStyle}
-                onClick={() => setShowForm("new")}
-              >
-                I'm a new user
-              </button>
-              <button
-                type="button"
-                class={buttonBlueStyle}
-                onClick={() => setShowForm("existing")}
-              >
-                I already have an Alice&Bot identity
-              </button>
-            </div>
-          )}
-          {showForm === "new" && (
-            <NewUserForm
-              onCreated={(creds, _credsStr) => {
-                setCredentials(creds);
-              }}
-              storeInBrowser={storeInBrowser}
-              setStoreInBrowser={setStoreInBrowser}
-            />
-          )}
-          {showForm === "existing" && (
-            <ExistingUserForm
-              onIdentified={(creds) => setCredentials(creds)}
-              storeInBrowser={storeInBrowser}
-              setStoreInBrowser={setStoreInBrowser}
-            />
-          )}
-        </div>
-      )}
-      {credentials && (
-        <div style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}>
-          <Nav
-            view={view}
-            setView={(view: View) => {
-              selectedConversation.value = null;
-              setView(view);
-            }}
-          />
-          <div
-            style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
-          >
-            {view === "chats" &&
-              (selectedConversation.value
-                ? (
-                  <Chat
-                    credentials={credentials}
-                    conversationId={selectedConversation.value}
-                  />
-                )
-                : <OpenChats credentials={credentials} setView={setView} />)}
-            {view === "new_chat" && <NewChatScreen credentials={credentials} />}
-            {view === "identity" && (
-              <YourKey publicSignKey={credentials.publicSignKey} />
-            )}
+    <div class={`p-4 flex flex-col h-screen ${textColorStyle} md:items-center`}>
+      <div class="flex flex-col flex-grow w-full md:max-w-2xl lg:max-w-3xl">
+        <div class="mb-4">
+          <div class="text-xl font-bold ">👧🤖 Alice&Bot</div>
+          <div>
+            encrypted chat for AI era
           </div>
         </div>
-      )}
+        {!credentials && (
+          <div class="flex flex-col flex-grow justify-center">
+            {showForm === null && (
+              <div class="flex flex-col items-center gap-4 mb-6">
+                <button
+                  type="button"
+                  class={buttonBlueStyle}
+                  onClick={() => setShowForm("new")}
+                >
+                  I'm a new user
+                </button>
+                <button
+                  type="button"
+                  class={buttonBlueStyle}
+                  onClick={() =>
+                    setShowForm("existing")}
+                >
+                  I already have an Alice&Bot identity
+                </button>
+              </div>
+            )}
+            {showForm === "new" && (
+              <NewUserForm
+                onCreated={setCredentials}
+                storeInBrowser={storeInBrowser}
+                setStoreInBrowser={setStoreInBrowser}
+              />
+            )}
+            {showForm === "existing" && (
+              <ExistingUserForm
+                onIdentified={(creds) => setCredentials(creds)}
+                storeInBrowser={storeInBrowser}
+                setStoreInBrowser={setStoreInBrowser}
+              />
+            )}
+          </div>
+        )}
+        {credentials && (
+          <LoggedInMessenger
+            setView={setView}
+            credentials={credentials}
+            view={view}
+          />
+        )}
+      </div>
     </div>
   );
 };
