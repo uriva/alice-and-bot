@@ -3,7 +3,10 @@ import { signal } from "@preact/signals";
 import { coerce } from "gamla";
 import { render } from "preact";
 import schema from "../../instant.schema.ts";
-import { type Credentials, instantAppId } from "../../protocol/src/clientApi.ts";
+import {
+  type Credentials,
+  instantAppId,
+} from "../../protocol/src/clientApi.ts";
 import { Widget } from "../../widget/src/widget.tsx";
 import { useCredentials, useGetOrCreateConversation } from "./src/hooks.ts";
 import { Chat } from "./src/main.tsx";

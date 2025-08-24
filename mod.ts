@@ -54,6 +54,17 @@ export const useIdentityProfile: (
 ) => { name?: string; avatar?: string; alias?: string } | null =
   useIdentityProfileNoDb(accessDb);
 
+export const getProfile = async (
+  publicSignKey: string,
+): Promise<{ name?: string; avatar?: string; alias?: string } | null> => {
+  const { data: { identities } } = await accessDb().queryOnce({
+    identities: { $: { where: { publicSignKey } } },
+  });
+  if (!identities.length) return null;
+  const { name, avatar, alias } = identities[0];
+  return { name, avatar, alias };
+};
+
 export const Chat: (
   { credentials, conversationId, onClose }: ChatProps,
 ) => JSX.Element = ChatNoDb(accessDb);
