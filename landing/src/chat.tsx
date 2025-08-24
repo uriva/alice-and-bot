@@ -453,9 +453,7 @@ export const Messenger = () => {
       <div class="flex flex-col flex-grow w-full md:max-w-2xl lg:max-w-3xl">
         <div class="mb-4">
           <div class="text-xl font-bold ">👧🤖 Alice&Bot</div>
-          <div>
-            encrypted chat for AI era
-          </div>
+          <div>encrypted chat for AI era</div>
         </div>
         {!credentials && (
           <div class="flex flex-col flex-grow justify-center">
