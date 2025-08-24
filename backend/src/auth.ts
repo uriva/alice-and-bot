@@ -1,4 +1,3 @@
-import { hash } from "gamla";
 import { verify } from "../../protocol/src/crypto.ts";
 import { canonicalStringForAuthSign } from "./api.ts";
 

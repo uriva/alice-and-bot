@@ -122,6 +122,16 @@ aliasToPublicSignKey(
 ): Promise<{ publicSignKey: string } | { error: "no-such-alias" }>
 ```
 
+Look up an alias by public sign key (client-side Instant query; no backend
+call):
+
+```ts
+publicSignKeyToAlias(publicSignKey: string): Promise<
+  | { alias: string }
+  | { error: "no-such-identity" | "no-alias" }
+>
+```
+
 Set or update an alias (signature-based auth handled internally, no session
 required):
 

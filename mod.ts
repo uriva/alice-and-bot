@@ -12,10 +12,9 @@ import {
   createConversation as createConversationNoDb,
   type Credentials,
   instantAppId,
+  publicSignKeyToAlias as publicSignKeyToAliasNoDb,
 } from "./protocol/src/clientApi.ts";
-export { setWebhook } from "./backend/src/api.ts";
-export { aliasToPublicSignKey } from "./backend/src/api.ts";
-export { setAlias } from "./protocol/src/clientApi.ts";
+export { aliasToPublicSignKey, setWebhook } from "./backend/src/api.ts";
 export {
   chatWithMeLink,
   createIdentity,
@@ -23,9 +22,13 @@ export {
   handleWebhookUpdate,
   sendMessage,
   sendMessageWithKey,
+  setAlias,
   type WebhookUpdate,
 } from "./protocol/src/clientApi.ts";
 export { Widget } from "./widget/src/widget.tsx";
+
+export const publicSignKeyToAlias = (publicSignKey: string) =>
+  publicSignKeyToAliasNoDb(accessDb, publicSignKey);
 
 let db: InstantReactWebDatabase<typeof schema> | null = null;
 

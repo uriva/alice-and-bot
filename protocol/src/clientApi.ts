@@ -263,3 +263,16 @@ export const setAlias = async ({
     },
   });
 };
+
+export const publicSignKeyToAlias = async (
+  db: () => InstantReactWebDatabase<typeof schema>,
+  publicSignKey: string,
+): Promise<{ alias: string } | { error: "no-such-identity" | "no-alias" }> => {
+  const { data: { identities } } = await db().queryOnce({
+    identities: { $: { where: { publicSignKey } } },
+  });
+  if (identities.length === 0) return { error: "no-such-identity" };
+  const alias = identities[0].alias;
+  if (!alias) return { error: "no-alias" };
+  return { alias };
+};
