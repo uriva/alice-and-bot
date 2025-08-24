@@ -63,7 +63,8 @@ export const getConversations = async (
   });
   return data.conversations.filter((c) => {
     const participantKeys = c.participants.map((p) => p.publicSignKey);
-    return publicSignKeys.every((k) => participantKeys.includes(k));
+    return publicSignKeys.every((k) => participantKeys.includes(k)) &&
+      participantKeys.length === publicSignKeys.length;
   });
 };
 
