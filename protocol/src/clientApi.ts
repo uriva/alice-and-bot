@@ -13,7 +13,7 @@ import {
   encryptAsymmetric,
   generateKeyPair,
   generateSymmetricKey,
-} from "./clientApi.ts";
+} from "../../protocol/src/crypto.ts";
 import {
   decryptAsymmetric,
   decryptSymmetric,
