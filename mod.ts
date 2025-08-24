@@ -52,6 +52,21 @@ export const createConversation: (
 ) => Promise<{ conversationId: string } | { error: string }> =
   createConversationNoDb(accessDb);
 
+export const getConversations = async (
+  publicSignKeys: string[],
+): Promise<Conversation[]> => {
+  const { data } = await accessDb().queryOnce({
+    conversations: {
+      participants: {},
+      $: { where: { "participants.publicSignKey": { $in: publicSignKeys } } },
+    },
+  });
+  return data.conversations.filter((c) => {
+    const participantKeys = c.participants.map((p) => p.publicSignKey);
+    return publicSignKeys.every((k) => participantKeys.includes(k));
+  });
+};
+
 export const embedScript = ({ publicSignKey, initialMessage }: {
   publicSignKey: string;
   initialMessage: string;

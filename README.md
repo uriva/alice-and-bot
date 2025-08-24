@@ -150,14 +150,14 @@ const scriptTag = embedScript({
 
 ## Known security weaknesses
 
-As discussed, we are at the early days, and beyond the encryption on the
-messages themselves, all metadata is exposed. Specific weaknesses we are aware
-of:
+Beyond message encryption, all metadata is currently exposed.
+
+TODO:
 
 1. handle faking the time
 1. handle linking message to a bad conversation id
 1. handle impersonation of the notification server
-1. handle message being in the db but es not called
+1. handle message inserted to the db but endpoint not called
 1. limit editing instant entities
 1. handle a member of the conversation injecting a geniuine signed message from
    someone outside
@@ -165,6 +165,5 @@ of:
 1. notify endpoint is public
 1. one can choose not to notify - adding messages
 1. everyone can see all metadata - groups, who sent when
+1. anyone can check if two people has a conversation
 1. webhooks are exposed to anyone seeing participants
-
-We hope to tackle all in the coming period!
