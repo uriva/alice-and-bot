@@ -148,6 +148,28 @@ getProfile(
 ): Promise<{ name?: string; avatar?: string; alias?: string } | null>
 ```
 
+Fetch (partial) conversation info (first 10 participant profiles + isPartial
+flag):
+
+```ts
+getConversationInfo(
+  conversationId: string
+): Promise<
+  | {
+      conversationInfo: {
+        participants: {
+          publicSignKey: string;
+          name?: string;
+          avatar?: string;
+          alias?: string;
+        }[];
+        isPartial: boolean; // true if more than 10 participants
+      };
+    }
+  | { error: "not-found" }
+>
+```
+
 Set or update an alias (signature-based auth handled internally, no session
 required):
 

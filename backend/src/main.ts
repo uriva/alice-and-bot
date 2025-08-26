@@ -115,13 +115,57 @@ const endpoints: BackendApiImpl = {
         },
       });
       const filtered = conversations.filter((c) => {
-        const participantKeys = c.participants.map((p: { publicSignKey: string }) => p.publicSignKey);
+        const participantKeys = c.participants.map(({ publicSignKey }) =>
+          publicSignKey
+        );
         return (
           publicSignKeys.every((k: string) => participantKeys.includes(k)) &&
           participantKeys.length === publicSignKeys.length
         );
       });
       return { conversations: filtered };
+    },
+    getConversationInfo: async ({ conversationId }) => {
+      const { conversations } = await query({
+        conversations: {
+          participants: {},
+          $: { where: { id: conversationId } },
+        },
+      });
+      if (!conversations.length) return { error: "not-found" };
+      const limited = conversations[0].participants.slice(0, 10);
+      const { identities } = await query({
+        identities: {
+          $: {
+            where: {
+              publicSignKey: {
+                $in: limited.map(({ publicSignKey }) => publicSignKey),
+              },
+            },
+          },
+        },
+      });
+      const pkToIdentity = Object.fromEntries(
+        identities.map((
+          i: {
+            publicSignKey: string;
+            name?: string;
+            avatar?: string;
+            alias?: string;
+          },
+        ) => [i.publicSignKey, i]),
+      );
+      return {
+        conversationInfo: {
+          participants: limited.map(
+            ({ publicSignKey }: { publicSignKey: string }) => {
+              const { name, avatar, alias } = pkToIdentity[publicSignKey];
+              return { publicSignKey, name, avatar, alias };
+            },
+          ),
+          isPartial: conversations[0].participants.length > limited.length,
+        },
+      };
     },
     issueNonce: async ({ publicSignKey }) => ({
       nonce: await issueNonceHelper(publicSignKey),

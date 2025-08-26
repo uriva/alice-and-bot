@@ -141,6 +141,26 @@ export const backendApiSchema = {
       ),
     }),
   }),
+  getConversationInfo: endpoint({
+    authRequired: false,
+    input: z.object({ conversationId: z.string() }),
+    output: z.union([
+      z.object({
+        conversationInfo: z.object({
+          participants: z.array(
+            z.object({
+              publicSignKey: z.string(),
+              name: z.string().optional(),
+              avatar: z.string().optional(),
+              alias: z.string().optional(),
+            }),
+          ),
+          isPartial: z.boolean(),
+        }),
+      }),
+      z.object({ error: z.literal("not-found") }),
+    ]),
+  }),
 } as const;
 
 export const apiClient = apiClientMaker(
@@ -210,3 +230,21 @@ export const getConversations = (
     }[];
   }
 > => apiClient({ endpoint: "getConversations", payload: { publicSignKeys } });
+
+export const getConversationInfo = (
+  conversationId: string,
+): Promise<
+  | {
+    conversationInfo: {
+      participants: {
+        publicSignKey: string;
+        name?: string;
+        avatar?: string;
+        alias?: string;
+      }[];
+      isPartial: boolean;
+    };
+  }
+  | { error: "not-found" }
+> =>
+  apiClient({ endpoint: "getConversationInfo", payload: { conversationId } });

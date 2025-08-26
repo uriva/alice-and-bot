@@ -28,6 +28,18 @@ export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
 
 type InternalMessage = { type: "text"; text: string };
 
+export type Profile = {
+  publicSignKey: string;
+  name?: string;
+  avatar?: string;
+  alias?: string;
+};
+
+export type ConversationInfoPayload = {
+  participants: Profile[]; // first N participants (capped)
+  isPartial: boolean; // true if there are more participants not included
+};
+
 export type WebhookUpdate = {
   payload: EncryptedMessage;
   timestamp: number;

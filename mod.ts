@@ -3,6 +3,7 @@ import { init } from "@instantdb/react";
 import type { JSX } from "preact";
 import {
   getConversations as backendGetConversations,
+  getConversationInfo as backendGetConversationInfo,
   getProfile as backendGetProfile,
 } from "./backend/src/api.ts";
 import {
@@ -89,6 +90,21 @@ export const getConversations = async (publicSignKeys: string[]): Promise<{
   const { conversations } = await backendGetConversations(publicSignKeys);
   return conversations;
 };
+
+export const getConversationInfo = (conversationId: string): Promise<
+  | {
+    conversationInfo: {
+      participants: {
+        publicSignKey: string;
+        name?: string;
+        avatar?: string;
+        alias?: string;
+      }[];
+      isPartial: boolean;
+    };
+  }
+  | { error: "not-found" }
+> => backendGetConversationInfo(conversationId);
 
 export const embedScript = ({ publicSignKey, initialMessage }: {
   publicSignKey: string;
