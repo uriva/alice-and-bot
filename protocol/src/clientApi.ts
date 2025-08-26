@@ -130,26 +130,20 @@ export type DecipheredMessage =
   & { publicSignKey: string; timestamp: number }
   & InternalMessage;
 
-export const decryptMessage =
-  (conversationSymmetricKey: string) =>
-  async (dbMsg: Omit<DbMessage, "id">): Promise<DecipheredMessage> => {
-    const decrypted = await decryptSymmetric<SignedPayload<InternalMessage>>(
+export const decryptMessage = (conversationSymmetricKey: string) =>
+async (
+  { payload, timestamp }: Omit<DbMessage, "id">,
+): Promise<DecipheredMessage> => {
+  const { signature, payload: decryptedPayload, publicSignKey } =
+    await decryptSymmetric<SignedPayload<InternalMessage>>(
       conversationSymmetricKey,
-      dbMsg.payload,
+      payload,
     );
-    if (!decrypted) throw new Error("Failed to decrypt message");
-    const isValid = await verify(
-      decrypted.signature,
-      decrypted.publicSignKey,
-      msgToStr(decrypted.payload),
-    );
-    if (!isValid) throw new Error("Invalid signature");
-    return {
-      publicSignKey: decrypted.publicSignKey,
-      timestamp: dbMsg.timestamp,
-      ...decrypted.payload,
-    };
-  };
+  if (await verify(signature, publicSignKey, msgToStr(decryptedPayload))) {
+    return { publicSignKey, timestamp, ...decryptedPayload };
+  }
+  throw new Error("Invalid signature");
+};
 
 // deno-lint-ignore ban-types
 type Identity = InstaQLEntity<typeof schema, "identities", { account: {} }>;
