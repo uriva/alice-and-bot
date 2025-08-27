@@ -9,6 +9,7 @@ import {
 } from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
 import { chatPath } from "../../landing/src/paths.ts";
+import { normalizeAlias } from "./alias.ts";
 import {
   encryptAsymmetric,
   generateKeyPair,
@@ -235,9 +236,6 @@ export const chatWithMeLink = (
   publicSignKey: string,
 ): string =>
   `${baseUrl}${chatPath}?chatWith=${encodeURIComponent(publicSignKey)}`;
-
-const normalizeAlias = (alias: string): string =>
-  alias.trim().toLowerCase().slice(0, 25).replace(/\s+/g, "");
 
 export const setAlias = async ({
   alias,

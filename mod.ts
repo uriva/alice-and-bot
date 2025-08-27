@@ -2,8 +2,8 @@ import type { InstantReactWebDatabase } from "@instantdb/react";
 import { init } from "@instantdb/react";
 import type { JSX } from "preact";
 import {
-  getConversations as backendGetConversations,
   getConversationInfo as backendGetConversationInfo,
+  getConversations as backendGetConversations,
   getProfile as backendGetProfile,
 } from "./backend/src/api.ts";
 import {

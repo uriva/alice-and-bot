@@ -1,14 +1,12 @@
 import { id } from "@instantdb/admin";
 import { apiHandler } from "typed-api";
+import { isValidAlias, normalizeAlias } from "../../protocol/src/alias.ts";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
 import { issueNonceHelper, verifyAuthToken } from "./auth.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import { callWebhooks } from "./notificationService.ts";
-
-const normalizeAlias = (alias: string): string =>
-  alias.trim().toLowerCase().slice(0, 25).replaceAll(/\s+/g, "");
 
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
@@ -186,10 +184,9 @@ const endpoints: BackendApiImpl = {
         authToken,
       });
       const { alias } = payload;
-      if (normalizeAlias(alias) !== alias) {
+      if (!isValidAlias(alias)) {
         return { success: false, error: "invalid-alias" };
       }
-      const normalized = normalizeAlias(alias);
       const { identities: identityMatches } = await query({
         identities: { $: { where: { publicSignKey } } },
       });
@@ -198,13 +195,13 @@ const endpoints: BackendApiImpl = {
       }
       if (!authOk) return { success: false, error: "invalid-auth" };
       const { identities: taken } = await query({
-        identities: { $: { where: { alias: normalized } } },
+        identities: { $: { where: { alias } } },
       });
       if (taken.length > 0 && taken[0].id !== identityMatches[0].id) {
         return { success: false, error: "alias-taken" };
       }
       await transact(
-        tx.identities[identityMatches[0].id].update({ alias: normalized }),
+        tx.identities[identityMatches[0].id].update({ alias }),
       );
       return { success: true };
     },

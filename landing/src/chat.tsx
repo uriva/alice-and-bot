@@ -21,6 +21,7 @@ import {
   instantAppId,
   setAlias,
 } from "../../protocol/src/clientApi.ts";
+import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath } from "./paths.ts";
 
@@ -43,22 +44,51 @@ const selectedConversation = signal<string | null>(null);
 
 const Chat = ChatNoDb(() => db);
 
+// Create a conversation with one or more other participants. Each token can be a
+// public sign key or an alias. Comma separated list.
 const startConversation = async (
   credentials: Credentials,
-  publicSignKey: string,
-) =>
-  createConversation(() => db)(
-    [publicSignKey, credentials.publicSignKey],
-    `${await nameFromPublicSignKey(
-      credentials.publicSignKey,
-    )} & ${await nameFromPublicSignKey(publicSignKey)}`,
-  ).then((response) => {
-    if (!("conversationId" in response)) {
-      alert("Failed to create conversation");
-      return;
+  rawInput: string,
+) => {
+  // Split by comma, trim, drop empties
+  const tokens = rawInput.split(",").map((t) => t.trim()).filter(Boolean);
+  if (tokens.length === 0) {
+    alert("Please enter at least one participant public key or alias");
+    return;
+  }
+  // Resolve each token: try alias lookup first; fallback to original (assume key)
+  const resolved = await Promise.all(tokens.map(async (token) => {
+    try {
+      const res = await aliasToPublicSignKey(token);
+      if ("publicSignKey" in res) return res.publicSignKey;
+    } catch (_) {
+      // network / other errors fall through to treat as key
     }
-    selectedConversation.value = response.conversationId;
-  });
+    return token; // assume it's already a public sign key
+  }));
+  // Include current user and dedupe
+  const participantKeys = Array.from(
+    new Set([
+      credentials.publicSignKey,
+      ...resolved.filter((k) => k !== credentials.publicSignKey),
+    ]),
+  );
+  if (participantKeys.length < 2) {
+    alert("Need at least one other participant");
+    return;
+  }
+  // Build title from names (fallback to key if missing)
+  const names = await Promise.all(
+    participantKeys.map((k) => nameFromPublicSignKey(k)),
+  );
+  const title = names.join(", ");
+  const response = await createConversation(() => db)(participantKeys, title);
+  if (!("conversationId" in response)) {
+    alert("Failed to create conversation (some participants may be invalid)");
+    return;
+  }
+  selectedConversation.value = response.conversationId;
+};
 
 const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
   onCreated: (creds: Credentials) => void;
@@ -224,7 +254,9 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
       if (res.success) {
         setStatus({ type: "success", message: "Alias saved" });
         // Alias will reflect via reactive query; keep local field normalized (same as server)
-        setAliasInput(trimmed.toLowerCase().slice(0, 25).replace(/\s+/g, ""));
+        setAliasInput(
+          trimmed.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 15),
+        );
       } else {
         let message = "Failed to set alias";
         if (res.error === "alias-taken") message = "Alias already taken";
@@ -264,7 +296,11 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             class={inputStyle + " flex-grow"}
             placeholder="choose-alias"
             value={aliasInput}
-            onInput={(e) => setAliasInput(e.currentTarget.value)}
+            onInput={(e) =>
+              setAliasInput(
+                e.currentTarget.value.toLowerCase().replace(/[^a-z0-9_]/g, "")
+                  .slice(0, 15),
+              )}
             disabled={saving}
           />
           <button
@@ -277,7 +313,8 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           </button>
         </div>
         <div class={hintStyle}>
-          Lowercase, no spaces, max 25 chars. Public & shareable.
+          Lowercase letters, numbers, underscore. Max 15 chars. Public &
+          shareable.
         </div>
         {status && (
           <div
@@ -427,7 +464,7 @@ const NewChatScreen = (
       >
         <input
           class={inputStyle}
-          placeholder="Recipient public key"
+          placeholder="Recipient alias or public key (comma separated for group)"
           value={otherParticipantPubKey}
           onInput={(e) => {
             setOtherParticipantPubKey(e.currentTarget.value);
@@ -438,10 +475,7 @@ const NewChatScreen = (
             type="button"
             class={buttonGreenStyle}
             onClick={() =>
-              startConversation(
-                credentials,
-                otherParticipantPubKey,
-              )}
+              startConversation(credentials, otherParticipantPubKey)}
           >
             Start New Conversation
           </button>

@@ -171,7 +171,7 @@ getConversationInfo(
 ```
 
 Set or update an alias (signature-based auth handled internally, no session
-required):
+required). Aliases: lowercase letters, numbers, underscore, max 15 chars:
 
 ```ts
 setAlias({
