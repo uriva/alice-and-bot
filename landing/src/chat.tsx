@@ -84,7 +84,7 @@ const startConversation = async (
   const title = names.join(", ");
   const response = await createConversation(() => db)(participantKeys, title);
   if (!("conversationId" in response)) {
-    alert("Failed to create conversation (some participants may be invalid)");
+    alert(`Failed to create conversation: ${response.error}`);
     return;
   }
   selectedConversation.value = response.conversationId;
