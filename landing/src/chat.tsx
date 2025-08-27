@@ -24,6 +24,7 @@ import {
 import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath } from "./paths.ts";
+import { normalizeAlias } from "../../protocol/src/alias.ts";
 
 const db = init({ appId: instantAppId, schema });
 
@@ -96,45 +97,148 @@ const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
   setStoreInBrowser: (v: boolean) => void;
 }) => {
   const [identityName, setIdentityName] = useState("");
+  const [alias, setAliasInput] = useState("");
   const [credentialsString, setCredentialsString] = useState<string | null>(
     null,
   );
+  const [creating, setCreating] = useState(false);
+  const [aliasStatus, setAliasStatus] = useState<
+    null | { type: "error" | "success"; message: string }
+  >(null);
 
   const onClickCreateIdentity = async () => {
     if (!identityName.trim()) {
       alert("Please enter a name for your identity.");
       return;
     }
-    const creds = await createIdentity(identityName);
-    const credsStr = JSON.stringify(creds);
-    setCredentialsString(credsStr);
-    onCreated(creds);
-    if (storeInBrowser) {
+    const trimmedAlias = alias.trim().toLowerCase();
+    if (!trimmedAlias) {
+      alert("Please choose a public alias.");
+      return;
+    }
+    // Front-end validation similar to server rules
+    const normalized = trimmedAlias.replace(/[^a-z0-9_]/g, "").slice(0, 15);
+    if (normalized !== trimmedAlias || normalized.length === 0) {
+      alert(
+        "Alias must be lowercase letters, numbers, underscore. Max 15 chars.",
+      );
+      return;
+    }
+    setCreating(true);
+    setAliasStatus(null);
+    try {
+      // Pre-check alias availability before creating identity
       try {
-        localStorage.setItem("alicebot_credentials", credsStr);
-      } catch (e) {
-        console.error("failed storing credentials in localStorage", e);
+        const existing = await aliasToPublicSignKey(normalized);
+        if ("publicSignKey" in existing) {
+          setAliasStatus({
+            type: "error",
+            message: "Alias already taken. Please choose another.",
+          });
+          setCreating(false);
+          return;
+        }
+      } catch (_e) {
+        // If the check fails for network reasons, allow user to decide
+        const proceed = confirm(
+          "Couldn't verify alias availability (network error). Proceed anyway?",
+        );
+        if (!proceed) {
+          setCreating(false);
+          return;
+        }
       }
+      const creds = await createIdentity(identityName, normalized);
+      // Attempt to set alias immediately
+      const res = await setAlias({ alias: normalized, credentials: creds });
+      if (!res.success) {
+        let message = "Failed to set alias";
+        if (res.error === "alias-taken") message = "Alias already taken";
+        if (res.error === "invalid-alias") message = "Invalid alias";
+        if (res.error === "invalid-auth") message = "Auth failed";
+        if (res.error === "not-found") message = "Identity not found";
+        setAliasStatus({ type: "error", message });
+      } else {
+        setAliasStatus({ type: "success", message: "Alias set" });
+      }
+      const credsStr = JSON.stringify(creds);
+      setCredentialsString(credsStr);
+      onCreated(creds);
+      if (storeInBrowser) {
+        try {
+          localStorage.setItem("alicebot_credentials", credsStr);
+        } catch (e) {
+          console.error("failed storing credentials in localStorage", e);
+        }
+      }
+    } catch (e) {
+      console.error("Error creating identity", e);
+      alert("Unexpected error creating identity");
+    } finally {
+      setCreating(false);
     }
   };
 
   return (
     <div class={sectionSpacing}>
       <label class={labelStyle}>Create a new identity</label>
-      <div class={inputRowStyle}>
-        <input
-          class={inputStyle}
-          placeholder="Enter your name"
-          value={identityName}
-          onInput={(e) => setIdentityName(e.currentTarget.value)}
-        />
-        <button
-          type="button"
-          class={buttonBlueStyle}
-          onClick={onClickCreateIdentity}
-        >
-          Sign up
-        </button>
+      <div
+        style={{ display: "flex", flexDirection: "column" }}
+        class={inputRowStyle}
+      >
+        <div>
+          <input
+            class={inputStyle}
+            placeholder="Choose @alias"
+            value={alias}
+            onInput={(e) =>
+              setAliasInput(normalizeAlias(e.currentTarget.value))}
+          />
+          <div class={hintStyle}>
+            Your public handle/callsign/username.
+          </div>
+          <div class={hintStyle}>
+            Use lowercase letters, numbers, underscore. Max 15 chars.
+          </div>
+          <div class={hintStyle}>
+            You can change it later.
+          </div>
+          {aliasStatus && (
+            <div
+              class={`text-xs mt-1 ${
+                aliasStatus.type === "error"
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-green-600 dark:text-green-400"
+              }`}
+            >
+              {aliasStatus.message}
+            </div>
+          )}
+        </div>
+        <div>
+          <input
+            class={inputStyle}
+            placeholder="Display name"
+            value={identityName}
+            onInput={(e) => setIdentityName(e.currentTarget.value)}
+          />
+          <div class={hintStyle}>
+            A display name that people will see in chats.
+          </div>
+          <div class={hintStyle}>
+            You can change it later.
+          </div>
+        </div>
+        <div>
+          <button
+            type="button"
+            class={buttonBlueStyle}
+            onClick={onClickCreateIdentity}
+            disabled={creating}
+          >
+            {creating ? "Creating..." : "Sign up"}
+          </button>
+        </div>
       </div>
       <div class="flex items-center mb-2">
         <input

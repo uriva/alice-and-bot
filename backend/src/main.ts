@@ -63,10 +63,26 @@ const endpoints: BackendApiImpl = {
       return { success: true, accountId, accessToken };
     },
     createAnonymousIdentity: async (
-      { name, publicSignKey, publicEncryptKey },
+      { name, publicSignKey, publicEncryptKey, alias },
     ) => {
+      let finalAlias: string | undefined = undefined;
+      if (alias) {
+        const normalized = normalizeAlias(alias);
+        if (isValidAlias(normalized)) {
+          // ensure not taken
+          const { identities: taken } = await query({
+            identities: { $: { where: { alias: normalized } } },
+          });
+          if (taken.length === 0) finalAlias = normalized;
+        }
+      }
       await transact(
-        tx.identities[id()].update({ name, publicSignKey, publicEncryptKey }),
+        tx.identities[id()].update({
+          name,
+          publicSignKey,
+          publicEncryptKey,
+          ...(finalAlias ? { alias: finalAlias } : {}),
+        }),
       );
       return {};
     },

@@ -78,7 +78,8 @@ Generate a new user identity:
 
 ```ts
 createIdentity(
-  name: string
+  name: string,
+  alias?: string // optional public alias to set at creation
 ): Promise<Credentials>
 ```
 

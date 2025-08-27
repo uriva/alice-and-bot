@@ -83,6 +83,7 @@ export const backendApiSchema = {
       name: z.string(),
       publicSignKey: z.string(),
       publicEncryptKey: z.string(),
+      alias: z.string().optional(),
     }),
     output: z.object({}),
   }),

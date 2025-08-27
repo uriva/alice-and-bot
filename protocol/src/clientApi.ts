@@ -212,7 +212,10 @@ export type Credentials = {
   privateEncryptKey: string;
 };
 
-export const createIdentity = async (name: string): Promise<Credentials> => {
+export const createIdentity = async (
+  name: string,
+  alias?: string,
+): Promise<Credentials> => {
   const { publicKey, privateKey } = await generateKeyPair("sign");
   const encryptKey = await generateKeyPair("encrypt");
   await apiClient({
@@ -221,6 +224,7 @@ export const createIdentity = async (name: string): Promise<Credentials> => {
       name,
       publicSignKey: publicKey,
       publicEncryptKey: encryptKey.publicKey,
+      ...(alias ? { alias } : {}),
     },
   });
   return {
