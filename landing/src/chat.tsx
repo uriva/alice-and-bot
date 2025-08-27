@@ -6,6 +6,7 @@ import {
   type Conversation,
   useConversations,
   useDarkMode,
+  useIdentityProfile,
   useUserName,
 } from "../..//clients/react/src/hooks.ts";
 import { ChatAvatar } from "../../clients/react/src/abstractChatBox.tsx";
@@ -18,6 +19,7 @@ import {
   createIdentity,
   type Credentials,
   instantAppId,
+  setAlias,
 } from "../../protocol/src/clientApi.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath } from "./paths.ts";
@@ -195,24 +197,105 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
   );
 };
 
-const YourKey = ({ publicSignKey }: { publicSignKey: string }) => {
+const YourKey = ({ credentials }: { credentials: Credentials }) => {
+  const publicSignKey = credentials.publicSignKey;
   const name = useUserName(() => db)(publicSignKey);
+  const profile = useIdentityProfile(() => db)(publicSignKey);
+  const [aliasInput, setAliasInput] = useState(profile?.alias ?? "");
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<
+    null | { type: "success" | "error"; message: string }
+  >(null);
+  // Keep alias input in sync if it appears later
+  useEffect(() => {
+    setAliasInput(profile?.alias ?? "");
+  }, [profile?.alias]);
+
+  const onSaveAlias = async () => {
+    const trimmed = aliasInput.trim();
+    if (!trimmed) {
+      setStatus({ type: "error", message: "Alias can't be empty" });
+      return;
+    }
+    setSaving(true);
+    setStatus(null);
+    try {
+      const res = await setAlias({ alias: trimmed, credentials });
+      if (res.success) {
+        setStatus({ type: "success", message: "Alias saved" });
+        // Alias will reflect via reactive query; keep local field normalized (same as server)
+        setAliasInput(trimmed.toLowerCase().slice(0, 25).replace(/\s+/g, ""));
+      } else {
+        let message = "Failed to set alias";
+        if (res.error === "alias-taken") message = "Alias already taken";
+        if (res.error === "invalid-alias") message = "Invalid alias";
+        if (res.error === "not-found") message = "Identity not found";
+        if (res.error === "invalid-auth") message = "Authentication failed";
+        setStatus({ type: "error", message });
+      }
+    } catch (e) {
+      console.error("Alias save error", e);
+      setStatus({ type: "error", message: "Unexpected error" });
+    } finally {
+      setSaving(false);
+      setTimeout(() => {
+        setStatus((s) => (s?.type === "success" ? null : s));
+      }, 2000);
+    }
+  };
+
   return (
     <div
       style={{ display: "flex", flexDirection: "column", gap: 16 }}
       class={`${textColorStyle} mb-2`}
     >
-      <div>
-        Your public name: {name ?? "loading..."}
-      </div>
+      <div>Your display name: {name ?? "loading..."}</div>
       <div>
         Your user id is <CopyableString str={publicSignKey} />
       </div>
       <div>
         Invite others to chat with you:&nbsp;
-        <CopyableString
-          str={chatWithMeLink(publicSignKey)}
-        />
+        <CopyableString str={chatWithMeLink(publicSignKey)} />
+      </div>
+      <div class="flex flex-col gap-1 max-w-md">
+        <label class={labelSmallStyle}>Public alias (optional)</label>
+        <div class="flex gap-2 items-center">
+          <input
+            class={inputStyle + " flex-grow"}
+            placeholder="choose-alias"
+            value={aliasInput}
+            onInput={(e) => setAliasInput(e.currentTarget.value)}
+            disabled={saving}
+          />
+          <button
+            type="button"
+            class={buttonGreenStyle}
+            disabled={saving}
+            onClick={onSaveAlias}
+          >
+            {saving ? "Saving..." : profile?.alias ? "Update" : "Set"} alias
+          </button>
+        </div>
+        <div class={hintStyle}>
+          Lowercase, no spaces, max 25 chars. Public & shareable.
+        </div>
+        {status && (
+          <div
+            class={`text-xs ${
+              status.type === "success"
+                ? "text-green-600 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
+            }`}
+          >
+            {status.message}
+          </div>
+        )}
+        {profile?.alias && (
+          <div class={hintStyle}>
+            Current alias:&nbsp;
+            <span class="font-mono">@{profile.alias}</span>
+          </div>
+        )}
       </div>
       <CopyCredentialsButton />
       <DeleteCredentialsButton />
@@ -407,9 +490,7 @@ const LoggedInMessenger = (
           )
           : <OpenChats credentials={credentials} setView={setView} />)}
       {view === "new_chat" && <NewChatScreen credentials={credentials} />}
-      {view === "identity" && (
-        <YourKey publicSignKey={credentials.publicSignKey} />
-      )}
+      {view === "identity" && <YourKey credentials={credentials} />}
     </div>
   </div>
 );
