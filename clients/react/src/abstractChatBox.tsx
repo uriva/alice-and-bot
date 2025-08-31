@@ -369,8 +369,9 @@ export const AbstractChatBox = (
 
   // Scroll to bottom when messages change (new message sent/received)
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
   }, [messages.length]);
 
