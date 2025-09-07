@@ -640,6 +640,19 @@ const MessengerLogin = ({ setCredentials }: {
   const [showForm, setShowForm] = useState<null | "new" | "existing">(null);
   return (
     <div class="flex flex-col flex-grow justify-center">
+      <div class="mb-6 max-w-prose">
+        <div class="text-sm">
+          <span class="font-semibold">What is Alice&Bot?</span>
+          &nbsp;An end-to-end encrypted messenger for people and bots. Create a
+          self-owned cryptographic identity and chat using a public key or an
+          @alias.
+        </div>
+        <div class={hintStyle}>
+          No email, phone number, or personal info required. Your keys are
+          generated locally in your browser. You can keep the credentials in
+          this browser or copy the credentials string to store safely elsewhere.
+        </div>
+      </div>
       {showForm === null && (
         <div class="flex flex-col items-center gap-4 mb-6">
           <button
