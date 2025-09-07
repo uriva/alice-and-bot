@@ -105,7 +105,7 @@ export const LandingPage = () => (
         href={chatPath}
         class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
       >
-        Live demo
+        Messenger app
       </a>
       <a
         type="button"
