@@ -641,6 +641,14 @@ const MessengerLogin = ({ setCredentials }: {
   const [showForm, setShowForm] = useState<null | "new" | "existing">(null);
   const [showWhat, setShowWhat] = useState(false);
   const [showNoEmail, setShowNoEmail] = useState(false);
+  const loc = useLocation();
+  const router = useLocation().route;
+  // Keep showForm in sync with URL so browser back returns to the question
+  useEffect(() => {
+    const v = (loc.query["login"] ?? "") as string;
+    if (v === "new" || v === "existing") setShowForm(v);
+    else setShowForm(null);
+  }, [JSON.stringify(loc.query)]);
   return (
     <div class="flex flex-col flex-grow">
       {showForm === null && (
@@ -652,14 +660,22 @@ const MessengerLogin = ({ setCredentials }: {
             <button
               type="button"
               class={buttonBlueStyle}
-              onClick={() => setShowForm("existing")}
+              onClick={() => {
+                const params = new URLSearchParams(globalThis.location.search);
+                params.set("login", "existing");
+                router(`${loc.path}?${params.toString()}`);
+              }}
             >
               Yes
             </button>
             <button
               type="button"
               class={buttonGreenStyle}
-              onClick={() => setShowForm("new")}
+              onClick={() => {
+                const params = new URLSearchParams(globalThis.location.search);
+                params.set("login", "new");
+                router(`${loc.path}?${params.toString()}`);
+              }}
             >
               No
             </button>
