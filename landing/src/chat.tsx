@@ -642,27 +642,32 @@ const MessengerLogin = ({ setCredentials }: {
   const [showWhat, setShowWhat] = useState(false);
   const [showNoEmail, setShowNoEmail] = useState(false);
   return (
-    <div class="flex flex-col flex-grow justify-center">
+    <div class="flex flex-col flex-grow">
       {showForm === null && (
-        <div class="flex flex-col items-center gap-4 mb-6">
-          <button
-            type="button"
-            class={buttonBlueStyle}
-            onClick={() => setShowForm("new")}
-          >
-            I'm a new user
-          </button>
-          <button
-            type="button"
-            class={buttonBlueStyle}
-            onClick={() => setShowForm("existing")}
-          >
-            I already have an Alice&Bot identity
-          </button>
+        <div class="flex flex-col items-center gap-4 mb-6 flex-grow justify-center text-center px-4">
+          <div class="text-lg font-semibold max-w-xl">
+            To start, we need your alice&bot identity. Do you have one?
+          </div>
+          <div class="flex gap-3">
+            <button
+              type="button"
+              class={buttonBlueStyle}
+              onClick={() => setShowForm("existing")}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              class={buttonGreenStyle}
+              onClick={() => setShowForm("new")}
+            >
+              No
+            </button>
+          </div>
         </div>
       )}
       {showForm === null && (
-        <div class="mt-2 mb-6 self-center max-w-md w-full">
+        <div class="pt-2 self-center max-w-md w-full">
           <button
             type="button"
             class="w-full flex justify-between items-center py-2 px-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
