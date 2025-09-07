@@ -238,6 +238,7 @@ const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
           >
             {creating ? "Creating..." : "Sign up"}
           </button>
+          <div class={`${hintStyle} mt-1`}>No email or phone required.</div>
         </div>
       </div>
       <div class="flex items-center mb-2">
@@ -638,21 +639,10 @@ const MessengerLogin = ({ setCredentials }: {
 }) => {
   const [storeInBrowser, setStoreInBrowser] = useState(true);
   const [showForm, setShowForm] = useState<null | "new" | "existing">(null);
+  const [showWhat, setShowWhat] = useState(false);
+  const [showNoEmail, setShowNoEmail] = useState(false);
   return (
     <div class="flex flex-col flex-grow justify-center">
-      <div class="mb-6 max-w-prose">
-        <div class="text-sm">
-          <span class="font-semibold">What is Alice&Bot?</span>
-          &nbsp;An end-to-end encrypted messenger for people and bots. Create a
-          self-owned cryptographic identity and chat using a public key or an
-          @alias.
-        </div>
-        <div class={hintStyle}>
-          No email, phone number, or personal info required. Your keys are
-          generated locally in your browser. You can keep the credentials in
-          this browser or copy the credentials string to store safely elsewhere.
-        </div>
-      </div>
       {showForm === null && (
         <div class="flex flex-col items-center gap-4 mb-6">
           <button
@@ -669,6 +659,44 @@ const MessengerLogin = ({ setCredentials }: {
           >
             I already have an Alice&Bot identity
           </button>
+        </div>
+      )}
+      {showForm === null && (
+        <div class="mt-2 mb-6 self-center max-w-md w-full">
+          <button
+            type="button"
+            class="w-full flex justify-between items-center py-2 px-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
+            onClick={() => setShowWhat((v) => !v)}
+          >
+            <span class="text-lg font-semibold">What is Alice&Bot?</span>
+            <span class="ml-2 text-gray-500">{showWhat ? "▲" : "▼"}</span>
+          </button>
+          {showWhat && (
+            <div class="px-3 mt-2 text-base">
+              An end-to-end encrypted messenger for people and bots. Create a
+              self-owned cryptographic identity and chat using a public key or
+              an @alias.
+            </div>
+          )}
+          <div class="mt-3"></div>
+          <button
+            type="button"
+            class="w-full flex justify-between items-center py-2 px-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
+            onClick={() => setShowNoEmail((v) => !v)}
+          >
+            <span class="text-lg font-semibold">
+              Do I need to give out my email or phone?
+            </span>
+            <span class="ml-2 text-gray-500">{showNoEmail ? "▲" : "▼"}</span>
+          </button>
+          {showNoEmail && (
+            <div class="px-3 mt-2 text-base">
+              No. You create a self-owned identity right here—no email, phone
+              number, or personal info required. Your keys are generated locally
+              in your browser. You can keep the credentials in this browser or
+              copy the credentials string to store safely elsewhere.
+            </div>
+          )}
         </div>
       )}
       {showForm === "new" && (
