@@ -9,10 +9,12 @@ import {
   useIdentityProfile,
   useUserName,
 } from "../..//clients/react/src/hooks.ts";
+import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import { ChatAvatar } from "../../clients/react/src/abstractChatBox.tsx";
 import { stringToColor } from "../../clients/react/src/design.tsx";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
+import { normalizeAlias } from "../../protocol/src/alias.ts";
 import {
   chatWithMeLink,
   createConversation,
@@ -21,10 +23,8 @@ import {
   instantAppId,
   setAlias,
 } from "../../protocol/src/clientApi.ts";
-import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath } from "./paths.ts";
-import { normalizeAlias } from "../../protocol/src/alias.ts";
 
 const db = init({ appId: instantAppId, schema });
 
@@ -633,11 +633,53 @@ const LoggedInMessenger = (
   </div>
 );
 
+const MessengerLogin = ({ setCredentials }: {
+  setCredentials: (creds: Credentials) => void;
+}) => {
+  const [storeInBrowser, setStoreInBrowser] = useState(true);
+  const [showForm, setShowForm] = useState<null | "new" | "existing">(null);
+  return (
+    <div class="flex flex-col flex-grow justify-center">
+      {showForm === null && (
+        <div class="flex flex-col items-center gap-4 mb-6">
+          <button
+            type="button"
+            class={buttonBlueStyle}
+            onClick={() => setShowForm("new")}
+          >
+            I'm a new user
+          </button>
+          <button
+            type="button"
+            class={buttonBlueStyle}
+            onClick={() => setShowForm("existing")}
+          >
+            I already have an Alice&Bot identity
+          </button>
+        </div>
+      )}
+      {showForm === "new" && (
+        <NewUserForm
+          onCreated={setCredentials}
+          storeInBrowser={storeInBrowser}
+          setStoreInBrowser={setStoreInBrowser}
+        />
+      )}
+      {showForm === "existing" && (
+        <ExistingUserForm
+          onIdentified={(creds) => setCredentials(creds)}
+          storeInBrowser={storeInBrowser}
+          setStoreInBrowser={setStoreInBrowser}
+        />
+      )}
+    </div>
+  );
+};
+
 export const Messenger = () => {
   const location = useLocation();
   const [credentials, setCredentials] = useState<Credentials | null>(null);
-  const [storeInBrowser, setStoreInBrowser] = useState(true);
-  const [showForm, setShowForm] = useState<null | "new" | "existing">(null);
+
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
   );
@@ -674,43 +716,7 @@ export const Messenger = () => {
           <div class="text-xl font-bold ">👧🤖 Alice&Bot</div>
           <div>encrypted chat for AI era</div>
         </div>
-        {!credentials && (
-          <div class="flex flex-col flex-grow justify-center">
-            {showForm === null && (
-              <div class="flex flex-col items-center gap-4 mb-6">
-                <button
-                  type="button"
-                  class={buttonBlueStyle}
-                  onClick={() => setShowForm("new")}
-                >
-                  I'm a new user
-                </button>
-                <button
-                  type="button"
-                  class={buttonBlueStyle}
-                  onClick={() =>
-                    setShowForm("existing")}
-                >
-                  I already have an Alice&Bot identity
-                </button>
-              </div>
-            )}
-            {showForm === "new" && (
-              <NewUserForm
-                onCreated={setCredentials}
-                storeInBrowser={storeInBrowser}
-                setStoreInBrowser={setStoreInBrowser}
-              />
-            )}
-            {showForm === "existing" && (
-              <ExistingUserForm
-                onIdentified={(creds) => setCredentials(creds)}
-                storeInBrowser={storeInBrowser}
-                setStoreInBrowser={setStoreInBrowser}
-              />
-            )}
-          </div>
-        )}
+        {!credentials && <MessengerLogin setCredentials={setCredentials} />}
         {credentials && (
           <LoggedInMessenger
             setView={setView}
