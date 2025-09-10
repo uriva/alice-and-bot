@@ -551,7 +551,7 @@ const Nav = (
         class={buttonClass("identity")}
         onClick={() => setView("identity")}
       >
-        Identity
+        Account
       </button>
     </nav>
   );
@@ -562,28 +562,30 @@ const NewChatScreen = (
 ) => {
   const [otherParticipantPubKey, setOtherParticipantPubKey] = useState("");
   return (
-    <div class="h-full">
-      <div
-        style={{ display: "flex", flexDirection: "column", gap: 8 }}
-        class={inputRowStyle + " mb-4"}
-      >
-        <input
-          class={inputStyle}
-          placeholder="Recipient alias or public key (comma separated for group)"
-          value={otherParticipantPubKey}
-          onInput={(e) => {
-            setOtherParticipantPubKey(e.currentTarget.value);
-          }}
-        />
-        <div>
-          <button
-            type="button"
-            class={buttonGreenStyle}
-            onClick={() =>
-              startConversation(credentials, otherParticipantPubKey)}
-          >
-            Start New Conversation
-          </button>
+    <div class="flex flex-col items-center flex-grow justify-center px-4">
+      <div class="w-full max-w-md">
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+          class={inputRowStyle + " mb-4"}
+        >
+          <input
+            class={inputStyle}
+            placeholder="Recipient alias or public key (comma separated for group)"
+            value={otherParticipantPubKey}
+            onInput={(e) => {
+              setOtherParticipantPubKey(e.currentTarget.value);
+            }}
+          />
+          <div>
+            <button
+              type="button"
+              class={buttonGreenStyle}
+              onClick={() =>
+                startConversation(credentials, otherParticipantPubKey)}
+            >
+              Start New Conversation
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -636,8 +638,20 @@ const LoggedInMessenger = (
             />
           )
           : <OpenChats credentials={credentials} setView={setView} />)}
-      {view === "new_chat" && <NewChatScreen credentials={credentials} />}
-      {view === "identity" && <YourKey credentials={credentials} />}
+      {view === "new_chat" && (
+        <div class="flex flex-col items-center flex-grow justify-center px-4">
+          <div class="w-full max-w-md">
+            <NewChatScreen credentials={credentials} />
+          </div>
+        </div>
+      )}
+      {view === "identity" && (
+        <div class="flex flex-col items-center flex-grow justify-center px-4">
+          <div class="w-full max-w-xl">
+            <YourKey credentials={credentials} />
+          </div>
+        </div>
+      )}
     </div>
   </div>
 );
@@ -805,20 +819,28 @@ const MessengerLogin = ({ setCredentials }: {
             </div>
           )}
           {newMode === "manual" && (
-            <NewUserForm
-              onCreated={setCredentials}
-              storeInBrowser={storeInBrowser}
-              setStoreInBrowser={setStoreInBrowser}
-            />
+            <div class="flex flex-col items-center flex-grow justify-center px-4">
+              <div class="w-full max-w-md">
+                <NewUserForm
+                  onCreated={setCredentials}
+                  storeInBrowser={storeInBrowser}
+                  setStoreInBrowser={setStoreInBrowser}
+                />
+              </div>
+            </div>
           )}
         </>
       )}
       {showForm === "existing" && (
-        <ExistingUserForm
-          onIdentified={(creds) => setCredentials(creds)}
-          storeInBrowser={storeInBrowser}
-          setStoreInBrowser={setStoreInBrowser}
-        />
+        <div class="flex flex-col items-center flex-grow justify-center px-4">
+          <div class="w-full max-w-md">
+            <ExistingUserForm
+              onIdentified={(creds) => setCredentials(creds)}
+              storeInBrowser={storeInBrowser}
+              setStoreInBrowser={setStoreInBrowser}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
@@ -917,8 +939,11 @@ export const Messenger = () => {
   return (
     <div class={`p-4 flex flex-col h-screen ${textColorStyle} md:items-center`}>
       <div class="flex flex-col flex-grow w-full md:max-w-2xl lg:max-w-3xl">
-        <div class="mb-4">
-          <div class="text-xl font-bold ">👧🤖 Alice&Bot</div>
+        <div
+          class="mb-4"
+          style={{ display: "flex", alignItems: "baseline", gap: 8 }}
+        >
+          <div class="text-xl font-bold">👧🤖 Alice&Bot</div>
           <div>encrypted chat for AI era</div>
         </div>
         {!credentials && <MessengerLogin setCredentials={setCredentials} />}
