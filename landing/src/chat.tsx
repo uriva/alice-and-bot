@@ -388,7 +388,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
     >
       <div>Your display name: {name ?? "loading..."}</div>
       <div>
-        Your user id is <CopyableString str={publicSignKey} />
+        Your public key is <CopyableString str={publicSignKey} />
       </div>
       <div>
         Invite others to chat with you:&nbsp;
@@ -564,18 +564,25 @@ const NewChatScreen = (
   return (
     <div class="flex flex-col items-center flex-grow justify-center px-4">
       <div class="w-full max-w-md">
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: 8 }}
-          class={inputRowStyle + " mb-4"}
-        >
+        <div class="flex flex-col gap-3 mb-4">
           <input
-            class={inputStyle}
-            placeholder="Recipient alias or public key (comma separated for group)"
+            id="newChatInput"
+            class={inputStyle + " w-full"}
+            placeholder="Recipient @alias or public key"
             value={otherParticipantPubKey}
+            autoFocus
+            aria-label="Recipient alias or public key"
             onInput={(e) => {
               setOtherParticipantPubKey(e.currentTarget.value);
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                startConversation(credentials, otherParticipantPubKey);
+              }
+            }}
           />
+          <div class={hintStyle}>Use comma to add multiple recipients.</div>
           <div>
             <button
               type="button"
