@@ -625,6 +625,14 @@ const LoggedInMessenger = (
             <Chat
               credentials={credentials}
               conversationId={selectedConversation.value}
+              onClose={() => {
+                // Mirror browser back to return to chats list state
+                if (typeof globalThis !== "undefined" && globalThis.history) {
+                  globalThis.history.back();
+                } else {
+                  selectedConversation.value = null;
+                }
+              }}
             />
           )
           : <OpenChats credentials={credentials} setView={setView} />)}
@@ -741,6 +749,7 @@ const MessengerLogin = ({ setCredentials }: {
 export const Messenger = () => {
   const location = useLocation();
   const [credentials, setCredentials] = useState<Credentials | null>(null);
+  const [initializedFromQuery, setInitializedFromQuery] = useState(false);
 
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
@@ -771,6 +780,62 @@ export const Messenger = () => {
       startConversation(credentials, chatWith);
     }
   }, [credentials, chatWith, conversations]);
+
+  // Keep URL in sync with current messenger state so browser Back works.
+  useEffect(() => {
+    if (!credentials) return; // avoid interfering with login flow query params
+    if (!initializedFromQuery) return; // wait until state is initialized from URL
+    const params = new URLSearchParams(globalThis.location.search);
+    // We only manage 'view' and 'c' (conversation id) here; preserve others.
+    if (view === "identity") {
+      params.set("view", "identity");
+      params.delete("c");
+    } else if (view === "new_chat") {
+      params.set("view", "new_chat");
+      params.delete("c");
+    } else {
+      // chats
+      params.delete("view");
+      if (selectedConversation.value) {
+        params.set("c", selectedConversation.value);
+      } else params.delete("c");
+    }
+    const newUrl = `${chatPath}${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
+    const currentUrl =
+      `${globalThis.location.pathname}${globalThis.location.search}`;
+    if (currentUrl !== newUrl) {
+      route(newUrl);
+    }
+  }, [credentials, view, selectedConversation.value, initializedFromQuery]);
+
+  // Reflect URL query changes back to local state (supports browser Back).
+  useEffect(() => {
+    if (!credentials) return; // only relevant inside messenger
+    const q = location.query as Record<string, string | undefined>;
+    const v = q["view"] as View | undefined;
+    const c = q["c"] as string | undefined;
+    if (v === "identity" || v === "new_chat") {
+      if (selectedConversation.value !== null) {
+        selectedConversation.value = null;
+      }
+      if (view !== v) setView(v);
+      if (!initializedFromQuery) setInitializedFromQuery(true);
+      return;
+    }
+    // default to chats
+    if (c) {
+      if (view !== "chats") setView("chats");
+      if (selectedConversation.value !== c) selectedConversation.value = c;
+    } else {
+      if (view !== "chats") setView("chats");
+      if (selectedConversation.value !== null) {
+        selectedConversation.value = null;
+      }
+    }
+    if (!initializedFromQuery) setInitializedFromQuery(true);
+  }, [credentials, JSON.stringify(location.query)]);
   return (
     <div class={`p-4 flex flex-col h-screen ${textColorStyle} md:items-center`}>
       <div class="flex flex-col flex-grow w-full md:max-w-2xl lg:max-w-3xl">
