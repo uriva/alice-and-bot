@@ -391,8 +391,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
         Your public key is <CopyableString str={publicSignKey} />
       </div>
       <div>
-        Invite others to chat with you:&nbsp;
-        <CopyableString str={chatWithMeLink(publicSignKey)} />
+        <CopyInviteLinkButton publicSignKey={publicSignKey} />
       </div>
       <div class="flex flex-col gap-1 max-w-md">
         <label class={labelSmallStyle}>Public alias (optional)</label>
@@ -439,8 +438,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           </div>
         )}
       </div>
-      <CopyCredentialsButton />
-      <DeleteCredentialsButton />
+      <DangerZone />
     </div>
   );
 };
@@ -993,6 +991,29 @@ const CopyCredentialsButton = () => {
   );
 };
 
+const CopyInviteLinkButton = ({ publicSignKey }: { publicSignKey: string }) => {
+  const [copied, setCopied] = useState(false);
+  const link = chatWithMeLink(publicSignKey);
+  return (
+    <div class="mb-4">
+      <button
+        type="button"
+        class={buttonBlueStyle}
+        onClick={() => {
+          navigator.clipboard.writeText(link);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }}
+      >
+        Copy invite link {copied && <span class="text-sm ml-1">Copied!</span>}
+      </button>
+      <div class={hintStyle}>
+        Share this link so others can start a chat with you.
+      </div>
+    </div>
+  );
+};
+
 const DeleteCredentialsButton = () => (
   <div class="mb-4">
     <button
@@ -1017,6 +1038,32 @@ const DeleteCredentialsButton = () => (
     </div>
   </div>
 );
+
+const DangerZone = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div class="mt-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 overflow-hidden">
+      <button
+        type="button"
+        class="w-full flex justify-between items-center py-2 px-3 text-left hover:bg-red-100/70 dark:hover:bg-red-900/50"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span class="text-lg font-semibold text-red-700 dark:text-red-300">
+          Danger zone
+        </span>
+        <span class="ml-2 text-red-600/80 dark:text-red-300/80">
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+      {open && (
+        <div class="px-3 py-2 border-t border-red-200 dark:border-red-800">
+          <CopyCredentialsButton />
+          <DeleteCredentialsButton />
+        </div>
+      )}
+    </div>
+  );
+};
 
 const textColorStyle = "text-gray-900 dark:text-gray-100";
 const sectionSpacing = "mb-6";
