@@ -683,7 +683,9 @@ const MessengerLogin = ({ setCredentials }: {
       // Clean the login step from URL so back navigation doesn’t reopen it
       const params = new URLSearchParams(globalThis.location.search);
       params.delete("login");
-      const newUrl = `${loc.path}${params.toString() ? `?${params.toString()}` : ""}`;
+      const newUrl = `${loc.path}${
+        params.toString() ? `?${params.toString()}` : ""
+      }`;
       router(newUrl);
     } catch (e) {
       console.error("Error creating random identity", e);
