@@ -647,6 +647,8 @@ const MessengerLogin = ({ setCredentials }: {
 }) => {
   const [storeInBrowser, setStoreInBrowser] = useState(true);
   const [showForm, setShowForm] = useState<null | "new" | "existing">(null);
+  const [newMode, setNewMode] = useState<null | "manual">(null);
+  const [creatingRandom, setCreatingRandom] = useState(false);
   const [showWhat, setShowWhat] = useState(false);
   const [showNoEmail, setShowNoEmail] = useState(false);
   const loc = useLocation();
@@ -654,9 +656,42 @@ const MessengerLogin = ({ setCredentials }: {
   // Keep showForm in sync with URL so browser back returns to the question
   useEffect(() => {
     const v = (loc.query["login"] ?? "") as string;
-    if (v === "new" || v === "existing") setShowForm(v);
-    else setShowForm(null);
+    if (v === "new" || v === "existing") {
+      setShowForm(v);
+      // Reset sub-flow choice when URL changes
+      if (v !== "new") setNewMode(null);
+    } else {
+      setShowForm(null);
+      setNewMode(null);
+    }
   }, [JSON.stringify(loc.query)]);
+
+  const createRandomIdentity = async () => {
+    try {
+      setCreatingRandom(true);
+      // Simple random display name without prompting the user
+      const randomName = `Guest ${Math.floor(1000 + Math.random() * 9000)}`;
+      const creds = await createIdentity(randomName);
+      if (storeInBrowser) {
+        try {
+          localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
+        } catch (e) {
+          console.error("failed storing credentials in localStorage", e);
+        }
+      }
+      setCredentials(creds);
+      // Clean the login step from URL so back navigation doesn’t reopen it
+      const params = new URLSearchParams(globalThis.location.search);
+      params.delete("login");
+      const newUrl = `${loc.path}${params.toString() ? `?${params.toString()}` : ""}`;
+      router(newUrl);
+    } catch (e) {
+      console.error("Error creating random identity", e);
+      alert("Unexpected error creating a random identity");
+    } finally {
+      setCreatingRandom(false);
+    }
+  };
   return (
     <div class="flex flex-col flex-grow">
       {showForm === null && (
@@ -729,11 +764,52 @@ const MessengerLogin = ({ setCredentials }: {
         </div>
       )}
       {showForm === "new" && (
-        <NewUserForm
-          onCreated={setCredentials}
-          storeInBrowser={storeInBrowser}
-          setStoreInBrowser={setStoreInBrowser}
-        />
+        <>
+          {newMode === null && (
+            <div class="flex flex-col items-center gap-4 mb-6 flex-grow justify-center text-center px-4">
+              <div class="text-lg font-semibold max-w-xl">
+                How do you want to continue?
+              </div>
+              <div class="flex gap-3 flex-wrap justify-center">
+                <button
+                  type="button"
+                  class={buttonBlueStyle}
+                  disabled={creatingRandom}
+                  onClick={() => setNewMode("manual")}
+                >
+                  Pick a name and alias
+                </button>
+                <button
+                  type="button"
+                  class={buttonGreenStyle}
+                  disabled={creatingRandom}
+                  onClick={createRandomIdentity}
+                >
+                  {creatingRandom ? "Creating…" : "Continue as random user"}
+                </button>
+              </div>
+              <div class="flex items-center mt-2">
+                <input
+                  id="storeInBrowser3"
+                  type="checkbox"
+                  checked={storeInBrowser}
+                  onChange={(e) => setStoreInBrowser(e.currentTarget.checked)}
+                  class="mr-2"
+                />
+                <label for="storeInBrowser3" class={labelSmallStyle}>
+                  Store credentials in this browser (recommended)
+                </label>
+              </div>
+            </div>
+          )}
+          {newMode === "manual" && (
+            <NewUserForm
+              onCreated={setCredentials}
+              storeInBrowser={storeInBrowser}
+              setStoreInBrowser={setStoreInBrowser}
+            />
+          )}
+        </>
       )}
       {showForm === "existing" && (
         <ExistingUserForm
