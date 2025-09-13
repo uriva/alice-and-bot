@@ -50,12 +50,12 @@ const Chat = ChatNoDb(() => db);
 const startConversation = async (
   credentials: Credentials,
   rawInput: string,
-) => {
+): Promise<string | null> => {
   // Split by comma, trim, drop empties
   const tokens = rawInput.split(",").map((t) => t.trim()).filter(Boolean);
   if (tokens.length === 0) {
     alert("Please enter at least one participant public key or alias");
-    return;
+    return null;
   }
   // Resolve each token: try alias lookup first; fallback to original (assume key)
   const resolved = await Promise.all(tokens.map(async (token) => {
@@ -76,7 +76,7 @@ const startConversation = async (
   );
   if (participantKeys.length < 2) {
     alert("Need at least one other participant");
-    return;
+    return null;
   }
   // Build title from names (fallback to key if missing)
   const names = await Promise.all(
@@ -86,9 +86,10 @@ const startConversation = async (
   const response = await createConversation(() => db)(participantKeys, title);
   if (!("conversationId" in response)) {
     alert(`Failed to create conversation: ${response.error}`);
-    return;
+    return null;
   }
   selectedConversation.value = response.conversationId;
+  return response.conversationId;
 };
 
 const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
@@ -873,24 +874,44 @@ export const Messenger = () => {
   }, []);
   const chatWith = location.query["chatWith"];
   const route = useLocation().route;
+  const [handledChatWith, setHandledChatWith] = useState<string | null>(null);
   useEffect(() => {
-    if (!credentials || !conversations || !chatWith) return;
-    route(chatPath, true);
-    const existing = conversations.find(
-      isMatch(credentials.publicSignKey, chatWith),
-    );
-    if (existing) {
-      selectedConversation.value = existing.id;
-    } else {
-      startConversation(credentials, chatWith);
-    }
-  }, [credentials, chatWith, conversations]);
+    if (!credentials || !conversations) return;
+    const cw = (chatWith as string | undefined) ?? undefined;
+    if (!cw) return;
+    if (handledChatWith === cw) return; // already processed this value
+    (async () => {
+      // If a conversation already exists with this participant, use it.
+      const existing = conversations.find(
+        isMatch(credentials.publicSignKey, cw),
+      );
+      let conversationId: string | null = null;
+      if (existing) {
+        selectedConversation.value = existing.id;
+        conversationId = existing.id;
+      } else {
+        conversationId = await startConversation(credentials, cw);
+        if (!conversationId) return; // failed to create
+      }
+      // Build a stable URL: remove chatWith, set c=<id>, ensure chats view
+      const params = new URLSearchParams(globalThis.location.search);
+      params.delete("chatWith");
+      params.delete("login");
+      params.delete("view");
+      params.set("c", conversationId);
+      const newUrl = `${chatPath}?${params.toString()}`;
+      route(newUrl, true);
+      setHandledChatWith(cw);
+    })();
+  }, [credentials, chatWith, conversations, handledChatWith]);
 
   // Keep URL in sync with current messenger state so browser Back works.
   useEffect(() => {
     if (!credentials) return; // avoid interfering with login flow query params
     if (!initializedFromQuery) return; // wait until state is initialized from URL
     const params = new URLSearchParams(globalThis.location.search);
+    // Never preserve invite param once inside messenger
+    params.delete("chatWith");
     // We only manage 'view' and 'c' (conversation id) here; preserve others.
     if (view === "identity") {
       params.set("view", "identity");
@@ -919,6 +940,8 @@ export const Messenger = () => {
   useEffect(() => {
     if (!credentials) return; // only relevant inside messenger
     const q = location.query as Record<string, string | undefined>;
+    // If we're arriving via an invite, let the invite effect handle state
+    if (q["chatWith"]) return;
     const v = q["view"] as View | undefined;
     const c = q["c"] as string | undefined;
     if (v === "identity" || v === "new_chat") {
