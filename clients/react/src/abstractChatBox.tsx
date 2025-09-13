@@ -171,7 +171,10 @@ const Message = (
           marginLeft: isOwn ? 0 : !isOwn && showAvatar ? 0 : 36,
           marginRight: isOwn ? (showAvatar ? 0 : 36) : 0,
           maxWidth: "80%",
-          overflowWrap: "break-word",
+          overflowX: "auto",
+          overflowY: "hidden",
+          wordBreak: "normal",
+          overflowWrap: "normal",
         }}
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>
