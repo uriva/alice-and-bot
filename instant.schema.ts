@@ -4,6 +4,12 @@ import type {
   EncryptedMessage,
 } from "./protocol/src/clientApi.ts";
 
+export type PushSubscriptionJSON = {
+  endpoint: string;
+  expirationTime: number | null;
+  keys: { p256dh: string; auth: string };
+};
+
 const _schema = i.schema({
   entities: {
     $files: i.entity({
@@ -28,6 +34,11 @@ const _schema = i.schema({
       publicSignKey: i.string().unique().indexed(),
       webhook: i.string().indexed().optional(),
       alias: i.string().unique().indexed().optional(),
+    }),
+    pushSubscriptions: i.entity({
+      endpoint: i.string().unique().indexed(),
+      subscription: i.json<PushSubscriptionJSON>(),
+      createdAt: i.number(),
     }),
     conversations: i.entity({ title: i.string() }),
     keys: i.entity({ key: i.json<EncryptedConversationKey>() }),
@@ -60,6 +71,24 @@ const _schema = i.schema({
     conversationAdmins: {
       forward: { on: "conversations", label: "admins", has: "many" },
       reverse: { on: "identities", label: "managedConversations", has: "many" },
+    },
+    identityPushSubscriptions: {
+      forward: { on: "identities", label: "pushSubscriptions", has: "many" },
+      reverse: {
+        on: "pushSubscriptions",
+        label: "owner",
+        has: "one",
+        onDelete: "cascade",
+      },
+    },
+    pushSubscriptionConversation: {
+      forward: {
+        on: "pushSubscriptions",
+        label: "conversation",
+        has: "one",
+        onDelete: "cascade",
+      },
+      reverse: { on: "conversations", label: "pushSubscriptions", has: "many" },
     },
   },
   rooms: {},

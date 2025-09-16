@@ -2,11 +2,7 @@ import type { InstaQLEntity } from "@instantdb/core";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import stringify from "safe-stable-stringify";
-import {
-  apiClient,
-  canonicalStringForAuthSign,
-  issueNonce,
-} from "../../backend/src/api.ts";
+import { apiClient } from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
 import { chatPath } from "../../landing/src/paths.ts";
 import { normalizeAlias } from "./alias.ts";
@@ -24,6 +20,7 @@ import {
   sign,
   verify,
 } from "./crypto.ts";
+import { buildSignedRequest } from "./authClient.ts";
 
 export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
 
@@ -250,27 +247,13 @@ export const setAlias = async ({
     success: false;
     error: "alias-taken" | "invalid-alias" | "not-found" | "invalid-auth";
   }
-> => {
-  const { nonce } = await issueNonce(credentials.publicSignKey);
-  const payload = { alias: normalizeAlias(alias) };
-  return apiClient({
+> =>
+  apiClient({
     endpoint: "setAlias",
-    payload: {
-      payload,
-      publicSignKey: credentials.publicSignKey,
-      nonce,
-      authToken: await sign(
-        credentials.privateSignKey,
-        canonicalStringForAuthSign({
-          action: "setAlias",
-          publicSignKey: credentials.publicSignKey,
-          payload,
-          nonce,
-        }),
-      ),
-    },
+    payload: await buildSignedRequest(credentials, "setAlias", {
+      alias: normalizeAlias(alias),
+    }),
   });
-};
 
 export const publicSignKeyToAlias = async (
   db: () => InstantReactWebDatabase<typeof schema>,

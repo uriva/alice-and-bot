@@ -27,6 +27,7 @@
     "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
     "typed-api": "jsr:@uri/typed-api@0.0.10",
     "vite": "npm:vite@^7.0.2",
+    "web-push": "npm:web-push@3.6.7",
     "zod": "npm:zod@3.25.57"
   },
   "unstable": ["cron"],

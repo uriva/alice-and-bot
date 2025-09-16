@@ -7,6 +7,7 @@ import {
   type Credentials,
   instantAppId,
 } from "../../protocol/src/clientApi.ts";
+import { registerPush } from "../../protocol/src/pushClient.ts";
 import { Widget } from "../../widget/src/widget.tsx";
 import { useCredentials, useGetOrCreateConversation } from "./src/hooks.ts";
 import { Chat } from "./src/main.tsx";
@@ -68,6 +69,14 @@ const Main = ({ db }: { db: () => InstantReactWebDatabase<typeof schema> }) => {
           }}
         >
           toggle mode
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            registerPush(alice).catch(console.error);
+          }}
+        >
+          enable push
         </button>
         <WithCredentials db={db} participants={[alice, bot, eve]} />
       </>

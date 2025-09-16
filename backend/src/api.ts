@@ -1,4 +1,5 @@
 import type { User } from "@instantdb/core";
+import { hash } from "gamla";
 import {
   apiClient as apiClientMaker,
   type ApiImplementation,
@@ -6,8 +7,26 @@ import {
   httpCommunication,
 } from "typed-api";
 import { z } from "zod/v4";
+import { buildSignedRequest } from "../../protocol/src/authClient.ts";
 import type { Credentials } from "../../protocol/src/clientApi.ts";
-import { hash } from "gamla";
+
+const authenticatedInput = <T extends z.ZodTypeAny>(payloadSchema: T) =>
+  z.object({
+    payload: payloadSchema,
+    publicSignKey: z.string(),
+    nonce: z.string(),
+    authToken: z.string(),
+  });
+
+const authenticatedEndpoint = <T extends z.ZodTypeAny, O extends z.ZodTypeAny>(
+  payloadSchema: T,
+  outputSchema: O,
+) =>
+  endpoint({
+    authRequired: false,
+    input: authenticatedInput(payloadSchema),
+    output: outputSchema,
+  });
 
 export const backendApiSchema = {
   issueNonce: endpoint({
@@ -23,15 +42,9 @@ export const backendApiSchema = {
       z.object({ error: z.enum(["no-such-alias"]) }),
     ]),
   }),
-  setAlias: endpoint({
-    authRequired: false,
-    input: z.object({
-      payload: z.object({ alias: z.string() }),
-      publicSignKey: z.string(),
-      nonce: z.string(),
-      authToken: z.string(),
-    }),
-    output: z.union([
+  setAlias: authenticatedEndpoint(
+    z.object({ alias: z.string() }),
+    z.union([
       z.object({ success: z.literal(true) }),
       z.object({
         success: z.literal(false),
@@ -43,7 +56,7 @@ export const backendApiSchema = {
         ]),
       }),
     ]),
-  }),
+  ),
   conversationKey: endpoint({
     authRequired: false,
     input: z.object({
@@ -162,6 +175,26 @@ export const backendApiSchema = {
       z.object({ error: z.literal("not-found") }),
     ]),
   }),
+  getVapidPublicKey: endpoint({
+    authRequired: false,
+    input: z.object({}),
+    output: z.object({ publicKey: z.string() }),
+  }),
+  registerPushSubscription: authenticatedEndpoint(
+    z.object({
+      subscription: z.object({
+        endpoint: z.string(),
+        expirationTime: z.number().nullable(),
+        keys: z.object({ p256dh: z.string(), auth: z.string() }),
+      }),
+      conversationId: z.string().optional(),
+    }),
+    z.object({ success: z.literal(true) }),
+  ),
+  unregisterPushSubscription: authenticatedEndpoint(
+    z.object({ endpoint: z.string() }),
+    z.object({ success: z.literal(true) }),
+  ),
 } as const;
 
 export const apiClient = apiClientMaker(
@@ -214,6 +247,57 @@ export const canonicalStringForAuthSign = <T>(
   params: { action: string; publicSignKey: string; payload: T; nonce: string },
 ): string => hash(params, 10);
 
+export const setAliasSigned = async (
+  params: { alias: string; credentials: Credentials },
+): Promise<
+  | { success: true }
+  | {
+    success: false;
+    error: "alias-taken" | "invalid-alias" | "not-found" | "invalid-auth";
+  }
+> =>
+  apiClient({
+    endpoint: "setAlias",
+    payload: await buildSignedRequest(
+      params.credentials,
+      "setAlias",
+      { alias: params.alias },
+    ),
+  });
+
+export const registerPushSubscriptionSigned = async (
+  credentials: Credentials,
+  payload: {
+    subscription: {
+      endpoint: string;
+      expirationTime: number | null;
+      keys: { p256dh: string; auth: string };
+    };
+    conversationId?: string;
+  },
+): Promise<{ success: true }> =>
+  apiClient({
+    endpoint: "registerPushSubscription",
+    payload: await buildSignedRequest(
+      credentials,
+      "registerPushSubscription",
+      payload,
+    ),
+  });
+
+export const unregisterPushSubscriptionSigned = async (
+  credentials: Credentials,
+  payload: { endpoint: string },
+): Promise<{ success: true }> =>
+  apiClient({
+    endpoint: "unregisterPushSubscription",
+    payload: await buildSignedRequest(
+      credentials,
+      "unregisterPushSubscription",
+      payload,
+    ),
+  });
+
 export const getProfile = (
   publicSignKey: string,
 ): Promise<
@@ -249,3 +333,33 @@ export const getConversationInfo = (
   | { error: "not-found" }
 > =>
   apiClient({ endpoint: "getConversationInfo", payload: { conversationId } });
+
+export const getVapidPublicKey = (): Promise<{ publicKey: string }> =>
+  apiClient({ endpoint: "getVapidPublicKey", payload: {} });
+
+export const registerPushSubscription = (
+  params: {
+    payload: {
+      subscription: {
+        endpoint: string;
+        expirationTime: number | null;
+        keys: { p256dh: string; auth: string };
+      };
+      conversationId?: string;
+    };
+    publicSignKey: string;
+    nonce: string;
+    authToken: string;
+  },
+): Promise<{ success: true }> =>
+  apiClient({ endpoint: "registerPushSubscription", payload: params });
+
+export const unregisterPushSubscription = (
+  params: {
+    payload: { endpoint: string };
+    publicSignKey: string;
+    nonce: string;
+    authToken: string;
+  },
+): Promise<{ success: true }> =>
+  apiClient({ endpoint: "unregisterPushSubscription", payload: params });

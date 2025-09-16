@@ -9,6 +9,12 @@ import {
   type Credentials,
   useGetOrCreateConversation,
 } from "../../mod.ts";
+import { registerPush } from "../../protocol/src/pushClient.ts";
+
+const enableConversationPush = (
+  credentials: Credentials,
+  conversationId: string,
+) => registerPush(credentials, { conversationId });
 
 const getStartButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
   background: isDark
@@ -43,13 +49,46 @@ const WithCredentials = (
   return conversation
     ? (
       <div style={{ flex: 1, display: "flex", minHeight: 0, height: "100%" }}>
-        <Chat
-          onClose={() => {
-            chatOpen.value = false;
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
           }}
-          credentials={coerce(credentials)}
-          conversationId={conversation}
-        />
+        >
+          <div
+            style={{ display: "flex", justifyContent: "flex-end", padding: 8 }}
+          >
+            <button
+              type="button"
+              style={{
+                padding: "6px 10px",
+                fontSize: 12,
+                borderRadius: 6,
+                border: "1px solid #ccc",
+                background: "#fff",
+                cursor: "pointer",
+              }}
+              onClick={() => {
+                enableConversationPush(credentials, conversation)
+                  .catch((e) => {
+                    console.error("Failed to enable push for conversation", e);
+                    alert("Failed to enable notifications for this chat.");
+                  });
+              }}
+            >
+              Enable notifications
+            </button>
+          </div>
+          <Chat
+            onClose={() => {
+              chatOpen.value = false;
+            }}
+            credentials={coerce(credentials)}
+            conversationId={conversation}
+          />
+        </div>
       </div>
     )
     : (

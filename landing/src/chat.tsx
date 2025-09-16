@@ -2,6 +2,7 @@ import { init } from "@instantdb/react";
 import { effect, signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
 import { useEffect, useState } from "preact/hooks";
+import { toast } from "react-hot-toast";
 import {
   type Conversation,
   useConversations,
@@ -23,6 +24,7 @@ import {
   instantAppId,
   setAlias,
 } from "../../protocol/src/clientApi.ts";
+import { registerPush } from "../../protocol/src/pushClient.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath } from "./paths.ts";
 
@@ -54,7 +56,7 @@ const startConversation = async (
   // Split by comma, trim, drop empties
   const tokens = rawInput.split(",").map((t) => t.trim()).filter(Boolean);
   if (tokens.length === 0) {
-    alert("Please enter at least one participant public key or alias");
+    toast.error("Enter at least one @alias or public key");
     return null;
   }
   // Resolve each token: try alias lookup first; fallback to original (assume key)
@@ -75,7 +77,7 @@ const startConversation = async (
     ]),
   );
   if (participantKeys.length < 2) {
-    alert("Need at least one other participant");
+    toast.error("Need at least one other participant");
     return null;
   }
   // Build title from names (fallback to key if missing)
@@ -83,11 +85,18 @@ const startConversation = async (
     participantKeys.map((k) => nameFromPublicSignKey(k)),
   );
   const title = names.join(", ");
-  const response = await createConversation(() => db)(participantKeys, title);
-  if (!("conversationId" in response)) {
-    alert(`Failed to create conversation: ${response.error}`);
-    return null;
-  }
+  const response = await toast.promise(
+    (async () => {
+      const res = await createConversation(() => db)(participantKeys, title);
+      if ("error" in res) throw new Error(res.error);
+      return res;
+    })(),
+    {
+      loading: "Creating conversation…",
+      success: "Conversation created",
+      error: (e) => `Failed to create conversation: ${e?.message ?? "error"}`,
+    },
+  );
   selectedConversation.value = response.conversationId;
   return response.conversationId;
 };
@@ -109,20 +118,18 @@ const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
 
   const onClickCreateIdentity = async () => {
     if (!identityName.trim()) {
-      alert("Please enter a name for your identity.");
+      toast.error("Please enter a display name");
       return;
     }
     const trimmedAlias = alias.trim().toLowerCase();
     if (!trimmedAlias) {
-      alert("Please choose a public alias.");
+      toast.error("Please choose a public @alias");
       return;
     }
     // Front-end validation similar to server rules
     const normalized = trimmedAlias.replace(/[^a-z0-9_]/g, "").slice(0, 15);
     if (normalized !== trimmedAlias || normalized.length === 0) {
-      alert(
-        "Alias must be lowercase letters, numbers, underscore. Max 15 chars.",
-      );
+      toast.error("Alias: lowercase letters, numbers, underscore (max 15)");
       return;
     }
     setCreating(true);
@@ -140,16 +147,17 @@ const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
           return;
         }
       } catch (_e) {
-        // If the check fails for network reasons, allow user to decide
-        const proceed = confirm(
-          "Couldn't verify alias availability (network error). Proceed anyway?",
-        );
-        if (!proceed) {
-          setCreating(false);
-          return;
-        }
+        // Network hiccup, proceed with a warning toast
+        toast("Alias availability check failed, attempting anyway…");
       }
-      const creds = await createIdentity(identityName, normalized);
+      const creds = await toast.promise(
+        createIdentity(identityName, normalized),
+        {
+          loading: "Creating identity…",
+          success: "Identity created",
+          error: "Failed to create identity",
+        },
+      );
       // Attempt to set alias immediately
       const res = await setAlias({ alias: normalized, credentials: creds });
       if (!res.success) {
@@ -159,8 +167,10 @@ const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
         if (res.error === "invalid-auth") message = "Auth failed";
         if (res.error === "not-found") message = "Identity not found";
         setAliasStatus({ type: "error", message });
+        toast.error(message);
       } else {
         setAliasStatus({ type: "success", message: "Alias set" });
+        toast.success("Alias set");
       }
       const credsStr = JSON.stringify(creds);
       setCredentialsString(credsStr);
@@ -174,7 +184,7 @@ const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
       }
     } catch (e) {
       console.error("Error creating identity", e);
-      alert("Unexpected error creating identity");
+      toast.error("Unexpected error creating identity");
     } finally {
       setCreating(false);
     }
@@ -438,6 +448,24 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             <span class="font-mono">@{profile.alias}</span>
           </div>
         )}
+      </div>
+      <div>
+        <button
+          type="button"
+          class={buttonBlueStyle}
+          onClick={() => {
+            toast.promise(
+              registerPush(credentials),
+              {
+                loading: "Enabling notifications…",
+                success: "Notifications enabled",
+                error: "Failed to enable notifications",
+              },
+            );
+          }}
+        >
+          Enable push notifications
+        </button>
       </div>
       <DangerZone />
     </div>

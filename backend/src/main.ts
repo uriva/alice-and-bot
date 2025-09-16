@@ -1,12 +1,17 @@
 import { id } from "@instantdb/admin";
 import { apiHandler } from "typed-api";
+import type { PushSubscriptionJSON } from "../../instant.schema.ts";
 import { isValidAlias, normalizeAlias } from "../../protocol/src/alias.ts";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
 import { issueNonceHelper, verifyAuthToken } from "./auth.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
-import { callWebhooks } from "./notificationService.ts";
+import {
+  callWebhooks,
+  sendPushToParticipants,
+  vapidPublicKey,
+} from "./notificationService.ts";
 
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
@@ -44,16 +49,19 @@ const endpoints: BackendApiImpl = {
     createConversation,
     sendMessage: async ({ encryptedMessage, conversation }) => {
       const messageId = id();
-      await transact(
-        tx.messages[messageId]
-          .update({
-            payload: encryptedMessage as EncryptedMessage,
-            timestamp: Date.now(),
-          }).link({
-            conversation,
-          }),
-      );
-      await callWebhooks({ messageId });
+      await Promise.all([
+        transact(
+          tx.messages[messageId]
+            .update({
+              payload: encryptedMessage as EncryptedMessage,
+              timestamp: Date.now(),
+            }).link({
+              conversation,
+            }),
+        ),
+        callWebhooks({ messageId }),
+        sendPushToParticipants({ messageId }),
+      ]);
       return { messageId };
     },
     createAccount: async () => {
@@ -219,6 +227,105 @@ const endpoints: BackendApiImpl = {
       await transact(
         tx.identities[identityMatches[0].id].update({ alias }),
       );
+      return { success: true };
+    },
+    getVapidPublicKey: () => Promise.resolve({ publicKey: vapidPublicKey }),
+    registerPushSubscription: async (
+      { payload, publicSignKey, nonce, authToken },
+    ) => {
+      const authed = await verifyAuthToken<{
+        subscription: PushSubscriptionJSON;
+        conversationId?: string;
+      }>({
+        action: "registerPushSubscription",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authed) return { success: true };
+      const { subscription, conversationId } = payload;
+      const { identities } = await query({
+        identities: { $: { where: { publicSignKey } } },
+      });
+      if (identities.length === 0) return { success: true };
+      const identity = identities[0];
+      // If scoping to a conversation, ensure this identity is a participant
+      if (conversationId) {
+        const { conversations } = await query({
+          conversations: {
+            participants: {},
+            $: { where: { id: conversationId } },
+          },
+        });
+        const isParticipant = conversations.length > 0 &&
+          conversations[0].participants.some((p: { publicSignKey: string }) =>
+            p.publicSignKey === publicSignKey
+          );
+        if (!isParticipant) return { success: true };
+      }
+      const { pushSubscriptions } = await query({
+        pushSubscriptions: {
+          $: { where: { endpoint: subscription.endpoint } },
+        },
+      });
+      if (pushSubscriptions.length) {
+        await transact(
+          tx.pushSubscriptions[pushSubscriptions[0].id]
+            .update({ subscription })
+            .link({
+              owner: identity.id,
+              ...(conversationId ? { conversation: conversationId } : {}),
+            }),
+        );
+      } else {
+        await transact(
+          tx.pushSubscriptions[id()]
+            .update({
+              endpoint: subscription.endpoint,
+              subscription,
+              createdAt: Date.now(),
+            })
+            .link({
+              owner: identity.id,
+              ...(conversationId ? { conversation: conversationId } : {}),
+            }),
+        );
+      }
+      return { success: true };
+    },
+    unregisterPushSubscription: async (
+      { payload, publicSignKey, nonce, authToken },
+    ) => {
+      const authed = await verifyAuthToken<{ endpoint: string }>({
+        action: "unregisterPushSubscription",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authed) return { success: true };
+      const { endpoint } = payload;
+      const { pushSubscriptions } = await query({
+        pushSubscriptions: { $: { where: { endpoint } } },
+      });
+      if (pushSubscriptions.length) {
+        // Only allow owner to delete
+        const { pushSubscriptions: withOwner } = await query({
+          pushSubscriptions: {
+            owner: {},
+            $: { where: { id: pushSubscriptions[0].id } },
+          },
+        });
+        if (
+          withOwner.length &&
+          withOwner[0].owner?.publicSignKey === publicSignKey
+        ) {
+          await transact(
+            tx.pushSubscriptions[pushSubscriptions[0].id].delete(),
+          );
+        }
+      }
       return { success: true };
     },
   },
