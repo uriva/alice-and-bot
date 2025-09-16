@@ -49,19 +49,23 @@ const endpoints: BackendApiImpl = {
     createConversation,
     sendMessage: async ({ encryptedMessage, conversation }) => {
       const messageId = id();
-      await Promise.all([
-        transact(
-          tx.messages[messageId]
-            .update({
-              payload: encryptedMessage as EncryptedMessage,
-              timestamp: Date.now(),
-            }).link({
-              conversation,
-            }),
-        ),
-        callWebhooks({ messageId }),
-        sendPushToParticipants({ messageId }),
-      ]);
+      // Persist the message first; do not block on side effects (webhooks/push)
+      await transact(
+        tx.messages[messageId]
+          .update({
+            payload: encryptedMessage as EncryptedMessage,
+            timestamp: Date.now(),
+          }).link({
+            conversation,
+          }),
+      );
+      // Fire-and-forget side effects
+      callWebhooks({ messageId }).catch((e) =>
+        console.error("webhook dispatch failed", e)
+      );
+      sendPushToParticipants({ messageId }).catch((e) =>
+        console.error("push dispatch failed", e)
+      );
       return { messageId };
     },
     createAccount: async () => {
