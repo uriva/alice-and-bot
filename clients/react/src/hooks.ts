@@ -158,6 +158,28 @@ export const useUserName =
     return data?.identities[0].name ?? "Anonymous";
   };
 
+export const useIdentityDetailsMap =
+  (db: () => InstantReactWebDatabase<typeof schema>) =>
+  (publicKeys: string[]) => {
+    const [cache, setCache] = useState<Record<string, { name: string; avatar?: string }>>({});
+    const keys = Array.from(new Set(publicKeys));
+    const { data } = db().useQuery({
+      identities: {
+        $: { where: { publicSignKey: { $in: keys } } },
+      },
+    });
+    useEffect(() => {
+      const entries = Object.fromEntries(
+        (data?.identities ?? []).map((i) => [
+          i.publicSignKey,
+          { name: i.name || i.publicSignKey, avatar: i.avatar },
+        ]),
+      );
+      if (Object.keys(entries).length) setCache((prev) => ({ ...prev, ...entries }));
+    }, [data?.identities]);
+    return cache;
+  };
+
 export const useIdentityProfile =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
   (publicSignKey: string) => {
