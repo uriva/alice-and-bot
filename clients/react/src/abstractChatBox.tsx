@@ -11,6 +11,38 @@ import {
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
 
+const typingIndicatorStyle = (isDark: boolean) => ({
+  padding: "0 8px 6px 44px",
+  color: isDark ? "#cbd5e1" : "#475569",
+  fontSize: 12,
+});
+
+const TypingIndicator = (
+  { names, isDark }: { names: string[]; isDark: boolean },
+) => {
+  const [dots, setDots] = useState(0);
+  useEffect(() => {
+    const t = setInterval(
+      () => setDots((n) => (n + 1) % 4),
+      400,
+    ) as unknown as number;
+    return () => clearInterval(t);
+  }, []);
+  const label = names.length === 1
+    ? `${names[0]} is typing`
+    : `${names.slice(0, 2).join(", ")}${
+      names.length > 2 ? " and others" : ""
+    } are typing`;
+  return (
+    <div style={typingIndicatorStyle(isDark)}>
+      {label}
+      <span style={{ display: "inline-block", width: 18, letterSpacing: 2 }}>
+        {".".repeat(dots)}
+      </span>
+    </div>
+  );
+};
+
 const useTimeAgo = (timestamp: number) => {
   const [timeAgo, setTimeAgo] = useState("");
   const intervalRef = useRef<number | null>(null);
@@ -400,13 +432,14 @@ export const AbstractChatBox = (
   }, [limit, messages, fetchingMore]);
   const isDark = useDarkMode();
 
-  // Scroll to bottom when messages change (new message sent/received)
+  // Scroll to bottom when messages or typing indicator change
   useEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop =
-        messagesContainerRef.current.scrollHeight;
-    }
-  }, [messages.length]);
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [messages.length, typingUsers.length]);
 
   // Helper to resize textarea
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
@@ -480,23 +513,11 @@ export const AbstractChatBox = (
                   next={arr[i + 1]}
                 />
               ))}
-              <div ref={messagesEndRef} />
               {/* Typing indicator */}
               {typingUsers.length > 0 && (
-                <div
-                  style={{
-                    padding: "0 8px 6px 44px",
-                    color: isDark ? "#cbd5e1" : "#475569",
-                    fontSize: 12,
-                  }}
-                >
-                  {typingUsers.length === 1
-                    ? `${typingUsers[0]} is typing…`
-                    : `${typingUsers.slice(0, 2).join(", ")}${
-                      typingUsers.length > 2 ? " and others" : ""
-                    } are typing…`}
-                </div>
+                <TypingIndicator names={typingUsers} isDark={isDark} />
               )}
+              <div ref={messagesEndRef} />
             </>
           )}
       </div>
