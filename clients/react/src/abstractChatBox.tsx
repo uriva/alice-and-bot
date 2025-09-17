@@ -207,7 +207,26 @@ const Message = (
             wordBreak: "break-word",
           }}
         >
-          <ReactMarkdown>
+          <ReactMarkdown
+            components={{
+              // @ts-expect-error react-markdown types are not fully compatible with Preact here
+              a: ({ children, href }) => (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: textColor,
+                    textDecoration: "underline",
+                    overflowWrap: "anywhere",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {children}
+                </a>
+              ),
+            }}
+          >
             {convertSingleNewlines(linkify(text))}
           </ReactMarkdown>
         </div>
