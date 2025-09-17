@@ -129,6 +129,27 @@ const convertSingleNewlines = (input: string) =>
     .map((block) => block.replace(/\n/g, "  \n")) // within paragraphs, make single newlines hard breaks
     .join("\n\n"); // rejoin with a single blank line (Markdown collapses multiples anyway)
 
+// Ensure typical URLs are clickable without remark plugins by wrapping them
+// in angle brackets <...> (CommonMark autolink). Also prefix scheme for
+// bare domains and www.* so they are valid links.
+const linkify = (input: string) => {
+  // 1) Prefix scheme for bare domains (including www.)
+  const withSchemes = input
+    .replace(
+      /\b(?!https?:\/\/)(www\.[\w.-]+(?:\/[\w\-._~:/?#\[\]@!$&'()*+,;=%]*)?)/gi,
+      (m) => `https://${m}`,
+    )
+    .replace(
+      /\b(?!https?:\/\/)(?!www\.)((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-._~:/?#\[\]@!$&'()*+,;=%]*)?)/g,
+      (m) => `https://${m}`,
+    );
+  // 2) Wrap http(s) URLs in <...> unless already inside <> or markdown link
+  return withSchemes.replace(
+    /(^|\s)(https?:\/\/[\w.-]+(?:\/[\w\-._~:/?#\[\]@!$&'()*+,;=%]*)?)/gi,
+    (_full, pre, url) => `${pre}<${url}>`,
+  );
+};
+
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
     {
@@ -171,16 +192,23 @@ const Message = (
           marginLeft: isOwn ? 0 : !isOwn && showAvatar ? 0 : 36,
           marginRight: isOwn ? (showAvatar ? 0 : 36) : 0,
           maxWidth: "80%",
-          overflowX: "auto",
+          overflowX: "hidden",
           overflowY: "hidden",
-          wordBreak: "normal",
-          overflowWrap: "normal",
+          wordBreak: "break-word",
+          overflowWrap: "anywhere",
         }}
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>
-        <div dir="auto">
+        <div
+          dir="auto"
+          style={{
+            // Ensure child text and links wrap nicely on small widths
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+          }}
+        >
           <ReactMarkdown>
-            {convertSingleNewlines(text)}
+            {convertSingleNewlines(linkify(text))}
           </ReactMarkdown>
         </div>
         <span
