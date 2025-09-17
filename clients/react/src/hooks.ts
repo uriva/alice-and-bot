@@ -1,6 +1,6 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe, sort, unique } from "gamla";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useState, useRef } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
   createConversation,
@@ -10,6 +10,7 @@ import {
   decryptMessage,
   sendMessageWithKey,
 } from "../../../protocol/src/clientApi.ts";
+import { sendTyping } from "../../../backend/src/api.ts";
 import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
 
 export const useDarkMode = () => {
@@ -247,4 +248,58 @@ export const useDecryptedMessages = (
     }
   }, [conversationKey, encryptedMessages]);
   return messages;
+};
+
+// Typing presence (basic): emits typing start/stop to backend; reads peers via Instant presence (TBD)
+export const useTypingPresence = (
+  db: InstantReactWebDatabase<typeof schema>,
+  conversationId: string,
+  selfPublicSignKey: string,
+  lastMessageCount: number,
+) => {
+  const TTL = 20000; // 20 seconds
+  const [isTyping, setIsTyping] = useState(false);
+  const timerRef = useRef<number | null>(null);
+
+  const setTyping = (typing: boolean) => {
+    setIsTyping(typing);
+    if (typing) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        setIsTyping(false);
+        sendTyping({ conversation: conversationId, isTyping: false, publicSignKey: selfPublicSignKey }).catch(() => {});
+      }, TTL) as unknown as number;
+    } else if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    sendTyping({ conversation: conversationId, isTyping: typing, publicSignKey: selfPublicSignKey }).catch(() => {});
+  };
+
+  const onUserInput = () => {
+    setTyping(true); // starts 20s window (resets timer each input)
+  };
+  const onBlurOrSend = () => setTyping(false);
+
+  // Early stop when a new message arrives in the conversation
+  useEffect(() => {
+    if (isTyping) setTyping(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastMessageCount]);
+
+  // Subscribe to typingStates and compute names of peers typing
+  const { data: typingData } = db.useQuery({
+    typingStates: {
+      owner: {},
+      $: { where: { conversation: conversationId } },
+    },
+  });
+  const now = Date.now();
+  const typingNames = (typingData?.typingStates ?? [])
+    .filter((t) => t.owner?.publicSignKey !== selfPublicSignKey)
+    .filter((t) => t.updatedAt && now - t.updatedAt < TTL)
+    .map((t) => t.owner?.name || t.owner?.publicSignKey)
+    .filter((x): x is string => Boolean(x));
+
+  return { isTyping, typingNames, onUserInput, onBlurOrSend } as const;
 };

@@ -42,6 +42,7 @@ const _schema = i.schema({
     }),
     conversations: i.entity({ title: i.string() }),
     keys: i.entity({ key: i.json<EncryptedConversationKey>() }),
+    typingStates: i.entity({ updatedAt: i.number() }),
   },
   links: {
     conversationMessages: {
@@ -89,6 +90,24 @@ const _schema = i.schema({
         onDelete: "cascade",
       },
       reverse: { on: "conversations", label: "pushSubscriptions", has: "many" },
+    },
+    identityTypingStates: {
+      forward: { on: "identities", label: "typingStates", has: "many" },
+      reverse: {
+        on: "typingStates",
+        label: "owner",
+        has: "one",
+        onDelete: "cascade",
+      },
+    },
+    conversationTypingStates: {
+      forward: {
+        on: "typingStates",
+        label: "conversation",
+        has: "one",
+        onDelete: "cascade",
+      },
+      reverse: { on: "conversations", label: "typingStates", has: "many" },
     },
   },
   rooms: {},

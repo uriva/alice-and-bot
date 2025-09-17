@@ -20,7 +20,11 @@ import {
   instantAppId,
   publicSignKeyToAlias as publicSignKeyToAliasNoDb,
 } from "./protocol/src/clientApi.ts";
-export { aliasToPublicSignKey, setWebhook } from "./backend/src/api.ts";
+export {
+  aliasToPublicSignKey,
+  sendTyping,
+  setWebhook,
+} from "./backend/src/api.ts";
 export {
   chatWithMeLink,
   createIdentity,

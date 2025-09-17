@@ -16,6 +16,7 @@ import {
   useConversationKey,
   useDecryptedMessages,
   useIdentityDetailsMap,
+  useTypingPresence,
 } from "./hooks.ts";
 
 export type ChatProps = {
@@ -71,6 +72,12 @@ export const Chat =
     const [limit, setLimit] = useState(100);
     const decrypted =
       useDecryptedMessages(db(), limit, convoKey, conversationId) ?? [];
+    const typing = useTypingPresence(
+      db(),
+      conversationId,
+      credentials.publicSignKey,
+      decrypted.length,
+    );
     const identityDetails = useIdentityDetailsMap(db)(
       decrypted.map(({ publicSignKey }) => publicSignKey),
     );
@@ -88,6 +95,7 @@ export const Chat =
           setLimit(limit + 100);
         }}
         userId={credentials.publicSignKey}
+        typingUsers={typing.typingNames}
         messages={pipe(
           () => decrypted,
           (x: DecipheredMessage[]) => x,
@@ -105,7 +113,9 @@ export const Chat =
           }).catch((err) => {
             console.error("Failed to send message", err);
           });
+          typing.onBlurOrSend();
         }}
+        onInputActivity={() => typing.onUserInput()}
       />
     );
   };

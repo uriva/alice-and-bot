@@ -320,7 +320,17 @@ const sendButtonStyle = (isDark: boolean, disabled: boolean) => ({
 });
 
 export const AbstractChatBox = (
-  { limit, loadMore, userId, onSend, messages, onClose, title }: {
+  {
+    limit,
+    loadMore,
+    userId,
+    onSend,
+    messages,
+    onClose,
+    title,
+    typingUsers = [],
+    onInputActivity,
+  }: {
     userId: string;
     onSend: (input: string) => void;
     messages: AbstracChatMessage[];
@@ -328,6 +338,8 @@ export const AbstractChatBox = (
     loadMore: () => void;
     onClose?: () => void;
     title: string;
+    typingUsers?: string[];
+    onInputActivity?: () => void;
   },
 ) => {
   const isMobile = useIsMobile();
@@ -469,6 +481,22 @@ export const AbstractChatBox = (
                 />
               ))}
               <div ref={messagesEndRef} />
+              {/* Typing indicator */}
+              {typingUsers.length > 0 && (
+                <div
+                  style={{
+                    padding: "0 8px 6px 44px",
+                    color: isDark ? "#cbd5e1" : "#475569",
+                    fontSize: 12,
+                  }}
+                >
+                  {typingUsers.length === 1
+                    ? `${typingUsers[0]} is typing…`
+                    : `${typingUsers.slice(0, 2).join(", ")}${
+                      typingUsers.length > 2 ? " and others" : ""
+                    } are typing…`}
+                </div>
+              )}
             </>
           )}
       </div>
@@ -488,7 +516,9 @@ export const AbstractChatBox = (
           onInput={(e) => {
             setInput(e.currentTarget.value);
             resizeTextarea(e.currentTarget);
+            onInputActivity?.();
           }}
+          onBlur={() => onInputActivity?.()}
           style={{
             flexGrow: 1,
             padding: "12px 16px",
@@ -536,6 +566,7 @@ export const AbstractChatBox = (
               if (input.trim()) {
                 onSend(input.trim());
                 setInput("");
+                onInputActivity?.();
                 setTimeout(() => {
                   if (inputRef.current) {
                     inputRef.current.style.height = "auto";
@@ -565,6 +596,7 @@ export const AbstractChatBox = (
               }, 0);
               e.preventDefault();
             }
+            onInputActivity?.();
           }}
         />
         <button
@@ -575,6 +607,7 @@ export const AbstractChatBox = (
             if (!input.trim()) return;
             onSend(input.trim());
             setInput("");
+            onInputActivity?.();
             setTimeout(() => {
               if (inputRef.current) {
                 inputRef.current.focus();

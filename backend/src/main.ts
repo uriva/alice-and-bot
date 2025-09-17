@@ -68,6 +68,44 @@ const endpoints: BackendApiImpl = {
       );
       return { messageId };
     },
+    sendTyping: async ({ conversation, isTyping, publicSignKey }) => {
+      // Validate conversation & identity exist
+      const { conversations, identities } = await query({
+        conversations: { $: { where: { id: conversation } } },
+        identities: { $: { where: { publicSignKey } } },
+      });
+      if (conversations.length === 0 || identities.length === 0) {
+        return { success: true };
+      }
+      const identityId = identities[0].id;
+      // Find existing typingState for (owner, conversation)
+      const { typingStates } = await query({
+        typingStates: {
+          $: { where: { "owner.id": identityId, conversation } },
+        },
+      });
+      await transact(
+        tx.typingStates[typingStates.length > 0 ? typingStates[0].id : id()]
+          .update({ updatedAt: isTyping ? Date.now() : 0 })
+          .link({ owner: identityId, conversation }),
+      );
+      // Opportunistic cleanup: occasionally prune stale typingStates for this conversation
+      if (Math.random() < 0.15) {
+        const now = Date.now();
+        const { typingStates: allStates } = await query({
+          typingStates: { $: { where: { conversation } } },
+        });
+        const stale = allStates.filter((t: { id: string; updatedAt: number }) =>
+          t.updatedAt === 0 || now - t.updatedAt > 20_000
+        );
+        await Promise.all(
+          stale.map((t: { id: string }) =>
+            transact(tx.typingStates[t.id].delete())
+          ),
+        );
+      }
+      return { success: true };
+    },
     createAccount: async () => {
       const accountId = id();
       const accessToken = crypto.randomUUID();

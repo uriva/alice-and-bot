@@ -113,6 +113,15 @@ export const backendApiSchema = {
     input: z.object({ encryptedMessage: z.string(), conversation: z.string() }),
     output: z.object({ messageId: z.string() }),
   }),
+  sendTyping: endpoint({
+    authRequired: false,
+    input: z.object({
+      conversation: z.string(),
+      isTyping: z.boolean(),
+      publicSignKey: z.string(),
+    }),
+    output: z.object({ success: z.literal(true) }),
+  }),
   setWebhook: endpoint({
     authRequired: false,
     input: z.object({
@@ -363,3 +372,8 @@ export const unregisterPushSubscription = (
   },
 ): Promise<{ success: true }> =>
   apiClient({ endpoint: "unregisterPushSubscription", payload: params });
+
+export const sendTyping = (
+  params: { conversation: string; isTyping: boolean; publicSignKey: string },
+): Promise<{ success: true }> =>
+  apiClient({ endpoint: "sendTyping", payload: params });
