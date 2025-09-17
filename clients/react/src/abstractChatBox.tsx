@@ -131,23 +131,27 @@ const convertSingleNewlines = (input: string) =>
 
 // Ensure typical URLs are clickable without remark plugins by wrapping them
 // in angle brackets <...> (CommonMark autolink). Also prefix scheme for
-// bare domains and www.* so they are valid links.
+// bare domains and www.* so they are valid links, without touching emails
+// or already-schemed URLs.
 const linkify = (input: string) => {
-  // 1) Prefix scheme for bare domains (including www.)
-  const withSchemes = input
-    .replace(
-      /\b(?!https?:\/\/)(www\.[\w.-]+(?:\/[\w\-._~:/?#\[\]@!$&'()*+,;=%]*)?)/gi,
-      (m) => `https://${m}`,
-    )
-    .replace(
-      /\b(?!https?:\/\/)(?!www\.)((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-._~:/?#\[\]@!$&'()*+,;=%]*)?)/g,
-      (m) => `https://${m}`,
-    );
-  // 2) Wrap http(s) URLs in <...> unless already inside <> or markdown link
-  return withSchemes.replace(
-    /(^|\s)(https?:\/\/[\w.-]+(?:\/[\w\-._~:/?#\[\]@!$&'()*+,;=%]*)?)/gi,
-    (_full, pre, url) => `${pre}<${url}>`,
+  let s = input;
+  // 1) Prefix scheme for www.* that is not part of an existing scheme or email
+  s = s.replace(
+    /(^|[^\w@:\/])(www\.[\w.-]+(?:\/[^\s<>()]*)?)/gi,
+    (_m, pre, url) => `${pre}https://${url}`,
   );
+  // 2) Prefix scheme for bare domains (not starting with www),
+  // ensuring we don't match after a scheme (:/) or inside emails (@)
+  s = s.replace(
+    /(^|[^\w@:\/])((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[^\s<>()]*)?)/g,
+    (_m, pre, url) => `${pre}https://${url}`,
+  );
+  // 3) Wrap http(s) URLs in <...> to trigger CommonMark autolink
+  s = s.replace(
+    /(^|[^<])(https?:\/\/[\w.-]+(?:\/[^\s<>()]*)?)/gi,
+    (_m, pre, url) => `${pre}<${url}>`,
+  );
+  return s;
 };
 
 const Message = (
