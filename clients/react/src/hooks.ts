@@ -1,6 +1,6 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe, sort, unique } from "gamla";
-import { useEffect, useState, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
   createConversation,
@@ -162,7 +162,9 @@ export const useUserName =
 export const useIdentityDetailsMap =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
   (publicKeys: string[]) => {
-    const [cache, setCache] = useState<Record<string, { name: string; avatar?: string }>>({});
+    const [cache, setCache] = useState<
+      Record<string, { name: string; avatar?: string }>
+    >({});
     const keys = Array.from(new Set(publicKeys));
     const { data } = db().useQuery({
       identities: {
@@ -176,7 +178,9 @@ export const useIdentityDetailsMap =
           { name: i.name || i.publicSignKey, avatar: i.avatar },
         ]),
       );
-      if (Object.keys(entries).length) setCache((prev) => ({ ...prev, ...entries }));
+      if (Object.keys(entries).length) {
+        setCache((prev) => ({ ...prev, ...entries }));
+      }
     }, [data?.identities]);
     return cache;
   };
@@ -255,7 +259,7 @@ export const useTypingPresence = (
   db: InstantReactWebDatabase<typeof schema>,
   conversationId: string,
   selfPublicSignKey: string,
-  lastMessageCount: number,
+  lastMessageAuthorPublicKey: string | null,
 ) => {
   const TTL = 20000; // 20 seconds
   const [isTyping, setIsTyping] = useState(false);
@@ -267,13 +271,21 @@ export const useTypingPresence = (
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         setIsTyping(false);
-        sendTyping({ conversation: conversationId, isTyping: false, publicSignKey: selfPublicSignKey }).catch(() => {});
+        sendTyping({
+          conversation: conversationId,
+          isTyping: false,
+          publicSignKey: selfPublicSignKey,
+        }).catch(() => {});
       }, TTL) as unknown as number;
     } else if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    sendTyping({ conversation: conversationId, isTyping: typing, publicSignKey: selfPublicSignKey }).catch(() => {});
+    sendTyping({
+      conversation: conversationId,
+      isTyping: typing,
+      publicSignKey: selfPublicSignKey,
+    }).catch(() => {});
   };
 
   const onUserInput = () => {
@@ -281,11 +293,11 @@ export const useTypingPresence = (
   };
   const onBlurOrSend = () => setTyping(false);
 
-  // Early stop when a new message arrives in the conversation
+  // Early stop when any new message arrives in this conversation
   useEffect(() => {
-    if (isTyping) setTyping(false);
+    if (isTyping && lastMessageAuthorPublicKey != null) setTyping(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastMessageCount]);
+  }, [lastMessageAuthorPublicKey]);
 
   // Subscribe to typingStates and compute names of peers typing
   const { data: typingData } = db.useQuery({
@@ -297,6 +309,7 @@ export const useTypingPresence = (
   const now = Date.now();
   const typingNames = (typingData?.typingStates ?? [])
     .filter((t) => t.owner?.publicSignKey !== selfPublicSignKey)
+    .filter((t) => t.owner?.publicSignKey !== lastMessageAuthorPublicKey)
     .filter((t) => t.updatedAt && now - t.updatedAt < TTL)
     .map((t) => t.owner?.name || t.owner?.publicSignKey)
     .filter((x): x is string => Boolean(x));

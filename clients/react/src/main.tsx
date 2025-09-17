@@ -72,11 +72,12 @@ export const Chat =
     const [limit, setLimit] = useState(100);
     const decrypted =
       useDecryptedMessages(db(), limit, convoKey, conversationId) ?? [];
+    const lastMsgAuthor = decrypted[0]?.publicSignKey ?? null;
     const typing = useTypingPresence(
       db(),
       conversationId,
       credentials.publicSignKey,
-      decrypted.length,
+      lastMsgAuthor,
     );
     const identityDetails = useIdentityDetailsMap(db)(
       decrypted.map(({ publicSignKey }) => publicSignKey),
