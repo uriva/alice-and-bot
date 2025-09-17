@@ -119,41 +119,6 @@ export const ChatAvatar = (
   );
 };
 
-// Transform markdown so that a single newline becomes a hard line break (<br />),
-// while a double newline (blank line) remains a paragraph break, producing a
-// visibly larger gap. This matches typical chat expectations where pressing Enter
-// (or Shift+Enter) creates a new line, and an empty line creates a blank spacer.
-const convertSingleNewlines = (input: string) =>
-  input
-    .split(/\n\n+/) // split on one or more blank lines to retain paragraph breaks
-    .map((block) => block.replace(/\n/g, "  \n")) // within paragraphs, make single newlines hard breaks
-    .join("\n\n"); // rejoin with a single blank line (Markdown collapses multiples anyway)
-
-// Ensure typical URLs are clickable without remark plugins by wrapping them
-// in angle brackets <...> (CommonMark autolink). Also prefix scheme for
-// bare domains and www.* so they are valid links, without touching emails
-// or already-schemed URLs.
-const linkify = (input: string) => {
-  let s = input;
-  // 1) Prefix scheme for www.* that is not part of an existing scheme or email
-  s = s.replace(
-    /(^|[^\w@:\/])(www\.[\w.-]+(?:\/[^\s<>()]*)?)/gi,
-    (_m, pre, url) => `${pre}https://${url}`,
-  );
-  // 2) Prefix scheme for bare domains (not starting with www),
-  // ensuring we don't match after a scheme (:/) or inside emails (@)
-  s = s.replace(
-    /(^|[^\w@:\/])((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[^\s<>()]*)?)/g,
-    (_m, pre, url) => `${pre}https://${url}`,
-  );
-  // 3) Wrap http(s) URLs in <...> to trigger CommonMark autolink
-  s = s.replace(
-    /(^|[^<])(https?:\/\/[\w.-]+(?:\/[^\s<>()]*)?)/gi,
-    (_m, pre, url) => `${pre}<${url}>`,
-  );
-  return s;
-};
-
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
     {
@@ -231,7 +196,7 @@ const Message = (
               ),
             }}
           >
-            {convertSingleNewlines(linkify(text))}
+            {text}
           </ReactMarkdown>
         </div>
         <span
