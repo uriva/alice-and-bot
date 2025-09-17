@@ -2,6 +2,7 @@ import { sortKey } from "gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   chatContainerStyle,
   isLightColor,
@@ -177,6 +178,7 @@ const Message = (
           }}
         >
           <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
             components={{
               // @ts-expect-error react-markdown types are not fully compatible with Preact here
               a: ({ children, href }) => (
