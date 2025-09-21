@@ -9,7 +9,7 @@ const elementId = "alice-and-bot-widget-root";
 const Entry = (
   { dialTo, initialMessage }: { dialTo: string; initialMessage?: string },
 ) => {
-  const [name, setName] = useState<string>(null);
+  const [name, setName] = useState<string | null>(null);
   const credentials = useCredentials(name, "aliceAndBotCredentials");
   return (
     <>
