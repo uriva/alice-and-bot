@@ -197,11 +197,7 @@ const WithCredentials = (
         conversationId={conversation}
       />
     )
-    : (
-      <div style={getStartButtonStyle(useDarkMode())}>
-        <p>Getting/creating conversation...</p>
-      </div>
-    );
+    : <div>Loading...</div>;
 };
 
 const overlayZIndex = 10000;
