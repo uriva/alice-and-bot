@@ -313,7 +313,8 @@ const titleStyle = (isDark: boolean) => ({
 
 const messageContainerStyle = (isDark: boolean) => ({
   display: "flex",
-  flexGrow: 1,
+  flex: "1 1 auto",
+  minHeight: 0,
   overflowY: "auto",
   scrollbarGutter: "stable",
   gap: 8,
@@ -479,8 +480,6 @@ export const AbstractChatBox = (
         ref={messagesContainerRef}
         style={{
           ...messageContainerStyle(isDark),
-          flex: 1,
-          overflowY: "auto",
         }}
       >
         {messages.length === 0
@@ -526,6 +525,8 @@ export const AbstractChatBox = (
           display: "flex",
           alignItems: "center",
           gap: 8,
+          flex: "0 0 auto",
+          minHeight: 44,
         }}
       >
         <textarea

@@ -13,6 +13,7 @@ import {
   AbstractChatBox,
 } from "./abstractChatBox.tsx";
 import {
+  compactPublicKey,
   useConversationKey,
   useDecryptedMessages,
   useIdentityDetailsMap,
@@ -29,7 +30,8 @@ const msgToUIMessage =
   (details: Record<string, { name: string; avatar?: string }>) =>
   (msg: DecipheredMessage): AbstracChatMessage => ({
     authorId: msg.publicSignKey,
-    authorName: details[msg.publicSignKey]?.name ?? msg.publicSignKey,
+    authorName: details[msg.publicSignKey]?.name ??
+      compactPublicKey(msg.publicSignKey),
     authorAvatar: details[msg.publicSignKey]?.avatar,
     text: msg.text,
     timestamp: msg.timestamp,
@@ -57,7 +59,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       ) => [
         publicSignKey,
         {
-          name: name || publicSignKey,
+          name: name || compactPublicKey(publicSignKey),
           avatar,
         },
       ]),

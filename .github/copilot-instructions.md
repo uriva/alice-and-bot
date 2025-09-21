@@ -7,8 +7,8 @@ When you make UI changes, make sure you design for both light and dark mode.
 
 Avoid using `as` for type assertions.
 
-Avoid commenting. Instead make the code self-explanatory or refactor into smaller
-functions.
+Avoid commenting. Instead make the code self-explanatory or refactor into
+smaller functions.
 
 Prefer destructuring in the signature of functions, e.g. `function f({a, b})`
 instead of `function f(x)` and then `x.a`, `x.b`.

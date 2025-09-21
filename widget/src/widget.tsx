@@ -58,6 +58,8 @@ const dialogBoxStyle = (isDark: boolean): JSX.CSSProperties => ({
 
 const fieldStyle = (isDark: boolean): JSX.CSSProperties => ({
   width: "100%",
+  maxWidth: "100%",
+  boxSizing: "border-box",
   padding: "10px 12px",
   borderRadius: 8,
   border: `1px solid ${isDark ? "#4b5563" : "#d1d5db"}`,

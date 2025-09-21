@@ -13,6 +13,9 @@ import {
 import { sendTyping } from "../../../backend/src/api.ts";
 import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
 
+export const compactPublicKey = (k: string): string =>
+  k.length <= 14 ? k : `${k.slice(0, 6)}…${k.slice(-4)}`;
+
 export const useDarkMode = () => {
   const getPref = () =>
     typeof globalThis !== "undefined" &&
@@ -175,7 +178,10 @@ export const useIdentityDetailsMap =
       const entries = Object.fromEntries(
         (data?.identities ?? []).map((i) => [
           i.publicSignKey,
-          { name: i.name || i.publicSignKey, avatar: i.avatar },
+          {
+            name: i.name || compactPublicKey(i.publicSignKey),
+            avatar: i.avatar,
+          },
         ]),
       );
       if (Object.keys(entries).length) {
@@ -311,7 +317,12 @@ export const useTypingPresence = (
     .filter((t) => t.owner?.publicSignKey !== selfPublicSignKey)
     .filter((t) => t.owner?.publicSignKey !== lastMessageAuthorPublicKey)
     .filter((t) => t.updatedAt && now - t.updatedAt < TTL)
-    .map((t) => t.owner?.name || t.owner?.publicSignKey)
+    .map((t) =>
+      t.owner?.name ||
+      (t.owner?.publicSignKey
+        ? compactPublicKey(t.owner.publicSignKey)
+        : undefined)
+    )
     .filter((x): x is string => Boolean(x));
 
   return { isTyping, typingNames, onUserInput, onBlurOrSend } as const;
