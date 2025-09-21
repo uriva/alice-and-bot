@@ -25,7 +25,7 @@ const TypingIndicator = (
     const t = setInterval(
       () => setDots((n) => (n + 1) % 4),
       400,
-    ) as unknown as number;
+    );
     return () => clearInterval(t);
   }, []);
   const label = names.length === 1
