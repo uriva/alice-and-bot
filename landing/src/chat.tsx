@@ -303,7 +303,7 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
         }
       }
     } catch {
-      alert("Invalid credentials string");
+      toast.error("Invalid credentials string");
     }
   };
 
@@ -737,7 +737,7 @@ const MessengerLogin = ({ setCredentials }: {
       router(newUrl);
     } catch (e) {
       console.error("Error creating random identity", e);
-      alert("Unexpected error creating a random identity");
+      toast.error("Unexpected error creating a random identity");
     } finally {
       setCreatingRandom(false);
     }
