@@ -73,8 +73,8 @@ export const Chat =
     const convoKey = useConversationKey(db())(conversationId, credentials);
     const [limit, setLimit] = useState(100);
     const decrypted =
-      useDecryptedMessages(db(), limit, convoKey, conversationId) ?? [];
-    const lastMsgAuthor = decrypted[0]?.publicSignKey ?? null;
+      useDecryptedMessages(db(), limit, convoKey, conversationId);
+  const lastMsgAuthor = decrypted?.[0]?.publicSignKey ?? null;
     const typing = useTypingPresence(
       db(),
       conversationId,
@@ -82,7 +82,7 @@ export const Chat =
       lastMsgAuthor,
     );
     const identityDetails = useIdentityDetailsMap(db)(
-      decrypted.map(({ publicSignKey }) => publicSignKey),
+      (decrypted ?? []).map(({ publicSignKey }) => publicSignKey),
     );
     const conversationTitle = db().useQuery({
       conversations: {
@@ -99,8 +99,9 @@ export const Chat =
         }}
         userId={credentials.publicSignKey}
         typingUsers={typing.typingNames}
+        isLoading={!decrypted}
         messages={pipe(
-          () => decrypted,
+          () => decrypted ?? [],
           (x: DecipheredMessage[]) => x,
           (msgs) => processMessages(db())(msgs, identityDetails),
         )()}

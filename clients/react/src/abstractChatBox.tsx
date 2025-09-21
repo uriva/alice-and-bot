@@ -7,6 +7,7 @@ import {
   chatContainerStyle,
   isLightColor,
   loadingStyle,
+  centerFillStyle,
   stringToColor,
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
@@ -363,6 +364,7 @@ export const AbstractChatBox = (
     title,
     typingUsers = [],
     onInputActivity,
+    isLoading = false,
   }: {
     userId: string;
     onSend: (input: string) => void;
@@ -373,6 +375,7 @@ export const AbstractChatBox = (
     title: string;
     typingUsers?: string[];
     onInputActivity?: () => void;
+    isLoading?: boolean;
   },
 ) => {
   const isMobile = useIsMobile();
@@ -482,18 +485,14 @@ export const AbstractChatBox = (
           ...messageContainerStyle(isDark),
         }}
       >
-        {messages.length === 0
+        {isLoading
+          ? (
+            <div style={centerFillStyle(isDark)}>Loading…</div>
+          )
+          : messages.length === 0
           ? (
             <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "100%",
-                textAlign: "center",
-                color: "#888",
-              }}
+              style={centerFillStyle(isDark)}
             >
               No messages yet. Start the conversation!
             </div>

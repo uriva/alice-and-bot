@@ -11,6 +11,16 @@ export const chatContainerStyle = (isDarkMode: boolean) => ({
 
 export const loadingStyle = { fontSize: 12, color: "#bbb" };
 
+export const centerFillStyle = (isDarkMode: boolean) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  height: "100%",
+  textAlign: "center",
+  color: isDarkMode ? "#9ca3af" : "#888",
+});
+
 const participantColors = [
   { h: 195, s: 65 }, // blue
   { h: 105, s: 65 }, // green
