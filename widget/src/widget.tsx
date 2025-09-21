@@ -216,6 +216,75 @@ const WithCredentials = (
 
 const overlayZIndex = 10000;
 
+const containerStyle = (
+  { isMobile, isDark, isOpen }: {
+    isMobile: boolean;
+    isDark: boolean;
+    isOpen: boolean;
+  },
+): JSX.CSSProperties => (
+  isOpen
+    ? (isMobile
+      ? {
+        position: "fixed",
+        inset: 0,
+        width: "100vw",
+        height: "100dvh",
+        zIndex: 10001,
+        background: isDark ? "#232526" : "#ffffff",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+      }
+      : {
+        position: "fixed",
+        right: 24,
+        bottom: 24,
+        zIndex: 10001,
+        width: 420,
+        maxWidth: "calc(100vw - 48px)",
+        height: "min(80vh, 720px)",
+        maxHeight: "calc(100vh - 48px)",
+        background: isDark ? "#232526" : "#ffffff",
+        borderRadius: 12,
+        boxShadow: isDark
+          ? "0 10px 30px rgba(0,0,0,0.5)"
+          : "0 10px 30px rgba(0,0,0,0.12)",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        minHeight: 0,
+      })
+    : {
+      position: "fixed",
+      right: 24,
+      bottom: 24,
+      zIndex: 10001,
+      display: "flex",
+      flexDirection: "column",
+      minHeight: 0,
+    }
+);
+
+const closeButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
+  position: "absolute",
+  top: 8,
+  right: 8,
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  border: "none",
+  background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+  color: isDark ? "#f3f4f6" : "#111827",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxShadow: isDark
+    ? "0 2px 6px rgba(0,0,0,0.4)"
+    : "0 2px 6px rgba(0,0,0,0.15)",
+});
+
 const Overlay = () => (
   <div
     style={{
@@ -251,6 +320,13 @@ const InnerWidget = ({ onNameChosen, dialTo, credentials }: WidgetProps) => {
       };
     }
   }, [isMobile, chatOpen.value]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && chatOpen.value) chatOpen.value = false;
+    };
+    globalThis.addEventListener("keydown", onKey);
+    return () => globalThis.removeEventListener("keydown", onKey);
+  }, [chatOpen.value]);
   return (
     <>
       <NameDialog
@@ -326,23 +402,18 @@ export const Widget = (props: WidgetProps): JSX.Element => {
       {shadowRoot && createPortal(
         <div
           ref={containerRef}
-          style={{
-            position: "fixed",
-            zIndex: 10001,
-            inset: isMobile && chatOpen.value ? 0 : undefined,
-            width: isMobile && chatOpen.value ? "100vw" : undefined,
-            height: isMobile && chatOpen.value ? undefined : undefined,
-            background: isMobile && chatOpen.value
-              ? (isDark ? "#232526" : "#fff")
-              : undefined,
-            transition: "height 0.2s",
-            display: "flex",
-            flexDirection: "column",
-            bottom: !isMobile || !chatOpen.value ? 24 : undefined,
-            right: !isMobile || !chatOpen.value ? 24 : undefined,
-            minHeight: 0,
-          }}
+          style={containerStyle({ isMobile, isDark, isOpen: chatOpen.value })}
         >
+          {chatOpen.value && (
+            <button
+              type="button"
+              aria-label="Close chat"
+              style={closeButtonStyle(isDark)}
+              onClick={() => (chatOpen.value = false)}
+            >
+              ×
+            </button>
+          )}
           <InnerWidget {...props} />
         </div>,
         shadowRoot,

@@ -467,10 +467,10 @@ export const AbstractChatBox = (
         borderRadius: isMobile ? 0 : 16,
         fontFamily:
           "'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
-        height: isMobile ? viewportHeight : "auto",
+        height: isMobile ? viewportHeight : "100%",
         display: "flex",
         flexDirection: "column",
-        ...(isMobile ? { flexGrow: 1 } : { height: 700, width: 400 }),
+        ...(isMobile ? { flexGrow: 1 } : { width: 400 }),
       }}
     >
       <div style={titleStyle(isDark)}>{title}</div>
