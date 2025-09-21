@@ -5,7 +5,7 @@
     "widget": "cd widget && deno run -A --node-modules-dir=auto npm:vite build --config vite.config.ts",
     "dev": "cd clients/react; deno run -A --node-modules-dir=auto npm:vite",
     "build": "deno run -A --node-modules-dir=auto npm:vite build",
-    "check": "deno fmt --check && deno lint && deno check *.ts server/**/*.ts web/**/*.ts web/**/*.tsx"
+    "check": "deno fmt --check && deno lint && deno check *.ts backend/**/*.ts clients/**/*.ts clients/**/*.tsx landing/**/*.ts landing/**/*.tsx protocol/**/*.ts widget/**/*.ts widget/**/*.tsx"
   },
   "githooks": {
     "$schema": "https://deno.land/x/githooks/schema.json",
