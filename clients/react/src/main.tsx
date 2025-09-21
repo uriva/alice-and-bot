@@ -72,9 +72,13 @@ export const Chat =
   ({ credentials, conversationId, onClose }: ChatProps): JSX.Element => {
     const convoKey = useConversationKey(db())(conversationId, credentials);
     const [limit, setLimit] = useState(100);
-    const decrypted =
-      useDecryptedMessages(db(), limit, convoKey, conversationId);
-  const lastMsgAuthor = decrypted?.[0]?.publicSignKey ?? null;
+    const decrypted = useDecryptedMessages(
+      db(),
+      limit,
+      convoKey,
+      conversationId,
+    );
+    const lastMsgAuthor = decrypted?.[0]?.publicSignKey ?? null;
     const typing = useTypingPresence(
       db(),
       conversationId,

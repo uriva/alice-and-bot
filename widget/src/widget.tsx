@@ -187,36 +187,36 @@ const WithCredentials = (
     credentials,
     participants: dialTo,
   });
-  const isDark = useDarkMode();
   return conversation
     ? (
-      <div style={{ flex: 1, display: "flex", minHeight: 0, height: "100%" }}>
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-          }}
-        >
-          <Chat
-            onClose={() => {
-              chatOpen.value = false;
-            }}
-            credentials={coerce(credentials)}
-            conversationId={conversation}
-          />
-        </div>
-      </div>
+      <Chat
+        onClose={() => {
+          chatOpen.value = false;
+        }}
+        credentials={coerce(credentials)}
+        conversationId={conversation}
+      />
     )
     : (
-      <div style={getStartButtonStyle(isDark)}>
+      <div style={getStartButtonStyle(useDarkMode())}>
         <p>Getting/creating conversation...</p>
       </div>
     );
 };
 
 const overlayZIndex = 10000;
+
+const commonContainerProps = {
+  position: "fixed",
+  flexDirection: "column",
+};
+
+const fixedPosition = {
+  right: 24,
+  position: "fixed",
+  bottom: 24,
+  zIndex: 10001,
+};
 
 const containerStyle = (
   { isMobile, isDark, isOpen }: {
@@ -228,43 +228,30 @@ const containerStyle = (
   isOpen
     ? (isMobile
       ? {
-        position: "fixed",
+        ...commonContainerProps,
         inset: 0,
         width: "100vw",
         height: "100dvh",
-        zIndex: 10001,
-        background: isDark ? "#232526" : "#ffffff",
         display: "flex",
-        flexDirection: "column",
-        minHeight: 0,
       }
       : {
-        position: "fixed",
-        right: 24,
-        bottom: 24,
-        zIndex: 10001,
-        width: 420,
-        maxWidth: "calc(100vw - 48px)",
+        ...commonContainerProps,
+        ...fixedPosition,
+        width: "min(400px, 90vw)",
         height: "min(80vh, 720px)",
+        maxWidth: "calc(100vw - 48px)",
         maxHeight: "calc(100vh - 48px)",
-        background: isDark ? "#232526" : "#ffffff",
-        borderRadius: 12,
         boxShadow: isDark
           ? "0 10px 30px rgba(0,0,0,0.5)"
           : "0 10px 30px rgba(0,0,0,0.12)",
         display: "flex",
-        flexDirection: "column",
+        borderRadius: 12,
         overflow: "hidden",
-        minHeight: 0,
       })
     : {
-      position: "fixed",
-      right: 24,
-      bottom: 24,
-      zIndex: 10001,
+      ...fixedPosition,
       display: "flex",
       flexDirection: "column",
-      minHeight: 0,
     }
 );
 
@@ -375,30 +362,6 @@ export const Widget = (props: WidgetProps): JSX.Element => {
       setShadowRoot(hostRef.current.attachShadow({ mode: "open" }));
     }
   }, [hostRef.current, !shadowRoot]);
-  useEffect(() => {
-    if (isMobile && chatOpen.value && containerRef.current) {
-      const setHeight = () => {
-        const height = globalThis.visualViewport?.height ||
-          globalThis.innerHeight;
-        containerRef.current!.style.height = height + "px";
-        containerRef.current!.style.width = "100vw";
-      };
-      setHeight();
-      globalThis.addEventListener("resize", setHeight);
-      if (globalThis.visualViewport) {
-        globalThis.visualViewport.addEventListener("resize", setHeight);
-      }
-      return () => {
-        globalThis.removeEventListener("resize", setHeight);
-        if (globalThis.visualViewport) {
-          globalThis.visualViewport.removeEventListener("resize", setHeight);
-        }
-      };
-    } else if (containerRef.current) {
-      containerRef.current.style.height = "";
-      containerRef.current.style.width = "";
-    }
-  }, [isMobile, shadowRoot, chatOpen.value]);
   return (
     <div ref={hostRef}>
       {shadowRoot && createPortal(

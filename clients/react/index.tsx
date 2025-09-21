@@ -28,7 +28,7 @@ const WithCredentials = (
   if (widgetMode.value) {
     return (
       <Widget
-        generateCredentials={() => {}}
+        onNameChosen={() => {}}
         credentials={participants[0]}
         dialTo={participants.map((x) => x.publicSignKey)}
       />
