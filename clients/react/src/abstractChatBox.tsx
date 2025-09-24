@@ -44,6 +44,19 @@ const TypingIndicator = (
   );
 };
 
+// Escape <script>...</script> so it renders as text, not HTML
+const neutralizeScriptTags = (s: string) => {
+  const escape = (x: string) =>
+    x.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(
+      ">",
+      "&gt;",
+    );
+  return s
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (m) => escape(m))
+    .replace(/<script\b[^>]*>/gi, (m) => escape(m))
+    .replace(/<\/script>/gi, (m) => escape(m));
+};
+
 const useTimeAgo = (timestamp: number) => {
   const [timeAgo, setTimeAgo] = useState("");
   const intervalRef = useRef<number | null>(null);
@@ -231,7 +244,7 @@ const Message = (
               ),
             }}
           >
-            {text}
+            {neutralizeScriptTags(text)}
           </ReactMarkdown>
         </div>
         <span
