@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { ComponentChildren } from "preact";
 import {
   centerFillStyle,
   chatContainerStyle,
@@ -44,17 +45,84 @@ const TypingIndicator = (
   );
 };
 
-// Escape <script>...</script> so it renders as text, not HTML
-const neutralizeScriptTags = (s: string) => {
-  const escape = (x: string) =>
-    x.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(
-      ">",
-      "&gt;",
-    );
-  return s
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (m) => escape(m))
-    .replace(/<script\b[^>]*>/gi, (m) => escape(m))
-    .replace(/<\/script>/gi, (m) => escape(m));
+// Treat raw HTML in markdown as text so it renders literally (e.g., <script>...)
+type MdNode = { type?: string; value?: string; children?: MdNode[] };
+const remarkHtmlToText = () => (tree: MdNode) => {
+  const visit = (node?: MdNode) => {
+    if (!node) return;
+    if (Array.isArray(node.children)) {
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (child && child.type === "html" && typeof child.value === "string") {
+          node.children[i] = { type: "text", value: child.value };
+        } else {
+          visit(child);
+        }
+      }
+    }
+  };
+  visit(tree);
+};
+
+const copyOverlayStyle = (
+  { isDark }: { isDark: boolean },
+) => ({
+  position: "absolute",
+  top: 6,
+  right: 8,
+  fontSize: 11,
+  lineHeight: 1,
+  borderRadius: 10,
+  border: isDark ? "1px solid #374151" : "1px solid transparent",
+  padding: "4px 8px",
+  background: isDark ? "#111827cc" : "#00000014",
+  color: isDark ? "#f9fafb" : "#111",
+  cursor: "pointer",
+  boxShadow: isDark ? "0 2px 6px #0006" : "0 1px 3px #0002",
+  opacity: 0.95,
+  zIndex: 2,
+});
+
+const codeLabelStyle = ({ isDark }: { isDark: boolean }) => ({
+  position: "absolute",
+  top: 6,
+  left: 8,
+  fontSize: 10,
+  lineHeight: 1,
+  borderRadius: 8,
+  padding: "3px 6px",
+  background: isDark ? "#ffffff1a" : "#0000000f",
+  color: isDark ? "#e5e7eb" : "#111827",
+  fontWeight: 600,
+});
+
+const copyToClipboard = async (text: string) => {
+  try {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function"
+    ) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (_) {
+    // ignore and try fallback
+  }
+  try {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.setAttribute("readonly", "");
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(el);
+    return ok;
+  } catch (_) {
+    return false;
+  }
 };
 
 const useTimeAgo = (timestamp: number) => {
@@ -62,27 +130,20 @@ const useTimeAgo = (timestamp: number) => {
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const updateTimeAgo = () => {
-      const now = Date.now();
-      const diff = now - timestamp;
-      const date = new Date(timestamp);
-      const nowDate = new Date(now);
-
+    const date = new Date(timestamp);
+    const update = () => {
+      const now = new Date();
+      const diff = now.getTime() - timestamp;
       if (diff < 60000) {
         setTimeAgo("just now");
       } else if (diff < 3600000) {
         const minutes = Math.floor(diff / 60000);
         setTimeAgo(`${minutes} minute${minutes !== 1 ? "s" : ""} ago`);
-      } else if (
-        date.getDate() === nowDate.getDate() &&
-        date.getMonth() === nowDate.getMonth() &&
-        date.getFullYear() === nowDate.getFullYear()
-      ) {
+      } else if (date.toDateString() === now.toDateString()) {
         const hours = Math.floor(diff / 3600000);
         setTimeAgo(`${hours} hour${hours !== 1 ? "s" : ""} ago`);
       } else {
-        // Show date, e.g. "Jul 5" or "Jul 5, 2025" if not this year
-        const showYear = date.getFullYear() !== nowDate.getFullYear();
+        const showYear = date.getFullYear() !== now.getFullYear();
         setTimeAgo(
           date.toLocaleDateString(undefined, {
             month: "short",
@@ -93,16 +154,18 @@ const useTimeAgo = (timestamp: number) => {
       }
     };
 
-    updateTimeAgo();
+    update();
 
-    // Fast update for the first minute, then slow down
     let timeoutId: number | null = null;
-    function setSlowInterval() {
+    const setSlowInterval = () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(updateTimeAgo, 60000);
-    }
-    intervalRef.current = setInterval(updateTimeAgo, 1000);
-    timeoutId = setTimeout(setSlowInterval, 60000) as unknown as number;
+      const slowHandle = setInterval(update, 60000);
+      intervalRef.current = typeof slowHandle === "number" ? slowHandle : null;
+    };
+    const fastHandle = setInterval(update, 1000);
+    intervalRef.current = typeof fastHandle === "number" ? fastHandle : null;
+    const to = setTimeout(setSlowInterval, 60000);
+    timeoutId = typeof to === "number" ? to : null;
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -111,6 +174,91 @@ const useTimeAgo = (timestamp: number) => {
   }, [timestamp]);
 
   return timeAgo;
+};
+
+const CodeBlock = (
+  { inline, className, children }: {
+    inline?: boolean;
+    className?: string;
+    children: ComponentChildren;
+  },
+) => {
+  const isDark = useDarkMode();
+  if (inline) {
+    return (
+      <code
+        class={className}
+        style={{
+          background: isDark ? "#ffffff22" : "#00000012",
+          padding: "0 4px",
+          borderRadius: 4,
+          fontFamily:
+            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+          fontSize: 13,
+        }}
+      >
+        {children}
+      </code>
+    );
+  }
+  const [hovered, setHovered] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const codeStr = String(children ?? "").replace(/\n$/, "");
+  const lang = (className?.match(/language-([A-Za-z0-9_+-]+)/)?.[1] || "")
+    .toUpperCase();
+  return (
+    <div
+      style={{ position: "relative" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <button
+        type="button"
+        onFocus={() => setHovered(true)}
+        onBlur={() => setHovered(false)}
+        onClick={async () => {
+          const ok = await copyToClipboard(codeStr);
+          if (ok) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1000);
+          }
+        }}
+        title={copied ? "Copied" : "Copy"}
+        style={{
+          ...copyOverlayStyle({ isDark }),
+          opacity: hovered || copied ? 0.95 : 0,
+          pointerEvents: hovered || copied ? "auto" : "none",
+          transition: "opacity 0.15s ease-in-out",
+        }}
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+      <pre
+        style={{
+          position: "relative",
+          padding: "10px 12px",
+          overflow: "auto",
+          background: isDark ? "#0b1220" : "#f3f4f6",
+          color: isDark ? "#e5e7eb" : "#111827",
+          borderRadius: 8,
+          fontFamily:
+            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+          fontSize: 13,
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            display: "inline-block",
+            minWidth: "max-content",
+          }}
+        >
+          {lang && <span style={codeLabelStyle({ isDark })}>{lang}</span>}
+          <code class={className}>{codeStr}</code>
+        </div>
+      </pre>
+    </div>
+  );
 };
 
 export const ChatAvatar = (
@@ -224,7 +372,7 @@ const Message = (
           }}
         >
           <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
+            remarkPlugins={[remarkGfm, remarkHtmlToText]}
             components={{
               // @ts-expect-error react-markdown types are not fully compatible with Preact here
               a: ({ children, href }) => (
@@ -242,9 +390,11 @@ const Message = (
                   {children}
                 </a>
               ),
+              // @ts-expect-error react-markdown types are not fully compatible with Preact here
+              code: CodeBlock,
             }}
           >
-            {neutralizeScriptTags(text)}
+            {text}
           </ReactMarkdown>
         </div>
         <span
