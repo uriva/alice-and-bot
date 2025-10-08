@@ -525,6 +525,7 @@ export const AbstractChatBox = (
     messages,
     onClose,
     title,
+    emptyMessage,
     typingUsers = [],
     onInputActivity,
     isLoading = false,
@@ -536,6 +537,7 @@ export const AbstractChatBox = (
     loadMore: () => void;
     onClose?: () => void;
     title: string;
+    emptyMessage?: ComponentChildren;
     typingUsers?: string[];
     onInputActivity?: () => void;
     isLoading?: boolean;
@@ -627,7 +629,7 @@ export const AbstractChatBox = (
             <div
               style={centerFillStyle(isDark)}
             >
-              No messages yet. Start the conversation!
+              {emptyMessage ?? "No messages yet. Start the conversation!"}
             </div>
           )
           : (
