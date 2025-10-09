@@ -244,6 +244,15 @@ const endpoints: BackendApiImpl = {
       if (identities.length === 0) return { error: "no-such-alias" };
       return { publicSignKey: identities[0].publicSignKey };
     },
+    publicSignKeyToAlias: async ({ publicSignKey }) => {
+      const { identities } = await query({
+        identities: { $: { where: { publicSignKey } } },
+      });
+      if (identities.length === 0) return { error: "no-such-identity" };
+      const alias = identities[0].alias;
+      if (!alias) return { error: "no-alias" };
+      return { alias };
+    },
     setAlias: async ({ payload, publicSignKey, nonce, authToken }) => {
       const authOk = await verifyAuthToken({
         action: "setAlias",

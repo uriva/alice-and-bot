@@ -39,7 +39,7 @@ export { Widget } from "./widget/src/widget.tsx";
 
 export const publicSignKeyToAlias = (publicSignKey: string): Promise<
   { alias: string } | { error: "no-such-identity" | "no-alias" }
-> => publicSignKeyToAliasNoDb(accessDb, publicSignKey);
+> => publicSignKeyToAliasNoDb(publicSignKey);
 
 let db: InstantReactWebDatabase<typeof schema> | null = null;
 

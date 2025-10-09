@@ -42,6 +42,14 @@ export const backendApiSchema = {
       z.object({ error: z.enum(["no-such-alias"]) }),
     ]),
   }),
+  publicSignKeyToAlias: endpoint({
+    authRequired: false,
+    input: z.object({ publicSignKey: z.string() }),
+    output: z.union([
+      z.object({ alias: z.string() }),
+      z.object({ error: z.enum(["no-such-identity", "no-alias"]) }),
+    ]),
+  }),
   setAlias: authenticatedEndpoint(
     z.object({ alias: z.string() }),
     z.union([
@@ -232,6 +240,11 @@ export const aliasToPublicSignKey = (
   alias: string,
 ): Promise<{ publicSignKey: string } | { error: "no-such-alias" }> =>
   apiClient({ endpoint: "aliasToPublicSignKey", payload: { alias } });
+
+export const publicSignKeyToAlias = (
+  publicSignKey: string,
+): Promise<{ alias: string } | { error: "no-such-identity" | "no-alias" }> =>
+  apiClient({ endpoint: "publicSignKeyToAlias", payload: { publicSignKey } });
 
 export const issueNonce = (publicSignKey: string): Promise<{ nonce: string }> =>
   apiClient({ endpoint: "issueNonce", payload: { publicSignKey } });

@@ -123,8 +123,7 @@ aliasToPublicSignKey(
 ): Promise<{ publicSignKey: string } | { error: "no-such-alias" }>
 ```
 
-Look up an alias by public sign key (client-side Instant query; no backend
-call):
+Look up an alias by public sign key:
 
 ```ts
 publicSignKeyToAlias(publicSignKey: string): Promise<
