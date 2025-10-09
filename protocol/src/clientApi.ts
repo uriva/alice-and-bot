@@ -182,15 +182,15 @@ async (
   )(identities);
   const symmetricKey = await generateSymmetricKey();
   return pipe(
-    map(async (
-      publicSignKey: string,
-    ): Promise<[string, EncryptedConversationKey]> => [
-      publicSignKey,
-      await encryptAsymmetric(
-        signKeyToEncrypionKey[publicSignKey],
-        symmetricKey,
-      ),
-    ]),
+    map(async (publicSignKey: string) =>
+      [
+        publicSignKey,
+        await encryptAsymmetric(
+          signKeyToEncrypionKey[publicSignKey],
+          symmetricKey,
+        ),
+      ] as const
+    ),
     Object.fromEntries<EncryptedConversationKey>,
     (publicSignKeyToEncryptedSymmetricKey) =>
       apiClient({
