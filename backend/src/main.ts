@@ -137,6 +137,9 @@ const endpoints: BackendApiImpl = {
       return {};
     },
     createIdentity: async ({ email }, { publicSignKey, publicEncryptKey }) => {
+      if (!email) {
+        return { success: false, error: "cannot-associate-to-guest-account" };
+      }
       const { accounts } = await query({
         accounts: { $: { where: { email } } },
       });
@@ -145,7 +148,7 @@ const endpoints: BackendApiImpl = {
         publicEncryptKey,
         account: accounts[0].id,
       });
-      return {};
+      return { success: true };
     },
     setWebhook: async ({ url, publicSignKey }) => {
       const { identities } = await query({

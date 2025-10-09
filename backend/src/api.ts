@@ -106,7 +106,10 @@ export const backendApiSchema = {
       publicSignKey: z.string(),
       publicEncryptKey: z.string(),
     }),
-    output: z.object({}),
+    output: z.union([
+      z.object({ success: z.literal(true) }),
+      z.object({ success: z.literal(false), error: z.string() }),
+    ]),
   }),
   sendMessage: endpoint({
     authRequired: false,
