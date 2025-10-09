@@ -100,22 +100,19 @@ export const sendMessageWithKey = async ({
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
-const getConversationKey = async (
-  credentials: Credentials,
-  conversation: string,
-): Promise<string> => {
+const getConversationKey = async (creds: Credentials, convo: string) => {
   const result = await apiClient({
     endpoint: "conversationKey",
     payload: {
-      conversationId: conversation,
-      publicSignKey: credentials.publicSignKey,
+      conversationId: convo,
+      publicSignKey: creds.publicSignKey,
     },
   });
   if ("error" in result) {
     throw new Error("No keys found for conversation");
   }
   return await decryptAsymmetric<string>(
-    credentials.privateEncryptKey,
+    creds.privateEncryptKey,
     result.conversationKey as EncryptedAsymmetric<string>,
   );
 };
