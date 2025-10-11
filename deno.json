@@ -13,9 +13,9 @@
   },
   "imports": {
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.5",
-    "@instantdb/admin": "npm:@instantdb/admin@0.22.9",
-    "@instantdb/core": "npm:@instantdb/core@0.22.9",
-    "@instantdb/react": "npm:@instantdb/react@0.22.9",
+    "@instantdb/admin": "npm:@instantdb/admin@0.22.12",
+    "@instantdb/core": "npm:@instantdb/core@0.22.12",
+    "@instantdb/react": "npm:@instantdb/react@0.22.12",
     "@preact/preset-vite": "npm:@preact/preset-vite@2.10.2",
     "@preact/signals": "npm:@preact/signals@2.1.1",
     "@std/assert": "jsr:@std/assert@1",
@@ -44,6 +44,6 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.103",
+  "version": "0.0.104",
   "exports": "./mod.ts"
 }

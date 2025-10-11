@@ -181,11 +181,16 @@ const NameDialog = ({ isOpen, onClose, onSubmit }: NameDialogProps) => {
 };
 
 const WithCredentials = (
-  { dialTo, credentials }: { dialTo: string[]; credentials: Credentials },
+  { dialTo, credentials, initialMessage }: {
+    dialTo: string[];
+    credentials: Credentials;
+    initialMessage?: string;
+  },
 ) => {
   const conversation = useGetOrCreateConversation({
     credentials,
     participants: dialTo,
+    initialMessage,
   });
   return conversation
     ? (
@@ -290,12 +295,24 @@ type WidgetProps = {
   initialMessage?: string;
   credentials: Credentials | null;
   onNameChosen: (name: string) => void;
+  startOpen?: boolean;
 };
 
-const InnerWidget = ({ onNameChosen, dialTo, credentials }: WidgetProps) => {
+const InnerWidget = (
+  { onNameChosen, dialTo, credentials, startOpen, initialMessage }: WidgetProps,
+) => {
   const isMobile = useIsMobile();
   const isDark = useDarkMode();
   const [showNameDialog, setNameDialog] = useState(false);
+  useEffect(() => {
+    if (!startOpen) return;
+    if (chatOpen.value) return;
+    if (credentials) {
+      chatOpen.value = true;
+    } else {
+      setNameDialog(true);
+    }
+  }, [startOpen, credentials]);
   useEffect(() => {
     if (isMobile && chatOpen.value) {
       const originalOverflow = document.body.style.overflow;
@@ -326,7 +343,13 @@ const InnerWidget = ({ onNameChosen, dialTo, credentials }: WidgetProps) => {
       {isMobile && chatOpen.value && <Overlay />}
       {chatOpen.value
         ? (credentials
-          ? <WithCredentials dialTo={dialTo} credentials={credentials} />
+          ? (
+            <WithCredentials
+              initialMessage={initialMessage}
+              dialTo={dialTo}
+              credentials={credentials}
+            />
+          )
           : <p>Loading credentials...</p>)
         : (
           <button

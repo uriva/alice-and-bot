@@ -1,3 +1,4 @@
+import { init as initAdmin, type InstantAdminDatabase } from "@instantdb/admin";
 import { init, type InstantReactWebDatabase } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { coerce } from "gamla";
@@ -15,14 +16,17 @@ import { Chat } from "./src/main.tsx";
 const widgetMode = signal(true);
 
 const WithCredentials = (
-  { participants, db }: {
+  { participants, db, adminDb, initialMessage }: {
     participants: Credentials[];
+    initialMessage?: string;
     db: () => InstantReactWebDatabase<typeof schema>;
+    adminDb: () => InstantAdminDatabase<typeof schema>;
   },
 ) => {
   const ChatWithDb = Chat(db);
-  const conversation = useGetOrCreateConversation(db)({
+  const conversation = useGetOrCreateConversation(adminDb, db)({
     credentials: participants[0],
+    initialMessage,
     participants: participants.map((p) => p.publicSignKey),
   });
   if (widgetMode.value) {
@@ -50,7 +54,12 @@ const WithCredentials = (
     : <div>preparing conversation</div>;
 };
 
-const Main = ({ db }: { db: () => InstantReactWebDatabase<typeof schema> }) => {
+const Main = (
+  { adminDb, db }: {
+    adminDb: () => InstantAdminDatabase<typeof schema>;
+    db: () => InstantReactWebDatabase<typeof schema>;
+  },
+) => {
   const alice = useCredentials("alice", "demo-alice");
   const bot = useCredentials("bot", "demo-bot");
   const eve = useCredentials("eve", "demo-eve");
@@ -78,12 +87,20 @@ const Main = ({ db }: { db: () => InstantReactWebDatabase<typeof schema> }) => {
         >
           enable push
         </button>
-        <WithCredentials db={db} participants={[alice, bot, eve]} />
+        <WithCredentials
+          adminDb={adminDb}
+          db={db}
+          participants={[alice, bot, eve]}
+        />
       </>
     );
 };
 
 render(
-  <Main db={() => init({ appId: instantAppId, schema })} />,
+  <Main
+    adminDb={() =>
+      initAdmin({ appId: instantAppId, schema }).asUser({ guest: true })}
+    db={() => init({ appId: instantAppId, schema })}
+  />,
   coerce(document.getElementById("root")),
 );

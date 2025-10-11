@@ -1,16 +1,17 @@
+import type { InstantAdminDatabase } from "@instantdb/admin";
 import type { InstaQLEntity } from "@instantdb/core";
-import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe } from "gamla";
 import stringify from "safe-stable-stringify";
 import { apiClient } from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
 import { chatPath } from "../../landing/src/paths.ts";
-import { normalizeAlias } from "./alias.ts";
 import {
   encryptAsymmetric,
   generateKeyPair,
   generateSymmetricKey,
 } from "../../protocol/src/crypto.ts";
+import { normalizeAlias } from "./alias.ts";
+import { buildSignedRequest } from "./authClient.ts";
 import {
   decryptAsymmetric,
   decryptSymmetric,
@@ -20,7 +21,6 @@ import {
   sign,
   verify,
 } from "./crypto.ts";
-import { buildSignedRequest } from "./authClient.ts";
 
 export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
 
@@ -156,13 +156,13 @@ async (
 type Identity = InstaQLEntity<typeof schema, "identities", { account: {} }>;
 
 export const createConversation = (
-  db: () => InstantReactWebDatabase<typeof schema>,
+  db: () => InstantAdminDatabase<typeof schema>,
 ) =>
 async (
   publicSignKeys: string[],
   conversationTitle: string,
 ) => {
-  const { data: { identities } } = await db().queryOnce({
+  const { identities } = await db().query({
     identities: {
       account: {},
       $: { where: { publicSignKey: { $in: publicSignKeys } } },

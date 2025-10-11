@@ -1,3 +1,4 @@
+import { init as adminInit } from "@instantdb/admin";
 import { init } from "@instantdb/react";
 import { effect, signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
@@ -29,6 +30,9 @@ import { CopyableString } from "./components.tsx";
 import { chatPath } from "./paths.ts";
 
 const db = init({ appId: instantAppId, schema });
+const adminDb = adminInit({ appId: instantAppId, schema }).asUser({
+  guest: true,
+});
 
 const nameFromPublicSignKey = async (publicSignKey: string) => {
   const { data } = await db.queryOnce({
@@ -87,7 +91,10 @@ const startConversation = async (
   const title = names.join(", ");
   const response = await toast.promise(
     (async () => {
-      const res = await createConversation(() => db)(participantKeys, title);
+      const res = await createConversation(() => adminDb)(
+        participantKeys,
+        title,
+      );
       if ("error" in res) throw new Error(res.error);
       return res;
     })(),

@@ -1,5 +1,7 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { init } from "@instantdb/react";
+import { init as adminInit } from "@instantdb/admin";
+import type { InstantAdminDatabase } from "@instantdb/admin";
 import type { JSX } from "preact";
 import {
   getConversationInfo as backendGetConversationInfo,
@@ -50,9 +52,24 @@ const accessDb = (): InstantReactWebDatabase<typeof schema> => {
   return db;
 };
 
+let adminDb: InstantAdminDatabase<typeof schema> | null = null;
+
+const accessAdminDb = (): InstantAdminDatabase<typeof schema> => {
+  if (!adminDb) {
+    adminDb = adminInit({ appId: instantAppId, schema }).asUser({
+      guest: true,
+    });
+  }
+  return adminDb;
+};
+
 export const useGetOrCreateConversation: (
-  params: { credentials: Credentials; participants: string[] },
-) => string | null = useGetOrCreateConversationNoDb(accessDb);
+  params: {
+    credentials: Credentials;
+    participants: string[];
+    initialMessage?: string;
+  },
+) => string | null = useGetOrCreateConversationNoDb(accessAdminDb, accessDb);
 
 export const useConversations: (
   publicSignKey: string,
@@ -82,7 +99,7 @@ export const createConversation: (
   publicSignKeys: string[],
   conversationTitle: string,
 ) => Promise<{ conversationId: string } | { error: string }> =
-  createConversationNoDb(accessDb);
+  createConversationNoDb(accessAdminDb);
 
 export const getConversations = async (publicSignKeys: string[]): Promise<{
   id: string;
@@ -110,8 +127,11 @@ export const getConversationInfo = (conversationId: string): Promise<
   | { error: "not-found" }
 > => backendGetConversationInfo(conversationId);
 
-export const embedScript = ({ publicSignKey, initialMessage }: {
+export const embedScript = ({ publicSignKey, initialMessage, startOpen }: {
   publicSignKey: string;
   initialMessage: string;
+  startOpen?: boolean;
 }): string =>
-  `<script src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js" async onload="aliceAndBot.loadChatWidget({ dialingTo: '${publicSignKey}', initialMessage: '${initialMessage}' })"></script>`;
+  `<script src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js" async onload="aliceAndBot.loadChatWidget({ dialingTo: '${publicSignKey}', initialMessage: '${initialMessage}'${
+    startOpen ? ", startOpen: true" : ""
+  } })"></script>`;

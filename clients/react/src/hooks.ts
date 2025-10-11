@@ -1,6 +1,8 @@
+import type { InstantAdminDatabase } from "@instantdb/admin";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { map, pipe, sort, unique } from "gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { sendTyping } from "../../../backend/src/api.ts";
 import type schema from "../../../instant.schema.ts";
 import {
   createConversation,
@@ -10,7 +12,6 @@ import {
   decryptMessage,
   sendMessageWithKey,
 } from "../../../protocol/src/clientApi.ts";
-import { sendTyping } from "../../../backend/src/api.ts";
 import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
 
 export const compactPublicKey = (k: string): string =>
@@ -100,41 +101,43 @@ const initialMessageLogic = (
   }, [initialMessage, messages, conversationId, conversationKey]);
 };
 
-export const useGetOrCreateConversation =
-  (db: () => InstantReactWebDatabase<typeof schema>) =>
-  ({ credentials, participants, initialMessage }: {
-    credentials: Credentials;
-    participants: string[];
-    initialMessage?: string;
-  }): string | null => {
-    const [conversation, setConversation] = useState<string | null>(null);
-    const conversations = useConversations(db)(credentials.publicSignKey);
-    const fixedParticipants = sort(
-      unique([credentials.publicSignKey, ...participants]),
+export const useGetOrCreateConversation = (
+  adminDb: () => InstantAdminDatabase<typeof schema>,
+  db: () => InstantReactWebDatabase<typeof schema>,
+) =>
+({ credentials, participants, initialMessage }: {
+  credentials: Credentials;
+  participants: string[];
+  initialMessage?: string;
+}): string | null => {
+  const [conversation, setConversation] = useState<string | null>(null);
+  const conversations = useConversations(db)(credentials.publicSignKey);
+  const fixedParticipants = sort(
+    unique([credentials.publicSignKey, ...participants]),
+  );
+  useEffect(() => {
+    if (conversation || !conversations) return;
+    const existingConversation = conversations.find(
+      matchesParticipants(fixedParticipants),
     );
-    useEffect(() => {
-      if (conversation || !conversations) return;
-      const existingConversation = conversations.find(
-        matchesParticipants(fixedParticipants),
-      );
-      if (existingConversation) {
-        setConversation(existingConversation.id);
-        return;
+    if (existingConversation) {
+      setConversation(existingConversation.id);
+      return;
+    }
+    createConversation(adminDb)(fixedParticipants, "Chat").then((result) => {
+      if ("error" in result) {
+        console.error("Error creating conversation:", result.error);
       }
-      createConversation(db)(fixedParticipants, "Chat").then((result) => {
-        if ("error" in result) {
-          console.error("Error creating conversation:", result.error);
-        }
-      });
-    }, [conversation, conversations, fixedParticipants]);
-    initialMessageLogic(
-      db(),
-      conversation ?? crypto.randomUUID(),
-      credentials,
-      initialMessage ?? "",
-    );
-    return conversation;
-  };
+    });
+  }, [conversation, conversations, fixedParticipants]);
+  initialMessageLogic(
+    db(),
+    conversation ?? crypto.randomUUID(),
+    credentials,
+    initialMessage ?? "",
+  );
+  return conversation;
+};
 
 export const useCredentials = (name: string | null, key: string) => {
   const [credentials, setCredentials] = useState<Credentials | null>(null);

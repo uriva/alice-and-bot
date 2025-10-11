@@ -7,7 +7,11 @@ import { toast, Toaster } from "react-hot-toast";
 const elementId = "alice-and-bot-widget-root";
 
 const Entry = (
-  { dialTo, initialMessage }: { dialTo: string; initialMessage?: string },
+  { dialTo, initialMessage, startOpen }: {
+    dialTo: string;
+    initialMessage?: string;
+    startOpen?: boolean;
+  },
 ) => {
   const [name, setName] = useState<string | null>(null);
   const credentials = useCredentials(name, "aliceAndBotCredentials");
@@ -17,6 +21,7 @@ const Entry = (
       <Widget
         dialTo={[dialTo]}
         initialMessage={initialMessage}
+        startOpen={startOpen}
         onNameChosen={(userName) => {
           if (credentials) return;
           const trimmed = userName.trim();
@@ -34,12 +39,23 @@ const Entry = (
 };
 
 export const loadChatWidget = (
-  { dialingTo, initialMessage }: { dialingTo: string; initialMessage?: string },
+  { dialingTo, initialMessage, startOpen }: {
+    dialingTo: string;
+    initialMessage?: string;
+    startOpen?: boolean;
+  },
 ) => {
   const existing = document.getElementById(elementId);
   if (existing) return;
   const div = document.createElement("div");
   div.id = elementId;
   document.body.appendChild(div);
-  render(<Entry dialTo={dialingTo} initialMessage={initialMessage} />, div);
+  render(
+    <Entry
+      dialTo={dialingTo}
+      initialMessage={initialMessage}
+      startOpen={startOpen}
+    />,
+    div,
+  );
 };
