@@ -404,7 +404,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
       style={{ display: "flex", flexDirection: "column", gap: 16 }}
       class={`${textColorStyle} mb-2`}
     >
-      <div>Your display name: {name ?? "loading..."}</div>
+      {name && <div>Your display name: {name}</div>}
       <div>
         Your public key is <CopyableString str={publicSignKey} />
       </div>

@@ -202,7 +202,7 @@ const WithCredentials = (
         conversationId={conversation}
       />
     )
-    : <div>Loading...</div>;
+    : null;
 };
 
 const overlayZIndex = 10000;
