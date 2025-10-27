@@ -2,7 +2,7 @@ import { signal } from "@preact/signals";
 import { coerce } from "gamla";
 import type { JSX } from "preact";
 import { createPortal } from "preact/compat";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { toast } from "react-hot-toast";
 import { useDarkMode, useIsMobile } from "../../clients/react/src/hooks.ts";
 import {
