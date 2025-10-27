@@ -374,7 +374,7 @@ const InnerWidget = (
               setNameDialog(true);
             }}
           >
-            {buttonText ?? credentials ? "Chat" : "Start chat"}
+            {buttonText ?? (credentials ? "Chat" : "Start chat")}
           </button>
         )}
     </>
