@@ -377,22 +377,8 @@ export const Widget = (props: WidgetProps): JSX.Element => {
   const isDark = useDarkMode();
   useLayoutEffect(() => {
     if (hostRef.current && !shadowRoot) {
-      console.log("Setting alice&bot shadow root v3");
+      console.log("Setting alice&bot shadow root v4");
       const root = hostRef.current.attachShadow({ mode: "open" });
-
-      const style = document.createElement("style");
-      style.textContent = `
-        :host {
-          all: initial;
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          z-index: 999999;
-          display: block;
-        }
-      `;
-      root.appendChild(style);
-
       setShadowRoot(root);
     }
   }, [hostRef.current, shadowRoot]);
@@ -404,28 +390,81 @@ export const Widget = (props: WidgetProps): JSX.Element => {
     }
   }, [shadowRoot, chatOpen.value]);
 
+  useEffect(() => {
+    if (hostRef.current) {
+      const host = hostRef.current;
+      const rect = host.getBoundingClientRect();
+      const computed = globalThis.getComputedStyle(host);
+      console.log("Host element debug:", {
+        rect: {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        },
+        position: computed.position,
+        zIndex: computed.zIndex,
+        display: computed.display,
+        pointerEvents: computed.pointerEvents,
+      });
+
+      if (shadowRoot && containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const containerComputed = globalThis.getComputedStyle(
+          containerRef.current,
+        );
+        console.log("Container debug:", {
+          rect: {
+            top: containerRect.top,
+            left: containerRect.left,
+            width: containerRect.width,
+            height: containerRect.height,
+          },
+          position: containerComputed.position,
+          display: containerComputed.display,
+        });
+      }
+    }
+  }, [hostRef.current, shadowRoot, containerRef.current, chatOpen.value]);
+
   return (
-    <div ref={hostRef}>
+    <div
+      ref={hostRef}
+      style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 999999,
+      }}
+    >
       {shadowRoot &&
         createPortal(
           <div
-            ref={containerRef}
             style={{
-              ...containerStyle({ isMobile, isDark, isOpen: chatOpen.value }),
-              pointerEvents: "auto",
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
             }}
           >
-            {chatOpen.value && (
-              <button
-                type="button"
-                aria-label="Close chat"
-                style={closeButtonStyle(isDark)}
-                onClick={() => (chatOpen.value = false)}
-              >
-                ×
-              </button>
-            )}
-            <InnerWidget {...props} />
+            <div
+              ref={containerRef}
+              style={{
+                ...containerStyle({ isMobile, isDark, isOpen: chatOpen.value }),
+                pointerEvents: "auto",
+              }}
+            >
+              {chatOpen.value && (
+                <button
+                  type="button"
+                  aria-label="Close chat"
+                  style={closeButtonStyle(isDark)}
+                  onClick={() => (chatOpen.value = false)}
+                >
+                  ×
+                </button>
+              )}
+              <InnerWidget {...props} />
+            </div>
           </div>,
           shadowRoot,
         )}
