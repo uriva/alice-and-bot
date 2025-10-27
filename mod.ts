@@ -128,7 +128,15 @@ export const getConversationInfo = (conversationId: string): Promise<
   | { error: "not-found" }
 > => backendGetConversationInfo(conversationId);
 
-export const embedScript = (params: WidgetParams): string =>
-  `<script src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js" async onload="aliceAndBot.loadChatWidget(${
-    JSON.stringify(params)
-  })"></script>`;
+export const embedScript = (params: WidgetParams): string => `
+<script type="application/json" id="alice-and-bot-params">
+  ${JSON.stringify(params)}
+</script>
+<script>
+  const widgetParams = JSON.parse(document.getElementById('alice-and-bot-params').textContent);
+  const s = document.createElement('script');
+  s.src = "https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js";
+  s.async = true;
+  s.onload = () => aliceAndBot.loadChatWidget(widgetParams);
+  document.head.appendChild(s);
+</script>`;
