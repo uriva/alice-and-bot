@@ -380,28 +380,43 @@ export const Widget = (props: WidgetProps): JSX.Element => {
     if (hostRef.current && !shadowRoot) {
       setShadowRoot(hostRef.current.attachShadow({ mode: "open" }));
     }
-  }, [hostRef.current, !shadowRoot]);
+  }, [hostRef.current, shadowRoot]);
   return (
-    <div ref={hostRef}>
-      {shadowRoot && createPortal(
-        <div
-          ref={containerRef}
-          style={containerStyle({ isMobile, isDark, isOpen: chatOpen.value })}
-        >
-          {chatOpen.value && (
-            <button
-              type="button"
-              aria-label="Close chat"
-              style={closeButtonStyle(isDark)}
-              onClick={() => (chatOpen.value = false)}
-            >
-              ×
-            </button>
-          )}
-          <InnerWidget {...props} />
-        </div>,
-        shadowRoot,
-      )}
+    <div
+      ref={hostRef}
+      style={{
+        position: "fixed",
+        bottom: 24,
+        right: 24,
+        width: 0,
+        height: 0,
+        pointerEvents: "none",
+        zIndex: 999999,
+      }}
+    >
+      {shadowRoot &&
+        createPortal(
+          <div
+            ref={containerRef}
+            style={{
+              ...containerStyle({ isMobile, isDark, isOpen: chatOpen.value }),
+              pointerEvents: "auto", // enable interactions
+            }}
+          >
+            {chatOpen.value && (
+              <button
+                type="button"
+                aria-label="Close chat"
+                style={closeButtonStyle(isDark)}
+                onClick={() => (chatOpen.value = false)}
+              >
+                ×
+              </button>
+            )}
+            <InnerWidget {...props} />
+          </div>,
+          shadowRoot,
+        )}
     </div>
   );
 };
