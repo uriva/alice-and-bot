@@ -377,8 +377,16 @@ export const Widget = (props: WidgetProps): JSX.Element => {
   const isDark = useDarkMode();
   useLayoutEffect(() => {
     if (hostRef.current && !shadowRoot) {
-      console.log("Setting alice&bot shadow root v4");
+      console.log("Setting alice&bot shadow root v5");
       const root = hostRef.current.attachShadow({ mode: "open" });
+
+      const host = hostRef.current;
+      host.style.setProperty("display", "block", "important");
+      host.style.setProperty("position", "fixed", "important");
+      host.style.setProperty("inset", "0", "important");
+      host.style.setProperty("pointer-events", "none", "important");
+      host.style.setProperty("z-index", "999999", "important");
+
       setShadowRoot(root);
     }
   }, [hostRef.current, shadowRoot]);
@@ -428,15 +436,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
   }, [hostRef.current, shadowRoot, containerRef.current, chatOpen.value]);
 
   return (
-    <div
-      ref={hostRef}
-      style={{
-        position: "fixed",
-        inset: 0,
-        pointerEvents: "none",
-        zIndex: 999999,
-      }}
-    >
+    <div ref={hostRef}>
       {shadowRoot &&
         createPortal(
           <div
