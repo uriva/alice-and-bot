@@ -1,7 +1,7 @@
+import type { InstantAdminDatabase } from "@instantdb/admin";
+import { init as adminInit } from "@instantdb/admin";
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { init } from "@instantdb/react";
-import { init as adminInit } from "@instantdb/admin";
-import type { InstantAdminDatabase } from "@instantdb/admin";
 import type { JSX } from "preact";
 import {
   getConversationInfo as backendGetConversationInfo,
@@ -22,6 +22,7 @@ import {
   instantAppId,
   publicSignKeyToAlias as publicSignKeyToAliasNoDb,
 } from "./protocol/src/clientApi.ts";
+import type { WidgetParams } from "./widget/src/widget.tsx";
 export {
   aliasToPublicSignKey,
   sendTyping,
@@ -127,11 +128,7 @@ export const getConversationInfo = (conversationId: string): Promise<
   | { error: "not-found" }
 > => backendGetConversationInfo(conversationId);
 
-export const embedScript = ({ publicSignKey, initialMessage, startOpen }: {
-  publicSignKey: string;
-  initialMessage: string;
-  startOpen?: boolean;
-}): string =>
-  `<script src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js" async onload="aliceAndBot.loadChatWidget({ dialingTo: '${publicSignKey}', initialMessage: '${initialMessage}'${
-    startOpen ? ", startOpen: true" : ""
-  } })"></script>`;
+export const embedScript = (params: WidgetParams): string =>
+  `<script src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js" async onload="aliceAndBot.loadChatWidget(${
+    JSON.stringify(params)
+  })"></script>`;

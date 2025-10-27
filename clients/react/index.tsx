@@ -34,7 +34,7 @@ const WithCredentials = (
       <Widget
         onNameChosen={() => {}}
         credentials={participants[0]}
-        dialTo={participants.map((x) => x.publicSignKey)}
+        participants={participants.map((x) => x.publicSignKey)}
       />
     );
   }

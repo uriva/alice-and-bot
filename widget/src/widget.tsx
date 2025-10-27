@@ -289,16 +289,28 @@ const Overlay = () => (
   />
 );
 
-type WidgetProps = {
-  dialTo: string[];
+export type WidgetParams = {
+  participants: string[];
   initialMessage?: string;
-  credentials: Credentials | null;
-  onNameChosen: (name: string) => void;
   startOpen?: boolean;
+  buttonText?: string;
+  defaultName?: string;
 };
 
+type WidgetProps = {
+  credentials: Credentials | null;
+  onNameChosen: (name: string) => void;
+} & WidgetParams;
+
 const InnerWidget = (
-  { onNameChosen, dialTo, credentials, startOpen, initialMessage }: WidgetProps,
+  {
+    onNameChosen,
+    participants,
+    credentials,
+    startOpen,
+    initialMessage,
+    buttonText,
+  }: WidgetProps,
 ) => {
   const isMobile = useIsMobile();
   const isDark = useDarkMode();
@@ -345,7 +357,7 @@ const InnerWidget = (
           ? (
             <WithCredentials
               initialMessage={initialMessage}
-              dialTo={dialTo}
+              dialTo={participants}
               credentials={credentials}
             />
           )
@@ -362,7 +374,7 @@ const InnerWidget = (
               setNameDialog(true);
             }}
           >
-            {credentials ? "Chat" : "Start Chat"}
+            {buttonText ?? credentials ? "Chat" : "Start chat"}
           </button>
         )}
     </>
