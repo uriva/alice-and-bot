@@ -376,8 +376,9 @@ export const Widget = (props: WidgetProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const isDark = useDarkMode();
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (hostRef.current && !shadowRoot) {
+      console.log("Setting alice&bot shadow root");
       setShadowRoot(hostRef.current.attachShadow({ mode: "open" }));
     }
   }, [hostRef.current, shadowRoot]);
