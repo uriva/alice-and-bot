@@ -208,15 +208,14 @@ const WithCredentials = (
 const overlayZIndex = 10000;
 
 const commonContainerProps = {
-  position: "fixed",
+  position: "absolute",
   flexDirection: "column",
 };
 
 const fixedPosition = {
   right: 24,
-  position: "fixed",
+  position: "absolute",
   bottom: 24,
-  zIndex: 10001,
 };
 
 const containerStyle = (
@@ -278,7 +277,7 @@ const closeButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
 const Overlay = () => (
   <div
     style={{
-      position: "fixed",
+      position: "absolute",
       inset: 0,
       zIndex: overlayZIndex,
       background: "transparent",
@@ -378,7 +377,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
   const isDark = useDarkMode();
   useLayoutEffect(() => {
     if (hostRef.current && !shadowRoot) {
-      console.log("Setting alice&bot shadow root");
+      console.log("Setting alice&bot shadow root v2");
       setShadowRoot(hostRef.current.attachShadow({ mode: "open" }));
     }
   }, [hostRef.current, shadowRoot]);
@@ -387,10 +386,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
       ref={hostRef}
       style={{
         position: "fixed",
-        bottom: 24,
-        right: 24,
-        width: 0,
-        height: 0,
+        inset: 0,
         pointerEvents: "none",
         zIndex: 999999,
       }}
