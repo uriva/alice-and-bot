@@ -393,6 +393,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
       const root = hostRef.current.attachShadow({ mode: "open" });
 
       const host = hostRef.current;
+      host.style.setProperty("direction", "ltr", "important");
       host.style.setProperty("display", "block", "important");
       host.style.setProperty("position", "fixed", "important");
       host.style.setProperty("inset", "0", "important");
