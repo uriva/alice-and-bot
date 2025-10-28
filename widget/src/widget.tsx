@@ -12,6 +12,27 @@ import {
 } from "../../mod.ts";
 import { widgetColors } from "../../clients/react/src/design.tsx";
 
+const fontStack = [
+  "Inter",
+  "ui-sans-serif",
+  "system-ui",
+  "-apple-system",
+  "Segoe UI",
+  "Roboto",
+  "Ubuntu",
+  "Cantarell",
+  "Noto Sans",
+  "Helvetica Neue",
+  "Arial",
+  "Apple Color Emoji",
+  "Segoe UI Emoji",
+].join(", ");
+
+const widgetBaseCss = `
+:host, *, *::before, *::after { font-family: ${fontStack}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+:host { color-scheme: light dark; }
+`;
+
 const getStartButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
   background: isDark
     ? "linear-gradient(90deg, #232526 0%, #414345 100%)"
@@ -43,6 +64,7 @@ const overlayStyle: JSX.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   padding: "16px",
+  fontFamily: fontStack,
 };
 
 const dialogBoxStyle = (isDark: boolean): JSX.CSSProperties => ({
@@ -409,6 +431,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
       {shadowRoot &&
         createPortal(
           <div>
+            <style>{widgetBaseCss}</style>
             <div
               ref={containerRef}
               style={{
