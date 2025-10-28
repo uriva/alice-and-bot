@@ -205,7 +205,7 @@ const NameDialog = ({ isOpen, onClose, onSubmit }: NameDialogProps) => {
 
 const LoadingCredentials = () => {
   const isDark = useDarkMode();
-  return <div style={widgetColors(isDark)}></div>;
+  return <div style={{ height: "100%", ...widgetColors(isDark) }}></div>;
 };
 
 const WithCredentials = (
