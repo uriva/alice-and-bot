@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { ComponentChildren } from "preact";
+import type { ComponentChildren, JSX } from "preact";
 import {
   centerFillStyle,
   chatContainerStyle,
@@ -64,13 +64,28 @@ const remarkHtmlToText = () => (tree: MdNode) => {
   visit(tree);
 };
 
-const bubbleImgStyle = {
+const bubbleImgStyle: JSX.CSSProperties = {
   display: "block",
   maxWidth: "100%",
   height: "auto",
   borderRadius: 8,
   marginTop: 6,
-} as const;
+};
+
+const bubbleVideoStyle: JSX.CSSProperties = {
+  display: "block",
+  maxWidth: "100%",
+  height: "auto",
+  borderRadius: 8,
+  marginTop: 6,
+  background: "#000",
+};
+
+const bubbleAudioStyle: JSX.CSSProperties = {
+  display: "block",
+  width: "100%",
+  marginTop: 6,
+};
 
 const htmlImgToMarkdown = (text: string) => {
   const rx = /<img\s+[^>]*>/gi;
@@ -81,6 +96,37 @@ const htmlImgToMarkdown = (text: string) => {
     return `![${alt}](${src})`;
   });
 };
+
+const isVideoUrl = (href?: string) =>
+  !!href && /\.(mp4|webm|ogg|m4v|mov)(\?.*)?$/i.test(href);
+const isAudioUrl = (href?: string) =>
+  !!href && /\.(mp3|wav|ogg|m4a|flac)(\?.*)?$/i.test(href);
+
+const htmlMediaToLinks = (text: string) => {
+  let out = text;
+  // <video src="...">
+  out = out.replace(/<video\s+[^>]*>/gi, (tag) => {
+    const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
+    if (!/^https?:\/\//i.test(src)) return tag;
+    return src;
+  });
+  // <audio src="...">
+  out = out.replace(/<audio\s+[^>]*>/gi, (tag) => {
+    const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
+    if (!/^https?:\/\//i.test(src)) return tag;
+    return src;
+  });
+  // <source src="..."> (inside media)
+  out = out.replace(/<source\s+[^>]*>/gi, (tag) => {
+    const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
+    if (!/^https?:\/\//i.test(src)) return tag;
+    return src;
+  });
+  return out;
+};
+
+const preprocessText = (text: string) =>
+  htmlImgToMarkdown(htmlMediaToLinks(text));
 
 const copyOverlayStyle = (
   { isDark }: { isDark: boolean },
@@ -395,21 +441,44 @@ const Message = (
             remarkPlugins={[remarkGfm, remarkHtmlToText]}
             components={{
               // @ts-expect-error react-markdown types are not fully compatible with Preact here
-              a: ({ children, href }) => (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: textColor,
-                    textDecoration: "underline",
-                    overflowWrap: "anywhere",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {children}
-                </a>
-              ),
+              a: ({ children, href }) => {
+                if (isVideoUrl(href)) {
+                  return (
+                    <video
+                      src={href}
+                      controls
+                      preload="metadata"
+                      playsInline
+                      style={bubbleVideoStyle}
+                    />
+                  );
+                }
+                if (isAudioUrl(href)) {
+                  return (
+                    <audio
+                      src={href}
+                      controls
+                      preload="metadata"
+                      style={bubbleAudioStyle}
+                    />
+                  );
+                }
+                return (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: textColor,
+                      textDecoration: "underline",
+                      overflowWrap: "anywhere",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {children}
+                  </a>
+                );
+              },
               // @ts-expect-error react-markdown types are not fully compatible with Preact here
               img: ({ src, alt }) => (
                 <img src={src} alt={alt} style={bubbleImgStyle} />
@@ -418,7 +487,7 @@ const Message = (
               code: CodeBlock,
             }}
           >
-            {htmlImgToMarkdown(text)}
+            {preprocessText(text)}
           </ReactMarkdown>
         </div>
         <span
