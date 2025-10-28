@@ -100,7 +100,7 @@ render(
   <Main
     adminDb={() =>
       initAdmin({ appId: instantAppId, schema }).asUser({ guest: true })}
-    db={() => init({ appId: instantAppId, schema })}
+    db={() => init({ appId: instantAppId, schema, devtool: false })}
   />,
   coerce(document.getElementById("root")),
 );
