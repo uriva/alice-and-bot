@@ -40,7 +40,7 @@ const WithCredentials = (
   }
   return conversation
     ? (
-      <div style={{ display: "flex", gap: 10 }}>
+      <div style={{ display: "flex", gap: 10, height: 850 }}>
         {participants.slice(0, widgetMode.value ? 1 : participants.length)
           .map((p) => (
             <ChatWithDb
