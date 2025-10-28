@@ -214,7 +214,7 @@ const spinnerStyle = (isDark: boolean): JSX.CSSProperties => ({
   animation: "spin 1s linear infinite",
 });
 
-const LoadingCredentials = () => {
+const Loading = () => {
   const isDark = useDarkMode();
   return (
     <div
@@ -261,7 +261,7 @@ const WithCredentials = (
         conversationId={conversation}
       />
     )
-    : <LoadingCredentials />;
+    : <Loading />;
 };
 
 const overlayZIndex = 10000;
@@ -410,7 +410,7 @@ const InnerWidget = ({
       />
       {isMobile && chatOpen.value && <Overlay />}
       {chatOpen.value
-        ? (credentials
+        ? credentials
           ? (
             <WithCredentials
               initialMessage={initialMessage}
@@ -418,7 +418,7 @@ const InnerWidget = ({
               credentials={credentials}
             />
           )
-          : <p>Loading credentials...</p>)
+          : <Loading />
         : (
           <button
             type="button"

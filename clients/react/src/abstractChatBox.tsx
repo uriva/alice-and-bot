@@ -64,6 +64,24 @@ const remarkHtmlToText = () => (tree: MdNode) => {
   visit(tree);
 };
 
+const bubbleImgStyle = {
+  display: "block",
+  maxWidth: "100%",
+  height: "auto",
+  borderRadius: 8,
+  marginTop: 6,
+} as const;
+
+const htmlImgToMarkdown = (text: string) => {
+  const rx = /<img\s+[^>]*>/gi;
+  return text.replace(rx, (tag) => {
+    const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
+    if (!/^https?:\/\//i.test(src)) return tag;
+    const alt = /\salt=["']([^"']*)["']/i.exec(tag)?.[1] ?? "";
+    return `![${alt}](${src})`;
+  });
+};
+
 const copyOverlayStyle = (
   { isDark }: { isDark: boolean },
 ) => ({
@@ -314,13 +332,15 @@ export const ChatAvatar = (
   );
 };
 
+type MessageProps = {
+  msg: AbstracChatMessage;
+  next: AbstracChatMessage | undefined;
+  isOwn: boolean;
+};
+
 const Message = (
   { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
-    {
-      msg: AbstracChatMessage;
-      next: AbstracChatMessage | undefined;
-      isOwn: boolean;
-    },
+    MessageProps,
 ) => {
   const isFirstOfSequence = !next || next.authorId !== authorId;
   const isDark = useDarkMode();
@@ -391,10 +411,14 @@ const Message = (
                 </a>
               ),
               // @ts-expect-error react-markdown types are not fully compatible with Preact here
+              img: ({ src, alt }) => (
+                <img src={src} alt={alt} style={bubbleImgStyle} />
+              ),
+              // @ts-expect-error react-markdown types are not fully compatible with Preact here
               code: CodeBlock,
             }}
           >
-            {text}
+            {htmlImgToMarkdown(text)}
           </ReactMarkdown>
         </div>
         <span
