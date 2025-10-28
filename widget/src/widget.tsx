@@ -302,16 +302,14 @@ type WidgetProps = {
   onNameChosen: (name: string) => void;
 } & WidgetParams;
 
-const InnerWidget = (
-  {
-    onNameChosen,
-    participants,
-    credentials,
-    startOpen,
-    initialMessage,
-    buttonText,
-  }: WidgetProps,
-) => {
+const InnerWidget = ({
+  onNameChosen,
+  participants,
+  credentials,
+  startOpen,
+  initialMessage,
+  buttonText,
+}: WidgetProps) => {
   const isMobile = useIsMobile();
   const isDark = useDarkMode();
   const [showNameDialog, setNameDialog] = useState(false);
