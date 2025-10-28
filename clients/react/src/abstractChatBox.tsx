@@ -484,7 +484,6 @@ const messageContainerStyle = (isDark: boolean) => ({
   gap: 8,
   transition: "background 0.2s",
   flexDirection: "column",
-  background: isDark ? "#181c23" : "#f8fafc",
   scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
   padding: 4,
 });
@@ -616,12 +615,7 @@ export const AbstractChatBox = (
     <div style={chatContainerStyle(isDark)}>
       <div style={titleStyle(isDark)}>{title}</div>
       {onClose && <CloseButton onClose={onClose} />}
-      <div
-        ref={messagesContainerRef}
-        style={{
-          ...messageContainerStyle(isDark),
-        }}
-      >
+      <div ref={messagesContainerRef} style={messageContainerStyle(isDark)}>
         {isLoading
           ? <div style={centerFillStyle(isDark)}>Loading…</div>
           : messages.length === 0
@@ -661,7 +655,6 @@ export const AbstractChatBox = (
           gap: 8,
           flex: "0 0 auto",
           minHeight: 44,
-          paddingTop: 4,
         }}
       >
         <textarea

@@ -10,6 +10,7 @@ import {
   type Credentials,
   useGetOrCreateConversation,
 } from "../../mod.ts";
+import { widgetColors } from "../../clients/react/src/design.tsx";
 
 const getStartButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
   background: isDark
@@ -180,6 +181,11 @@ const NameDialog = ({ isOpen, onClose, onSubmit }: NameDialogProps) => {
   );
 };
 
+const LoadingCredentials = () => {
+  const isDark = useDarkMode();
+  return <div style={widgetColors(isDark)}></div>;
+};
+
 const WithCredentials = (
   { dialTo, credentials, initialMessage }: {
     dialTo: string[];
@@ -202,7 +208,7 @@ const WithCredentials = (
         conversationId={conversation}
       />
     )
-    : null;
+    : <LoadingCredentials />;
 };
 
 const overlayZIndex = 10000;

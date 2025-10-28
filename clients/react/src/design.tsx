@@ -1,12 +1,15 @@
+export const widgetColors = (isDarkMode: boolean) => ({
+  background: isDarkMode ? "#22232a" : "#fff",
+  color: isDarkMode ? "#f4f4f4" : "#222",
+});
+
 export const chatContainerStyle = (isDarkMode: boolean) => ({
   position: "relative",
   display: "flex",
   overflow: "hidden",
   flexDirection: "column",
   flexGrow: 1,
-  background: isDarkMode ? "#22232a" : "#fff",
-  color: isDarkMode ? "#f4f4f4" : "#222",
-  borderColor: isDarkMode ? "#393a44" : "#ccc",
+  ...widgetColors(isDarkMode),
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
 });
 
