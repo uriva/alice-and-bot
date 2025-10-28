@@ -387,9 +387,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
   const isDark = useDarkMode();
   useLayoutEffect(() => {
     if (hostRef.current && !shadowRoot) {
-      console.log("Setting alice&bot shadow root v5");
       const root = hostRef.current.attachShadow({ mode: "open" });
-
       const host = hostRef.current;
       host.setAttribute("dir", "ltr");
       host.style.setProperty("display", "block", "important");
@@ -397,66 +395,14 @@ export const Widget = (props: WidgetProps): JSX.Element => {
       host.style.setProperty("inset", "0", "important");
       host.style.setProperty("pointer-events", "none", "important");
       host.style.setProperty("z-index", "999999", "important");
-
       setShadowRoot(root);
     }
   }, [hostRef.current, shadowRoot]);
-
-  useEffect(() => {
-    if (shadowRoot) {
-      console.log("Shadow root children count:", shadowRoot.childNodes.length);
-      console.log("Shadow root HTML:", shadowRoot.innerHTML);
-    }
-  }, [shadowRoot, chatOpen.value]);
-
-  useEffect(() => {
-    if (hostRef.current) {
-      const host = hostRef.current;
-      const rect = host.getBoundingClientRect();
-      const computed = globalThis.getComputedStyle(host);
-      console.log("Host element debug:", {
-        rect: {
-          top: rect.top,
-          left: rect.left,
-          width: rect.width,
-          height: rect.height,
-        },
-        position: computed.position,
-        zIndex: computed.zIndex,
-        display: computed.display,
-        pointerEvents: computed.pointerEvents,
-      });
-
-      if (shadowRoot && containerRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const containerComputed = globalThis.getComputedStyle(
-          containerRef.current,
-        );
-        console.log("Container debug:", {
-          rect: {
-            top: containerRect.top,
-            left: containerRect.left,
-            width: containerRect.width,
-            height: containerRect.height,
-          },
-          position: containerComputed.position,
-          display: containerComputed.display,
-        });
-      }
-    }
-  }, [hostRef.current, shadowRoot, containerRef.current, chatOpen.value]);
-
   return (
     <div ref={hostRef}>
       {shadowRoot &&
         createPortal(
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              pointerEvents: "none",
-            }}
-          >
+          <div>
             <div
               ref={containerRef}
               style={{
