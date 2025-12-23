@@ -358,7 +358,7 @@ const CodeBlock = (
           }}
         >
           {lang && <span style={codeLabelStyle({ isDark })}>{lang}</span>}
-          <code class={className}>{codeStr}</code>
+          <code className={className}>{codeStr}</code>
         </div>
       </pre>
     </div>
@@ -480,7 +480,6 @@ const Message = (
           <ReactMarkdown
             remarkPlugins={[remarkGfm, remarkHtmlToText]}
             components={{
-              // @ts-expect-error react-markdown types are not fully compatible with Preact here
               p: MarkdownParagraph,
               // @ts-expect-error react-markdown types are not fully compatible with Preact here
               a: ({ children, href }) => {
@@ -525,7 +524,6 @@ const Message = (
               img: ({ src, alt }) => (
                 <img src={src} alt={alt} style={bubbleImgStyle} />
               ),
-              // @ts-expect-error react-markdown types are not fully compatible with Preact here
               code: CodeBlock,
             }}
           >
