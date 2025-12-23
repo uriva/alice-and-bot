@@ -54,7 +54,7 @@ const hasBlockLevelChild = (children: ComponentChildren): boolean => {
   return false;
 };
 
-const MarkdownParagraph = ({ children }: { children: ComponentChildren }) =>
+const MarkdownParagraph = ({ children }: { children?: ComponentChildren }) =>
   hasBlockLevelChild(children)
     ? <div style={paragraphSpacingStyle}>{children}</div>
     : <p style={paragraphSpacingStyle}>{children}</p>;
@@ -284,7 +284,7 @@ const CodeBlock = (
   { inline, className, children }: {
     inline?: boolean;
     className?: string;
-    children: ComponentChildren;
+    children?: ComponentChildren;
   },
 ) => {
   const isDark = useDarkMode();
