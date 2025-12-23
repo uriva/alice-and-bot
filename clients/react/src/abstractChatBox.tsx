@@ -480,6 +480,7 @@ const Message = (
           <ReactMarkdown
             remarkPlugins={[remarkGfm, remarkHtmlToText]}
             components={{
+              // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
               p: MarkdownParagraph,
               // @ts-expect-error react-markdown types are not fully compatible with Preact here
               a: ({ children, href }) => {
@@ -524,6 +525,7 @@ const Message = (
               img: ({ src, alt }) => (
                 <img src={src} alt={alt} style={bubbleImgStyle} />
               ),
+              // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
               code: CodeBlock,
             }}
           >
