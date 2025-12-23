@@ -12,3 +12,6 @@ smaller functions.
 
 Prefer destructuring in the signature of functions, e.g. `function f({a, b})`
 instead of `function f(x)` and then `x.a`, `x.b`.
+
+Avoid duplciation by creating small reusable functions or components. Never copy
+nontrivial portions of code.

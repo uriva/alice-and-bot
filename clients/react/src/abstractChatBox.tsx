@@ -9,6 +9,7 @@ import {
   chatContainerStyle,
   isLightColor,
   loadingStyle,
+  Spinner,
   stringToColor,
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
@@ -751,7 +752,11 @@ export const AbstractChatBox = (
       {onClose && <CloseButton onClose={onClose} />}
       <div ref={messagesContainerRef} style={messageContainerStyle(isDark)}>
         {isLoading
-          ? <div style={centerFillStyle(isDark)}>Loading…</div>
+          ? (
+            <div style={centerFillStyle(isDark)}>
+              <Spinner />
+            </div>
+          )
           : messages.length === 0
           ? (
             <div

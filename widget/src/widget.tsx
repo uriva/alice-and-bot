@@ -10,7 +10,7 @@ import {
   type Credentials,
   useGetOrCreateConversation,
 } from "../../mod.ts";
-import { widgetColors } from "../../clients/react/src/design.tsx";
+import { Spinner, widgetColors } from "../../clients/react/src/design.tsx";
 
 const fontStack = [
   "Inter",
@@ -203,17 +203,6 @@ const NameDialog = ({ isOpen, onClose, onSubmit }: NameDialogProps) => {
   );
 };
 
-const spinnerStyle = (isDark: boolean): JSX.CSSProperties => ({
-  width: "40px",
-  height: "40px",
-  border: `4px solid ${
-    isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"
-  }`,
-  borderTop: `4px solid ${isDark ? "#fff" : "#6a82fb"}`,
-  borderRadius: "50%",
-  animation: "spin 1s linear infinite",
-});
-
 const Loading = () => {
   const isDark = useDarkMode();
   return (
@@ -226,15 +215,7 @@ const Loading = () => {
         ...widgetColors(isDark),
       }}
     >
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
-      <div style={spinnerStyle(isDark)} />
+      <Spinner />
     </div>
   );
 };

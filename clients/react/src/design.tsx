@@ -1,3 +1,6 @@
+import type { JSX } from "preact";
+import { useDarkMode } from "./hooks.ts";
+
 export const widgetColors = (isDarkMode: boolean) => ({
   background: isDarkMode ? "#22232a" : "#fff",
   color: isDarkMode ? "#f4f4f4" : "#222",
@@ -51,4 +54,30 @@ export const isLightColor = (hsl: string) => {
   if (!match) return false;
   const lightness = parseInt(match[1], 10);
   return lightness > 60;
+};
+
+const spinnerStyle = (isDark: boolean): JSX.CSSProperties => ({
+  width: 40,
+  height: 40,
+  border: `4px solid ${isDark ? "#ffffff1a" : "#00000010"}`,
+  borderTop: `4px solid ${isDark ? "#2563eb" : "#3182ce"}`,
+  borderRadius: "50%",
+  animation: "spin 1s linear infinite",
+});
+
+export const Spinner = () => {
+  const isDark = useDarkMode();
+  return (
+    <>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+      <div style={spinnerStyle(isDark)} />
+    </>
+  );
 };
