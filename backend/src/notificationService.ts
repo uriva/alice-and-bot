@@ -1,4 +1,4 @@
-import { coerce } from "gamla";
+import { coerce } from "@uri/gamla";
 import webpush from "web-push";
 import type { WebhookUpdate } from "../../protocol/src/clientApi.ts";
 import { query, transact, tx } from "./db.ts";

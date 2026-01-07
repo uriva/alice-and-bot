@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { coerce } from "gamla";
+import { coerce } from "@uri/gamla";
 import type { JSX } from "preact";
 import { createPortal } from "preact/compat";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";

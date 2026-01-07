@@ -1,5 +1,5 @@
 import { init } from "@instantdb/admin";
-import { coerce } from "gamla";
+import { coerce } from "@uri/gamla";
 import schema from "../../instant.schema.ts";
 import { instantAppId } from "../../protocol/src/clientApi.ts";
 

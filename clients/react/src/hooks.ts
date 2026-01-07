@@ -1,6 +1,6 @@
 import type { InstantAdminDatabase } from "@instantdb/admin";
 import type { InstantReactWebDatabase } from "@instantdb/react";
-import { map, pipe, sort, unique } from "gamla";
+import { map, pipe, sort, unique } from "@uri/gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { sendTyping } from "../../../backend/src/api.ts";
 import type schema from "../../../instant.schema.ts";

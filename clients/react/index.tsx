@@ -1,7 +1,7 @@
 import { init as initAdmin, type InstantAdminDatabase } from "@instantdb/admin";
 import { init, type InstantReactWebDatabase } from "@instantdb/react";
 import { signal } from "@preact/signals";
-import { coerce } from "gamla";
+import { coerce } from "@uri/gamla";
 import { render } from "preact";
 import schema from "../../instant.schema.ts";
 import {

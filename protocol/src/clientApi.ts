@@ -1,6 +1,6 @@
 import type { InstantAdminDatabase } from "@instantdb/admin";
 import type { InstaQLEntity } from "@instantdb/core";
-import { map, pipe } from "gamla";
+import { map, pipe } from "@uri/gamla";
 import stringify from "safe-stable-stringify";
 import { apiClient } from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";

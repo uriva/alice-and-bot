@@ -19,9 +19,9 @@
     "@preact/preset-vite": "npm:@preact/preset-vite@2.10.2",
     "@preact/signals": "npm:@preact/signals@2.1.1",
     "@std/assert": "jsr:@std/assert@1",
+    "@uri/gamla": "jsr:@uri/gamla@0.0.14",
     "buffer": "npm:buffer@6.0.3",
-    "gamla": "npm:gamla@124.0.0",
-    "posthog-js": "npm:posthog-js@1.215.6",
+    "posthog-js": "npm:posthog-js@1.313.0",
     "preact-iso": "npm:preact-iso@2.9.1",
     "preact": "npm:preact@10.26.7",
     "preact/hooks": "npm:preact@10.26.7/hooks",
@@ -44,6 +44,6 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.113",
+  "version": "0.0.114",
   "exports": "./mod.ts"
 }

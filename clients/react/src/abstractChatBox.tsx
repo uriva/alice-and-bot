@@ -1,4 +1,4 @@
-import { sortKey } from "gamla";
+import { sortKey } from "@uri/gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { FaPaperPlane } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";

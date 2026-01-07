@@ -1,5 +1,5 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
-import { pipe } from "gamla";
+import { pipe } from "@uri/gamla";
 import type { ComponentChildren, JSX } from "preact";
 import { useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";

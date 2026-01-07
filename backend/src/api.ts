@@ -1,5 +1,5 @@
 import type { User } from "@instantdb/core";
-import { hash } from "gamla";
+import { hash } from "@uri/gamla";
 import {
   apiClient as apiClientMaker,
   type ApiImplementation,
