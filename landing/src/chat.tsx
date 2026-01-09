@@ -57,8 +57,9 @@ const startConversation = async (
   credentials: Credentials,
   rawInput: string,
 ): Promise<string | null> => {
-  // Split by comma, trim, drop empties
-  const tokens = rawInput.split(",").map((t) => t.trim()).filter(Boolean);
+  // Split by comma, trim, drop empties, strip @ prefix
+  const tokens = rawInput.split(",").map((t) => t.trim().replace(/^@/, ""))
+    .filter(Boolean);
   if (tokens.length === 0) {
     toast.error("Enter at least one @alias or public key");
     return null;
