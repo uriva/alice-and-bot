@@ -747,7 +747,7 @@ export const AbstractChatBox = (
   };
 
   return (
-    <div style={chatContainerStyle(isDark)}>
+    <div style={chatContainerStyle(isDark, isMobile)}>
       <div style={titleStyle(isDark)}>{title}</div>
       {onClose && <CloseButton onClose={onClose} />}
       <div ref={messagesContainerRef} style={messageContainerStyle(isDark)}>

@@ -34,7 +34,7 @@ const NotFound = () => (
 const App = () => (
   <LocationProvider>
     <Toaster />
-    <div className="flex flex-col flex-grow gap-3 font-sans">
+    <div className="flex flex-col h-full w-full font-sans">
       <ErrorBoundary>
         <Router>
           {routes.map(({ path, component }) => (

@@ -278,9 +278,9 @@ const containerStyle = (
         ...commonContainerProps,
         ...fixedPosition,
         width: "min(400px, 90vw)",
-        height: "min(80vh, 720px)",
+        height: "min(80dvh, 720px)",
         maxWidth: "calc(100vw - 48px)",
-        maxHeight: "calc(100vh - 48px)",
+        maxHeight: "calc(100dvh - 48px)",
         boxShadow: isDark
           ? "0 10px 30px rgba(0,0,0,0.5)"
           : "0 10px 30px rgba(0,0,0,0.12)",

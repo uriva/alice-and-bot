@@ -1001,10 +1001,10 @@ export const Messenger = () => {
     if (!initializedFromQuery) setInitializedFromQuery(true);
   }, [credentials, JSON.stringify(location.query)]);
   return (
-    <div class={`p-4 flex flex-col h-screen ${textColorStyle} md:items-center`}>
-      <div class="flex flex-col flex-grow w-full md:max-w-2xl lg:max-w-3xl">
+    <div class={`flex flex-col h-full w-full ${textColorStyle}`}>
+      <div class="flex flex-col flex-grow w-full md:max-w-2xl lg:max-w-3xl md:mx-auto md:px-4">
         <div
-          class="mb-4"
+          class="mb-4 px-4 md:px-0"
           style={{ display: "flex", alignItems: "baseline", gap: 8 }}
         >
           <div class="text-xl font-bold">👧🤖 Alice&Bot</div>

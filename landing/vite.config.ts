@@ -4,7 +4,7 @@ import deno from "@deno/vite-plugin";
 
 export default defineConfig({
   root: "./",
-  server: { port: 3000 },
+  server: { port: 3000, allowedHosts: true },
   plugins: [preact(), deno()],
   build: { sourcemap: true },
 });
