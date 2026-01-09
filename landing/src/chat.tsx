@@ -29,7 +29,7 @@ import { registerPush } from "../../protocol/src/pushClient.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath } from "./paths.ts";
 
-const db = init({ appId: instantAppId, schema });
+const db = init({ appId: instantAppId, schema, devtool: false });
 const adminDb = adminInit({ appId: instantAppId, schema }).asUser({
   guest: true,
 });
