@@ -110,7 +110,7 @@ const startConversation = async (
   return response.conversationId;
 };
 
-const NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
+const _NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
   onCreated: (creds: Credentials) => void;
   storeInBrowser: boolean;
   setStoreInBrowser: (v: boolean) => void;
@@ -1027,9 +1027,9 @@ const MessengerLogin = ({ setCredentials }: {
   setCredentials: (creds: Credentials) => void;
 }) => {
   const [storeInBrowser, setStoreInBrowser] = useState(true);
-  const [showForm, setShowForm] = useState<null | "new" | "existing">(null);
-  const [newMode, setNewMode] = useState<null | "manual">(null);
-  const [creatingRandom, setCreatingRandom] = useState(false);
+  const [showForm, setShowForm] = useState<null | "existing">(null);
+  const [displayName, setDisplayName] = useState("");
+  const [creatingIdentity, setCreatingIdentity] = useState(false);
   const [showWhat, setShowWhat] = useState(false);
   const [showNoEmail, setShowNoEmail] = useState(false);
   const loc = useLocation();
@@ -1037,22 +1037,21 @@ const MessengerLogin = ({ setCredentials }: {
   // Keep showForm in sync with URL so browser back returns to the question
   useEffect(() => {
     const v = (loc.query["login"] ?? "") as string;
-    if (v === "new" || v === "existing") {
+    if (v === "existing") {
       setShowForm(v);
-      // Reset sub-flow choice when URL changes
-      if (v !== "new") setNewMode(null);
     } else {
       setShowForm(null);
-      setNewMode(null);
     }
   }, [JSON.stringify(loc.query)]);
 
-  const createRandomIdentity = async () => {
+  const createIdentityWithName = async (name: string) => {
+    if (!name.trim()) {
+      toast.error("Please enter a display name");
+      return;
+    }
     try {
-      setCreatingRandom(true);
-      // Simple random display name without prompting the user
-      const randomName = `Guest ${Math.floor(1000 + Math.random() * 9000)}`;
-      const creds = await createIdentity(randomName);
+      setCreatingIdentity(true);
+      const creds = await createIdentity(name.trim());
       if (storeInBrowser) {
         try {
           localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
@@ -1061,7 +1060,6 @@ const MessengerLogin = ({ setCredentials }: {
         }
       }
       setCredentials(creds);
-      // Clean the login step from URL so back navigation doesn’t reopen it
       const params = new URLSearchParams(globalThis.location.search);
       params.delete("login");
       const newUrl = `${loc.path}${
@@ -1069,10 +1067,10 @@ const MessengerLogin = ({ setCredentials }: {
       }`;
       router(newUrl);
     } catch (e) {
-      console.error("Error creating random identity", e);
-      toast.error("Unexpected error creating a random identity");
+      console.error("Error creating identity", e);
+      toast.error("Unexpected error creating identity");
     } finally {
-      setCreatingRandom(false);
+      setCreatingIdentity(false);
     }
   };
   return (
@@ -1080,30 +1078,52 @@ const MessengerLogin = ({ setCredentials }: {
       {showForm === null && (
         <div class="flex flex-col items-center gap-4 mb-6 flex-grow justify-center text-center px-4">
           <div class="text-lg font-semibold max-w-xl">
-            To start, we need your alice&bot identity. Do you have one?
+            We don't know you yet. What's your name?
           </div>
-          <div class="flex gap-3">
+          <div class="w-full max-w-md flex flex-col gap-3">
+            <input
+              class={inputStyle}
+              placeholder="Display name"
+              value={displayName}
+              onInput={(e) => setDisplayName(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && displayName.trim()) {
+                  createIdentityWithName(displayName);
+                }
+              }}
+            />
+            <div class="flex items-center">
+              <input
+                id="storeInBrowser0"
+                type="checkbox"
+                checked={storeInBrowser}
+                onChange={(e) => setStoreInBrowser(e.currentTarget.checked)}
+                class="mr-2"
+              />
+              <label for="storeInBrowser0" class={labelSmallStyle}>
+                This is my device, so store my credentials here
+              </label>
+            </div>
+            <div class="flex justify-center">
+              <button
+                type="button"
+                class={buttonGreenStyle + " px-8"}
+                disabled={creatingIdentity}
+                onClick={() => createIdentityWithName(displayName)}
+              >
+                {creatingIdentity ? "Creating..." : "Continue"}
+              </button>
+            </div>
             <button
               type="button"
-              class={buttonBlueStyle}
+              class="px-4 py-2 text-blue-600 dark:text-blue-300 hover:underline text-sm"
               onClick={() => {
                 const params = new URLSearchParams(globalThis.location.search);
                 params.set("login", "existing");
                 router(`${loc.path}?${params.toString()}`);
               }}
             >
-              Yes
-            </button>
-            <button
-              type="button"
-              class={buttonGreenStyle}
-              onClick={() => {
-                const params = new URLSearchParams(globalThis.location.search);
-                params.set("login", "new");
-                router(`${loc.path}?${params.toString()}`);
-              }}
-            >
-              No
+              I already have an account
             </button>
           </div>
         </div>
@@ -1145,58 +1165,6 @@ const MessengerLogin = ({ setCredentials }: {
             </div>
           )}
         </div>
-      )}
-      {showForm === "new" && (
-        <>
-          {newMode === null && (
-            <div class="flex flex-col items-center gap-4 mb-6 flex-grow justify-center text-center px-4">
-              <div class="text-lg font-semibold max-w-xl">
-                How do you want to continue?
-              </div>
-              <div class="flex gap-3 flex-wrap justify-center">
-                <button
-                  type="button"
-                  class={buttonBlueStyle}
-                  disabled={creatingRandom}
-                  onClick={() => setNewMode("manual")}
-                >
-                  Pick a name and alias
-                </button>
-                <button
-                  type="button"
-                  class={buttonGreenStyle}
-                  disabled={creatingRandom}
-                  onClick={createRandomIdentity}
-                >
-                  {creatingRandom ? "Creating…" : "Continue as random user"}
-                </button>
-              </div>
-              <div class="flex items-center mt-2">
-                <input
-                  id="storeInBrowser3"
-                  type="checkbox"
-                  checked={storeInBrowser}
-                  onChange={(e) => setStoreInBrowser(e.currentTarget.checked)}
-                  class="mr-2"
-                />
-                <label for="storeInBrowser3" class={labelSmallStyle}>
-                  Store credentials in this browser (recommended)
-                </label>
-              </div>
-            </div>
-          )}
-          {newMode === "manual" && (
-            <div class="flex flex-col items-center flex-grow justify-center px-4">
-              <div class="w-full max-w-md">
-                <NewUserForm
-                  onCreated={setCredentials}
-                  storeInBrowser={storeInBrowser}
-                  setStoreInBrowser={setStoreInBrowser}
-                />
-              </div>
-            </div>
-          )}
-        </>
       )}
       {showForm === "existing" && (
         <div class="flex flex-col items-center flex-grow justify-center px-4">
