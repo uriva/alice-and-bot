@@ -519,10 +519,50 @@ const ConversationListItem = (
   );
 };
 
+const EmptyChatsView = ({ searchQuery, onNewChat }: {
+  searchQuery?: string;
+  onNewChat?: () => void;
+}) => {
+  const isEmpty = !searchQuery?.trim();
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flexGrow: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+      }}
+    >
+      {isEmpty && (
+        <>
+          <div class="mb-6 text-center">
+            <BrandingLogo />
+          </div>
+          <button
+            type="button"
+            class="px-6 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            onClick={onNewChat}
+          >
+            + New Chat
+          </button>
+        </>
+      )}
+      {!isEmpty && (
+        <div class="text-gray-600 dark:text-gray-400">
+          No matching chats
+        </div>
+      )}
+    </div>
+  );
+};
+
 const OpenChats = (
-  { credentials, searchQuery }: {
+  { credentials, searchQuery, onNewChat }: {
     credentials: Credentials | null;
     searchQuery?: string;
+    onNewChat?: () => void;
   },
 ) => {
   const conversations = useConversations(() => db)(
@@ -538,13 +578,7 @@ const OpenChats = (
   return (
     <div style={{ display: "flex", flexDirection: "column", flexGrow: 1 }}>
       {filtered.length === 0
-        ? (
-          <div class="p-4 text-center text-gray-600 dark:text-gray-400">
-            <div>
-              {searchQuery?.trim() ? "No matching chats" : "No chats yet"}
-            </div>
-          </div>
-        )
+        ? <EmptyChatsView searchQuery={searchQuery} onNewChat={onNewChat} />
         : (
           <ul class="flex flex-col">
             {filtered.map((conv) => (
@@ -598,7 +632,10 @@ const _Nav = (
 };
 
 const NewChatScreen = (
-  { credentials }: { credentials: Credentials },
+  { credentials, onChatCreated }: {
+    credentials: Credentials;
+    onChatCreated?: () => void;
+  },
 ) => {
   const [otherParticipantPubKey, setOtherParticipantPubKey] = useState("");
   return (
@@ -618,7 +655,9 @@ const NewChatScreen = (
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                startConversation(credentials, otherParticipantPubKey);
+                startConversation(credentials, otherParticipantPubKey).then(
+                  () => onChatCreated?.(),
+                );
               }
             }}
           />
@@ -628,7 +667,9 @@ const NewChatScreen = (
               type="button"
               class={buttonGreenStyle}
               onClick={() =>
-                startConversation(credentials, otherParticipantPubKey)}
+                startConversation(credentials, otherParticipantPubKey).then(
+                  () => onChatCreated?.(),
+                )}
             >
               Start New Conversation
             </button>
@@ -774,11 +815,18 @@ const LoggedInMessenger = (
             }}
           >
             {view === "chats" && (
-              <OpenChats credentials={credentials} searchQuery={searchQuery} />
+              <OpenChats
+                credentials={credentials}
+                searchQuery={searchQuery}
+                onNewChat={() => setView("new_chat")}
+              />
             )}
             {view === "new_chat" && (
               <div class="p-4">
-                <NewChatScreen credentials={credentials} />
+                <NewChatScreen
+                  credentials={credentials}
+                  onChatCreated={() => setView("chats")}
+                />
               </div>
             )}
             {view === "identity" && (
@@ -895,6 +943,7 @@ const LoggedInMessenger = (
                   <OpenChats
                     credentials={credentials}
                     searchQuery={searchQuery}
+                    onNewChat={() => setView("new_chat")}
                   />
                 </div>
               </div>
@@ -913,28 +962,7 @@ const LoggedInMessenger = (
                       conversationId={selectedConversation.value}
                     />
                   )
-                  : (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        flexGrow: 1,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <div class="mb-6 text-center">
-                        <BrandingLogo />
-                      </div>
-                      <button
-                        type="button"
-                        class="px-6 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                        onClick={() => setView("new_chat")}
-                      >
-                        + New Chat
-                      </button>
-                    </div>
-                  )}
+                  : <EmptyChatsView onNewChat={() => setView("new_chat")} />}
               </div>
             </>
           )}
@@ -956,7 +984,10 @@ const LoggedInMessenger = (
                 class="p-4"
               >
                 <div style={{ maxWidth: "500px", width: "100%" }}>
-                  <NewChatScreen credentials={credentials} />
+                  <NewChatScreen
+                    credentials={credentials}
+                    onChatCreated={() => setView("chats")}
+                  />
                 </div>
               </div>
             </div>
