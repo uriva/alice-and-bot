@@ -670,11 +670,10 @@ const LoggedInMessenger = (
               credentials={credentials}
               conversationId={selectedConversation.value}
               onClose={() => {
-                // Mirror browser back to return to chats list state
+                selectedConversation.value = null;
+                // Also try browser back as fallback
                 if (typeof globalThis !== "undefined" && globalThis.history) {
                   globalThis.history.back();
-                } else {
-                  selectedConversation.value = null;
                 }
               }}
             />
@@ -1001,10 +1000,10 @@ export const Messenger = () => {
     if (!initializedFromQuery) setInitializedFromQuery(true);
   }, [credentials, JSON.stringify(location.query)]);
   return (
-    <div class={`flex flex-col h-full w-full ${textColorStyle}`}>
-      <div class="flex flex-col flex-grow w-full md:max-w-2xl lg:max-w-3xl md:mx-auto md:px-4">
+    <div class={`p-4 flex flex-col h-screen ${textColorStyle} md:items-center`}>
+      <div class="flex flex-col flex-grow w-full md:max-w-2xl lg:max-w-3xl">
         <div
-          class="mb-4 px-4 md:px-0"
+          class="mb-4"
           style={{ display: "flex", alignItems: "baseline", gap: 8 }}
         >
           <div class="text-xl font-bold">👧🤖 Alice&Bot</div>
