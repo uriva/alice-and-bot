@@ -115,39 +115,52 @@ export const LandingPage = () => (
         Read more
       </a>
     </div>
-    <div>
-      <div>Alice&Bot. Chat for AI era.</div>
-      <a
-        href={manifestoPath}
-        class="underline text-blue-700 dark:text-blue-300 hover:text-blue-900 ml-2"
-      >
-        Manifesto
-      </a>
-      <a
-        href="https://github.com/uriva/alice-and-bot"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="underline text-blue-700 dark:text-blue-300 hover:text-blue-900 ml-2"
-      >
-        GitHub
-      </a>
-      <a
-        href="https://discord.gg/xkGMFH9RAz"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="underline text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 ml-2"
-      >
-        Discord
-      </a>
-      <a
-        href="https://github.com/uriva/alice-and-bot"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="underline text-blue-700 dark:text-blue-300 hover:text-blue-900 ml-2"
-      >
-        API Docs
-      </a>
-      <div>&copy; {new Date().getFullYear()}</div>
-    </div>
+    <footer class="w-full bg-gradient-to-r from-blue-900 dark:from-gray-950 to-blue-800 dark:to-gray-900 border-t border-blue-700 dark:border-gray-700 mt-16">
+      <div class="max-w-6xl mx-auto px-4 py-12 flex flex-col items-center gap-8">
+        <div class="text-center">
+          <p class="text-lg font-semibold text-white mb-2">
+            Alice&Bot. Chat for the AI era.
+          </p>
+          <p class="text-sm text-blue-100 dark:text-gray-300">
+            The developer-first, privacy-first chat platform
+          </p>
+        </div>
+        <nav class="flex flex-wrap justify-center gap-6">
+          <a
+            href={manifestoPath}
+            class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
+          >
+            Manifesto
+          </a>
+          <a
+            href="https://github.com/uriva/alice-and-bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
+          >
+            GitHub
+          </a>
+          <a
+            href="https://discord.gg/xkGMFH9RAz"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
+          >
+            Discord
+          </a>
+          <a
+            href="https://github.com/uriva/alice-and-bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
+          >
+            API Docs
+          </a>
+        </nav>
+        <div class="border-t border-blue-700 dark:border-gray-700 w-full pt-6 text-center text-sm text-blue-100 dark:text-gray-400">
+          &copy; {new Date().getFullYear()} Alice&Bot. All rights reserved.
+        </div>
+      </div>
+    </footer>
   </main>
 );
