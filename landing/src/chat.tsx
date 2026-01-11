@@ -28,7 +28,7 @@ import {
 } from "../../protocol/src/clientApi.ts";
 import { registerPush } from "../../protocol/src/pushClient.ts";
 import { CopyableString } from "./components.tsx";
-import { chatPath } from "./paths.ts";
+import { chatPath, homePath } from "./paths.ts";
 
 const db = init({ appId: instantAppId, schema, devtool: false });
 const adminDb = adminInit({ appId: instantAppId, schema }).asUser({
@@ -270,7 +270,7 @@ const _NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
           class="mr-2"
         />
         <label for="storeInBrowser" class={labelSmallStyle}>
-          Store credentials in this browser (recommended)
+          {storeCredentialsLabel}
         </label>
       </div>
       {credentialsString && (
@@ -345,7 +345,7 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
           class="mr-2"
         />
         <label for="storeInBrowser2" class={labelSmallStyle}>
-          Store credentials in this browser (recommended)
+          {storeCredentialsLabel}
         </label>
       </div>
     </div>
@@ -680,6 +680,7 @@ const NewChatScreen = (
   );
 };
 const tagline = "Encrypted chat for the AI era";
+const storeCredentialsLabel = "This is my device, so store my credentials here";
 
 const isMatch =
   (myKey: string, chatWithKey: string) => ({ participants }: Conversation) => {
@@ -700,10 +701,13 @@ const LogoText = () => (
 );
 
 const BrandingLogo = (
-  { layout = "vertical" }: { layout?: "vertical" | "horizontal" },
+  { layout = "vertical", onClick }: {
+    layout?: "vertical" | "horizontal";
+    onClick?: () => void;
+  },
 ) => {
   const isHorizontal = layout === "horizontal";
-  return (
+  const content = (
     <div
       style={{
         display: isHorizontal ? "flex" : "block",
@@ -717,9 +721,25 @@ const BrandingLogo = (
       <LogoText />
     </div>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        class="hover:opacity-80 transition-opacity cursor-pointer"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return content;
 };
 
-const LogoHeader = () => <BrandingLogo layout="horizontal" />;
+const LogoHeader = ({ onClick }: { onClick?: () => void }) => (
+  <BrandingLogo layout="horizontal" onClick={onClick} />
+);
 
 const LoggedInMessenger = (
   { view, setView, credentials }: {
@@ -730,6 +750,7 @@ const LoggedInMessenger = (
 ) => {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
+  const router = useLocation().route;
 
   const showChatsList = isMobile ? !selectedConversation.value : true;
 
@@ -770,7 +791,7 @@ const LoggedInMessenger = (
         <div class="flex flex-col w-full h-full">
           {view === "chats" && (
             <div class="p-4 bg-white dark:bg-gray-900 flex-shrink-0">
-              <LogoHeader />
+              <LogoHeader onClick={() => router(homePath)} />
             </div>
           )}
           {view === "new_chat" && (
@@ -879,11 +900,12 @@ const LoggedInMessenger = (
                       justifyContent: "space-between",
                     }}
                   >
-                    <LogoHeader />
+                    <LogoHeader onClick={() => router(homePath)} />
                     <button
                       type="button"
                       class="w-10 h-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg transition-colors flex-shrink-0"
-                      onClick={() => setView("new_chat")}
+                      onClick={() =>
+                        setView("new_chat")}
                       title="New Chat"
                     >
                       <svg
@@ -908,8 +930,7 @@ const LoggedInMessenger = (
                     type="text"
                     placeholder="Search chats..."
                     value={searchQuery}
-                    onInput={(e) =>
-                      setSearchQuery(e.currentTarget.value)}
+                    onInput={(e) => setSearchQuery(e.currentTarget.value)}
                     class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 text-sm"
                   />
                 </div>
@@ -1101,7 +1122,7 @@ const MessengerLogin = ({ setCredentials }: {
                 class="mr-2"
               />
               <label for="storeInBrowser0" class={labelSmallStyle}>
-                This is my device, so store my credentials here
+                {storeCredentialsLabel}
               </label>
             </div>
             <div class="flex justify-center">
