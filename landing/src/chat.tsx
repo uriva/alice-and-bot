@@ -52,6 +52,44 @@ const selectedConversation = signal<string | null>(null);
 
 const Chat = ChatNoDb(() => db);
 
+const setViewportHeightVar = () => {
+  if (typeof document === "undefined") return;
+  const viewport = globalThis.visualViewport;
+  const height = viewport
+    ? Math.min(viewport.height, globalThis.innerHeight) -
+      (viewport.offsetTop ?? 0)
+    : globalThis.innerHeight;
+  const h = `${Math.max(height, 320)}px`;
+  const root = document.getElementById("root");
+  const targets = [document.documentElement, document.body, root].filter(
+    Boolean,
+  ) as HTMLElement[];
+  targets.forEach((el) => {
+    el.style.setProperty("--app-height", h);
+    el.style.height = h;
+    el.style.maxHeight = h;
+    el.style.minHeight = h;
+    el.style.overflow = "hidden";
+  });
+};
+
+const initViewportHeightListener = () => {
+  if (typeof document === "undefined") return () => {};
+  const handler = () => setViewportHeightVar();
+  setViewportHeightVar();
+  const viewport = globalThis.visualViewport;
+  viewport?.addEventListener("resize", handler);
+  viewport?.addEventListener("scroll", handler);
+  globalThis.addEventListener("resize", handler);
+  globalThis.addEventListener("orientationchange", handler);
+  return () => {
+    viewport?.removeEventListener("resize", handler);
+    viewport?.removeEventListener("scroll", handler);
+    globalThis.removeEventListener("resize", handler);
+    globalThis.removeEventListener("orientationchange", handler);
+  };
+};
+
 // Create a conversation with one or more other participants. Each token can be a
 // public sign key or an alias. Comma separated list.
 const startConversation = async (
@@ -755,8 +793,10 @@ const LoggedInMessenger = (
   const showChatsList = isMobile ? !selectedConversation.value : true;
 
   return (
-    <div class="flex flex-row h-full w-full">
-      {/* Desktop navigation panel */}
+    <div
+      class="flex flex-row h-full w-full overflow-hidden"
+      style={{ minHeight: 0 }}
+    >
       {!isMobile && (
         <div class="w-20 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col items-center py-6 gap-4">
           <button
@@ -788,7 +828,7 @@ const LoggedInMessenger = (
 
       {/* Mobile sidebar - Chats list (hidden when viewing chat) */}
       {isMobile && showChatsList && (
-        <div class="flex flex-col w-full h-full">
+        <div class="flex flex-col w-full h-full overflow-hidden">
           {view === "chats" && (
             <div class="p-4 bg-white dark:bg-gray-900 flex-shrink-0">
               <LogoHeader onClick={() => router(homePath)} />
@@ -1029,6 +1069,7 @@ const LoggedInMessenger = (
             flexDirection: "column",
             width: "100%",
             height: "100%",
+            minHeight: 0,
           }}
         >
           <Chat
@@ -1211,6 +1252,22 @@ export const Messenger = () => {
     credentials?.publicSignKey ?? "",
   );
   const [view, setView] = useState<View>("chats");
+  useEffect(() => initViewportHeightListener(), []);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const { body, documentElement } = document;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyOverscroll = body.style.overscrollBehaviorY;
+    const prevHtmlOverflow = documentElement.style.overflow;
+    body.style.overflow = "hidden";
+    body.style.overscrollBehaviorY = "contain";
+    documentElement.style.overflow = "hidden";
+    return () => {
+      body.style.overflow = prevBodyOverflow;
+      body.style.overscrollBehaviorY = prevBodyOverscroll;
+      documentElement.style.overflow = prevHtmlOverflow;
+    };
+  }, []);
   useEffect(() => {
     try {
       const stored = localStorage.getItem("alicebot_credentials");
@@ -1313,7 +1370,8 @@ export const Messenger = () => {
   }, [credentials, JSON.stringify(location.query)]);
   return (
     <div
-      class={`flex flex-col h-screen w-full overflow-hidden ${textColorStyle}`}
+      class={`flex flex-col w-full overflow-hidden ${textColorStyle}`}
+      style={{ height: "var(--app-height, 100dvh)" }}
     >
       {!credentials && <MessengerLogin setCredentials={setCredentials} />}
       {credentials && (

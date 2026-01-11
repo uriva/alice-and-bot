@@ -12,6 +12,7 @@ export const chatContainerStyle = (isDarkMode: boolean) => ({
   overflow: "hidden",
   flexDirection: "column",
   flexGrow: 1,
+  minHeight: 0,
   ...widgetColors(isDarkMode),
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
 });

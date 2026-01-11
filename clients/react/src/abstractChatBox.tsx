@@ -615,7 +615,7 @@ const messageContainerStyle = (isDark: boolean) => ({
   flex: "1 1 0",
   minHeight: 0,
   overflowY: "auto",
-  scrollbarGutter: "stable",
+  scrollbarGutter: "auto",
   gap: 8,
   transition: "background 0.2s",
   flexDirection: "column",
