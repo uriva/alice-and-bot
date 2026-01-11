@@ -34,16 +34,14 @@ const NotFound = () => (
 const App = () => (
   <LocationProvider>
     <Toaster />
-    <div className="flex flex-col flex-grow gap-3 font-sans">
-      <ErrorBoundary>
-        <Router>
-          {routes.map(({ path, component }) => (
-            <Route path={path} component={component} />
-          ))}
-          <Route default component={NotFound} />
-        </Router>
-      </ErrorBoundary>
-    </div>
+    <ErrorBoundary>
+      <Router>
+        {routes.map(({ path, component }) => (
+          <Route path={path} component={component} />
+        ))}
+        <Route default component={NotFound} />
+      </Router>
+    </ErrorBoundary>
   </LocationProvider>
 );
 

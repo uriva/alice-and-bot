@@ -639,7 +639,7 @@ const NewChatScreen = (
 ) => {
   const [otherParticipantPubKey, setOtherParticipantPubKey] = useState("");
   return (
-    <div class="flex flex-col items-center flex-grow justify-center px-4">
+    <div class="flex flex-col items-center px-4 py-8">
       <div class="w-full max-w-md">
         <div class="flex flex-col gap-3 mb-4">
           <input
@@ -734,10 +734,7 @@ const LoggedInMessenger = (
   const showChatsList = isMobile ? !selectedConversation.value : true;
 
   return (
-    <div
-      style={{ display: "flex", flexGrow: 1, flexDirection: "row" }}
-      class="h-full"
-    >
+    <div class="flex flex-row h-full w-full">
       {/* Desktop navigation panel */}
       {!isMobile && (
         <div class="w-20 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col items-center py-6 gap-4">
@@ -770,32 +767,25 @@ const LoggedInMessenger = (
 
       {/* Mobile sidebar - Chats list (hidden when viewing chat) */}
       {isMobile && showChatsList && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
-            backgroundColor: "inherit",
-          }}
-        >
+        <div class="flex flex-col w-full h-full">
           {view === "chats" && (
-            <div class="p-4 bg-white dark:bg-gray-900">
+            <div class="p-4 bg-white dark:bg-gray-900 flex-shrink-0">
               <LogoHeader />
             </div>
           )}
           {view === "new_chat" && (
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
               <h2 class="text-lg font-semibold">Start a new chat</h2>
             </div>
           )}
           {view === "identity" && (
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
               <h2 class="text-lg font-semibold">Account Settings</h2>
             </div>
           )}
 
           {view === "chats" && (
-            <div class="p-3 bg-white dark:bg-gray-900">
+            <div class="p-3 bg-white dark:bg-gray-900 flex-shrink-0">
               <input
                 type="text"
                 placeholder="Search chats..."
@@ -806,14 +796,7 @@ const LoggedInMessenger = (
             </div>
           )}
 
-          <div
-            style={{
-              display: "flex",
-              flexGrow: 1,
-              flexDirection: "column",
-              overflowY: "auto",
-            }}
-          >
+          <div class="flex-1 overflow-y-auto min-h-0">
             {view === "chats" && (
               <OpenChats
                 credentials={credentials}
@@ -822,22 +805,20 @@ const LoggedInMessenger = (
               />
             )}
             {view === "new_chat" && (
-              <div class="p-4">
-                <NewChatScreen
-                  credentials={credentials}
-                  onChatCreated={() => setView("chats")}
-                />
-              </div>
+              <NewChatScreen
+                credentials={credentials}
+                onChatCreated={() => setView("chats")}
+              />
             )}
             {view === "identity" && (
-              <div class="p-4 overflow-y-auto">
+              <div class="p-4">
                 <YourKey credentials={credentials} />
               </div>
             )}
           </div>
 
           {/* Mobile bottom buttons */}
-          <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 flex gap-2">
+          <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 flex gap-2 flex-shrink-0">
             <button
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
@@ -1026,6 +1007,7 @@ const LoggedInMessenger = (
             flexGrow: 1,
             flexDirection: "column",
             width: "100%",
+            height: "100%",
           }}
         >
           <Chat
@@ -1341,17 +1323,17 @@ export const Messenger = () => {
     if (!initializedFromQuery) setInitializedFromQuery(true);
   }, [credentials, JSON.stringify(location.query)]);
   return (
-    <div class={`flex flex-col h-screen w-full ${textColorStyle}`}>
-      <div class="flex flex-col flex-grow w-full">
-        {!credentials && <MessengerLogin setCredentials={setCredentials} />}
-        {credentials && (
-          <LoggedInMessenger
-            setView={setView}
-            credentials={credentials}
-            view={view}
-          />
-        )}
-      </div>
+    <div
+      class={`flex flex-col h-screen w-full overflow-hidden ${textColorStyle}`}
+    >
+      {!credentials && <MessengerLogin setCredentials={setCredentials} />}
+      {credentials && (
+        <LoggedInMessenger
+          setView={setView}
+          credentials={credentials}
+          view={view}
+        />
+      )}
     </div>
   );
 };
