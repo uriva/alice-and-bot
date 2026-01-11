@@ -1,6 +1,6 @@
 import { init as adminInit } from "@instantdb/admin";
 import { init } from "@instantdb/react";
-import { effect, signal } from "@preact/signals";
+import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
 import { useEffect, useState } from "preact/hooks";
 import { toast } from "react-hot-toast";
@@ -9,6 +9,7 @@ import {
   useConversations,
   useDarkMode,
   useIdentityProfile,
+  useIsMobile,
   useUserName,
 } from "../..//clients/react/src/hooks.ts";
 import { aliasToPublicSignKey } from "../../backend/src/api.ts";
@@ -492,10 +493,10 @@ const ConversationListItem = (
     <li key={conv.id}>
       <button
         type="button"
-        class={`w-full text-left p-2 rounded-lg flex items-center gap-3 ${
+        class={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 transition-colors ${
           selectedConversation.value === conv.id
-            ? "bg-blue-100 dark:bg-blue-700"
-            : "hover:bg-gray-100 dark:hover:bg-gray-700"
+            ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500"
+            : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
         }`}
         onClick={() => {
           selectedConversation.value = conv.id;
@@ -508,8 +509,10 @@ const ConversationListItem = (
             isDarkMode,
           )}
         />
-        <div class="flex-grow overflow-hidden">
-          <div class={`font-semibold ${textColorStyle}`}>{name ?? "..."}</div>
+        <div class="flex-grow overflow-hidden min-w-0">
+          <div class={`font-medium ${textColorStyle} truncate`}>
+            {name ?? "..."}
+          </div>
         </div>
       </button>
     </li>
@@ -517,32 +520,34 @@ const ConversationListItem = (
 };
 
 const OpenChats = (
-  { credentials, setView }: {
+  { credentials, searchQuery }: {
     credentials: Credentials | null;
-    setView: (view: View) => void;
+    searchQuery?: string;
   },
 ) => {
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
   ) ?? [];
+
+  const filtered = searchQuery?.trim()
+    ? conversations.filter((conv) =>
+      conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    : conversations;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", flexGrow: 1 }}>
-      {conversations.length === 0
+      {filtered.length === 0
         ? (
-          <div style={{ display: "flex", flexGrow: 1 }} class={emptyStyle}>
-            <div>No chats yet.</div>
-            <button
-              type="button"
-              class={buttonBlueStyle + " mt-4"}
-              onClick={() => setView("new_chat")}
-            >
-              Start a new chat
-            </button>
+          <div class="p-4 text-center text-gray-600 dark:text-gray-400">
+            <div>
+              {searchQuery?.trim() ? "No matching chats" : "No chats yet"}
+            </div>
           </div>
         )
         : (
-          <ul class="flex flex-col gap-1">
-            {conversations.map((conv) => (
+          <ul class="flex flex-col">
+            {filtered.map((conv) => (
               <ConversationListItem
                 key={conv.id}
                 conv={conv}
@@ -555,7 +560,7 @@ const OpenChats = (
   );
 };
 
-const Nav = (
+const _Nav = (
   { view, setView }: { view: View; setView: (view: View) => void },
 ) => {
   const buttonClass = (buttonView: View) =>
@@ -633,6 +638,7 @@ const NewChatScreen = (
     </div>
   );
 };
+const tagline = "Encrypted chat for the AI era";
 
 const isMatch =
   (myKey: string, chatWithKey: string) => ({ participants }: Conversation) => {
@@ -643,59 +649,366 @@ const isMatch =
 
 type View = "chats" | "new_chat" | "identity";
 
+const LogoText = () => (
+  <div>
+    <div class="text-sm font-semibold">Alice&Bot</div>
+    <div class="text-xs text-gray-600 dark:text-gray-400">
+      {tagline}
+    </div>
+  </div>
+);
+
+const BrandingLogo = (
+  { layout = "vertical" }: { layout?: "vertical" | "horizontal" },
+) => {
+  const isHorizontal = layout === "horizontal";
+  return (
+    <div
+      style={{
+        display: isHorizontal ? "flex" : "block",
+        alignItems: isHorizontal ? "center" : undefined,
+        gap: isHorizontal ? 8 : undefined,
+      }}
+    >
+      <div class={`text-2xl font-bold ${!isHorizontal ? "mb-2" : ""}`}>
+        👧🤖
+      </div>
+      <LogoText />
+    </div>
+  );
+};
+
+const LogoHeader = () => <BrandingLogo layout="horizontal" />;
+
 const LoggedInMessenger = (
   { view, setView, credentials }: {
     view: View;
     setView: (view: View) => void;
     credentials: Credentials;
   },
-) => (
-  <div
-    style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
-  >
-    <Nav
-      view={view}
-      setView={(view: View) => {
-        selectedConversation.value = null;
-        setView(view);
-      }}
-    />
+) => {
+  const isMobile = useIsMobile();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const showChatsList = isMobile ? !selectedConversation.value : true;
+
+  return (
     <div
-      style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
+      style={{ display: "flex", flexGrow: 1, flexDirection: "row" }}
+      class="h-full"
     >
-      {view === "chats" &&
-        (selectedConversation.value
-          ? (
-            <Chat
-              credentials={credentials}
-              conversationId={selectedConversation.value}
-              onClose={() => {
-                selectedConversation.value = null;
-                // Also try browser back as fallback
-                if (typeof globalThis !== "undefined" && globalThis.history) {
-                  globalThis.history.back();
-                }
-              }}
-            />
-          )
-          : <OpenChats credentials={credentials} setView={setView} />)}
-      {view === "new_chat" && (
-        <div class="flex flex-col items-center flex-grow justify-center px-4">
-          <div class="w-full max-w-md">
-            <NewChatScreen credentials={credentials} />
+      {/* Desktop navigation panel */}
+      {!isMobile && (
+        <div class="w-20 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col items-center py-6 gap-4">
+          <button
+            type="button"
+            class={`w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
+              view === "chats"
+                ? "bg-blue-600 text-white"
+                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+            onClick={() => setView("chats")}
+            title="Messages"
+          >
+            💬
+          </button>
+          <button
+            type="button"
+            class={`w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
+              view === "identity"
+                ? "bg-blue-600 text-white"
+                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+            onClick={() => setView("identity")}
+            title="Settings"
+          >
+            ⚙️
+          </button>
+        </div>
+      )}
+
+      {/* Mobile sidebar - Chats list (hidden when viewing chat) */}
+      {isMobile && showChatsList && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            backgroundColor: "inherit",
+          }}
+        >
+          {view === "chats" && (
+            <div class="p-4 bg-white dark:bg-gray-900">
+              <LogoHeader />
+            </div>
+          )}
+          {view === "new_chat" && (
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <h2 class="text-lg font-semibold">Start a new chat</h2>
+            </div>
+          )}
+          {view === "identity" && (
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <h2 class="text-lg font-semibold">Account Settings</h2>
+            </div>
+          )}
+
+          {view === "chats" && (
+            <div class="p-3 bg-white dark:bg-gray-900">
+              <input
+                type="text"
+                placeholder="Search chats..."
+                value={searchQuery}
+                onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 text-sm"
+              />
+            </div>
+          )}
+
+          <div
+            style={{
+              display: "flex",
+              flexGrow: 1,
+              flexDirection: "column",
+              overflowY: "auto",
+            }}
+          >
+            {view === "chats" && (
+              <OpenChats credentials={credentials} searchQuery={searchQuery} />
+            )}
+            {view === "new_chat" && (
+              <div class="p-4">
+                <NewChatScreen credentials={credentials} />
+              </div>
+            )}
+            {view === "identity" && (
+              <div class="p-4 overflow-y-auto">
+                <YourKey credentials={credentials} />
+              </div>
+            )}
+          </div>
+
+          {/* Mobile bottom buttons */}
+          <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 flex gap-2">
+            <button
+              type="button"
+              class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
+                view === "chats"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+              onClick={() => setView("chats")}
+            >
+              Chats
+            </button>
+            <button
+              type="button"
+              class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
+                view === "new_chat"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+              onClick={() => setView("new_chat")}
+            >
+              New
+            </button>
+            <button
+              type="button"
+              class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
+                view === "identity"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+              onClick={() => setView("identity")}
+            >
+              Settings
+            </button>
           </div>
         </div>
       )}
-      {view === "identity" && (
-        <div class="flex flex-col items-center flex-grow justify-center px-4">
-          <div class="w-full max-w-xl">
-            <YourKey credentials={credentials} />
-          </div>
+
+      {/* Desktop content area */}
+      {!isMobile && (
+        <div style={{ display: "flex", flexGrow: 1, flexDirection: "row" }}>
+          {view === "chats" && (
+            <>
+              {/* Chat list sidebar */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  width: "320px",
+                }}
+                class="border-r border-gray-200 dark:border-gray-700"
+              >
+                <div class="p-4 bg-white dark:bg-gray-900">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <LogoHeader />
+                    <button
+                      type="button"
+                      class="w-10 h-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg transition-colors flex-shrink-0"
+                      onClick={() => setView("new_chat")}
+                      title="New Chat"
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 3.8.9" />
+                        <line x1="12" y1="9" x2="12" y2="15" />
+                        <line x1="9" y1="12" x2="15" y2="12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="p-3 bg-white dark:bg-gray-900">
+                  <input
+                    type="text"
+                    placeholder="Search chats..."
+                    value={searchQuery}
+                    onInput={(e) =>
+                      setSearchQuery(e.currentTarget.value)}
+                    class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 text-sm"
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexGrow: 1,
+                    flexDirection: "column",
+                    overflowY: "auto",
+                  }}
+                >
+                  <OpenChats
+                    credentials={credentials}
+                    searchQuery={searchQuery}
+                  />
+                </div>
+              </div>
+              {/* Chat view */}
+              <div
+                style={{
+                  display: "flex",
+                  flexGrow: 1,
+                  flexDirection: "column",
+                }}
+              >
+                {selectedConversation.value
+                  ? (
+                    <Chat
+                      credentials={credentials}
+                      conversationId={selectedConversation.value}
+                    />
+                  )
+                  : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        flexGrow: 1,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div class="mb-6 text-center">
+                        <BrandingLogo />
+                      </div>
+                      <button
+                        type="button"
+                        class="px-6 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                        onClick={() => setView("new_chat")}
+                      >
+                        + New Chat
+                      </button>
+                    </div>
+                  )}
+              </div>
+            </>
+          )}
+          {view === "new_chat" && (
+            <div
+              style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
+            >
+              <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <h2 class="text-lg font-semibold">Start a new chat</h2>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexGrow: 1,
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                class="p-4"
+              >
+                <div style={{ maxWidth: "500px", width: "100%" }}>
+                  <NewChatScreen credentials={credentials} />
+                </div>
+              </div>
+            </div>
+          )}
+          {view === "identity" && (
+            <div
+              style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
+            >
+              <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <h2 class="text-lg font-semibold">Account Settings</h2>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexGrow: 1,
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                }}
+                class="p-8 overflow-y-auto"
+              >
+                <div style={{ maxWidth: "600px", width: "100%" }}>
+                  <YourKey credentials={credentials} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mobile chat view */}
+      {isMobile && view === "chats" && selectedConversation.value && (
+        <div
+          style={{
+            display: "flex",
+            flexGrow: 1,
+            flexDirection: "column",
+            width: "100%",
+          }}
+        >
+          <Chat
+            credentials={credentials}
+            conversationId={selectedConversation.value}
+            onClose={() => {
+              selectedConversation.value = null;
+            }}
+          />
         </div>
       )}
     </div>
-  </div>
-);
+  );
+};
 
 const MessengerLogin = ({ setCredentials }: {
   setCredentials: (creds: Credentials) => void;
@@ -896,9 +1209,6 @@ export const Messenger = () => {
     credentials?.publicSignKey ?? "",
   );
   const [view, setView] = useState<View>("chats");
-  effect(() => {
-    if (selectedConversation.value) setView("chats");
-  });
   useEffect(() => {
     try {
       const stored = localStorage.getItem("alicebot_credentials");
@@ -1000,15 +1310,8 @@ export const Messenger = () => {
     if (!initializedFromQuery) setInitializedFromQuery(true);
   }, [credentials, JSON.stringify(location.query)]);
   return (
-    <div class={`p-4 flex flex-col h-screen ${textColorStyle} md:items-center`}>
-      <div class="flex flex-col flex-grow w-full md:max-w-2xl lg:max-w-3xl">
-        <div
-          class="mb-4"
-          style={{ display: "flex", alignItems: "baseline", gap: 8 }}
-        >
-          <div class="text-xl font-bold">👧🤖 Alice&Bot</div>
-          <div>encrypted chat for AI era</div>
-        </div>
+    <div class={`flex flex-col h-screen w-full ${textColorStyle}`}>
+      <div class="flex flex-col flex-grow w-full">
         {!credentials && <MessengerLogin setCredentials={setCredentials} />}
         {credentials && (
           <LoggedInMessenger
@@ -1140,7 +1443,5 @@ const buttonGreenStyle =
 const textareaStyle =
   "w-full border rounded-lg p-2.5 text-sm bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white";
 const hintStyle = "text-xs text-gray-600 dark:text-gray-400 mt-1";
-const emptyStyle =
-  "text-gray-600 dark:text-gray-400 text-sm text-center flex flex-col justify-center items-center h-64";
 const buttonRedStyle =
   `${buttonBaseStyle} bg-red-600 hover:bg-red-700 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800`;
