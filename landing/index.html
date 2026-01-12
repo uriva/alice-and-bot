@@ -20,16 +20,18 @@
     <link rel="icon" type="image/png" href="/icon.png" />
     <style>
       html,
-      body,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+      }
+
       #root {
         margin: 0;
         padding: 0;
         width: 100%;
-        min-height: var(--app-height, 100svh);
-        height: var(--app-height, 100svh);
-        max-height: var(--app-height, 100svh);
-        overflow: hidden;
-        overscroll-behavior-y: contain;
+        display: flex;
+        flex-direction: column;
       }
 
       body {

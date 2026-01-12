@@ -927,7 +927,7 @@ const LoggedInMessenger = (
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  width: "320px",
+                  width: "380px",
                 }}
                 class="border-r border-gray-200 dark:border-gray-700"
               >
