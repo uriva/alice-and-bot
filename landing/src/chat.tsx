@@ -75,6 +75,20 @@ const setViewportHeightVar = () => {
 
 const initViewportHeightListener = () => {
   if (typeof document === "undefined") return () => {};
+
+  const root = document.getElementById("root");
+  const targets = [document.documentElement, document.body, root].filter(
+    Boolean,
+  ) as HTMLElement[];
+
+  const originalStyles = targets.map((el) => ({
+    height: el.style.height,
+    maxHeight: el.style.maxHeight,
+    minHeight: el.style.minHeight,
+    overflow: el.style.overflow,
+    appHeight: el.style.getPropertyValue("--app-height"),
+  }));
+
   const handler = () => setViewportHeightVar();
   setViewportHeightVar();
   const viewport = globalThis.visualViewport;
@@ -87,6 +101,19 @@ const initViewportHeightListener = () => {
     viewport?.removeEventListener("scroll", handler);
     globalThis.removeEventListener("resize", handler);
     globalThis.removeEventListener("orientationchange", handler);
+
+    targets.forEach((el, i) => {
+      const orig = originalStyles[i];
+      el.style.height = orig.height;
+      el.style.maxHeight = orig.maxHeight;
+      el.style.minHeight = orig.minHeight;
+      el.style.overflow = orig.overflow;
+      if (orig.appHeight) {
+        el.style.setProperty("--app-height", orig.appHeight);
+      } else {
+        el.style.removeProperty("--app-height");
+      }
+    });
   };
 };
 
@@ -1252,7 +1279,10 @@ export const Messenger = () => {
     credentials?.publicSignKey ?? "",
   );
   const [view, setView] = useState<View>("chats");
-  useEffect(() => initViewportHeightListener(), []);
+  useEffect(() => {
+    const cleanup = initViewportHeightListener();
+    return cleanup;
+  }, []);
   useEffect(() => {
     if (typeof document === "undefined") return;
     const { body, documentElement } = document;
