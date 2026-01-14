@@ -687,7 +687,7 @@ export const AbstractChatBox = (
     darkModeOverride?: boolean;
     customColors?: CustomColors;
   },
-) => {
+): JSX.Element => {
   const isMobile = useIsMobile();
   const [fetchingMore, setFetchingMore] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);

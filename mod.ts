@@ -14,6 +14,7 @@ import {
   useGetOrCreateConversation as useGetOrCreateConversationNoDb,
   useIdentityProfile as useIdentityProfileNoDb,
 } from "./clients/react/src/hooks.ts";
+import { AbstractChatBox } from "./clients/react/src/abstractChatBox.tsx";
 import { Chat as ChatNoDb, type ChatProps } from "./clients/react/src/main.tsx";
 import schema from "./instant.schema.ts";
 import {
@@ -127,6 +128,7 @@ export const getConversationInfo = (conversationId: string): Promise<
   }
   | { error: "not-found" }
 > => backendGetConversationInfo(conversationId);
+export { AbstractChatBox };
 
 export const embedScript = (params: WidgetParams): string => `
 <script type="application/json" id="alice-and-bot-params">
