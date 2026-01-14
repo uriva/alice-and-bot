@@ -18,8 +18,8 @@ const widgetMode = signal(true);
 const customScheme = signal<WidgetColorScheme>({
   dark: {
     primary: "#a855f7",
-    buttonColor: "#7c3aed",
-    buttonTextColor: "#ffffff",
+    startButton: "#7c3aed",
+    startButtonText: "#ffffff",
     background: "#0b1021",
   },
 });
@@ -84,14 +84,14 @@ const ColorPicker = () => {
     const defaults = mode === "dark"
       ? {
         primary: "#a855f7",
-        buttonColor: "#7c3aed",
-        buttonTextColor: "#ffffff",
+        startButton: "#7c3aed",
+        startButtonText: "#ffffff",
         background: "#0b1021",
       }
       : {
         primary: "#2563eb",
-        buttonColor: "#2563eb",
-        buttonTextColor: "#ffffff",
+        startButton: "#2563eb",
+        startButtonText: "#ffffff",
         background: "#f8fafc",
       };
     customScheme.value = { ...scheme, [mode]: defaults };
@@ -186,7 +186,7 @@ const ColorPicker = () => {
               gap: 8,
             }}
           >
-            {["primary", "background", "buttonColor", "buttonTextColor"].map((
+            {["primary", "background", "startButton", "startButtonText"].map((
               key,
             ) => (
               <label

@@ -42,8 +42,8 @@ type WidgetMode = "light" | "dark";
 export type ExportedWidgetModeColors = {
   primary: string;
   background: string;
-  buttonColor: string;
-  buttonTextColor: string;
+  startButton: string;
+  startButtonText: string;
 };
 
 type WidgetModeColors = {
@@ -56,8 +56,8 @@ type WidgetModeColors = {
   primaryText: string;
   neutralBg: string;
   neutralText: string;
-  buttonColor: string;
-  buttonTextColor: string;
+  startButton: string;
+  startButtonText: string;
   startShadow: string;
   inputBackground: string;
   inputBorder: string;
@@ -82,8 +82,8 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     primaryText: "#ffffff",
     neutralBg: "#e5e7eb",
     neutralText: "#111827",
-    buttonColor: "#2563eb",
-    buttonTextColor: "#ffffff",
+    startButton: "#2563eb",
+    startButtonText: "#ffffff",
     startShadow: "0 2px 8px rgba(80, 80, 120, 0.15)",
     inputBackground: "#f9fafb",
     inputBorder: "#d1d5db",
@@ -101,8 +101,8 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     primaryText: "#ffffff",
     neutralBg: "#4b5563",
     neutralText: "#f9fafb",
-    buttonColor: "#2563eb",
-    buttonTextColor: "#ffffff",
+    startButton: "#2563eb",
+    startButtonText: "#ffffff",
     startShadow: "0 2px 8px rgba(20, 20, 40, 0.35)",
     inputBackground: "#374151",
     inputBorder: "#4b5563",
@@ -137,8 +137,8 @@ const resolveAppearance = (
 };
 
 const getStartButtonStyle = (colors: WidgetModeColors): JSX.CSSProperties => ({
-  background: colors.buttonColor,
-  color: colors.buttonTextColor,
+  background: colors.startButton,
+  color: colors.startButtonText,
   fontWeight: "bold",
   padding: "12px 28px",
   border: "none",
