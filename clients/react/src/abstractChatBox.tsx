@@ -7,6 +7,7 @@ import type { ComponentChildren, JSX } from "preact";
 import {
   centerFillStyle,
   chatContainerStyle,
+  type CustomColors,
   isLightColor,
   loadingStyle,
   Spinner,
@@ -595,19 +596,14 @@ const CloseButton = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-const titleStyle = (isDark: boolean) => ({
+const titleStyle = (isDark: boolean, customColors?: CustomColors) => ({
   textAlign: "center",
   fontWeight: "bold",
   fontSize: "1.2em",
   padding: "0.7em 0 0.5em 0",
-  background: isDark ? "#23272f" : "#fff",
-  color: isDark ? "#f3f4f6" : "#222",
-  boxShadow: isDark
-    ? "0 1px 0 0 #23272f, 0 2px 8px 0 #0002"
-    : "0 1px 0 0 #e5e7eb, 0 2px 8px 0 #0001",
-  borderBottom: "none",
-  borderTopLeftRadius: isDark ? 0 : 16,
-  borderTopRightRadius: isDark ? 0 : 16,
+  background: customColors?.primary ?? (isDark ? "#2563eb" : "#3182ce"),
+  color: "#ffffff",
+  borderBottom: `1px solid ${isDark ? "#ffffff10" : "#00000008"}`,
 });
 
 const messageContainerStyle = (isDark: boolean) => ({
@@ -623,32 +619,43 @@ const messageContainerStyle = (isDark: boolean) => ({
   padding: 4,
 });
 
-const sendButtonStyle = (isDark: boolean, disabled: boolean) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "0 22px 0 16px",
-  height: 44,
-  borderRadius: 32,
-  border: "none",
-  background: !disabled
-    ? (isDark
-      ? "linear-gradient(90deg,#2563eb 60%,#60a5fa 100%)"
-      : "linear-gradient(90deg,#3182ce 60%,#60a5fa 100%)")
-    : (isDark ? "#23272f" : "#cbd5e1"),
-  color: !disabled ? "#fff" : (isDark ? "#aaa" : "#64748b"),
-  fontWeight: 700,
-  fontSize: 17,
-  cursor: !disabled ? "pointer" : "not-allowed",
-  boxShadow: isDark
-    ? "0 2px 8px rgba(0,0,0,0.18)"
-    : "0 2px 8px rgba(0,0,0,0.08)",
-  transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
-  opacity: !disabled ? 1 : 0.7,
-  borderTopLeftRadius: 12,
-  borderBottomLeftRadius: 12,
-  gap: 7,
-});
+const sendButtonStyle = (
+  isDark: boolean,
+  disabled: boolean,
+  customColors?: CustomColors,
+) => {
+  const primaryColor = customColors?.primary ??
+    (isDark ? "#2563eb" : "#3182ce");
+  const gradientEnd = customColors?.primary
+    ? `${primaryColor}dd` // slightly lighter version
+    : (isDark ? "#60a5fa" : "#60a5fa");
+
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0 18px",
+    minHeight: 44,
+    height: "100%",
+    borderRadius: 0,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 0,
+    border: "none",
+    background: !disabled
+      ? `linear-gradient(90deg, ${primaryColor} 60%, ${gradientEnd} 100%)`
+      : (isDark ? "#23272f" : "#cbd5e1"),
+    color: !disabled ? "#fff" : (isDark ? "#aaa" : "#64748b"),
+    fontWeight: 600,
+    fontSize: 15,
+    cursor: !disabled ? "pointer" : "not-allowed",
+    boxShadow: isDark
+      ? "0 2px 8px rgba(0,0,0,0.18)"
+      : "0 2px 8px rgba(0,0,0,0.08)",
+    transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
+    opacity: !disabled ? 1 : 0.7,
+    gap: 7,
+  };
+};
 
 export const AbstractChatBox = (
   {
@@ -663,6 +670,8 @@ export const AbstractChatBox = (
     typingUsers = [],
     onInputActivity,
     isLoading = false,
+    darkModeOverride,
+    customColors,
   }: {
     userId: string;
     onSend: (input: string) => void;
@@ -675,6 +684,8 @@ export const AbstractChatBox = (
     typingUsers?: string[];
     onInputActivity?: () => void;
     isLoading?: boolean;
+    darkModeOverride?: boolean;
+    customColors?: CustomColors;
   },
 ) => {
   const isMobile = useIsMobile();
@@ -717,7 +728,10 @@ export const AbstractChatBox = (
         );
     }
   }, [limit, messages, fetchingMore]);
-  const isDark = useDarkMode();
+  const systemDarkMode = useDarkMode();
+  const isDark = darkModeOverride !== undefined
+    ? darkModeOverride
+    : systemDarkMode;
 
   // Scroll to bottom when messages or typing indicator change
   useEffect(() => {
@@ -747,8 +761,8 @@ export const AbstractChatBox = (
   };
 
   return (
-    <div style={chatContainerStyle(isDark)}>
-      <div style={titleStyle(isDark)}>{title}</div>
+    <div style={chatContainerStyle(isDark, customColors)}>
+      <div style={titleStyle(isDark, customColors)}>{title}</div>
       {onClose && <CloseButton onClose={onClose} />}
       <div ref={messagesContainerRef} style={messageContainerStyle(isDark)}>
         {isLoading
@@ -790,10 +804,12 @@ export const AbstractChatBox = (
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 8,
+          alignItems: "stretch",
+          gap: 0,
           flex: "0 0 auto",
           minHeight: 44,
+          borderTop: `1px solid ${isDark ? "#ffffff10" : "#00000008"}`,
+          paddingTop: 8,
         }}
       >
         <textarea
@@ -810,15 +826,20 @@ export const AbstractChatBox = (
           onBlur={() => onInputActivity?.()}
           style={{
             flexGrow: 1,
-            padding: "12px 16px",
-            border: `2px solid ${isDark ? "#2563eb" : "#3182ce"}`,
-            borderRadius: 32,
+            padding: "10px 16px",
+            border: "none",
+            borderTopLeftRadius: 10,
+            borderBottomLeftRadius: 0,
+            borderTopRightRadius: 0,
+            borderBottomRightRadius: 0,
             background: isDark ? "#181c23" : "#f1f5f9",
             color: isDark ? "#f3f4f6" : "#1e293b",
             fontSize: 16,
             outline: "none",
             resize: "none",
-            minHeight: "1.5em",
+            boxSizing: "border-box",
+            height: 44,
+            minHeight: 44,
             overflowY: "auto",
             overflowX: "hidden",
             maxHeight: 200,
@@ -904,7 +925,7 @@ export const AbstractChatBox = (
               }
             }, 0);
           }}
-          style={sendButtonStyle(isDark, !input.trim())}
+          style={sendButtonStyle(isDark, !input.trim(), customColors)}
           title="Send"
         >
           <span

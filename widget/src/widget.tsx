@@ -4,13 +4,17 @@ import type { JSX } from "preact";
 import { createPortal } from "preact/compat";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { toast } from "react-hot-toast";
-import { useDarkMode, useIsMobile } from "../../clients/react/src/hooks.ts";
+import {
+  setDarkModeOverride,
+  useDarkMode,
+  useIsMobile,
+} from "../../clients/react/src/hooks.ts";
 import {
   Chat,
   type Credentials,
   useGetOrCreateConversation,
 } from "../../mod.ts";
-import { Spinner, widgetColors } from "../../clients/react/src/design.tsx";
+import { Spinner } from "../../clients/react/src/design.tsx";
 
 const fontStack = [
   "Inter",
@@ -28,23 +32,118 @@ const fontStack = [
   "Segoe UI Emoji",
 ].join(", ");
 
-const widgetBaseCss = `
+const widgetBaseCss = (colorScheme: "light" | "dark" | "light dark") => `
 :host, *, *::before, *::after { font-family: ${fontStack}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
-:host { color-scheme: light dark; }
+:host { color-scheme: ${colorScheme}; }
 `;
 
-const getStartButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
-  background: isDark
-    ? "linear-gradient(90deg, #232526 0%, #414345 100%)"
-    : "linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%)",
-  color: isDark ? "#fff" : "#fff",
+type WidgetMode = "light" | "dark";
+
+export type ExportedWidgetModeColors = {
+  primary: string;
+  background: string;
+  buttonColor: string;
+  buttonTextColor: string;
+};
+
+type WidgetModeColors = {
+  background: string;
+  text: string;
+  surface: string;
+  border: string;
+  overlay: string;
+  primary: string;
+  primaryText: string;
+  neutralBg: string;
+  neutralText: string;
+  buttonColor: string;
+  buttonTextColor: string;
+  startShadow: string;
+  inputBackground: string;
+  inputBorder: string;
+  inputText: string;
+  closeButtonBg: string;
+  closeButtonColor: string;
+};
+
+export type WidgetColorScheme = {
+  light?: Partial<ExportedWidgetModeColors>;
+  dark?: Partial<ExportedWidgetModeColors>;
+};
+
+const defaultColors: Record<WidgetMode, WidgetModeColors> = {
+  light: {
+    background: "#ffffff",
+    text: "#111827",
+    surface: "#ffffff",
+    border: "#d1d5db",
+    overlay: "rgba(0,0,0,0.4)",
+    primary: "#2563eb",
+    primaryText: "#ffffff",
+    neutralBg: "#e5e7eb",
+    neutralText: "#111827",
+    buttonColor: "#2563eb",
+    buttonTextColor: "#ffffff",
+    startShadow: "0 2px 8px rgba(80, 80, 120, 0.15)",
+    inputBackground: "#f9fafb",
+    inputBorder: "#d1d5db",
+    inputText: "#111827",
+    closeButtonBg: "rgba(0,0,0,0.06)",
+    closeButtonColor: "#111827",
+  },
+  dark: {
+    background: "#2a2a2a",
+    text: "#f3f4f6",
+    surface: "#2a2a2a",
+    border: "#4b5563",
+    overlay: "rgba(0,0,0,0.4)",
+    primary: "#2563eb",
+    primaryText: "#ffffff",
+    neutralBg: "#4b5563",
+    neutralText: "#f9fafb",
+    buttonColor: "#2563eb",
+    buttonTextColor: "#ffffff",
+    startShadow: "0 2px 8px rgba(20, 20, 40, 0.35)",
+    inputBackground: "#374151",
+    inputBorder: "#4b5563",
+    inputText: "#f9fafb",
+    closeButtonBg: "rgba(255,255,255,0.08)",
+    closeButtonColor: "#f3f4f6",
+  },
+};
+
+type ResolvedAppearance = {
+  mode: WidgetMode;
+  colors: WidgetModeColors;
+  colorSchemeValue: "light" | "dark" | "light dark";
+};
+
+const resolveAppearance = (
+  colorScheme: WidgetColorScheme | undefined,
+  prefersDark: boolean,
+): ResolvedAppearance => {
+  const hasLight = !!colorScheme?.light;
+  const hasDark = !!colorScheme?.dark;
+  const mode: WidgetMode = hasLight && hasDark
+    ? prefersDark ? "dark" : "light"
+    : hasDark
+    ? "dark"
+    : "light";
+  const colors = { ...defaultColors[mode], ...(colorScheme?.[mode] ?? {}) };
+  const colorSchemeValue: "light" | "dark" | "light dark" = hasLight && hasDark
+    ? "light dark"
+    : mode;
+  return { mode, colors, colorSchemeValue };
+};
+
+const getStartButtonStyle = (colors: WidgetModeColors): JSX.CSSProperties => ({
+  background: colors.buttonColor,
+  color: colors.buttonTextColor,
   fontWeight: "bold",
   padding: "12px 28px",
   border: "none",
   borderRadius: "999px",
-  boxShadow: isDark
-    ? "0 2px 8px rgba(20, 20, 40, 0.35)"
-    : "0 2px 8px rgba(80, 80, 120, 0.15)",
+  boxShadow: colors.startShadow,
   cursor: "pointer",
   fontSize: "1rem",
   transition: "background 0.2s, box-shadow 0.2s",
@@ -55,39 +154,41 @@ const getStartButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
 
 const chatOpen = signal(false);
 
-const overlayStyle: JSX.CSSProperties = {
+const overlayStyle = (colors: WidgetModeColors): JSX.CSSProperties => ({
   position: "fixed",
   inset: 0,
   zIndex: 10002,
-  background: "rgba(0,0,0,0.4)",
+  background: colors.overlay,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   padding: "16px",
   fontFamily: fontStack,
-};
+});
 
-const dialogBoxStyle = (isDark: boolean): JSX.CSSProperties => ({
-  background: isDark ? "#2a2a2a" : "#ffffff",
-  color: isDark ? "#f3f4f6" : "#111827",
+const dialogBoxStyle = (
+  { colors, mode }: { colors: WidgetModeColors; mode: WidgetMode },
+): JSX.CSSProperties => ({
+  background: colors.surface,
+  color: colors.text,
   width: "100%",
   maxWidth: 420,
   borderRadius: 12,
-  boxShadow: isDark
+  boxShadow: mode === "dark"
     ? "0 10px 30px rgba(0,0,0,0.5)"
     : "0 10px 30px rgba(0,0,0,0.12)",
   padding: 20,
 });
 
-const fieldStyle = (isDark: boolean): JSX.CSSProperties => ({
+const fieldStyle = (colors: WidgetModeColors): JSX.CSSProperties => ({
   width: "100%",
   maxWidth: "100%",
   boxSizing: "border-box",
   padding: "10px 12px",
   borderRadius: 8,
-  border: `1px solid ${isDark ? "#4b5563" : "#d1d5db"}`,
-  background: isDark ? "#374151" : "#f9fafb",
-  color: isDark ? "#f9fafb" : "#111827",
+  border: `1px solid ${colors.inputBorder}`,
+  background: colors.inputBackground,
+  color: colors.inputText,
   outline: "none",
 });
 
@@ -98,18 +199,18 @@ const actionsRowStyle: JSX.CSSProperties = {
   marginTop: 12,
 };
 
-const buttonNeutralStyle = (isDark: boolean): JSX.CSSProperties => ({
-  background: isDark ? "#4b5563" : "#e5e7eb",
-  color: isDark ? "#f9fafb" : "#111827",
+const buttonNeutralStyle = (colors: WidgetModeColors): JSX.CSSProperties => ({
+  background: colors.neutralBg,
+  color: colors.neutralText,
   border: "none",
   borderRadius: 8,
   padding: "8px 12px",
   cursor: "pointer",
 });
 
-const buttonPrimaryStyle = (isDark: boolean): JSX.CSSProperties => ({
-  background: isDark ? "#2563eb" : "#2563eb",
-  color: "#fff",
+const buttonPrimaryStyle = (colors: WidgetModeColors): JSX.CSSProperties => ({
+  background: colors.primary,
+  color: colors.primaryText,
   border: "none",
   borderRadius: 8,
   padding: "8px 12px",
@@ -132,10 +233,13 @@ type NameDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (name: string) => void;
+  colors: WidgetModeColors;
+  mode: WidgetMode;
 };
 
-const NameDialog = ({ isOpen, onClose, onSubmit }: NameDialogProps) => {
-  const isDark = useDarkMode();
+const NameDialog = (
+  { isOpen, onClose, onSubmit, colors, mode }: NameDialogProps,
+) => {
   const [value, setValue] = useState("");
   useEffect(() => {
     if (!isOpen) setValue("");
@@ -158,11 +262,11 @@ const NameDialog = ({ isOpen, onClose, onSubmit }: NameDialogProps) => {
   }, [isOpen, value]);
   if (!isOpen) return null;
   return createPortal(
-    <div style={overlayStyle} onClick={onClose}>
+    <div style={overlayStyle(colors)} onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
-        style={dialogBoxStyle(isDark)}
+        style={dialogBoxStyle({ colors, mode })}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={nameDialogTitleStyle}>Enter your display name</div>
@@ -172,19 +276,19 @@ const NameDialog = ({ isOpen, onClose, onSubmit }: NameDialogProps) => {
           value={value}
           onInput={(e) => setValue(e.currentTarget.value)}
           placeholder="Your name"
-          style={fieldStyle(isDark)}
+          style={fieldStyle(colors)}
         />
         <div style={actionsRowStyle}>
           <button
             type="button"
-            style={buttonNeutralStyle(isDark)}
+            style={buttonNeutralStyle(colors)}
             onClick={onClose}
           >
             Cancel
           </button>
           <button
             type="button"
-            style={buttonPrimaryStyle(isDark)}
+            style={buttonPrimaryStyle(colors)}
             onClick={() => {
               const v = value.trim();
               if (!v) {
@@ -203,28 +307,28 @@ const NameDialog = ({ isOpen, onClose, onSubmit }: NameDialogProps) => {
   );
 };
 
-const Loading = () => {
-  const isDark = useDarkMode();
-  return (
-    <div
-      style={{
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        ...widgetColors(isDark),
-      }}
-    >
-      <Spinner />
-    </div>
-  );
-};
+const Loading = ({ colors }: { colors: WidgetModeColors }) => (
+  <div
+    style={{
+      height: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: colors.background,
+      color: colors.text,
+    }}
+  >
+    <Spinner />
+  </div>
+);
 
 const WithCredentials = (
-  { dialTo, credentials, initialMessage }: {
+  { dialTo, credentials, initialMessage, colors, isDark }: {
     dialTo: string[];
     credentials: Credentials;
     initialMessage?: string;
+    colors: WidgetModeColors;
+    isDark: boolean;
   },
 ) => {
   const conversation = useGetOrCreateConversation({
@@ -240,9 +344,15 @@ const WithCredentials = (
         }}
         credentials={coerce(credentials)}
         conversationId={conversation}
+        darkModeOverride={isDark}
+        customColors={{
+          background: colors.background,
+          text: colors.text,
+          primary: colors.primary,
+        }}
       />
     )
-    : <Loading />;
+    : <Loading colors={colors} />;
 };
 
 const overlayZIndex = 10000;
@@ -295,7 +405,9 @@ const containerStyle = (
     }
 );
 
-const closeButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
+const closeButtonStyle = (
+  { colors, mode }: { colors: WidgetModeColors; mode: WidgetMode },
+): JSX.CSSProperties => ({
   position: "absolute",
   top: 8,
   right: 8,
@@ -303,13 +415,13 @@ const closeButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
   height: 32,
   borderRadius: 16,
   border: "none",
-  background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-  color: isDark ? "#f3f4f6" : "#111827",
+  background: colors.closeButtonBg,
+  color: colors.closeButtonColor,
   cursor: "pointer",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  boxShadow: isDark
+  boxShadow: mode === "dark"
     ? "0 2px 6px rgba(0,0,0,0.4)"
     : "0 2px 6px rgba(0,0,0,0.15)",
 });
@@ -335,12 +447,15 @@ export type WidgetParams = {
   startOpen?: boolean;
   buttonText?: string;
   defaultName?: string;
+  colorScheme?: WidgetColorScheme;
 };
 
 type WidgetProps = {
   credentials: Credentials | null;
   onNameChosen: (name: string) => void;
 } & WidgetParams;
+
+type InnerWidgetProps = WidgetProps & { appearance: ResolvedAppearance };
 
 const InnerWidget = ({
   onNameChosen,
@@ -349,9 +464,11 @@ const InnerWidget = ({
   startOpen,
   initialMessage,
   buttonText,
-}: WidgetProps) => {
+  appearance,
+}: InnerWidgetProps) => {
   const isMobile = useIsMobile();
-  const isDark = useDarkMode();
+  const isDark = appearance.mode === "dark";
+  const colors = appearance.colors;
   const [showNameDialog, setNameDialog] = useState(false);
   useEffect(() => {
     if (!startOpen) return;
@@ -382,6 +499,8 @@ const InnerWidget = ({
     <>
       <NameDialog
         isOpen={showNameDialog}
+        mode={appearance.mode}
+        colors={colors}
         onClose={() => setNameDialog(false)}
         onSubmit={(name) => {
           onNameChosen(name);
@@ -397,13 +516,15 @@ const InnerWidget = ({
               initialMessage={initialMessage}
               dialTo={participants}
               credentials={credentials}
+              colors={colors}
+              isDark={isDark}
             />
           )
-          : <Loading />
+          : <Loading colors={colors} />
         : (
           <button
             type="button"
-            style={getStartButtonStyle(isDark)}
+            style={getStartButtonStyle(colors)}
             onClick={() => {
               if (credentials) {
                 chatOpen.value = true;
@@ -424,7 +545,21 @@ export const Widget = (props: WidgetProps): JSX.Element => {
   const [shadowRoot, setShadowRoot] = useState<ShadowRoot | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const hasLight = !!props.colorScheme?.light;
+  const hasDark = !!props.colorScheme?.dark;
+  useEffect(() => {
+    const override = hasLight && hasDark
+      ? null
+      : hasDark
+      ? "dark"
+      : hasLight
+      ? "light"
+      : null;
+    setDarkModeOverride(override);
+    return () => setDarkModeOverride(null);
+  }, [hasLight, hasDark]);
   const isDark = useDarkMode();
+  const appearance = resolveAppearance(props.colorScheme, isDark);
   useLayoutEffect(() => {
     if (hostRef.current && !shadowRoot) {
       const root = hostRef.current.attachShadow({ mode: "open" });
@@ -443,11 +578,15 @@ export const Widget = (props: WidgetProps): JSX.Element => {
       {shadowRoot &&
         createPortal(
           <div>
-            <style>{widgetBaseCss}</style>
+            <style>{widgetBaseCss(appearance.colorSchemeValue)}</style>
             <div
               ref={containerRef}
               style={{
-                ...containerStyle({ isMobile, isDark, isOpen: chatOpen.value }),
+                ...containerStyle({
+                  isMobile,
+                  isDark: appearance.mode === "dark",
+                  isOpen: chatOpen.value,
+                }),
                 pointerEvents: "auto",
               }}
             >
@@ -455,13 +594,16 @@ export const Widget = (props: WidgetProps): JSX.Element => {
                 <button
                   type="button"
                   aria-label="Close chat"
-                  style={closeButtonStyle(isDark)}
+                  style={closeButtonStyle({
+                    colors: appearance.colors,
+                    mode: appearance.mode,
+                  })}
                   onClick={() => (chatOpen.value = false)}
                 >
                   ×
                 </button>
               )}
-              <InnerWidget {...props} />
+              <InnerWidget {...props} appearance={appearance} />
             </div>
           </div>,
           shadowRoot,

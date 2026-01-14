@@ -1,19 +1,28 @@
 import type { JSX } from "preact";
 import { useDarkMode } from "./hooks.ts";
 
-export const widgetColors = (isDarkMode: boolean) => ({
-  background: isDarkMode ? "#22232a" : "#fff",
-  color: isDarkMode ? "#f4f4f4" : "#222",
+export type CustomColors = {
+  background?: string;
+  text?: string;
+  primary?: string;
+};
+
+export const widgetColors = (isDarkMode: boolean, custom?: CustomColors) => ({
+  background: custom?.background ?? (isDarkMode ? "#22232a" : "#fff"),
+  color: custom?.text ?? (isDarkMode ? "#f4f4f4" : "#222"),
 });
 
-export const chatContainerStyle = (isDarkMode: boolean) => ({
+export const chatContainerStyle = (
+  isDarkMode: boolean,
+  custom?: CustomColors,
+) => ({
   position: "relative",
   display: "flex",
   overflow: "hidden",
   flexDirection: "column",
   flexGrow: 1,
   minHeight: 0,
-  ...widgetColors(isDarkMode),
+  ...widgetColors(isDarkMode, custom),
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
 });
 

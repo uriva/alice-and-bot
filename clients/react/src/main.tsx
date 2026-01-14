@@ -12,6 +12,7 @@ import {
   type AbstracChatMessage,
   AbstractChatBox,
 } from "./abstractChatBox.tsx";
+import type { CustomColors } from "./design.tsx";
 import {
   compactPublicKey,
   useConversationKey,
@@ -25,6 +26,8 @@ export type ChatProps = {
   onClose?: () => void;
   conversationId: string;
   emptyMessage?: ComponentChildren;
+  darkModeOverride?: boolean;
+  customColors?: CustomColors;
 };
 
 const msgToUIMessage =
@@ -70,7 +73,14 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
 
 export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
 (
-  { credentials, conversationId, onClose, emptyMessage }: ChatProps,
+  {
+    credentials,
+    conversationId,
+    onClose,
+    emptyMessage,
+    darkModeOverride,
+    customColors,
+  }: ChatProps,
 ): JSX.Element => {
   const convoKey = useConversationKey(db())(conversationId, credentials);
   const [limit, setLimit] = useState(100);
@@ -107,6 +117,8 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       userId={credentials.publicSignKey}
       typingUsers={typing.typingNames}
       isLoading={!decrypted}
+      darkModeOverride={darkModeOverride}
+      customColors={customColors}
       messages={pipe(
         () => decrypted ?? [],
         (x: DecipheredMessage[]) => x,

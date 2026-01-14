@@ -17,17 +17,39 @@ import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
 export const compactPublicKey = (k: string): string =>
   k.length <= 14 ? k : `${k.slice(0, 6)}…${k.slice(-4)}`;
 
+type DarkModeOverride = "light" | "dark" | null;
+
+let darkModeOverride: DarkModeOverride = null;
+const darkModeOverrideListeners = new Set<(isDark: boolean) => void>();
+
+export const setDarkModeOverride = (mode: DarkModeOverride) => {
+  darkModeOverride = mode;
+  darkModeOverrideListeners.forEach((listener) => listener(mode === "dark"));
+};
+
 export const useDarkMode = () => {
-  const getPref = () =>
-    typeof globalThis !== "undefined" &&
-    "matchMedia" in globalThis &&
-    globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+  const getPref = () => {
+    if (darkModeOverride !== null) return darkModeOverride === "dark";
+    return typeof globalThis !== "undefined" &&
+      "matchMedia" in globalThis &&
+      globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+  };
 
   const [isDark, setIsDark] = useState(getPref());
 
   useEffect(() => {
+    const listener = (next: boolean) => setIsDark(next);
+    darkModeOverrideListeners.add(listener);
+    return () => {
+      darkModeOverrideListeners.delete(listener);
+    };
+  }, []);
+
+  useEffect(() => {
     const mql = globalThis.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
+    const handler = (e: MediaQueryListEvent) => {
+      if (darkModeOverride === null) setIsDark(e.matches);
+    };
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
