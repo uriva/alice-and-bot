@@ -128,6 +128,10 @@ const resolveAppearance = (
     ? prefersDark ? "dark" : "light"
     : hasDark
     ? "dark"
+    : hasLight
+    ? "light"
+    : prefersDark
+    ? "dark"
     : "light";
   const colors = { ...defaultColors[mode], ...(colorScheme?.[mode] ?? {}) };
   const colorSchemeValue: "light" | "dark" | "light dark" = hasLight && hasDark
