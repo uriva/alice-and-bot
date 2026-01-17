@@ -808,8 +808,6 @@ export const AbstractChatBox = (
           gap: 0,
           flex: "0 0 auto",
           minHeight: 44,
-          borderTop: `1px solid ${isDark ? "#ffffff10" : "#00000008"}`,
-          paddingTop: 8,
         }}
       >
         <textarea
