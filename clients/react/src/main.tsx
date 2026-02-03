@@ -128,8 +128,8 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
         file,
       });
       if ("error" in result) {
-        console.error("Failed to upload attachment", result.error);
-        continue;
+        alert(`Failed to upload ${file.name}: ${result.error}`);
+        return;
       }
       attachments.push(result);
     }

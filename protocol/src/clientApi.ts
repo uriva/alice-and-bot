@@ -355,7 +355,11 @@ export const uploadAttachment = async ({
     headers: { "Content-Type": "application/octet-stream" },
     body: encrypted,
   });
-  if (!response.ok) return { error: "upload-failed" };
+  if (!response.ok) {
+    return {
+      error: `upload-failed:${response.status}:${await response.text()}`,
+    };
+  }
 
   const base: { url: string; name: string; size: number } = {
     url: fileUrl,
