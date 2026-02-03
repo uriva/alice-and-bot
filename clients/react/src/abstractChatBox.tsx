@@ -1098,13 +1098,15 @@ export const AbstractChatBox = (
       clearInterval(recordingIntervalRef.current);
       recordingIntervalRef.current = null;
     }
-    if (mediaRecorderRef.current && isRecording) {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
       if (save) {
-        mediaRecorderRef.current.stop();
+        recorder.requestData();
+        recorder.stop();
       } else {
-        mediaRecorderRef.current.ondataavailable = null;
-        mediaRecorderRef.current.onstop = null;
-        mediaRecorderRef.current.stop();
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        recorder.stop();
         streamRef.current?.getTracks().forEach((t) => t.stop());
       }
     }
@@ -1120,9 +1122,15 @@ export const AbstractChatBox = (
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
       recorder.ondataavailable = (e) => {
-        audioChunksRef.current.push(e.data);
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
       };
       recorder.onstop = () => {
+        if (audioChunksRef.current.length === 0) {
+          streamRef.current?.getTracks().forEach((t) => t.stop());
+          return;
+        }
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         const file = new File([blob], `recording-${Date.now()}.webm`, {
           type: "audio/webm",
@@ -1131,7 +1139,7 @@ export const AbstractChatBox = (
         streamRef.current?.getTracks().forEach((t) => t.stop());
         setRecordingDuration(0);
       };
-      recorder.start();
+      recorder.start(100);
       setIsRecording(true);
       setRecordingDuration(0);
       recordingIntervalRef.current = setInterval(() => {
@@ -1337,42 +1345,6 @@ export const AbstractChatBox = (
             e.currentTarget.value = "";
           }}
         />
-        {enableAttachments && (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={iconButtonStyle(isDark)}
-            title="Attach file"
-          >
-            <FaPaperclip size={18} />
-          </button>
-        )}
-        {enableAudioRecording && (
-          <button
-            type="button"
-            onClick={isMobile ? undefined : async () => {
-              if (isRecording) {
-                stopRecording(true);
-              } else {
-                await startRecording();
-              }
-            }}
-            onTouchStart={isMobile ? () => startRecording() : undefined}
-            onTouchEnd={isMobile ? () => stopRecording(true) : undefined}
-            onTouchCancel={isMobile ? () => stopRecording(false) : undefined}
-            style={{
-              ...iconButtonStyle(isDark),
-              color: isRecording ? "#dc2626" : (isDark ? "#9ca3af" : "#64748b"),
-            }}
-            title={isMobile
-              ? "Hold to record"
-              : isRecording
-              ? "Stop recording"
-              : "Record audio"}
-          >
-            {isRecording ? <FaStop size={18} /> : <FaMicrophone size={18} />}
-          </button>
-        )}
         <textarea
           dir="auto"
           ref={inputRef}
@@ -1389,9 +1361,7 @@ export const AbstractChatBox = (
             flexGrow: 1,
             padding: "10px 16px",
             border: "none",
-            borderTopLeftRadius: enableAttachments || enableAudioRecording
-              ? 0
-              : 10,
+            borderTopLeftRadius: 10,
             borderBottomLeftRadius: 0,
             borderTopRightRadius: 0,
             borderBottomRightRadius: 0,
@@ -1462,6 +1432,42 @@ export const AbstractChatBox = (
             onInputActivity?.();
           }}
         />
+        {enableAttachments && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            style={iconButtonStyle(isDark)}
+            title="Attach file"
+          >
+            <FaPaperclip size={18} />
+          </button>
+        )}
+        {enableAudioRecording && (
+          <button
+            type="button"
+            onClick={isMobile ? undefined : async () => {
+              if (isRecording) {
+                stopRecording(true);
+              } else {
+                await startRecording();
+              }
+            }}
+            onTouchStart={isMobile ? () => startRecording() : undefined}
+            onTouchEnd={isMobile ? () => stopRecording(true) : undefined}
+            onTouchCancel={isMobile ? () => stopRecording(false) : undefined}
+            style={{
+              ...iconButtonStyle(isDark),
+              color: isRecording ? "#dc2626" : (isDark ? "#9ca3af" : "#64748b"),
+            }}
+            title={isMobile
+              ? "Hold to record"
+              : isRecording
+              ? "Stop recording"
+              : "Record audio"}
+          >
+            {isRecording ? <FaStop size={18} /> : <FaMicrophone size={18} />}
+          </button>
+        )}
         <button
           type="button"
           disabled={(!input.trim() && pendingFiles.length === 0) || isSending}
