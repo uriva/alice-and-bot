@@ -4,9 +4,12 @@ import type { ComponentChildren, JSX } from "preact";
 import { useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
+  type Attachment,
   type Credentials,
   type DecipheredMessage,
+  downloadAttachment,
   sendMessageWithKey,
+  uploadAttachment,
 } from "../../../protocol/src/clientApi.ts";
 import {
   type AbstracChatMessage,
@@ -28,6 +31,8 @@ export type ChatProps = {
   emptyMessage?: ComponentChildren;
   darkModeOverride?: boolean;
   customColors?: CustomColors;
+  enableAttachments?: boolean;
+  enableAudioRecording?: boolean;
 };
 
 const msgToUIMessage =
@@ -39,6 +44,7 @@ const msgToUIMessage =
     authorAvatar: details[msg.publicSignKey]?.avatar,
     text: msg.text,
     timestamp: msg.timestamp,
+    attachments: msg.attachments,
   });
 
 const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
@@ -80,6 +86,8 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
     emptyMessage,
     darkModeOverride,
     customColors,
+    enableAttachments = true,
+    enableAudioRecording = true,
   }: ChatProps,
 ): JSX.Element => {
   const convoKey = useConversationKey(db())(conversationId, credentials);
@@ -105,6 +113,45 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       $: { where: { id: conversationId } },
     },
   }).data?.conversations[0]?.title || "Chat";
+
+  const handleSendWithAttachments = async (
+    text: string,
+    files: File[],
+  ): Promise<void> => {
+    if (!convoKey) return;
+    const attachments: Attachment[] = [];
+    for (const file of files) {
+      const result = await uploadAttachment({
+        credentials,
+        conversationId,
+        conversationKey: convoKey,
+        file,
+      });
+      if ("error" in result) {
+        console.error("Failed to upload attachment", result.error);
+        continue;
+      }
+      attachments.push(result);
+    }
+    await sendMessageWithKey({
+      conversationKey: convoKey,
+      credentials,
+      message: { type: "text", text, attachments },
+      conversation: conversationId,
+    });
+    typing.onBlurOrSend();
+  };
+
+  const handleDecryptAttachment = async (url: string): Promise<string> => {
+    if (!convoKey) throw new Error("No conversation key");
+    const arrayBuffer = await downloadAttachment({
+      url,
+      conversationKey: convoKey,
+    });
+    const blob = new Blob([arrayBuffer]);
+    return URL.createObjectURL(blob);
+  };
+
   return (
     <AbstractChatBox
       title={conversationTitle}
@@ -119,6 +166,10 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       isLoading={!decrypted}
       darkModeOverride={darkModeOverride}
       customColors={customColors}
+      enableAttachments={enableAttachments}
+      enableAudioRecording={enableAudioRecording}
+      onSendWithAttachments={handleSendWithAttachments}
+      onDecryptAttachment={handleDecryptAttachment}
       messages={pipe(
         () => decrypted ?? [],
         (x: DecipheredMessage[]) => x,
