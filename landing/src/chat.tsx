@@ -955,6 +955,7 @@ const LoggedInMessenger = (
                   display: "flex",
                   flexDirection: "column",
                   width: "380px",
+                  flexShrink: 0,
                 }}
                 class="border-r border-gray-200 dark:border-gray-700"
               >
@@ -1022,6 +1023,7 @@ const LoggedInMessenger = (
                   display: "flex",
                   flexGrow: 1,
                   flexDirection: "column",
+                  minWidth: 0,
                 }}
               >
                 {selectedConversation.value
