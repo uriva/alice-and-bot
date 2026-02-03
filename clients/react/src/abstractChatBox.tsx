@@ -1356,7 +1356,6 @@ export const AbstractChatBox = (
           alignItems: "flex-end",
           gap: 8,
           flex: "0 0 auto",
-          minHeight: 44,
           padding: "8px 12px",
           background: isDark ? "#0f1318" : "#f8fafc",
         }}
@@ -1372,14 +1371,21 @@ export const AbstractChatBox = (
             e.currentTarget.value = "";
           }}
         />
-        <div style={{ position: "relative", flexGrow: 1 }}>
+        <div
+          style={{
+            position: "relative",
+            flexGrow: 1,
+            display: "flex",
+            alignItems: "flex-end",
+          }}
+        >
           {enableAttachments && (
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               style={{
                 position: "absolute",
-                left: 8,
+                right: 8,
                 top: "50%",
                 transform: "translateY(-50%)",
                 background: "none",
@@ -1410,7 +1416,7 @@ export const AbstractChatBox = (
             onBlur={() => onInputActivity?.()}
             style={{
               width: "100%",
-              padding: enableAttachments ? "10px 16px 10px 36px" : "10px 16px",
+              padding: enableAttachments ? "10px 36px 10px 16px" : "10px 16px",
               border: "none",
               borderRadius: 22,
               background: isDark ? "#1f2937" : "#e2e8f0",
@@ -1421,6 +1427,7 @@ export const AbstractChatBox = (
               boxSizing: "border-box",
               height: 44,
               minHeight: 44,
+              margin: 0,
               overflowY: "auto",
               overflowX: "hidden",
               maxHeight: 200,
@@ -1482,135 +1489,139 @@ export const AbstractChatBox = (
         {(() => {
           const hasContent = input.trim() || pendingFiles.length > 0;
           const showMic = enableAudioRecording && !hasContent && !isRecording;
-          const showStop = isRecording;
+          const showStop = isRecording && !isRecordingLocked;
           const showSend = hasContent || (isRecording && isRecordingLocked);
+          const primaryColor = customColors?.primary ??
+            (isDark ? "#2563eb" : "#3182ce");
 
-          if (showMic) {
-            return (
-              <button
-                type="button"
-                onClick={isMobile ? undefined : () => startRecording()}
-                onTouchStart={isMobile
-                  ? (e) => {
-                    e.preventDefault();
-                    if (isRecordingLocked) return;
-                    const touch = e.touches[0];
-                    touchStartRef.current = {
-                      x: touch.clientX,
-                      y: touch.clientY,
-                    };
-                    setSwipeOffset({ x: 0, y: 0 });
-                    startRecording();
-                  }
-                  : undefined}
-                onTouchMove={isMobile
-                  ? (e) => {
-                    e.preventDefault();
-                    if (!touchStartRef.current || isRecordingLocked) return;
-                    const touch = e.touches[0];
-                    const dx = touch.clientX - touchStartRef.current.x;
-                    const dy = touch.clientY - touchStartRef.current.y;
-                    setSwipeOffset({ x: dx, y: dy });
-                    if (dx < -80) {
-                      stopRecording(false);
-                    } else if (dy < -60) {
-                      setIsRecordingLocked(true);
-                      setSwipeOffset({ x: 0, y: 0 });
-                    }
-                  }
-                  : undefined}
-                onTouchEnd={isMobile
-                  ? (e) => {
-                    e.preventDefault();
-                    if (isRecordingLocked) return;
-                    stopRecording(true);
-                  }
-                  : undefined}
-                onTouchCancel={isMobile
-                  ? (e) => {
-                    e.preventDefault();
-                    if (isRecordingLocked) return;
-                    stopRecording(false);
-                  }
-                  : undefined}
-                style={{
-                  ...sendButtonStyle(isDark, customColors),
-                  touchAction: "none",
-                }}
-                title={isMobile ? "Hold to record" : "Record audio"}
-              >
-                <FaMicrophone size={20} />
-              </button>
-            );
-          }
+          const handleButtonClick = () => {
+            if (showMic) {
+              if (!isMobile) startRecording();
+            } else if (showStop) {
+              if (!isMobile) stopRecording(true);
+            } else if (isRecordingLocked) {
+              stopRecording(true);
+            } else {
+              handleSend();
+            }
+          };
 
-          if (showStop && !isRecordingLocked) {
-            return (
-              <button
-                type="button"
-                onClick={isMobile ? undefined : () => stopRecording(true)}
-                onTouchMove={isMobile
-                  ? (e) => {
-                    e.preventDefault();
-                    if (!touchStartRef.current || isRecordingLocked) return;
-                    const touch = e.touches[0];
-                    const dx = touch.clientX - touchStartRef.current.x;
-                    const dy = touch.clientY - touchStartRef.current.y;
-                    setSwipeOffset({ x: dx, y: dy });
-                    if (dx < -80) {
-                      stopRecording(false);
-                    } else if (dy < -60) {
-                      setIsRecordingLocked(true);
-                      setSwipeOffset({ x: 0, y: 0 });
-                    }
-                  }
-                  : undefined}
-                onTouchEnd={isMobile
-                  ? (e) => {
-                    e.preventDefault();
-                    if (isRecordingLocked) return;
-                    stopRecording(true);
-                  }
-                  : undefined}
-                onTouchCancel={isMobile
-                  ? (e) => {
-                    e.preventDefault();
-                    if (isRecordingLocked) return;
-                    stopRecording(false);
-                  }
-                  : undefined}
-                style={{
-                  ...sendButtonStyle(isDark, customColors),
-                  background: "#dc2626",
-                  touchAction: "none",
-                }}
-                title="Stop recording"
-              >
-                <FaStop size={18} />
-              </button>
-            );
-          }
+          const handleTouchStart = isMobile
+            ? (e: TouchEvent) => {
+              e.preventDefault();
+              if (showSend && !isRecordingLocked) return;
+              if (isRecordingLocked) return;
+              const touch = e.touches[0];
+              touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+              setSwipeOffset({ x: 0, y: 0 });
+              if (showMic) startRecording();
+            }
+            : undefined;
+
+          const handleTouchMove = isMobile
+            ? (e: TouchEvent) => {
+              e.preventDefault();
+              if (!touchStartRef.current || isRecordingLocked) return;
+              const touch = e.touches[0];
+              const dx = touch.clientX - touchStartRef.current.x;
+              const dy = touch.clientY - touchStartRef.current.y;
+              setSwipeOffset({ x: dx, y: dy });
+              if (dx < -80) {
+                stopRecording(false);
+              } else if (dy < -60) {
+                setIsRecordingLocked(true);
+                setSwipeOffset({ x: 0, y: 0 });
+              }
+            }
+            : undefined;
+
+          const handleTouchEnd = isMobile
+            ? (e: TouchEvent) => {
+              e.preventDefault();
+              if (showSend && !isRecording) {
+                handleSend();
+                return;
+              }
+              if (isRecordingLocked) return;
+              if (isRecording) stopRecording(true);
+            }
+            : undefined;
+
+          const handleTouchCancel = isMobile
+            ? (e: TouchEvent) => {
+              e.preventDefault();
+              if (isRecordingLocked) return;
+              if (isRecording) stopRecording(false);
+            }
+            : undefined;
 
           return (
             <button
               type="button"
-              disabled={!hasContent && !showSend}
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                if (isRecordingLocked) {
-                  stopRecording(true);
-                } else {
-                  handleSend();
-                }
-              }}
+              onClick={isMobile ? undefined : handleButtonClick}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchCancel}
               style={{
                 ...sendButtonStyle(isDark, customColors),
-                opacity: (hasContent || showSend) ? 1 : 0.5,
-                cursor: (hasContent || showSend) ? "pointer" : "not-allowed",
+                background: showStop ? "#dc2626" : primaryColor,
+                touchAction: "none",
+                position: "relative",
+                overflow: "hidden",
               }}
-              title="Send"
+              title={showMic
+                ? (isMobile ? "Hold to record" : "Record audio")
+                : showStop
+                ? "Stop recording"
+                : "Send"}
             >
-              <FaPaperPlane size={18} />
+              <span
+                style={{
+                  position: "absolute",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "transform 0.2s ease, opacity 0.2s ease",
+                  transform: showMic
+                    ? "scale(1) rotate(0deg)"
+                    : "scale(0) rotate(-90deg)",
+                  opacity: showMic ? 1 : 0,
+                }}
+              >
+                <FaMicrophone size={20} />
+              </span>
+              <span
+                style={{
+                  position: "absolute",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "transform 0.2s ease, opacity 0.2s ease",
+                  transform: showStop
+                    ? "scale(1) rotate(0deg)"
+                    : "scale(0) rotate(90deg)",
+                  opacity: showStop ? 1 : 0,
+                }}
+              >
+                <FaStop size={18} />
+              </span>
+              <span
+                style={{
+                  position: "absolute",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "transform 0.2s ease, opacity 0.2s ease",
+                  transform: showSend
+                    ? "scale(1) rotate(0deg)"
+                    : "scale(0) rotate(90deg)",
+                  opacity: showSend ? 1 : 0,
+                }}
+              >
+                <FaPaperPlane size={18} />
+              </span>
             </button>
           );
         })()}
