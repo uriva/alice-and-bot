@@ -64,21 +64,12 @@ export type Attachment =
   | VideoAttachment
   | FileAttachment;
 
-const MB = 1024 * 1024;
-
-export const fileSizeLimits = {
-  image: 10 * MB,
-  audio: 25 * MB,
-  video: 100 * MB,
-  file: 25 * MB,
-};
-
-const getFileSizeLimit = (mimeType: string): number => {
-  if (mimeType.startsWith("image/")) return fileSizeLimits.image;
-  if (mimeType.startsWith("audio/")) return fileSizeLimits.audio;
-  if (mimeType.startsWith("video/")) return fileSizeLimits.video;
-  return fileSizeLimits.file;
-};
+import {
+  fileSizeLimits,
+  getFileSizeLimitByMimeType,
+  MB,
+} from "./attachmentLimits.ts";
+export { fileSizeLimits, getFileSizeLimitByMimeType, MB };
 
 type InternalMessage = {
   type: "text";
@@ -341,7 +332,7 @@ export const uploadAttachment = async ({
   conversationKey: string;
   file: File;
 }): Promise<Attachment | { error: string }> => {
-  const limit = getFileSizeLimit(file.type);
+  const limit = getFileSizeLimitByMimeType(file.type);
   if (file.size > limit) {
     return { error: `file-too-large:${Math.round(limit / MB)}MB` };
   }
