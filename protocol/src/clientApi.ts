@@ -390,6 +390,11 @@ export const downloadAttachment = async ({
   conversationKey: string;
 }): Promise<ArrayBuffer> => {
   const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Download failed: ${response.status} ${await response.text()}`,
+    );
+  }
   const encrypted = await response.arrayBuffer();
   return decryptBinary(conversationKey, encrypted);
 };
