@@ -1265,14 +1265,16 @@ export const AbstractChatBox = (
 
   // Clear sending indicator when new message arrives
   useEffect(() => {
-    if (
-      pendingAudioMessageCountRef.current !== null &&
-      messages.length > pendingAudioMessageCountRef.current
-    ) {
+    if (!isSending) return;
+    const hasNewAudioMessage = messages.some((m) =>
+      m.timestamp > sessionStartRef.current &&
+      m.attachments?.some((a) => a.type === "audio")
+    );
+    if (hasNewAudioMessage) {
       pendingAudioMessageCountRef.current = null;
       setIsSending(false);
     }
-  }, [messages.length]);
+  }, [messages, isSending]);
 
   // Scroll to bottom when messages or typing indicator change
   useEffect(() => {
