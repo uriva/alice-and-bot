@@ -321,6 +321,22 @@ const computeHash = async (data: ArrayBuffer): Promise<string> => {
   return arrayBufferToHex(hashBuffer);
 };
 
+const getAudioDuration = (file: File): Promise<number | undefined> =>
+  new Promise((resolve) => {
+    if (!file.type.startsWith("audio/")) {
+      resolve(undefined);
+      return;
+    }
+    const audio = new Audio();
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => {
+      resolve(Math.round(audio.duration));
+      URL.revokeObjectURL(audio.src);
+    };
+    audio.onerror = () => resolve(undefined);
+    audio.src = URL.createObjectURL(file);
+  });
+
 export const uploadAttachment = async ({
   credentials,
   conversationId,
@@ -374,7 +390,13 @@ export const uploadAttachment = async ({
     return { ...base, type: "image", mimeType: file.type as `image/${string}` };
   }
   if (file.type.startsWith("audio/")) {
-    return { ...base, type: "audio", mimeType: file.type as `audio/${string}` };
+    const duration = await getAudioDuration(file);
+    return {
+      ...base,
+      type: "audio",
+      mimeType: file.type as `audio/${string}`,
+      duration,
+    };
   }
   if (file.type.startsWith("video/")) {
     return { ...base, type: "video", mimeType: file.type as `video/${string}` };

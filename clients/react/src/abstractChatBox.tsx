@@ -1,9 +1,12 @@
 import { sortKey } from "@uri/gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
+  FaDownload,
   FaMicrophone,
   FaPaperclip,
   FaPaperPlane,
+  FaPause,
+  FaPlay,
   FaStop,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
@@ -444,14 +447,135 @@ const attachmentContainerStyle: JSX.CSSProperties = {
   marginTop: 6,
 };
 
-const audioAttachmentStyle = (isDark: boolean): JSX.CSSProperties => ({
+const audioPlayerStyle = (isDark: boolean): JSX.CSSProperties => ({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  padding: "8px 12px",
-  borderRadius: 8,
-  background: isDark ? "#ffffff15" : "#00000010",
+  gap: 10,
+  padding: "10px 14px",
+  borderRadius: 20,
+  background: isDark ? "#ffffff15" : "#00000008",
+  minWidth: 200,
 });
+
+const AudioPlayer = (
+  { src, isDark }: { src: string; isDark: boolean },
+): JSX.Element => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const onLoadedMetadata = () => setDuration(audio.duration);
+    const onEnded = () => setIsPlaying(false);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("ended", onEnded);
+    return () => {
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, []);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleSeek = (e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    audio.currentTime = percent * duration;
+  };
+
+  const progress = duration ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div style={audioPlayerStyle(isDark)}>
+      <audio ref={audioRef} src={src} preload="metadata" />
+      <button
+        type="button"
+        onClick={togglePlay}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: "50%",
+          border: "none",
+          background: isDark ? "#3b82f6" : "#2563eb",
+          color: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {isPlaying
+          ? <FaPause size={14} />
+          : <FaPlay size={14} style={{ marginLeft: 2 }} />}
+      </button>
+      <div
+        style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}
+      >
+        <div
+          onClick={handleSeek}
+          style={{
+            height: 24,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          {Array.from({ length: 30 }).map((_, i) => {
+            const barProgress = (i / 30) * 100;
+            const isPlayed = barProgress < progress;
+            const height = 6 + Math.sin(i * 0.8) * 6 + Math.random() * 4;
+            return (
+              <div
+                key={i}
+                style={{
+                  width: 3,
+                  height,
+                  borderRadius: 2,
+                  background: isPlayed
+                    ? (isDark ? "#3b82f6" : "#2563eb")
+                    : (isDark ? "#ffffff40" : "#00000020"),
+                  transition: "background 0.1s",
+                }}
+              />
+            );
+          })}
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            color: isDark ? "#9ca3af" : "#64748b",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{formatDuration(Math.floor(currentTime))}</span>
+          <span>
+            {duration ? formatDuration(Math.floor(duration)) : "--:--"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const fileAttachmentStyle = (isDark: boolean): JSX.CSSProperties => ({
   display: "flex",
@@ -484,39 +608,66 @@ const AttachmentRenderer = (
   };
 
   if (attachment.type === "audio") {
-    return (
-      <div style={audioAttachmentStyle(isDark)}>
-        {decryptedUrl
-          ? (
-            <audio controls preload="metadata" style={{ width: "100%" }}>
-              <source src={decryptedUrl} type={attachment.mimeType} />
-            </audio>
-          )
-          : (
-            <>
-              <button
-                type="button"
-                onClick={handleDecrypt}
-                disabled={loading}
+    return decryptedUrl
+      ? <AudioPlayer src={decryptedUrl} isDark={isDark} />
+      : (
+        <div style={audioPlayerStyle(isDark)}>
+          <button
+            type="button"
+            onClick={handleDecrypt}
+            disabled={loading}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              border: "none",
+              background: isDark ? "#3b82f6" : "#2563eb",
+              color: "#fff",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {loading ? <Spinner /> : <FaDownload size={14} />}
+          </button>
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            }}
+          >
+            <div
+              style={{ display: "flex", alignItems: "center", gap: 2 }}
+            >
+              {Array.from({ length: 30 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 3,
+                    height: 6 + Math.sin(i * 0.8) * 6,
+                    borderRadius: 2,
+                    background: isDark ? "#ffffff40" : "#00000020",
+                  }}
+                />
+              ))}
+            </div>
+            {attachment.duration !== undefined && (
+              <div
                 style={{
-                  background: "none",
-                  border: "none",
-                  color: textColor,
-                  cursor: "pointer",
-                  padding: 4,
+                  fontSize: 11,
+                  color: isDark ? "#9ca3af" : "#64748b",
                 }}
               >
-                {loading ? "..." : "▶"}
-              </button>
-              <span style={{ color: textColor, fontSize: 13 }}>
-                {attachment.name}
-                {attachment.duration &&
-                  ` (${formatDuration(attachment.duration)})`}
-              </span>
-            </>
-          )}
-      </div>
-    );
+                {formatDuration(attachment.duration)}
+              </div>
+            )}
+          </div>
+        </div>
+      );
   }
 
   if (attachment.type === "image") {
@@ -884,6 +1035,7 @@ const recordingIndicatorStyle = (isDark: boolean): JSX.CSSProperties => ({
   color: "#fff",
   fontSize: 14,
   fontWeight: 500,
+  justifyContent: "space-between",
 });
 
 export const AbstractChatBox = (
@@ -938,7 +1090,57 @@ export const AbstractChatBox = (
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  const stopRecording = (save: boolean) => {
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    if (mediaRecorderRef.current && isRecording) {
+      if (save) {
+        mediaRecorderRef.current.stop();
+      } else {
+        mediaRecorderRef.current.ondataavailable = null;
+        mediaRecorderRef.current.onstop = null;
+        mediaRecorderRef.current.stop();
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+      }
+    }
+    setIsRecording(false);
+    setRecordingDuration(0);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const file = new File([blob], `recording-${Date.now()}.webm`, {
+          type: "audio/webm",
+        });
+        setPendingFiles((prev) => [...prev, file]);
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        setRecordingDuration(0);
+      };
+      recorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration((d) => d + 1);
+      }, 1000) as unknown as number;
+    } catch {
+      console.error("Could not access microphone");
+    }
+  };
 
   const handleScroll = () => {
     if (
@@ -1092,8 +1294,27 @@ export const AbstractChatBox = (
       )}
       {isRecording && (
         <div style={recordingIndicatorStyle(isDark)}>
-          <span style={{ animation: "pulse 1s infinite" }}>🔴</span>
-          <span>Recording... {formatDuration(recordingDuration)}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ animation: "pulse 1s infinite" }}>🔴</span>
+            <span>Recording... {formatDuration(recordingDuration)}</span>
+          </div>
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={() => stopRecording(false)}
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                border: "none",
+                borderRadius: 4,
+                padding: "4px 12px",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              Cancel
+            </button>
+          )}
         </div>
       )}
       <div
@@ -1129,53 +1350,25 @@ export const AbstractChatBox = (
         {enableAudioRecording && (
           <button
             type="button"
-            onClick={async () => {
+            onClick={isMobile ? undefined : async () => {
               if (isRecording) {
-                mediaRecorderRef.current?.stop();
-                setIsRecording(false);
-                if (recordingIntervalRef.current) {
-                  clearInterval(recordingIntervalRef.current);
-                }
+                stopRecording(true);
               } else {
-                try {
-                  const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                  });
-                  const recorder = new MediaRecorder(stream);
-                  mediaRecorderRef.current = recorder;
-                  audioChunksRef.current = [];
-                  recorder.ondataavailable = (e) => {
-                    audioChunksRef.current.push(e.data);
-                  };
-                  recorder.onstop = () => {
-                    const blob = new Blob(audioChunksRef.current, {
-                      type: "audio/webm",
-                    });
-                    const file = new File(
-                      [blob],
-                      `recording-${Date.now()}.webm`,
-                      { type: "audio/webm" },
-                    );
-                    setPendingFiles([...pendingFiles, file]);
-                    stream.getTracks().forEach((t) => t.stop());
-                    setRecordingDuration(0);
-                  };
-                  recorder.start();
-                  setIsRecording(true);
-                  setRecordingDuration(0);
-                  recordingIntervalRef.current = setInterval(() => {
-                    setRecordingDuration((d) => d + 1);
-                  }, 1000) as unknown as number;
-                } catch {
-                  console.error("Could not access microphone");
-                }
+                await startRecording();
               }
             }}
+            onTouchStart={isMobile ? () => startRecording() : undefined}
+            onTouchEnd={isMobile ? () => stopRecording(true) : undefined}
+            onTouchCancel={isMobile ? () => stopRecording(false) : undefined}
             style={{
               ...iconButtonStyle(isDark),
               color: isRecording ? "#dc2626" : (isDark ? "#9ca3af" : "#64748b"),
             }}
-            title={isRecording ? "Stop recording" : "Record audio"}
+            title={isMobile
+              ? "Hold to record"
+              : isRecording
+              ? "Stop recording"
+              : "Record audio"}
           >
             {isRecording ? <FaStop size={18} /> : <FaMicrophone size={18} />}
           </button>
