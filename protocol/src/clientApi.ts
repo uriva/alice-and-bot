@@ -330,8 +330,13 @@ const getAudioDuration = (file: File): Promise<number | undefined> =>
     const audio = new Audio();
     audio.preload = "metadata";
     audio.onloadedmetadata = () => {
-      resolve(Math.round(audio.duration));
+      const dur = audio.duration;
       URL.revokeObjectURL(audio.src);
+      if (!isFinite(dur) || isNaN(dur)) {
+        resolve(undefined);
+        return;
+      }
+      resolve(Math.round(dur));
     };
     audio.onerror = () => resolve(undefined);
     audio.src = URL.createObjectURL(file);
@@ -342,11 +347,13 @@ export const uploadAttachment = async ({
   conversationId,
   conversationKey,
   file,
+  durationOverride,
 }: {
   credentials: Credentials;
   conversationId: string;
   conversationKey: string;
   file: File;
+  durationOverride?: number;
 }): Promise<Attachment | { error: string }> => {
   const limit = getFileSizeLimitByMimeType(file.type);
   if (file.size > limit) {
@@ -390,7 +397,7 @@ export const uploadAttachment = async ({
     return { ...base, type: "image", mimeType: file.type as `image/${string}` };
   }
   if (file.type.startsWith("audio/")) {
-    const duration = await getAudioDuration(file);
+    const duration = durationOverride ?? await getAudioDuration(file);
     return {
       ...base,
       type: "audio",

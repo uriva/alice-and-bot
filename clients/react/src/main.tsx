@@ -117,6 +117,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   const handleSendWithAttachments = async (
     text: string,
     files: File[],
+    audioDuration?: number,
   ): Promise<void> => {
     if (!convoKey) return;
     const attachments: Attachment[] = [];
@@ -126,6 +127,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
         conversationId,
         conversationKey: convoKey,
         file,
+        durationOverride: audioDuration,
       });
       if ("error" in result) {
         alert(`Failed to upload ${file.name}: ${result.error}`);

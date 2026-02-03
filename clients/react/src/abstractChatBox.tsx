@@ -429,6 +429,7 @@ export const ChatAvatar = (
 };
 
 const formatDuration = (seconds: number) => {
+  if (!isFinite(seconds) || isNaN(seconds)) return "--:--";
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, "0")}`;
@@ -1034,7 +1035,11 @@ export const AbstractChatBox = (
   }: {
     userId: string;
     onSend: (input: string) => void;
-    onSendWithAttachments?: (input: string, files: File[]) => Promise<void>;
+    onSendWithAttachments?: (
+      input: string,
+      files: File[],
+      audioDuration?: number,
+    ) => Promise<void>;
     messages: AbstracChatMessage[];
     limit: number;
     loadMore: () => void;
@@ -1106,7 +1111,8 @@ export const AbstractChatBox = (
           audioChunksRef.current.push(e.data);
         }
       };
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
+        const capturedDuration = recordingDuration;
         if (audioChunksRef.current.length === 0) {
           streamRef.current?.getTracks().forEach((t) => t.stop());
           return;
@@ -1115,9 +1121,17 @@ export const AbstractChatBox = (
         const file = new File([blob], `recording-${Date.now()}.webm`, {
           type: "audio/webm",
         });
-        setPendingFiles((prev) => [...prev, file]);
         streamRef.current?.getTracks().forEach((t) => t.stop());
         setRecordingDuration(0);
+        if (onSendWithAttachments) {
+          setIsSending(true);
+          await onSendWithAttachments(
+            "",
+            [file],
+            capturedDuration || undefined,
+          );
+          setIsSending(false);
+        }
       };
       recorder.start(100);
       setIsRecording(true);
@@ -1293,21 +1307,22 @@ export const AbstractChatBox = (
                 alignItems: "center",
                 gap: 16,
                 fontSize: 12,
-                opacity: 0.8,
               }}
             >
               <span
                 style={{
-                  opacity: Math.min(1, Math.abs(swipeOffset.x) / 30),
+                  opacity: 0.6 + Math.min(0.4, Math.abs(swipeOffset.x) / 50),
                   transform: `translateX(${Math.min(0, swipeOffset.x / 3)}px)`,
+                  transition: "opacity 0.15s",
                 }}
               >
-                ← cancel
+                ← slide to cancel
               </span>
               <span
                 style={{
-                  opacity: Math.min(1, Math.abs(swipeOffset.y) / 30),
+                  opacity: 0.4 + Math.min(0.6, Math.abs(swipeOffset.y) / 30),
                   transform: `translateY(${Math.min(0, swipeOffset.y / 3)}px)`,
+                  transition: "opacity 0.15s",
                 }}
               >
                 ↑ lock
@@ -1315,21 +1330,39 @@ export const AbstractChatBox = (
             </div>
           )}
           {isMobile && isRecordingLocked && (
-            <button
-              type="button"
-              onClick={() => stopRecording(true)}
-              style={{
-                background: "rgba(255,255,255,0.3)",
-                border: "none",
-                borderRadius: 4,
-                padding: "6px 14px",
-                color: "#fff",
-                fontSize: 14,
-                fontWeight: 500,
-              }}
-            >
-              Send
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() =>
+                  stopRecording(false)}
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "6px 14px",
+                  color: "#fff",
+                  fontSize: 14,
+                  fontWeight: 500,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => stopRecording(true)}
+                style={{
+                  background: "rgba(255,255,255,0.3)",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "6px 14px",
+                  color: "#fff",
+                  fontSize: 14,
+                  fontWeight: 500,
+                }}
+              >
+                Send
+              </button>
+            </div>
           )}
           {!isMobile && (
             <button
