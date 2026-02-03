@@ -1315,9 +1315,17 @@ export const Messenger = () => {
     if (!cw) return;
     if (handledChatWith === cw) return; // already processed this value
     (async () => {
+      // Resolve alias to public sign key if needed
+      let resolvedKey = cw;
+      try {
+        const res = await aliasToPublicSignKey(cw);
+        if ("publicSignKey" in res) resolvedKey = res.publicSignKey;
+      } catch (_) {
+        // assume it's already a public sign key
+      }
       // If a conversation already exists with this participant, use it.
       const existing = conversations.find(
-        isMatch(credentials.publicSignKey, cw),
+        isMatch(credentials.publicSignKey, resolvedKey),
       );
       let conversationId: string | null = null;
       if (existing) {
