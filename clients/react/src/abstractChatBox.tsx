@@ -1452,12 +1452,28 @@ export const AbstractChatBox = (
                 await startRecording();
               }
             }}
-            onTouchStart={isMobile ? () => startRecording() : undefined}
-            onTouchEnd={isMobile ? () => stopRecording(true) : undefined}
-            onTouchCancel={isMobile ? () => stopRecording(false) : undefined}
+            onTouchStart={isMobile
+              ? (e) => {
+                e.preventDefault();
+                startRecording();
+              }
+              : undefined}
+            onTouchEnd={isMobile
+              ? (e) => {
+                e.preventDefault();
+                stopRecording(true);
+              }
+              : undefined}
+            onTouchCancel={isMobile
+              ? (e) => {
+                e.preventDefault();
+                stopRecording(false);
+              }
+              : undefined}
             style={{
               ...iconButtonStyle(isDark),
               color: isRecording ? "#dc2626" : (isDark ? "#9ca3af" : "#64748b"),
+              touchAction: "none",
             }}
             title={isMobile
               ? "Hold to record"
