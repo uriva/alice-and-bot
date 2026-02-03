@@ -371,12 +371,13 @@ To run your own alice-and-bot server:
    gcloud iam service-accounts keys create key.json \
      --iam-account=your-service-account@your-project-id.iam.gserviceaccount.com
    ```
-6. Configure CORS on the bucket to allow uploads from your frontend:
+6. Configure CORS on the bucket to allow uploads from any origin (security is
+   enforced by signed URLs):
    ```sh
    cat > cors.json << 'EOF'
    [
      {
-       "origin": ["https://yourdomain.com", "http://localhost:5173"],
+       "origin": ["*"],
        "method": ["GET", "PUT", "POST", "OPTIONS"],
        "responseHeader": ["Content-Type", "x-goog-content-length-range"],
        "maxAgeSeconds": 3600
