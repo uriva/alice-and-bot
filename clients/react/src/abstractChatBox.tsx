@@ -30,6 +30,28 @@ const typingIndicatorStyle = (isDark: boolean) => ({
   fontSize: 12,
 });
 
+const SendingAudioIndicator = ({ isDark }: { isDark: boolean }) => {
+  const baseColor = isDark ? "#2563eb" : "#3182ce";
+  return (
+    <div style={{ display: "flex", flexDirection: "row-reverse", gap: 6 }}>
+      <div
+        style={{
+          background: baseColor,
+          borderRadius: 16,
+          padding: "10px 14px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          opacity: 0.7,
+        }}
+      >
+        <Spinner />
+        <span style={{ color: "#fff", fontSize: 13 }}>Sending audio...</span>
+      </div>
+    </div>
+  );
+};
+
 type VNodeLike = {
   type?: unknown;
   props?: { children?: ComponentChildren };
@@ -1125,6 +1147,7 @@ export const AbstractChatBox = (
   const recordingIntervalRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const pendingAudioMessageCountRef = useRef<number | null>(null);
   const [isRecordingLocked, setIsRecordingLocked] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
@@ -1180,13 +1203,13 @@ export const AbstractChatBox = (
         streamRef.current?.getTracks().forEach((t) => t.stop());
         setRecordingDuration(0);
         if (onSendWithAttachments) {
+          pendingAudioMessageCountRef.current = messages.length;
           setIsSending(true);
           await onSendWithAttachments(
             "",
             [file],
             capturedDuration > 0 ? capturedDuration : 1,
           );
-          setIsSending(false);
         }
       };
       recorder.start(100);
@@ -1240,14 +1263,25 @@ export const AbstractChatBox = (
     ? darkModeOverride
     : systemDarkMode;
 
+  // Clear sending indicator when new message arrives
+  useEffect(() => {
+    if (
+      pendingAudioMessageCountRef.current !== null &&
+      messages.length > pendingAudioMessageCountRef.current
+    ) {
+      pendingAudioMessageCountRef.current = null;
+      setIsSending(false);
+    }
+  }, [messages.length]);
+
   // Scroll to bottom when messages or typing indicator change
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
     requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     });
-  }, [messages.length, typingUsers.length]);
+  }, [messages.length, typingUsers.length, isSending]);
 
   // Helper to resize textarea
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
@@ -1302,6 +1336,8 @@ export const AbstractChatBox = (
                   sessionStart={sessionStartRef.current}
                 />
               ))}
+              {/* Sending audio indicator */}
+              {isSending && <SendingAudioIndicator isDark={isDark} />}
               {/* Typing indicator */}
               {typingUsers.length > 0 && (
                 <TypingIndicator names={typingUsers} isDark={isDark} />
