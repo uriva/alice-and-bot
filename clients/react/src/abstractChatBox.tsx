@@ -459,7 +459,11 @@ const audioPlayerStyle = (isDark: boolean): JSX.CSSProperties => ({
 });
 
 const AudioPlayer = (
-  { src, isDark }: { src: string; isDark: boolean },
+  { src, isDark, fallbackDuration }: {
+    src: string;
+    isDark: boolean;
+    fallbackDuration?: number;
+  },
 ): JSX.Element => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -470,7 +474,14 @@ const AudioPlayer = (
     const audio = audioRef.current;
     if (!audio) return;
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const onLoadedMetadata = () => setDuration(audio.duration);
+    const onLoadedMetadata = () => {
+      const dur = audio.duration;
+      if (isFinite(dur) && !isNaN(dur)) {
+        setDuration(dur);
+      } else if (fallbackDuration) {
+        setDuration(fallbackDuration);
+      }
+    };
     const onEnded = () => setIsPlaying(false);
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
@@ -570,7 +581,9 @@ const AudioPlayer = (
         >
           <span>{formatDuration(Math.floor(currentTime))}</span>
           <span>
-            {duration ? formatDuration(Math.floor(duration)) : "--:--"}
+            {(duration || fallbackDuration)
+              ? formatDuration(Math.floor(duration || fallbackDuration || 0))
+              : "--:--"}
           </span>
         </div>
       </div>
@@ -590,11 +603,22 @@ const fileAttachmentStyle = (isDark: boolean): JSX.CSSProperties => ({
 });
 
 const AttachmentRenderer = (
-  { attachment, textColor, isDark, onDecrypt }: {
+  {
+    attachment,
+    textColor,
+    isDark,
+    onDecrypt,
+    isOwn,
+    messageTimestamp,
+    sessionStart,
+  }: {
     attachment: Attachment;
     textColor: string;
     isDark: boolean;
     onDecrypt?: (url: string) => Promise<string>;
+    isOwn?: boolean;
+    messageTimestamp?: number;
+    sessionStart?: number;
   },
 ) => {
   const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
@@ -608,9 +632,27 @@ const AttachmentRenderer = (
     setLoading(false);
   };
 
+  const isFromThisSession = messageTimestamp && sessionStart &&
+    messageTimestamp >= sessionStart;
+
+  useEffect(() => {
+    if (
+      isOwn && isFromThisSession && attachment.type === "audio" && onDecrypt &&
+      !decryptedUrl
+    ) {
+      handleDecrypt();
+    }
+  }, [isOwn, isFromThisSession, attachment.type, onDecrypt]);
+
   if (attachment.type === "audio") {
     return decryptedUrl
-      ? <AudioPlayer src={decryptedUrl} isDark={isDark} />
+      ? (
+        <AudioPlayer
+          src={decryptedUrl}
+          isDark={isDark}
+          fallbackDuration={attachment.duration}
+        />
+      )
       : (
         <div style={audioPlayerStyle(isDark)}>
           <button
@@ -642,7 +684,12 @@ const AttachmentRenderer = (
             }}
           >
             <div
-              style={{ display: "flex", alignItems: "center", gap: 2 }}
+              style={{
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+              }}
             >
               {Array.from({ length: 30 }).map((_, i) => (
                 <div
@@ -761,6 +808,7 @@ type MessageProps = {
   next: AbstracChatMessage | undefined;
   isOwn: boolean;
   onDecryptAttachment?: (url: string) => Promise<string>;
+  sessionStart: number;
 };
 
 const Message = (
@@ -769,6 +817,7 @@ const Message = (
     next,
     isOwn,
     onDecryptAttachment,
+    sessionStart,
   }: MessageProps,
 ) => {
   const isFirstOfSequence = !next || next.authorId !== authorId;
@@ -885,6 +934,9 @@ const Message = (
                 textColor={textColor}
                 isDark={isDark}
                 onDecrypt={onDecryptAttachment}
+                isOwn={isOwn}
+                messageTimestamp={timestamp}
+                sessionStart={sessionStart}
               />
             ))}
           </div>
@@ -1066,6 +1118,8 @@ export const AbstractChatBox = (
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const recordingStartTimeRef = useRef<number>(0);
+  const sessionStartRef = useRef<number>(Date.now());
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<number | null>(null);
@@ -1112,7 +1166,9 @@ export const AbstractChatBox = (
         }
       };
       recorder.onstop = async () => {
-        const capturedDuration = recordingDuration;
+        const capturedDuration = Math.round(
+          (Date.now() - recordingStartTimeRef.current) / 1000,
+        );
         if (audioChunksRef.current.length === 0) {
           streamRef.current?.getTracks().forEach((t) => t.stop());
           return;
@@ -1128,7 +1184,7 @@ export const AbstractChatBox = (
           await onSendWithAttachments(
             "",
             [file],
-            capturedDuration || undefined,
+            capturedDuration > 0 ? capturedDuration : 1,
           );
           setIsSending(false);
         }
@@ -1136,6 +1192,7 @@ export const AbstractChatBox = (
       recorder.start(100);
       setIsRecording(true);
       setRecordingDuration(0);
+      recordingStartTimeRef.current = Date.now();
       recordingIntervalRef.current = setInterval(() => {
         setRecordingDuration((d) => d + 1);
       }, 1000) as unknown as number;
@@ -1242,6 +1299,7 @@ export const AbstractChatBox = (
                   msg={msg}
                   next={arr[i + 1]}
                   onDecryptAttachment={onDecryptAttachment}
+                  sessionStart={sessionStartRef.current}
                 />
               ))}
               {/* Typing indicator */}
