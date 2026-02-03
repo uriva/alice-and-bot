@@ -977,54 +977,28 @@ const messageContainerStyle = (isDark: boolean) => ({
 
 const sendButtonStyle = (
   isDark: boolean,
-  disabled: boolean,
   customColors?: CustomColors,
 ) => {
   const primaryColor = customColors?.primary ??
     (isDark ? "#2563eb" : "#3182ce");
-  const gradientEnd = customColors?.primary
-    ? `${primaryColor}dd` // slightly lighter version
-    : (isDark ? "#60a5fa" : "#60a5fa");
-
   return {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "0 18px",
-    minHeight: 44,
-    height: "100%",
-    borderRadius: 0,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 0,
+    width: 44,
+    height: 44,
+    borderRadius: "50%",
     border: "none",
-    background: !disabled
-      ? `linear-gradient(90deg, ${primaryColor} 60%, ${gradientEnd} 100%)`
-      : (isDark ? "#23272f" : "#cbd5e1"),
-    color: !disabled ? "#fff" : (isDark ? "#aaa" : "#64748b"),
-    fontWeight: 600,
-    fontSize: 15,
-    cursor: !disabled ? "pointer" : "not-allowed",
+    background: primaryColor,
+    color: "#fff",
+    cursor: "pointer",
     boxShadow: isDark
-      ? "0 2px 8px rgba(0,0,0,0.18)"
-      : "0 2px 8px rgba(0,0,0,0.08)",
-    transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
-    opacity: !disabled ? 1 : 0.7,
-    gap: 7,
+      ? "0 2px 8px rgba(0,0,0,0.25)"
+      : "0 2px 8px rgba(0,0,0,0.15)",
+    transition: "background 0.2s, transform 0.1s",
+    flexShrink: 0,
   };
 };
-
-const iconButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 40,
-  height: 44,
-  background: isDark ? "#181c23" : "#f1f5f9",
-  border: "none",
-  cursor: "pointer",
-  color: isDark ? "#9ca3af" : "#64748b",
-  transition: "color 0.2s, background 0.2s",
-});
 
 const recordingIndicatorStyle = (isDark: boolean): JSX.CSSProperties => ({
   display: "flex",
@@ -1379,10 +1353,12 @@ export const AbstractChatBox = (
       <div
         style={{
           display: "flex",
-          alignItems: "stretch",
-          gap: 0,
+          alignItems: "flex-end",
+          gap: 8,
           flex: "0 0 auto",
           minHeight: 44,
+          padding: "8px 12px",
+          background: isDark ? "#0f1318" : "#f8fafc",
         }}
       >
         <input
@@ -1396,200 +1372,248 @@ export const AbstractChatBox = (
             e.currentTarget.value = "";
           }}
         />
-        <textarea
-          dir="auto"
-          ref={inputRef}
-          value={input}
-          rows={1}
-          placeholder="Type a message..."
-          onInput={(e) => {
-            setInput(e.currentTarget.value);
-            resizeTextarea(e.currentTarget);
-            onInputActivity?.();
-          }}
-          onBlur={() => onInputActivity?.()}
-          style={{
-            flexGrow: 1,
-            padding: "10px 16px",
-            border: "none",
-            borderTopLeftRadius: 10,
-            borderBottomLeftRadius: 0,
-            borderTopRightRadius: 0,
-            borderBottomRightRadius: 0,
-            background: isDark ? "#181c23" : "#f1f5f9",
-            color: isDark ? "#f3f4f6" : "#1e293b",
-            fontSize: 16,
-            outline: "none",
-            resize: "none",
-            boxSizing: "border-box",
-            height: 44,
-            minHeight: 44,
-            overflowY: "auto",
-            overflowX: "hidden",
-            maxHeight: 200,
-            lineHeight: 1.5,
-            transition: "border 0.2s, background 0.2s, color 0.2s",
-            boxShadow: isDark
-              ? "0 2px 8px rgba(0,0,0,0.18)"
-              : "0 2px 8px rgba(0,0,0,0.08)",
-            fontFamily: "inherit",
-            letterSpacing: 0.1,
-            scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f1f5f9",
-            scrollbarWidth: "thin",
-          }}
-          onKeyDown={(e) => {
-            if (
-              (e.key === "PageUp" || e.key === "PageDown") && e.currentTarget
-            ) {
-              const ta = e.currentTarget;
-              const canScrollUp = ta.scrollTop > 0;
-              const canScrollDown =
-                ta.scrollTop + ta.clientHeight < ta.scrollHeight;
-              if (
-                (e.key === "PageUp" && canScrollUp) ||
-                (e.key === "PageDown" && canScrollDown)
-              ) {
-                e.stopPropagation();
-                return;
-              }
-            }
-            if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
-              if (isMobile) return;
-              const canSend = input.trim() || pendingFiles.length > 0;
-              if (canSend && !isSending) {
-                handleSend();
-              }
-              e.preventDefault();
-            } else if (
-              e.key === "Enter" && (e.shiftKey || e.ctrlKey)
-            ) {
-              const selectionStart = e.currentTarget.selectionStart ??
-                input.length;
-              const selectionEnd = e.currentTarget.selectionEnd ?? input.length;
-              const newValue = input.slice(0, selectionStart) + "\n" +
-                input.slice(selectionEnd);
-              e.currentTarget.value = newValue;
-              resizeTextarea(e.currentTarget);
-              setInput(newValue);
-              setTimeout(() => {
-                if (e.currentTarget) {
-                  e.currentTarget.selectionStart =
-                    e.currentTarget.selectionEnd =
-                      selectionStart + 1;
-                }
-              }, 0);
-              e.preventDefault();
-            }
-            onInputActivity?.();
-          }}
-        />
-        {enableAttachments && (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={iconButtonStyle(isDark)}
-            title="Attach file"
-          >
-            <FaPaperclip size={18} />
-          </button>
-        )}
-        {enableAudioRecording && (
-          <button
-            type="button"
-            onClick={isMobile ? undefined : async () => {
-              if (isRecording) {
-                stopRecording(true);
-              } else {
-                await startRecording();
-              }
-            }}
-            onTouchStart={isMobile
-              ? (e) => {
-                e.preventDefault();
-                if (isRecordingLocked) return;
-                const touch = e.touches[0];
-                touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-                setSwipeOffset({ x: 0, y: 0 });
-                startRecording();
-              }
-              : undefined}
-            onTouchMove={isMobile
-              ? (e) => {
-                e.preventDefault();
-                if (!touchStartRef.current || isRecordingLocked) return;
-                const touch = e.touches[0];
-                const dx = touch.clientX - touchStartRef.current.x;
-                const dy = touch.clientY - touchStartRef.current.y;
-                setSwipeOffset({ x: dx, y: dy });
-                if (dx < -80) {
-                  stopRecording(false);
-                } else if (dy < -60) {
-                  setIsRecordingLocked(true);
-                  setSwipeOffset({ x: 0, y: 0 });
-                }
-              }
-              : undefined}
-            onTouchEnd={isMobile
-              ? (e) => {
-                e.preventDefault();
-                if (isRecordingLocked) return;
-                stopRecording(true);
-              }
-              : undefined}
-            onTouchCancel={isMobile
-              ? (e) => {
-                e.preventDefault();
-                if (isRecordingLocked) return;
-                stopRecording(false);
-              }
-              : undefined}
-            style={{
-              ...iconButtonStyle(isDark),
-              color: isRecording ? "#dc2626" : (isDark ? "#9ca3af" : "#64748b"),
-              touchAction: "none",
-            }}
-            title={isMobile
-              ? "Hold to record"
-              : isRecording
-              ? "Stop recording"
-              : "Record audio"}
-          >
-            {isRecording ? <FaStop size={18} /> : <FaMicrophone size={18} />}
-          </button>
-        )}
-        <button
-          type="button"
-          disabled={(!input.trim() && pendingFiles.length === 0) || isSending}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleSend}
-          style={sendButtonStyle(
-            isDark,
-            (!input.trim() && pendingFiles.length === 0) || isSending,
-            customColors,
+        <div style={{ position: "relative", flexGrow: 1 }}>
+          {enableAttachments && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                position: "absolute",
+                left: 8,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: isDark ? "#6b7280" : "#94a3b8",
+                padding: 4,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              title="Attach file"
+            >
+              <FaPaperclip size={16} />
+            </button>
           )}
-          title="Send"
-        >
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginRight: 0,
-              color: (input.trim() || pendingFiles.length > 0) && !isSending
-                ? "#fff"
-                : "#64748b",
-              filter: (input.trim() || pendingFiles.length > 0) && !isSending
-                ? "drop-shadow(0 1px 2px #0002)"
-                : "none",
-              opacity: (input.trim() || pendingFiles.length > 0) && !isSending
-                ? 0.95
-                : 0.7,
-              transition: "color 0.2s, filter 0.2s",
+          <textarea
+            dir="auto"
+            ref={inputRef}
+            value={input}
+            rows={1}
+            placeholder="Type a message..."
+            onInput={(e) => {
+              setInput(e.currentTarget.value);
+              resizeTextarea(e.currentTarget);
+              onInputActivity?.();
             }}
-          >
-            <FaPaperPlane size={20} />
-          </span>
-          <span>{isSending ? "..." : "Send"}</span>
-        </button>
+            onBlur={() => onInputActivity?.()}
+            style={{
+              width: "100%",
+              padding: enableAttachments ? "10px 16px 10px 36px" : "10px 16px",
+              border: "none",
+              borderRadius: 22,
+              background: isDark ? "#1f2937" : "#e2e8f0",
+              color: isDark ? "#f3f4f6" : "#1e293b",
+              fontSize: 16,
+              outline: "none",
+              resize: "none",
+              boxSizing: "border-box",
+              height: 44,
+              minHeight: 44,
+              overflowY: "auto",
+              overflowX: "hidden",
+              maxHeight: 200,
+              lineHeight: 1.5,
+              transition: "background 0.2s, color 0.2s",
+              fontFamily: "inherit",
+              letterSpacing: 0.1,
+              scrollbarColor: isDark ? "#374151 #1f2937" : "#cbd5e1 #e2e8f0",
+              scrollbarWidth: "thin",
+            }}
+            onKeyDown={(e) => {
+              if (
+                (e.key === "PageUp" || e.key === "PageDown") && e.currentTarget
+              ) {
+                const ta = e.currentTarget;
+                const canScrollUp = ta.scrollTop > 0;
+                const canScrollDown =
+                  ta.scrollTop + ta.clientHeight < ta.scrollHeight;
+                if (
+                  (e.key === "PageUp" && canScrollUp) ||
+                  (e.key === "PageDown" && canScrollDown)
+                ) {
+                  e.stopPropagation();
+                  return;
+                }
+              }
+              if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
+                if (isMobile) return;
+                const canSend = input.trim() || pendingFiles.length > 0;
+                if (canSend && !isSending) {
+                  handleSend();
+                }
+                e.preventDefault();
+              } else if (
+                e.key === "Enter" && (e.shiftKey || e.ctrlKey)
+              ) {
+                const selectionStart = e.currentTarget.selectionStart ??
+                  input.length;
+                const selectionEnd = e.currentTarget.selectionEnd ??
+                  input.length;
+                const newValue = input.slice(0, selectionStart) + "\n" +
+                  input.slice(selectionEnd);
+                e.currentTarget.value = newValue;
+                resizeTextarea(e.currentTarget);
+                setInput(newValue);
+                setTimeout(() => {
+                  if (e.currentTarget) {
+                    e.currentTarget.selectionStart =
+                      e.currentTarget.selectionEnd =
+                        selectionStart + 1;
+                  }
+                }, 0);
+                e.preventDefault();
+              }
+              onInputActivity?.();
+            }}
+          />
+        </div>
+        {(() => {
+          const hasContent = input.trim() || pendingFiles.length > 0;
+          const showMic = enableAudioRecording && !hasContent && !isRecording;
+          const showStop = isRecording;
+          const showSend = hasContent || (isRecording && isRecordingLocked);
+
+          if (showMic) {
+            return (
+              <button
+                type="button"
+                onClick={isMobile ? undefined : () => startRecording()}
+                onTouchStart={isMobile
+                  ? (e) => {
+                    e.preventDefault();
+                    if (isRecordingLocked) return;
+                    const touch = e.touches[0];
+                    touchStartRef.current = {
+                      x: touch.clientX,
+                      y: touch.clientY,
+                    };
+                    setSwipeOffset({ x: 0, y: 0 });
+                    startRecording();
+                  }
+                  : undefined}
+                onTouchMove={isMobile
+                  ? (e) => {
+                    e.preventDefault();
+                    if (!touchStartRef.current || isRecordingLocked) return;
+                    const touch = e.touches[0];
+                    const dx = touch.clientX - touchStartRef.current.x;
+                    const dy = touch.clientY - touchStartRef.current.y;
+                    setSwipeOffset({ x: dx, y: dy });
+                    if (dx < -80) {
+                      stopRecording(false);
+                    } else if (dy < -60) {
+                      setIsRecordingLocked(true);
+                      setSwipeOffset({ x: 0, y: 0 });
+                    }
+                  }
+                  : undefined}
+                onTouchEnd={isMobile
+                  ? (e) => {
+                    e.preventDefault();
+                    if (isRecordingLocked) return;
+                    stopRecording(true);
+                  }
+                  : undefined}
+                onTouchCancel={isMobile
+                  ? (e) => {
+                    e.preventDefault();
+                    if (isRecordingLocked) return;
+                    stopRecording(false);
+                  }
+                  : undefined}
+                style={{
+                  ...sendButtonStyle(isDark, customColors),
+                  touchAction: "none",
+                }}
+                title={isMobile ? "Hold to record" : "Record audio"}
+              >
+                <FaMicrophone size={20} />
+              </button>
+            );
+          }
+
+          if (showStop && !isRecordingLocked) {
+            return (
+              <button
+                type="button"
+                onClick={isMobile ? undefined : () => stopRecording(true)}
+                onTouchMove={isMobile
+                  ? (e) => {
+                    e.preventDefault();
+                    if (!touchStartRef.current || isRecordingLocked) return;
+                    const touch = e.touches[0];
+                    const dx = touch.clientX - touchStartRef.current.x;
+                    const dy = touch.clientY - touchStartRef.current.y;
+                    setSwipeOffset({ x: dx, y: dy });
+                    if (dx < -80) {
+                      stopRecording(false);
+                    } else if (dy < -60) {
+                      setIsRecordingLocked(true);
+                      setSwipeOffset({ x: 0, y: 0 });
+                    }
+                  }
+                  : undefined}
+                onTouchEnd={isMobile
+                  ? (e) => {
+                    e.preventDefault();
+                    if (isRecordingLocked) return;
+                    stopRecording(true);
+                  }
+                  : undefined}
+                onTouchCancel={isMobile
+                  ? (e) => {
+                    e.preventDefault();
+                    if (isRecordingLocked) return;
+                    stopRecording(false);
+                  }
+                  : undefined}
+                style={{
+                  ...sendButtonStyle(isDark, customColors),
+                  background: "#dc2626",
+                  touchAction: "none",
+                }}
+                title="Stop recording"
+              >
+                <FaStop size={18} />
+              </button>
+            );
+          }
+
+          return (
+            <button
+              type="button"
+              disabled={!hasContent && !showSend}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                if (isRecordingLocked) {
+                  stopRecording(true);
+                } else {
+                  handleSend();
+                }
+              }}
+              style={{
+                ...sendButtonStyle(isDark, customColors),
+                opacity: (hasContent || showSend) ? 1 : 0.5,
+                cursor: (hasContent || showSend) ? "pointer" : "not-allowed",
+              }}
+              title="Send"
+            >
+              <FaPaperPlane size={18} />
+            </button>
+          );
+        })()}
       </div>
       {fetchingMore && <div style={loadingStyle}>Loading more...</div>}
     </div>
