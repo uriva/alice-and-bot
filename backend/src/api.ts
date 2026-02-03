@@ -223,7 +223,11 @@ export const backendApiSchema = {
       contentType: z.string(),
     }),
     z.union([
-      z.object({ uploadUrl: z.string(), fileUrl: z.string() }),
+      z.object({
+        uploadUrl: z.string(),
+        fileUrl: z.string(),
+        maxSize: z.number(),
+      }),
       z.object({ error: z.enum(["not-participant", "invalid-conversation"]) }),
     ]),
   ),
@@ -415,7 +419,7 @@ export const getUploadUrl = async (
     contentType: string;
   },
 ): Promise<
-  { uploadUrl: string; fileUrl: string } | {
+  { uploadUrl: string; fileUrl: string; maxSize: number } | {
     error: "not-participant" | "invalid-conversation";
   }
 > =>

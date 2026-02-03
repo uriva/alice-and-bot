@@ -25,7 +25,7 @@ export const generateUploadUrl = async ({
   contentHash: string;
   fileName: string;
   contentType: string;
-}): Promise<{ uploadUrl: string; fileUrl: string }> => {
+}): Promise<{ uploadUrl: string; fileUrl: string; maxSize: number }> => {
   const ext = getExtension(fileName);
   const filePath = `attachments/${conversationId}/${contentHash}${ext}`;
   const file = bucket.file(filePath);
@@ -43,5 +43,5 @@ export const generateUploadUrl = async ({
 
   const fileUrl = `https://storage.googleapis.com/${bucketName}/${filePath}`;
 
-  return { uploadUrl, fileUrl };
+  return { uploadUrl, fileUrl, maxSize };
 };

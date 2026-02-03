@@ -348,11 +348,14 @@ export const uploadAttachment = async ({
   });
   if ("error" in result) return { error: result.error };
 
-  const { uploadUrl, fileUrl } = result;
+  const { uploadUrl, fileUrl, maxSize } = result;
 
   const response = await fetch(uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": "application/octet-stream" },
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "x-goog-content-length-range": `0,${maxSize}`,
+    },
     body: encrypted,
   });
   if (!response.ok) {
