@@ -1092,6 +1092,9 @@ export const AbstractChatBox = (
   const recordingIntervalRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isRecordingLocked, setIsRecordingLocked] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
 
   const stopRecording = (save: boolean) => {
     if (recordingIntervalRef.current) {
@@ -1112,6 +1115,9 @@ export const AbstractChatBox = (
     }
     setIsRecording(false);
     setRecordingDuration(0);
+    setIsRecordingLocked(false);
+    setSwipeOffset({ x: 0, y: 0 });
+    touchStartRef.current = null;
   };
 
   const startRecording = async () => {
@@ -1306,6 +1312,51 @@ export const AbstractChatBox = (
             <span style={{ animation: "pulse 1s infinite" }}>🔴</span>
             <span>Recording... {formatDuration(recordingDuration)}</span>
           </div>
+          {isMobile && !isRecordingLocked && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                fontSize: 12,
+                opacity: 0.8,
+              }}
+            >
+              <span
+                style={{
+                  opacity: Math.min(1, Math.abs(swipeOffset.x) / 30),
+                  transform: `translateX(${Math.min(0, swipeOffset.x / 3)}px)`,
+                }}
+              >
+                ← cancel
+              </span>
+              <span
+                style={{
+                  opacity: Math.min(1, Math.abs(swipeOffset.y) / 30),
+                  transform: `translateY(${Math.min(0, swipeOffset.y / 3)}px)`,
+                }}
+              >
+                ↑ lock
+              </span>
+            </div>
+          )}
+          {isMobile && isRecordingLocked && (
+            <button
+              type="button"
+              onClick={() => stopRecording(true)}
+              style={{
+                background: "rgba(255,255,255,0.3)",
+                border: "none",
+                borderRadius: 4,
+                padding: "6px 14px",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              Send
+            </button>
+          )}
           {!isMobile && (
             <button
               type="button"
@@ -1455,18 +1506,40 @@ export const AbstractChatBox = (
             onTouchStart={isMobile
               ? (e) => {
                 e.preventDefault();
+                if (isRecordingLocked) return;
+                const touch = e.touches[0];
+                touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+                setSwipeOffset({ x: 0, y: 0 });
                 startRecording();
+              }
+              : undefined}
+            onTouchMove={isMobile
+              ? (e) => {
+                e.preventDefault();
+                if (!touchStartRef.current || isRecordingLocked) return;
+                const touch = e.touches[0];
+                const dx = touch.clientX - touchStartRef.current.x;
+                const dy = touch.clientY - touchStartRef.current.y;
+                setSwipeOffset({ x: dx, y: dy });
+                if (dx < -80) {
+                  stopRecording(false);
+                } else if (dy < -60) {
+                  setIsRecordingLocked(true);
+                  setSwipeOffset({ x: 0, y: 0 });
+                }
               }
               : undefined}
             onTouchEnd={isMobile
               ? (e) => {
                 e.preventDefault();
+                if (isRecordingLocked) return;
                 stopRecording(true);
               }
               : undefined}
             onTouchCancel={isMobile
               ? (e) => {
                 e.preventDefault();
+                if (isRecordingLocked) return;
                 stopRecording(false);
               }
               : undefined}
