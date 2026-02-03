@@ -12,6 +12,7 @@ import {
   sendPushToParticipants,
   vapidPublicKey,
 } from "./notificationService.ts";
+import { generateUploadUrl } from "./storage.ts";
 
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
@@ -381,6 +382,39 @@ const endpoints: BackendApiImpl = {
         }
       }
       return { success: true };
+    },
+    getUploadUrl: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authed = await verifyAuthToken<{
+        conversationId: string;
+        contentHash: string;
+        fileName: string;
+        contentType: string;
+      }>({
+        action: "getUploadUrl",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authed) return { error: "not-participant" };
+      const { conversationId, contentHash, fileName, contentType } = payload;
+      const { conversations } = await query({
+        conversations: {
+          participants: {},
+          $: { where: { id: conversationId } },
+        },
+      });
+      if (!conversations.length) return { error: "invalid-conversation" };
+      const isParticipant = conversations[0].participants.some(
+        (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+      );
+      if (!isParticipant) return { error: "not-participant" };
+      return generateUploadUrl({
+        conversationId,
+        contentHash,
+        fileName,
+        contentType,
+      });
     },
   },
 };

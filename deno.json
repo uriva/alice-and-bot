@@ -13,6 +13,7 @@
   },
   "imports": {
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.5",
+    "@google-cloud/storage": "npm:@google-cloud/storage@7.16.0",
     "@instantdb/admin": "npm:@instantdb/admin@0.22.41",
     "@instantdb/core": "npm:@instantdb/core@0.22.41",
     "@instantdb/react": "npm:@instantdb/react@0.22.41",

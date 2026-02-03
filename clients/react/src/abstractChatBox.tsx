@@ -1,9 +1,15 @@
 import { sortKey } from "@uri/gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { FaPaperPlane } from "react-icons/fa";
+import {
+  FaMicrophone,
+  FaPaperclip,
+  FaPaperPlane,
+  FaStop,
+} from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ComponentChildren, JSX } from "preact";
+import type { Attachment } from "../../../protocol/src/clientApi.ts";
 import {
   centerFillStyle,
   chatContainerStyle,
@@ -419,15 +425,199 @@ export const ChatAvatar = (
   );
 };
 
+const formatDuration = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const attachmentContainerStyle: JSX.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+  marginTop: 6,
+};
+
+const audioAttachmentStyle = (isDark: boolean): JSX.CSSProperties => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 12px",
+  borderRadius: 8,
+  background: isDark ? "#ffffff15" : "#00000010",
+});
+
+const fileAttachmentStyle = (isDark: boolean): JSX.CSSProperties => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 12px",
+  borderRadius: 8,
+  background: isDark ? "#ffffff15" : "#00000010",
+  textDecoration: "none",
+  color: "inherit",
+});
+
+const AttachmentRenderer = (
+  { attachment, textColor, isDark, onDecrypt }: {
+    attachment: Attachment;
+    textColor: string;
+    isDark: boolean;
+    onDecrypt?: (url: string) => Promise<string>;
+  },
+) => {
+  const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleDecrypt = async () => {
+    if (!onDecrypt || decryptedUrl) return;
+    setLoading(true);
+    const url = await onDecrypt(attachment.url);
+    setDecryptedUrl(url);
+    setLoading(false);
+  };
+
+  if (attachment.type === "audio") {
+    return (
+      <div style={audioAttachmentStyle(isDark)}>
+        {decryptedUrl
+          ? (
+            <audio controls preload="metadata" style={{ width: "100%" }}>
+              <source src={decryptedUrl} type={attachment.mimeType} />
+            </audio>
+          )
+          : (
+            <>
+              <button
+                type="button"
+                onClick={handleDecrypt}
+                disabled={loading}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: textColor,
+                  cursor: "pointer",
+                  padding: 4,
+                }}
+              >
+                {loading ? "..." : "▶"}
+              </button>
+              <span style={{ color: textColor, fontSize: 13 }}>
+                {attachment.name}
+                {attachment.duration &&
+                  ` (${formatDuration(attachment.duration)})`}
+              </span>
+            </>
+          )}
+      </div>
+    );
+  }
+
+  if (attachment.type === "image") {
+    return decryptedUrl
+      ? (
+        <img
+          src={decryptedUrl}
+          alt={attachment.name}
+          style={{
+            maxWidth: "100%",
+            borderRadius: 8,
+            cursor: "pointer",
+          }}
+        />
+      )
+      : (
+        <button
+          type="button"
+          onClick={handleDecrypt}
+          disabled={loading}
+          style={{
+            ...fileAttachmentStyle(isDark),
+            cursor: "pointer",
+            border: "none",
+          }}
+        >
+          <span>🖼️</span>
+          <span style={{ color: textColor, fontSize: 13 }}>
+            {loading ? "Loading..." : attachment.name}
+          </span>
+        </button>
+      );
+  }
+
+  if (attachment.type === "video") {
+    return decryptedUrl
+      ? (
+        <video
+          controls
+          preload="metadata"
+          style={{ maxWidth: "100%", borderRadius: 8 }}
+        >
+          <source src={decryptedUrl} type={attachment.mimeType} />
+        </video>
+      )
+      : (
+        <button
+          type="button"
+          onClick={handleDecrypt}
+          disabled={loading}
+          style={{
+            ...fileAttachmentStyle(isDark),
+            cursor: "pointer",
+            border: "none",
+          }}
+        >
+          <span>🎬</span>
+          <span style={{ color: textColor, fontSize: 13 }}>
+            {loading ? "Loading..." : attachment.name}
+          </span>
+        </button>
+      );
+  }
+
+  return (
+    <a
+      href={decryptedUrl ?? "#"}
+      onClick={async (e) => {
+        if (!decryptedUrl && onDecrypt) {
+          e.preventDefault();
+          await handleDecrypt();
+        }
+      }}
+      download={attachment.name}
+      style={fileAttachmentStyle(isDark)}
+    >
+      <span>📎</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ color: textColor, fontSize: 13 }}>{attachment.name}</div>
+        <div style={{ color: textColor, fontSize: 11, opacity: 0.7 }}>
+          {formatFileSize(attachment.size)}
+        </div>
+      </div>
+    </a>
+  );
+};
+
 type MessageProps = {
   msg: AbstracChatMessage;
   next: AbstracChatMessage | undefined;
   isOwn: boolean;
+  onDecryptAttachment?: (url: string) => Promise<string>;
 };
 
 const Message = (
-  { msg: { authorId, authorName, authorAvatar, text, timestamp }, next, isOwn }:
-    MessageProps,
+  {
+    msg: { authorId, authorName, authorAvatar, text, timestamp, attachments },
+    next,
+    isOwn,
+    onDecryptAttachment,
+  }: MessageProps,
 ) => {
   const isFirstOfSequence = !next || next.authorId !== authorId;
   const isDark = useDarkMode();
@@ -470,69 +660,83 @@ const Message = (
         }}
       >
         <b style={{ fontSize: 11 }}>{authorName}</b>
-        <div
-          dir="auto"
-          style={{
-            // Ensure child text and links wrap nicely on small widths
-            overflowWrap: "anywhere",
-            wordBreak: "break-word",
-          }}
-        >
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkHtmlToText]}
-            components={{
-              // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
-              p: MarkdownParagraph,
-              // @ts-expect-error react-markdown types are not fully compatible with Preact here
-              a: ({ children, href }) => {
-                if (isVideoUrl(href)) {
-                  return (
-                    <video
-                      src={href}
-                      controls
-                      preload="metadata"
-                      playsInline
-                      style={bubbleVideoStyle}
-                    />
-                  );
-                }
-                if (isAudioUrl(href)) {
-                  return (
-                    <audio
-                      src={href}
-                      controls
-                      preload="metadata"
-                      style={bubbleAudioStyle}
-                    />
-                  );
-                }
-                return (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: textColor,
-                      textDecoration: "underline",
-                      overflowWrap: "anywhere",
-                      wordBreak: "break-word",
-                    }}
-                  >
-                    {children}
-                  </a>
-                );
-              },
-              // @ts-expect-error react-markdown types are not fully compatible with Preact here
-              img: ({ src, alt }) => (
-                <img src={src} alt={alt} style={bubbleImgStyle} />
-              ),
-              // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
-              code: CodeBlock,
+        {text && (
+          <div
+            dir="auto"
+            style={{
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
             }}
           >
-            {preprocessText(text)}
-          </ReactMarkdown>
-        </div>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkHtmlToText]}
+              components={{
+                // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
+                p: MarkdownParagraph,
+                // @ts-expect-error react-markdown types are not fully compatible with Preact here
+                a: ({ children, href }) => {
+                  if (isVideoUrl(href)) {
+                    return (
+                      <video
+                        src={href}
+                        controls
+                        preload="metadata"
+                        playsInline
+                        style={bubbleVideoStyle}
+                      />
+                    );
+                  }
+                  if (isAudioUrl(href)) {
+                    return (
+                      <audio
+                        src={href}
+                        controls
+                        preload="metadata"
+                        style={bubbleAudioStyle}
+                      />
+                    );
+                  }
+                  return (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: textColor,
+                        textDecoration: "underline",
+                        overflowWrap: "anywhere",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {children}
+                    </a>
+                  );
+                },
+                // @ts-expect-error react-markdown types are not fully compatible with Preact here
+                img: ({ src, alt }) => (
+                  <img src={src} alt={alt} style={bubbleImgStyle} />
+                ),
+                // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
+                code: CodeBlock,
+              }}
+            >
+              {preprocessText(text)}
+            </ReactMarkdown>
+          </div>
+        )}
+        {attachments && attachments.length > 0 && (
+          <div style={attachmentContainerStyle}>
+            {attachments.map((att, i) => (
+              <AttachmentRenderer
+                key={i}
+                attachment={att}
+                textColor={textColor}
+                isDark={isDark}
+                onDecrypt={onDecryptAttachment}
+              />
+            ))}
+          </div>
+        )}
         <span
           style={{
             color: isDark ? "#bbb" : (textColor === "#222" ? "#555" : "#eee"),
@@ -553,6 +757,7 @@ export type AbstracChatMessage = {
   authorAvatar?: string;
   text: string;
   timestamp: number;
+  attachments?: Attachment[];
 };
 
 const CloseButton = ({ onClose }: { onClose: () => void }) => {
@@ -657,12 +862,37 @@ const sendButtonStyle = (
   };
 };
 
+const iconButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 40,
+  height: 44,
+  background: isDark ? "#181c23" : "#f1f5f9",
+  border: "none",
+  cursor: "pointer",
+  color: isDark ? "#9ca3af" : "#64748b",
+  transition: "color 0.2s, background 0.2s",
+});
+
+const recordingIndicatorStyle = (isDark: boolean): JSX.CSSProperties => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 16px",
+  background: isDark ? "#dc2626" : "#ef4444",
+  color: "#fff",
+  fontSize: 14,
+  fontWeight: 500,
+});
+
 export const AbstractChatBox = (
   {
     limit,
     loadMore,
     userId,
     onSend,
+    onSendWithAttachments,
     messages,
     onClose,
     title,
@@ -672,9 +902,13 @@ export const AbstractChatBox = (
     isLoading = false,
     darkModeOverride,
     customColors,
+    onDecryptAttachment,
+    enableAttachments = false,
+    enableAudioRecording = false,
   }: {
     userId: string;
     onSend: (input: string) => void;
+    onSendWithAttachments?: (input: string, files: File[]) => Promise<void>;
     messages: AbstracChatMessage[];
     limit: number;
     loadMore: () => void;
@@ -686,6 +920,9 @@ export const AbstractChatBox = (
     isLoading?: boolean;
     darkModeOverride?: boolean;
     customColors?: CustomColors;
+    onDecryptAttachment?: (url: string) => Promise<string>;
+    enableAttachments?: boolean;
+    enableAudioRecording?: boolean;
   },
 ): JSX.Element => {
   const isMobile = useIsMobile();
@@ -694,6 +931,15 @@ export const AbstractChatBox = (
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<number | null>(null);
+  const [isSending, setIsSending] = useState(false);
+
   const handleScroll = () => {
     if (
       messagesContainerRef.current &&
@@ -791,6 +1037,7 @@ export const AbstractChatBox = (
                   isOwn={msg.authorId === userId}
                   msg={msg}
                   next={arr[i + 1]}
+                  onDecryptAttachment={onDecryptAttachment}
                 />
               ))}
               {/* Typing indicator */}
@@ -801,6 +1048,54 @@ export const AbstractChatBox = (
             </>
           )}
       </div>
+      {pendingFiles.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            padding: "8px 12px",
+            background: isDark ? "#1f2937" : "#e2e8f0",
+            flexWrap: "wrap",
+          }}
+        >
+          {pendingFiles.map((f, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "4px 8px",
+                background: isDark ? "#374151" : "#cbd5e1",
+                borderRadius: 4,
+                fontSize: 12,
+              }}
+            >
+              <span>{f.name}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setPendingFiles(pendingFiles.filter((_, j) => j !== i))}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: isDark ? "#9ca3af" : "#64748b",
+                  padding: 2,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {isRecording && (
+        <div style={recordingIndicatorStyle(isDark)}>
+          <span style={{ animation: "pulse 1s infinite" }}>🔴</span>
+          <span>Recording... {formatDuration(recordingDuration)}</span>
+        </div>
+      )}
       <div
         style={{
           display: "flex",
@@ -810,6 +1105,81 @@ export const AbstractChatBox = (
           minHeight: 44,
         }}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const files = Array.from(e.currentTarget.files ?? []);
+            setPendingFiles([...pendingFiles, ...files]);
+            e.currentTarget.value = "";
+          }}
+        />
+        {enableAttachments && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            style={iconButtonStyle(isDark)}
+            title="Attach file"
+          >
+            <FaPaperclip size={18} />
+          </button>
+        )}
+        {enableAudioRecording && (
+          <button
+            type="button"
+            onClick={async () => {
+              if (isRecording) {
+                mediaRecorderRef.current?.stop();
+                setIsRecording(false);
+                if (recordingIntervalRef.current) {
+                  clearInterval(recordingIntervalRef.current);
+                }
+              } else {
+                try {
+                  const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                  });
+                  const recorder = new MediaRecorder(stream);
+                  mediaRecorderRef.current = recorder;
+                  audioChunksRef.current = [];
+                  recorder.ondataavailable = (e) => {
+                    audioChunksRef.current.push(e.data);
+                  };
+                  recorder.onstop = () => {
+                    const blob = new Blob(audioChunksRef.current, {
+                      type: "audio/webm",
+                    });
+                    const file = new File(
+                      [blob],
+                      `recording-${Date.now()}.webm`,
+                      { type: "audio/webm" },
+                    );
+                    setPendingFiles([...pendingFiles, file]);
+                    stream.getTracks().forEach((t) => t.stop());
+                    setRecordingDuration(0);
+                  };
+                  recorder.start();
+                  setIsRecording(true);
+                  setRecordingDuration(0);
+                  recordingIntervalRef.current = setInterval(() => {
+                    setRecordingDuration((d) => d + 1);
+                  }, 1000) as unknown as number;
+                } catch {
+                  console.error("Could not access microphone");
+                }
+              }
+            }}
+            style={{
+              ...iconButtonStyle(isDark),
+              color: isRecording ? "#dc2626" : (isDark ? "#9ca3af" : "#64748b"),
+            }}
+            title={isRecording ? "Stop recording" : "Record audio"}
+          >
+            {isRecording ? <FaStop size={18} /> : <FaMicrophone size={18} />}
+          </button>
+        )}
         <textarea
           dir="auto"
           ref={inputRef}
@@ -826,7 +1196,9 @@ export const AbstractChatBox = (
             flexGrow: 1,
             padding: "10px 16px",
             border: "none",
-            borderTopLeftRadius: 10,
+            borderTopLeftRadius: enableAttachments || enableAudioRecording
+              ? 0
+              : 10,
             borderBottomLeftRadius: 0,
             borderTopRightRadius: 0,
             borderBottomRightRadius: 0,
@@ -852,7 +1224,6 @@ export const AbstractChatBox = (
             scrollbarWidth: "thin",
           }}
           onKeyDown={(e) => {
-            // Allow PageUp/PageDown to scroll the textarea if possible
             if (
               (e.key === "PageUp" || e.key === "PageDown") && e.currentTarget
             ) {
@@ -865,22 +1236,14 @@ export const AbstractChatBox = (
                 (e.key === "PageDown" && canScrollDown)
               ) {
                 e.stopPropagation();
-                // Let the textarea handle the scroll
                 return;
               }
             }
             if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
               if (isMobile) return;
-              if (input.trim()) {
-                onSend(input.trim());
-                setInput("");
-                onInputActivity?.();
-                setTimeout(() => {
-                  if (inputRef.current) {
-                    inputRef.current.style.height = "auto";
-                    inputRef.current.focus();
-                  }
-                }, 0);
+              const canSend = input.trim() || pendingFiles.length > 0;
+              if (canSend && !isSending) {
+                handleSend();
               }
               e.preventDefault();
             } else if (
@@ -891,7 +1254,6 @@ export const AbstractChatBox = (
               const selectionEnd = e.currentTarget.selectionEnd ?? input.length;
               const newValue = input.slice(0, selectionStart) + "\n" +
                 input.slice(selectionEnd);
-              // Update the DOM value directly so resizeTextarea sees the new value immediately
               e.currentTarget.value = newValue;
               resizeTextarea(e.currentTarget);
               setInput(newValue);
@@ -909,21 +1271,14 @@ export const AbstractChatBox = (
         />
         <button
           type="button"
-          disabled={!input.trim()}
+          disabled={(!input.trim() && pendingFiles.length === 0) || isSending}
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => {
-            if (!input.trim()) return;
-            onSend(input.trim());
-            setInput("");
-            onInputActivity?.();
-            setTimeout(() => {
-              if (inputRef.current) {
-                inputRef.current.focus();
-                inputRef.current.style.height = "auto";
-              }
-            }, 0);
-          }}
-          style={sendButtonStyle(isDark, !input.trim(), customColors)}
+          onClick={handleSend}
+          style={sendButtonStyle(
+            isDark,
+            (!input.trim() && pendingFiles.length === 0) || isSending,
+            customColors,
+          )}
           title="Send"
         >
           <span
@@ -931,18 +1286,49 @@ export const AbstractChatBox = (
               display: "flex",
               alignItems: "center",
               marginRight: 0,
-              color: input.trim() ? "#fff" : "#64748b",
-              filter: input.trim() ? "drop-shadow(0 1px 2px #0002)" : "none",
-              opacity: input.trim() ? 0.95 : 0.7,
+              color: (input.trim() || pendingFiles.length > 0) && !isSending
+                ? "#fff"
+                : "#64748b",
+              filter: (input.trim() || pendingFiles.length > 0) && !isSending
+                ? "drop-shadow(0 1px 2px #0002)"
+                : "none",
+              opacity: (input.trim() || pendingFiles.length > 0) && !isSending
+                ? 0.95
+                : 0.7,
               transition: "color 0.2s, filter 0.2s",
             }}
           >
             <FaPaperPlane size={20} />
           </span>
-          <span>Send</span>
+          <span>{isSending ? "..." : "Send"}</span>
         </button>
       </div>
       {fetchingMore && <div style={loadingStyle}>Loading more...</div>}
     </div>
   );
+
+  async function handleSend() {
+    const text = input.trim();
+    const files = [...pendingFiles];
+    if (!text && files.length === 0) return;
+
+    setInput("");
+    setPendingFiles([]);
+    onInputActivity?.();
+
+    if (files.length > 0 && onSendWithAttachments) {
+      setIsSending(true);
+      await onSendWithAttachments(text, files);
+      setIsSending(false);
+    } else if (text) {
+      onSend(text);
+    }
+
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.style.height = "auto";
+      }
+    }, 0);
+  }
 };

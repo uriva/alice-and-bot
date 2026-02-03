@@ -157,3 +157,29 @@ export const generateSymmetricKey = async (): Promise<string> => {
   const raw = await crypto.subtle.exportKey("raw", key);
   return Buffer.from(new Uint8Array(raw)).toString("base64");
 };
+
+export const encryptBinary = async (
+  key: string,
+  data: ArrayBuffer,
+): Promise<ArrayBuffer> => {
+  const iv = crypto.getRandomValues(new Uint8Array(ivLength));
+  const cryptoKey = await importSymmetricKey(key, ["encrypt"]);
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt({ ...aesAlgo, iv }, cryptoKey, data),
+  );
+  const combined = new Uint8Array(iv.length + ciphertext.length);
+  combined.set(iv, 0);
+  combined.set(ciphertext, iv.length);
+  return combined.buffer;
+};
+
+export const decryptBinary = async (
+  key: string,
+  data: ArrayBuffer,
+): Promise<ArrayBuffer> => {
+  const raw = new Uint8Array(data);
+  const iv = raw.subarray(0, ivLength);
+  const ciphertext = raw.subarray(ivLength);
+  const cryptoKey = await importSymmetricKey(key, ["decrypt"]);
+  return crypto.subtle.decrypt({ ...aesAlgo, iv }, cryptoKey, ciphertext);
+};

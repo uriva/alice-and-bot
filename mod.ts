@@ -26,17 +26,26 @@ import {
 import type { WidgetParams } from "./widget/src/widget.tsx";
 export {
   aliasToPublicSignKey,
+  getUploadUrl,
   sendTyping,
   setWebhook,
 } from "./backend/src/api.ts";
 export {
+  type Attachment,
+  type AudioAttachment,
   chatWithMeLink,
   createIdentity,
   type Credentials,
+  downloadAttachment,
+  type FileAttachment,
+  fileSizeLimits,
   handleWebhookUpdate,
+  type ImageAttachment,
   sendMessage,
   sendMessageWithKey,
   setAlias,
+  uploadAttachment,
+  type VideoAttachment,
   type WebhookUpdate,
 } from "./protocol/src/clientApi.ts";
 export { Widget } from "./widget/src/widget.tsx";

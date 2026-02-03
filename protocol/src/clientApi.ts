@@ -2,7 +2,7 @@ import type { InstantAdminDatabase } from "@instantdb/admin";
 import type { InstaQLEntity } from "@instantdb/core";
 import { map, pipe } from "@uri/gamla";
 import stringify from "safe-stable-stringify";
-import { apiClient } from "../../backend/src/api.ts";
+import { apiClient, getUploadUrl } from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
 import { chatPath } from "../../landing/src/paths.ts";
 import {
@@ -14,7 +14,9 @@ import { normalizeAlias } from "./alias.ts";
 import { buildSignedRequest } from "./authClient.ts";
 import {
   decryptAsymmetric,
+  decryptBinary,
   decryptSymmetric,
+  encryptBinary,
   type EncryptedAsymmetric,
   type EncryptedSymmetric,
   encryptSymmetric,
@@ -24,7 +26,65 @@ import {
 
 export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
 
-type InternalMessage = { type: "text"; text: string };
+type AttachmentBase = {
+  url: string;
+  name: string;
+  size: number;
+};
+
+export type ImageAttachment = AttachmentBase & {
+  type: "image";
+  mimeType: `image/${string}`;
+  width?: number;
+  height?: number;
+};
+
+export type AudioAttachment = AttachmentBase & {
+  type: "audio";
+  mimeType: `audio/${string}`;
+  duration?: number;
+};
+
+export type VideoAttachment = AttachmentBase & {
+  type: "video";
+  mimeType: `video/${string}`;
+  duration?: number;
+  width?: number;
+  height?: number;
+};
+
+export type FileAttachment = AttachmentBase & {
+  type: "file";
+  mimeType: string;
+};
+
+export type Attachment =
+  | ImageAttachment
+  | AudioAttachment
+  | VideoAttachment
+  | FileAttachment;
+
+const MB = 1024 * 1024;
+
+export const fileSizeLimits = {
+  image: 10 * MB,
+  audio: 25 * MB,
+  video: 100 * MB,
+  file: 25 * MB,
+};
+
+const getFileSizeLimit = (mimeType: string): number => {
+  if (mimeType.startsWith("image/")) return fileSizeLimits.image;
+  if (mimeType.startsWith("audio/")) return fileSizeLimits.audio;
+  if (mimeType.startsWith("video/")) return fileSizeLimits.video;
+  return fileSizeLimits.file;
+};
+
+type InternalMessage = {
+  type: "text";
+  text: string;
+  attachments?: Attachment[];
+};
 
 export type Profile = {
   publicSignKey: string;
@@ -259,3 +319,79 @@ export const publicSignKeyToAlias = (
     endpoint: "publicSignKeyToAlias",
     payload: { publicSignKey },
   });
+
+const arrayBufferToHex = (buffer: ArrayBuffer): string =>
+  Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+const computeHash = async (data: ArrayBuffer): Promise<string> => {
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return arrayBufferToHex(hashBuffer);
+};
+
+export const uploadAttachment = async ({
+  credentials,
+  conversationId,
+  conversationKey,
+  file,
+}: {
+  credentials: Credentials;
+  conversationId: string;
+  conversationKey: string;
+  file: File;
+}): Promise<Attachment | { error: string }> => {
+  const limit = getFileSizeLimit(file.type);
+  if (file.size > limit) {
+    return { error: `file-too-large:${Math.round(limit / MB)}MB` };
+  }
+  const arrayBuffer = await file.arrayBuffer();
+  const encrypted = await encryptBinary(conversationKey, arrayBuffer);
+  const contentHash = await computeHash(encrypted);
+
+  const result = await getUploadUrl(credentials, {
+    conversationId,
+    contentHash,
+    fileName: file.name,
+    contentType: "application/octet-stream",
+  });
+  if ("error" in result) return { error: result.error };
+
+  const { uploadUrl, fileUrl } = result;
+
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: encrypted,
+  });
+  if (!response.ok) return { error: "upload-failed" };
+
+  const base: { url: string; name: string; size: number } = {
+    url: fileUrl,
+    name: file.name,
+    size: file.size,
+  };
+
+  if (file.type.startsWith("image/")) {
+    return { ...base, type: "image", mimeType: file.type as `image/${string}` };
+  }
+  if (file.type.startsWith("audio/")) {
+    return { ...base, type: "audio", mimeType: file.type as `audio/${string}` };
+  }
+  if (file.type.startsWith("video/")) {
+    return { ...base, type: "video", mimeType: file.type as `video/${string}` };
+  }
+  return { ...base, type: "file", mimeType: file.type };
+};
+
+export const downloadAttachment = async ({
+  url,
+  conversationKey,
+}: {
+  url: string;
+  conversationKey: string;
+}): Promise<ArrayBuffer> => {
+  const response = await fetch(url);
+  const encrypted = await response.arrayBuffer();
+  return decryptBinary(conversationKey, encrypted);
+};

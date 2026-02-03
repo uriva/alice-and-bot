@@ -99,7 +99,7 @@ conversation key for you):
 sendMessage({
   conversation: string,
   credentials: Credentials,
-  message: { type: "text"; text: string }
+  message: { type: "text"; text: string; attachments?: Attachment[] }
 }): Promise<{ messageId: string }>
 ```
 
@@ -111,8 +111,108 @@ sendMessageWithKey({
   conversationKey: string,
   conversation: string,
   credentials: Credentials,
-  message: { type: "text"; text: string }
+  message: { type: "text"; text: string; attachments?: Attachment[] }
 }): Promise<{ messageId: string }>
+```
+
+### Attachments
+
+To send a message with attachments:
+
+1. Upload each file using `uploadAttachment` to get an `Attachment` object
+2. Include the returned attachments in your `sendMessage` call
+
+```ts
+// Step 1: Upload files
+const attachment = await uploadAttachment({
+  credentials,
+  conversationId,
+  conversationKey,
+  file,
+});
+if ("error" in attachment) throw new Error(attachment.error);
+
+// Step 2: Send message with attachments
+await sendMessage({
+  credentials,
+  conversation: conversationId,
+  message: { type: "text", text: "Check this out!", attachments: [attachment] },
+});
+```
+
+Upload a file as an encrypted attachment:
+
+```ts
+uploadAttachment({
+  credentials: Credentials,
+  conversationId: string,
+  conversationKey: string,
+  file: File,
+}): Promise<Attachment | { error: string }>
+```
+
+Download and decrypt an attachment:
+
+```ts
+downloadAttachment({
+  url: string,
+  conversationKey: string,
+}): Promise<ArrayBuffer>
+```
+
+File size limits (in bytes):
+
+```ts
+fileSizeLimits = {
+  image: 10 * MB, // 10 MB
+  audio: 25 * MB, // 25 MB
+  video: 100 * MB, // 100 MB
+  file: 25 * MB, // 25 MB (other files)
+};
+```
+
+Attachment types:
+
+```ts
+type ImageAttachment = {
+  type: "image";
+  url: string;
+  name: string;
+  size: number;
+  mimeType: `image/${string}`;
+  width?: number;
+  height?: number;
+};
+type AudioAttachment = {
+  type: "audio";
+  url: string;
+  name: string;
+  size: number;
+  mimeType: `audio/${string}`;
+  duration?: number;
+};
+type VideoAttachment = {
+  type: "video";
+  url: string;
+  name: string;
+  size: number;
+  mimeType: `video/${string}`;
+  duration?: number;
+  width?: number;
+  height?: number;
+};
+type FileAttachment = {
+  type: "file";
+  url: string;
+  name: string;
+  size: number;
+  mimeType: string;
+};
+type Attachment =
+  | ImageAttachment
+  | AudioAttachment
+  | VideoAttachment
+  | FileAttachment;
 ```
 
 Look up a public sign key by alias (public):

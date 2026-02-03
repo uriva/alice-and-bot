@@ -215,6 +215,18 @@ export const backendApiSchema = {
     z.object({ endpoint: z.string() }),
     z.object({ success: z.literal(true) }),
   ),
+  getUploadUrl: authenticatedEndpoint(
+    z.object({
+      conversationId: z.string(),
+      contentHash: z.string(),
+      fileName: z.string(),
+      contentType: z.string(),
+    }),
+    z.union([
+      z.object({ uploadUrl: z.string(), fileUrl: z.string() }),
+      z.object({ error: z.enum(["not-participant", "invalid-conversation"]) }),
+    ]),
+  ),
 } as const;
 
 export const apiClient = apiClientMaker(
@@ -393,3 +405,21 @@ export const sendTyping = (
   params: { conversation: string; isTyping: boolean; publicSignKey: string },
 ): Promise<{ success: true }> =>
   apiClient({ endpoint: "sendTyping", payload: params });
+
+export const getUploadUrl = async (
+  credentials: Credentials,
+  payload: {
+    conversationId: string;
+    contentHash: string;
+    fileName: string;
+    contentType: string;
+  },
+): Promise<
+  { uploadUrl: string; fileUrl: string } | {
+    error: "not-participant" | "invalid-conversation";
+  }
+> =>
+  apiClient({
+    endpoint: "getUploadUrl",
+    payload: await buildSignedRequest(credentials, "getUploadUrl", payload),
+  });
