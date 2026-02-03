@@ -1,5 +1,7 @@
 export const MB = 1024 * 1024;
 
+export const encryptionOverhead = 12 + 16;
+
 export const fileSizeLimits = {
   image: 10 * MB,
   audio: 25 * MB,
@@ -30,3 +32,7 @@ export const getFileSizeLimitByExtension = (fileName: string): number => {
   if (videoExts.includes(ext)) return fileSizeLimits.video;
   return fileSizeLimits.file;
 };
+
+export const getEncryptedFileSizeLimitByExtension = (
+  fileName: string,
+): number => getFileSizeLimitByExtension(fileName) + encryptionOverhead;

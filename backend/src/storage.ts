@@ -1,5 +1,5 @@
 import { Storage } from "@google-cloud/storage";
-import { getFileSizeLimitByExtension } from "../../protocol/src/attachmentLimits.ts";
+import { getEncryptedFileSizeLimitByExtension } from "../../protocol/src/attachmentLimits.ts";
 
 const bucketName = "alice-and-bot-attachments";
 
@@ -29,7 +29,7 @@ export const generateUploadUrl = async ({
   const ext = getExtension(fileName);
   const filePath = `attachments/${conversationId}/${contentHash}${ext}`;
   const file = bucket.file(filePath);
-  const maxSize = getFileSizeLimitByExtension(fileName);
+  const maxSize = getEncryptedFileSizeLimitByExtension(fileName);
 
   const [uploadUrl] = await file.getSignedUrl({
     version: "v4",
