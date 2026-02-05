@@ -513,12 +513,14 @@ const InnerWidget = ({
   }, [chatOpen.value]);
   return (
     <div
-      style={{
-        height: viewportHeight ? `${viewportHeight}px` : "100%",
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-      }}
+      style={chatOpen.value
+        ? {
+          height: viewportHeight ? `${viewportHeight}px` : "100%",
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+        }
+        : {}}
     >
       <NameDialog
         isOpen={showNameDialog}
