@@ -599,17 +599,28 @@ export const Widget = (props: WidgetProps): JSX.Element => {
       host.setAttribute("dir", "ltr");
       host.style.setProperty("display", "block", "important");
       host.style.setProperty("position", "fixed", "important");
-      host.style.setProperty("inset", "0", "important");
-      host.style.setProperty("pointer-events", "none", "important");
       host.style.setProperty("z-index", "999999", "important");
+      host.style.setProperty("pointer-events", "none", "important");
       setShadowRoot(root);
     }
   }, [hostRef.current, shadowRoot]);
+
+  useLayoutEffect(() => {
+    if (hostRef.current) {
+      const host = hostRef.current;
+      if (chatOpen.value && isMobile) {
+        host.style.setProperty("inset", "0", "important");
+      } else {
+        host.style.setProperty("inset", "auto 0 0 auto", "important");
+      }
+    }
+  }, [chatOpen.value, isMobile]);
+
   return (
     <div ref={hostRef}>
       {shadowRoot &&
         createPortal(
-          <div>
+          <>
             <style>{widgetBaseCss(appearance.colorSchemeValue)}</style>
             <div
               ref={containerRef}
@@ -637,7 +648,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
               )}
               <InnerWidget {...props} appearance={appearance} />
             </div>
-          </div>,
+          </>,
           shadowRoot,
         )}
     </div>
