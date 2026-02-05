@@ -287,24 +287,6 @@ const Main = (
             </label>
           </div>
           {schemeChoice.value === "custom" && <ColorPicker />}
-          <div style={{ padding: "40px 20px", maxWidth: "800px", margin: "0 auto", lineHeight: "1.6", fontFamily: "system-ui" }}>
-            <h1 style={{ fontSize: "2.5rem", marginBottom: "20px" }}>Uri's homepage</h1>
-            <h2 style={{ fontSize: "1.5rem", marginBottom: "15px" }}>Collaborate with me</h2>
-            <p>
-              Hi 👋 I'm a programmer and startup founder. I worked for Google for 4 years, then founded hyro.ai and took it to series B as CTO for 4 years. Now focusing on bootstrap startups. I'm looking for collaborators on my projects and other interesting projects.
-            </p>
-            <h2 style={{ fontSize: "1.5rem", marginTop: "40px", marginBottom: "20px" }}>Projects</h2>
-            <div style={{ display: "grid", gap: "20px" }}>
-              {Array.from({ length: 15 }).map((_, i) => (
-                <div key={i} style={{ padding: "20px", border: "1px solid #eee", borderRadius: "8px" }}>
-                  <h3 style={{ margin: "0 0 10px 0" }}>Project Name {i + 1}</h3>
-                  <p style={{ margin: 0, color: "#666" }}>
-                    Description of project {i + 1}. This is some mock text to simulate the layout of the homepage and see if the widget button positioning is affected.
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
         <WithCredentials
           adminDb={adminDb}

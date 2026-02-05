@@ -373,19 +373,22 @@ const fixedPosition = {
 };
 
 const containerStyle = (
-  { isMobile, isDark, isOpen }: {
+  { isMobile, isDark, isOpen, viewport }: {
     isMobile: boolean;
     isDark: boolean;
     isOpen: boolean;
+    viewport: { height: number; offsetTop: number } | null;
   },
 ): JSX.CSSProperties => (
   isOpen
     ? (isMobile
       ? {
         ...commonContainerProps,
-        inset: 0,
+        position: "absolute",
+        top: viewport ? `${viewport.offsetTop}px` : 0,
+        left: 0,
         width: "100vw",
-        height: "100dvh",
+        height: viewport ? `${viewport.height}px` : "100dvh",
         display: "flex",
       }
       : {
@@ -476,17 +479,6 @@ const InnerWidget = ({
   const isDark = appearance.mode === "dark";
   const colors = appearance.colors;
   const [showNameDialog, setNameDialog] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!isMobile) return;
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const updateHeight = () => setViewportHeight(vv.height);
-    vv.addEventListener("resize", updateHeight);
-    updateHeight();
-    return () => vv.removeEventListener("resize", updateHeight);
-  }, [isMobile]);
 
   useEffect(() => {
     if (!startOpen) return;
@@ -514,7 +506,7 @@ const InnerWidget = ({
     return () => globalThis.removeEventListener("keydown", onKey);
   }, [chatOpen.value]);
 
-  const innerContent = (
+  return (
     <>
       <NameDialog
         isOpen={showNameDialog}
@@ -557,21 +549,6 @@ const InnerWidget = ({
         )}
     </>
   );
-
-  if (!isMobile || !chatOpen.value) return innerContent;
-
-  return (
-    <div
-      style={{
-        height: viewportHeight ? `${viewportHeight}px` : "100%",
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-      }}
-    >
-      {innerContent}
-    </div>
-  );
 };
 
 export const Widget = (props: WidgetProps): JSX.Element => {
@@ -581,6 +558,25 @@ export const Widget = (props: WidgetProps): JSX.Element => {
   const isMobile = useIsMobile();
   const hasLight = !!props.colorScheme?.light;
   const hasDark = !!props.colorScheme?.dark;
+  const [viewport, setViewport] = useState<
+    { height: number; offsetTop: number } | null
+  >(null);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () =>
+      setViewport({ height: vv.height, offsetTop: vv.offsetTop });
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    update();
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [isMobile]);
+
   useEffect(() => {
     const override = hasLight && hasDark
       ? null
@@ -636,6 +632,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
                   isMobile,
                   isDark: appearance.mode === "dark",
                   isOpen: chatOpen.value,
+                  viewport,
                 }),
                 pointerEvents: "auto",
               }}
