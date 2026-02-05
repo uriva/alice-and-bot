@@ -403,7 +403,9 @@ const containerStyle = (
         overflow: "hidden",
       })
     : {
-      ...fixedPosition,
+      position: "absolute",
+      right: 24,
+      bottom: 24,
       display: "flex",
       flexDirection: "column",
     }
@@ -610,8 +612,13 @@ export const Widget = (props: WidgetProps): JSX.Element => {
       const host = hostRef.current;
       if (chatOpen.value && isMobile) {
         host.style.setProperty("inset", "0", "important");
+        host.style.setProperty("width", "100vw", "important");
+        host.style.setProperty("height", "100dvh", "important");
       } else {
         host.style.setProperty("inset", "auto 0 0 auto", "important");
+        host.style.setProperty("width", "0", "important");
+        host.style.setProperty("height", "0", "important");
+        host.style.setProperty("overflow", "visible", "important");
       }
     }
   }, [chatOpen.value, isMobile]);
