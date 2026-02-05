@@ -67,9 +67,10 @@ export type Attachment =
 import {
   fileSizeLimits,
   getFileSizeLimitByMimeType,
+  maxTextLength,
   MB,
 } from "./attachmentLimits.ts";
-export { fileSizeLimits, getFileSizeLimitByMimeType, MB };
+export { fileSizeLimits, getFileSizeLimitByMimeType, maxTextLength, MB };
 
 type InternalMessage = {
   type: "text";
@@ -135,12 +136,18 @@ export const sendMessageWithKey = async ({
   credentials: { privateSignKey, publicSignKey },
   message,
 }: SendMessageParams): Promise<{ messageId: string }> => {
+  const serialized = msgToStr(message);
+  if (serialized.length > maxTextLength) {
+    throw new Error(
+      `Message exceeds maximum length of ${maxTextLength} characters`,
+    );
+  }
   const encryptedMessage = await encryptSymmetric(
     conversationKey,
     {
       payload: message,
       publicSignKey,
-      signature: await sign(privateSignKey, msgToStr(message)),
+      signature: await sign(privateSignKey, serialized),
     },
   );
   return apiClient({

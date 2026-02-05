@@ -2,6 +2,8 @@ export const MB = 1024 * 1024;
 
 export const encryptionOverhead = 12 + 16;
 
+export const maxTextLength = 10_000;
+
 export const fileSizeLimits = {
   image: 10 * MB,
   audio: 25 * MB,

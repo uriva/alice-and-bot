@@ -10,6 +10,8 @@ import { z } from "zod/v4";
 import { buildSignedRequest } from "../../protocol/src/authClient.ts";
 import type { Credentials } from "../../protocol/src/clientApi.ts";
 
+const maxEncryptedMessageLength = 50_000;
+
 const authenticatedInput = <T extends z.ZodTypeAny>(payloadSchema: T) =>
   z.object({
     payload: payloadSchema,
@@ -121,7 +123,10 @@ export const backendApiSchema = {
   }),
   sendMessage: endpoint({
     authRequired: false,
-    input: z.object({ encryptedMessage: z.string(), conversation: z.string() }),
+    input: z.object({
+      encryptedMessage: z.string().max(maxEncryptedMessageLength),
+      conversation: z.string(),
+    }),
     output: z.object({ messageId: z.string() }),
   }),
   sendTyping: endpoint({
