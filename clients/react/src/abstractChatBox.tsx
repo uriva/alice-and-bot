@@ -1113,6 +1113,7 @@ export const AbstractChatBox = (
   const [recordingDuration, setRecordingDuration] = useState(0);
   const recordingStartTimeRef = useRef<number>(0);
   const sessionStartRef = useRef<number>(Date.now());
+  const initialLoadRef = useRef(true);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<number | null>(null);
@@ -1251,8 +1252,10 @@ export const AbstractChatBox = (
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
+    const behavior = initialLoadRef.current ? "instant" : "smooth";
     requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      el.scrollTo({ top: el.scrollHeight, behavior });
+      initialLoadRef.current = false;
     });
   }, [messages.length, typingUsers.length, isSending]);
 
