@@ -511,17 +511,9 @@ const InnerWidget = ({
     globalThis.addEventListener("keydown", onKey);
     return () => globalThis.removeEventListener("keydown", onKey);
   }, [chatOpen.value]);
-  return (
-    <div
-      style={chatOpen.value
-        ? {
-          height: viewportHeight ? `${viewportHeight}px` : "100%",
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
-        }
-        : {}}
-    >
+
+  const innerContent = (
+    <>
       <NameDialog
         isOpen={showNameDialog}
         mode={appearance.mode}
@@ -561,6 +553,21 @@ const InnerWidget = ({
             {buttonText ?? (credentials ? "Chat" : "Start chat")}
           </button>
         )}
+    </>
+  );
+
+  if (!isMobile || !chatOpen.value) return innerContent;
+
+  return (
+    <div
+      style={{
+        height: viewportHeight ? `${viewportHeight}px` : "100%",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+      }}
+    >
+      {innerContent}
     </div>
   );
 };
