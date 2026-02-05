@@ -1252,11 +1252,14 @@ export const AbstractChatBox = (
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
-    const behavior = initialLoadRef.current ? "instant" : "smooth";
+    const isInitial = initialLoadRef.current;
     requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior });
-      initialLoadRef.current = false;
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: isInitial ? "instant" : "smooth",
+      });
     });
+    if (messages.length > 0) initialLoadRef.current = false;
   }, [messages.length, typingUsers.length, isSending]);
 
   // Helper to resize textarea
