@@ -52,44 +52,11 @@ const SendingAudioIndicator = ({ isDark }: { isDark: boolean }) => {
   );
 };
 
-type VNodeLike = {
-  type?: unknown;
-  props?: { children?: ComponentChildren };
-};
-
-const blockLevelTags = new Set([
-  "div",
-  "video",
-  "audio",
-  "pre",
-  "table",
-  "ul",
-  "ol",
-  "blockquote",
-  "iframe",
-]);
-
 const paragraphSpacingStyle: JSX.CSSProperties = { margin: "0 0 8px 0" };
 
-const isVNodeLike = (value: ComponentChildren): value is VNodeLike =>
-  typeof value === "object" && value !== null && "type" in (value as VNodeLike);
-
-const hasBlockLevelChild = (children: ComponentChildren): boolean => {
-  if (children === null || children === undefined) return false;
-  if (Array.isArray(children)) return children.some(hasBlockLevelChild);
-  if (isVNodeLike(children)) {
-    const type = children.type;
-    if (typeof type === "string" && blockLevelTags.has(type)) return true;
-    const nested = children.props?.children;
-    if (nested) return hasBlockLevelChild(nested);
-  }
-  return false;
-};
-
-const MarkdownParagraph = ({ children }: { children?: ComponentChildren }) =>
-  hasBlockLevelChild(children)
-    ? <div style={paragraphSpacingStyle}>{children}</div>
-    : <p style={paragraphSpacingStyle}>{children}</p>;
+const MarkdownParagraph = ({ children }: { children?: ComponentChildren }) => (
+  <div style={paragraphSpacingStyle}>{children}</div>
+);
 
 const TypingIndicator = (
   { names, isDark }: { names: string[]; isDark: boolean },
