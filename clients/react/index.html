@@ -10,10 +10,65 @@
         margin: 0;
         padding: 0;
       }
+      .mock-content {
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+      }
+      .mock-content h1 {
+        margin-top: 40px;
+      }
+      .mock-content p {
+        line-height: 1.6;
+        max-width: 600px;
+      }
+      .mock-content .spacer {
+        height: 300px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        margin: 20px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <div class="mock-content">
+      <h1>Page with Scrollable Content</h1>
+      <p>
+        This is some mock content to test the chat widget behavior when the page
+        has scroll. Try scrolling down and then opening the chat.
+      </p>
+      <div class="spacer">Section 1</div>
+      <p>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+        tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+        veniam, quis nostrud exercitation ullamco laboris.
+      </p>
+      <div class="spacer">Section 2</div>
+      <p>
+        Duis aute irure dolor in reprehenderit in voluptate velit esse cillum
+        dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+        proident.
+      </p>
+      <div class="spacer">Section 3</div>
+      <p>
+        Sed ut perspiciatis unde omnis iste natus error sit voluptatem
+        accusantium doloremque laudantium, totam rem aperiam.
+      </p>
+      <div class="spacer">Section 4</div>
+      <p>
+        At vero eos et accusamus et iusto odio dignissimos ducimus qui
+        blanditiis praesentium voluptatum deleniti atque corrupti.
+      </p>
+      <div class="spacer">Section 5</div>
+      <p>
+        End of page content. The chat button should be visible in the bottom
+        right corner.
+      </p>
+    </div>
   </body>
-</html>
 </html>

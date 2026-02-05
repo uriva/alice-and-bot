@@ -1042,6 +1042,8 @@ const messageContainerStyle = (isDark: boolean) => ({
   flex: "1 1 0",
   minHeight: 0,
   overflowY: "auto",
+  overscrollBehavior: "contain",
+  WebkitOverflowScrolling: "touch",
   scrollbarGutter: "auto",
   gap: 8,
   transition: "background 0.2s",
@@ -1049,6 +1051,8 @@ const messageContainerStyle = (isDark: boolean) => ({
   scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
   padding: 4,
 });
+
+const messageContainerDataAttr = { "data-scrollable": true };
 
 const sendButtonStyle = (
   isDark: boolean,
@@ -1307,7 +1311,11 @@ export const AbstractChatBox = (
     <div style={chatContainerStyle(isDark, customColors)}>
       <div style={titleStyle(isDark, customColors)}>{title}</div>
       {onClose && <CloseButton onClose={onClose} />}
-      <div ref={messagesContainerRef} style={messageContainerStyle(isDark)}>
+      <div
+        ref={messagesContainerRef}
+        style={messageContainerStyle(isDark)}
+        {...messageContainerDataAttr}
+      >
         {isLoading
           ? (
             <div style={centerFillStyle(isDark)}>

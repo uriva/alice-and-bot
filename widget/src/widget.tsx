@@ -326,6 +326,15 @@ const Loading = ({ colors }: { colors: WidgetModeColors }) => (
   </div>
 );
 
+const chatWrapperStyle: JSX.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  width: "100%",
+  height: "100%",
+  minHeight: 0,
+  overflow: "hidden",
+};
+
 const WithCredentials = (
   { dialTo, credentials, initialMessage, colors, isDark }: {
     dialTo: string[];
@@ -342,24 +351,24 @@ const WithCredentials = (
   });
   return conversation
     ? (
-      <Chat
-        onClose={() => {
-          chatOpen.value = false;
-        }}
-        credentials={coerce(credentials)}
-        conversationId={conversation}
-        darkModeOverride={isDark}
-        customColors={{
-          background: colors.background,
-          text: colors.text,
-          primary: colors.primary,
-        }}
-      />
+      <div style={chatWrapperStyle}>
+        <Chat
+          onClose={() => {
+            chatOpen.value = false;
+          }}
+          credentials={coerce(credentials)}
+          conversationId={conversation}
+          darkModeOverride={isDark}
+          customColors={{
+            background: colors.background,
+            text: colors.text,
+            primary: colors.primary,
+          }}
+        />
+      </div>
     )
     : <Loading colors={colors} />;
 };
-
-const overlayZIndex = 10000;
 
 const commonContainerProps = {
   position: "absolute",
@@ -373,23 +382,25 @@ const fixedPosition = {
 };
 
 const containerStyle = (
-  { isMobile, isDark, isOpen, viewport }: {
+  { isMobile, isDark, isOpen, viewportHeight }: {
     isMobile: boolean;
     isDark: boolean;
     isOpen: boolean;
-    viewport: { height: number; offsetTop: number } | null;
+    viewportHeight?: number;
   },
 ): JSX.CSSProperties => (
   isOpen
     ? (isMobile
       ? {
-        ...commonContainerProps,
         position: "absolute",
-        top: viewport ? `${viewport.offsetTop}px` : 0,
+        top: 0,
         left: 0,
-        width: "100vw",
-        height: viewport ? `${viewport.height}px` : "100dvh",
+        width: "100%",
+        height: viewportHeight ? `${viewportHeight}px` : "100%",
         display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        background: "#fff",
       }
       : {
         ...commonContainerProps,
@@ -435,21 +446,6 @@ const closeButtonStyle = (
     : "0 2px 6px rgba(0,0,0,0.15)",
 });
 
-const Overlay = () => (
-  <div
-    style={{
-      position: "absolute",
-      inset: 0,
-      zIndex: overlayZIndex,
-      background: "transparent",
-      touchAction: "none",
-      pointerEvents: "none",
-    }}
-    onTouchMove={(e) => e.preventDefault()}
-    onWheel={(e) => e.preventDefault()}
-  />
-);
-
 export type WidgetParams = {
   participants: string[];
   initialMessage?: string;
@@ -489,12 +485,20 @@ const InnerWidget = ({
       setNameDialog(true);
     }
   }, [startOpen, credentials]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isMobile && chatOpen.value) {
       const originalOverflow = document.body.style.overflow;
+      const originalPosition = document.body.style.position;
+      const originalHeight = document.body.style.height;
+
       document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.height = "100%";
+
       return () => {
         document.body.style.overflow = originalOverflow;
+        document.body.style.position = originalPosition;
+        document.body.style.height = originalHeight;
       };
     }
   }, [isMobile, chatOpen.value]);
@@ -519,7 +523,6 @@ const InnerWidget = ({
           chatOpen.value = true;
         }}
       />
-      {isMobile && chatOpen.value && <Overlay />}
       {chatOpen.value
         ? credentials
           ? (
@@ -564,7 +567,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
 
   useEffect(() => {
     if (!isMobile) return;
-    const vv = window.visualViewport;
+    const vv = globalThis.visualViewport;
     if (!vv) return;
     const update = () =>
       setViewport({ height: vv.height, offsetTop: vv.offsetTop });
@@ -607,10 +610,13 @@ export const Widget = (props: WidgetProps): JSX.Element => {
     if (hostRef.current) {
       const host = hostRef.current;
       if (chatOpen.value && isMobile) {
+        // Full screen fixed overlay - blocks everything behind it
         host.style.setProperty("inset", "0", "important");
-        host.style.setProperty("width", "100vw", "important");
-        host.style.setProperty("height", "100dvh", "important");
+        host.style.setProperty("width", "100%", "important");
+        host.style.setProperty("height", "100%", "important");
+        host.style.setProperty("overflow", "hidden", "important");
       } else {
+        host.style.setProperty("top", "", "important");
         host.style.setProperty("inset", "auto 0 0 auto", "important");
         host.style.setProperty("width", "0", "important");
         host.style.setProperty("height", "0", "important");
@@ -632,7 +638,9 @@ export const Widget = (props: WidgetProps): JSX.Element => {
                   isMobile,
                   isDark: appearance.mode === "dark",
                   isOpen: chatOpen.value,
-                  viewport,
+                  viewportHeight: isMobile && chatOpen.value
+                    ? viewport?.height
+                    : undefined,
                 }),
                 pointerEvents: "auto",
               }}
