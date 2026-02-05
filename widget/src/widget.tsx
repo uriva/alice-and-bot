@@ -474,6 +474,18 @@ const InnerWidget = ({
   const isDark = appearance.mode === "dark";
   const colors = appearance.colors;
   const [showNameDialog, setNameDialog] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const updateHeight = () => setViewportHeight(vv.height);
+    vv.addEventListener("resize", updateHeight);
+    updateHeight();
+    return () => vv.removeEventListener("resize", updateHeight);
+  }, [isMobile]);
+
   useEffect(() => {
     if (!startOpen) return;
     if (chatOpen.value) return;
@@ -500,7 +512,14 @@ const InnerWidget = ({
     return () => globalThis.removeEventListener("keydown", onKey);
   }, [chatOpen.value]);
   return (
-    <>
+    <div
+      style={{
+        height: viewportHeight ? `${viewportHeight}px` : "100%",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+      }}
+    >
       <NameDialog
         isOpen={showNameDialog}
         mode={appearance.mode}
@@ -540,7 +559,7 @@ const InnerWidget = ({
             {buttonText ?? (credentials ? "Chat" : "Start chat")}
           </button>
         )}
-    </>
+    </div>
   );
 };
 
