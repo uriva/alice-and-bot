@@ -72,10 +72,17 @@ import {
 } from "./attachmentLimits.ts";
 export { fileSizeLimits, getFileSizeLimitByMimeType, maxTextLength, MB };
 
+type EditHistoryEntry = {
+  text: string;
+  attachments?: Attachment[];
+  timestamp: number;
+};
+
 type InternalMessage = {
   type: "text";
   text: string;
   attachments?: Attachment[];
+  editHistory?: EditHistoryEntry[];
 };
 
 export type Profile = {
@@ -130,31 +137,72 @@ export const sendMessage = async (params: {
     ),
   });
 
-export const sendMessageWithKey = async ({
-  conversationKey,
-  conversation,
-  credentials: { privateSignKey, publicSignKey },
-  message,
-}: SendMessageParams): Promise<{ messageId: string }> => {
+const encryptAndSign = async (
+  conversationKey: string,
+  { privateSignKey, publicSignKey }: Pick<
+    Credentials,
+    "privateSignKey" | "publicSignKey"
+  >,
+  message: InternalMessage,
+) => {
   const serialized = msgToStr(message);
   if (serialized.length > maxTextLength) {
     throw new Error(
       `Message exceeds maximum length of ${maxTextLength} characters`,
     );
   }
-  const encryptedMessage = await encryptSymmetric(
-    conversationKey,
-    {
-      payload: message,
-      publicSignKey,
-      signature: await sign(privateSignKey, serialized),
-    },
-  );
-  return apiClient({
-    endpoint: "sendMessage",
-    payload: { conversation, encryptedMessage },
+  return encryptSymmetric(conversationKey, {
+    payload: message,
+    publicSignKey,
+    signature: await sign(privateSignKey, serialized),
   });
 };
+
+export const sendMessageWithKey = async ({
+  conversationKey,
+  conversation,
+  credentials,
+  message,
+}: SendMessageParams): Promise<{ messageId: string }> =>
+  apiClient({
+    endpoint: "sendMessage",
+    payload: {
+      conversation,
+      encryptedMessage: await encryptAndSign(
+        conversationKey,
+        credentials,
+        message,
+      ),
+    },
+  });
+
+type EditMessageParams = {
+  conversationKey: string;
+  credentials: Credentials;
+  messageId: string;
+  message: InternalMessage;
+};
+
+export const editMessageWithKey = async ({
+  conversationKey,
+  messageId,
+  credentials,
+  message,
+}: EditMessageParams): Promise<
+  | { success: true }
+  | { success: false; error: "message-not-found" | "edit-window-expired" }
+> =>
+  apiClient({
+    endpoint: "editMessage",
+    payload: {
+      messageId,
+      encryptedMessage: await encryptAndSign(
+        conversationKey,
+        credentials,
+        message,
+      ),
+    },
+  });
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
@@ -180,25 +228,31 @@ export const handleWebhookUpdate = async (
   credentials: Credentials,
 ): Promise<{
   conversationId: string;
-  message: DecipheredMessage;
+  message: Omit<DecipheredMessage, "id">;
   conversationKey: string;
 }> => {
   const key = await getConversationKey(credentials, whUpdate.conversationId);
   return {
     conversationId: whUpdate.conversationId,
-    message: await decryptMessage(key)(whUpdate),
+    message: await decryptMessagePayload(key)(whUpdate),
     conversationKey: key,
   };
 };
 
+export type DecipheredEdit = {
+  timestamp: number;
+  text: string;
+  attachments?: Attachment[];
+};
+
 export type DecipheredMessage =
-  & { publicSignKey: string; timestamp: number }
+  & { id: string; publicSignKey: string; timestamp: number }
   & InternalMessage;
 
-export const decryptMessage = (conversationSymmetricKey: string) =>
+const decryptMessagePayload = (conversationSymmetricKey: string) =>
 async (
   { payload, timestamp }: Omit<DbMessage, "id">,
-): Promise<DecipheredMessage> => {
+): Promise<Omit<DecipheredMessage, "id">> => {
   const { signature, payload: decryptedPayload, publicSignKey } =
     await decryptSymmetric<SignedPayload<InternalMessage>>(
       conversationSymmetricKey,
@@ -208,6 +262,17 @@ async (
     return { publicSignKey, timestamp, ...decryptedPayload };
   }
   throw new Error("Invalid signature");
+};
+
+export const decryptMessage = (conversationSymmetricKey: string) =>
+async (
+  { id, payload, timestamp }: DbMessage,
+): Promise<DecipheredMessage> => {
+  const base = await decryptMessagePayload(conversationSymmetricKey)({
+    payload,
+    timestamp,
+  });
+  return { id, ...base };
 };
 
 // deno-lint-ignore ban-types

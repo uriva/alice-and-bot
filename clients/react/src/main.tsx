@@ -8,6 +8,7 @@ import {
   type Credentials,
   type DecipheredMessage,
   downloadAttachment,
+  editMessageWithKey,
   sendMessageWithKey,
   uploadAttachment,
 } from "../../../protocol/src/clientApi.ts";
@@ -38,6 +39,7 @@ export type ChatProps = {
 const msgToUIMessage =
   (details: Record<string, { name: string; avatar?: string }>) =>
   (msg: DecipheredMessage): AbstracChatMessage => ({
+    id: msg.id,
     authorId: msg.publicSignKey,
     authorName: details[msg.publicSignKey]?.name ??
       compactPublicKey(msg.publicSignKey),
@@ -45,6 +47,7 @@ const msgToUIMessage =
     text: msg.text,
     timestamp: msg.timestamp,
     attachments: msg.attachments,
+    editHistory: msg.editHistory,
   });
 
 const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
@@ -154,6 +157,27 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
     return URL.createObjectURL(blob);
   };
 
+  const handleEdit = async (messageId: string, newText: string) => {
+    if (!convoKey || !decrypted) return;
+    const msg = decrypted.find((m) => m.id === messageId);
+    if (!msg) return;
+    const newHistory = [
+      { text: msg.text, attachments: msg.attachments, timestamp: Date.now() },
+      ...(msg.editHistory ?? []),
+    ];
+    await editMessageWithKey({
+      conversationKey: convoKey,
+      credentials,
+      messageId,
+      message: {
+        type: "text",
+        text: newText,
+        attachments: msg.attachments,
+        editHistory: newHistory,
+      },
+    });
+  };
+
   return (
     <AbstractChatBox
       title={conversationTitle}
@@ -172,6 +196,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       enableAudioRecording={enableAudioRecording}
       onSendWithAttachments={handleSendWithAttachments}
       onDecryptAttachment={handleDecryptAttachment}
+      onEdit={handleEdit}
       messages={pipe(
         () => decrypted ?? [],
         (x: DecipheredMessage[]) => x,

@@ -1,18 +1,23 @@
-import { sortKey } from "@uri/gamla";
+import { empty, sortKey } from "@uri/gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
   FaDownload,
+  FaHistory,
   FaMicrophone,
   FaPaperclip,
   FaPaperPlane,
   FaPause,
+  FaPen,
   FaPlay,
   FaStop,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ComponentChildren, JSX } from "preact";
-import type { Attachment } from "../../../protocol/src/clientApi.ts";
+import type {
+  Attachment,
+  DecipheredEdit,
+} from "../../../protocol/src/clientApi.ts";
 import {
   centerFillStyle,
   chatContainerStyle,
@@ -798,17 +803,169 @@ type MessageProps = {
   isOwn: boolean;
   onDecryptAttachment?: (url: string) => Promise<string>;
   sessionStart: number;
+  onEdit?: (newText: string) => void;
 };
+
+const editButtonStyle = (textColor: string): JSX.CSSProperties => ({
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  padding: 2,
+  color: textColor,
+  opacity: 0.7,
+});
+
+const historyButtonStyle = (textColor: string): JSX.CSSProperties => ({
+  ...editButtonStyle(textColor),
+  fontSize: 10,
+  display: "flex",
+  alignItems: "center",
+  gap: 2,
+});
+
+const messageHeaderStyle: JSX.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 8,
+};
+
+const editTextareaStyle: JSX.CSSProperties = {
+  width: "100%",
+  padding: 6,
+  borderRadius: 8,
+  border: "none",
+  fontSize: 14,
+  resize: "vertical",
+  minHeight: 40,
+};
+
+const editActionsStyle: JSX.CSSProperties = {
+  display: "flex",
+  gap: 4,
+  marginTop: 4,
+};
+
+const saveButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
+  padding: "4px 8px",
+  borderRadius: 6,
+  border: "none",
+  background: isDark ? "#374151" : "#e5e7eb",
+  cursor: "pointer",
+  fontSize: 12,
+});
+
+const cancelButtonStyle: JSX.CSSProperties = {
+  padding: "4px 8px",
+  borderRadius: 6,
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  fontSize: 12,
+  opacity: 0.7,
+};
+
+const submitEdit = (
+  onEdit: (text: string) => void,
+  text: string,
+  originalText: string,
+) =>
+(setIsEditing: (v: boolean) => void) => {
+  if (text.trim() && text !== originalText) onEdit(text);
+  setIsEditing(false);
+};
+
+const MessageEditControls = ({
+  hasEdits,
+  canEdit,
+  isEditing,
+  textColor,
+  onShowHistory,
+  onStartEdit,
+}: {
+  hasEdits: boolean;
+  canEdit: boolean;
+  isEditing: boolean;
+  textColor: string;
+  onShowHistory: () => void;
+  onStartEdit: () => void;
+}) => (
+  <div style={{ display: "flex", gap: 4 }}>
+    {hasEdits && (
+      <button
+        type="button"
+        onClick={onShowHistory}
+        style={historyButtonStyle(textColor)}
+        title="View edit history"
+      >
+        <FaHistory size={10} />
+        <span>edited</span>
+      </button>
+    )}
+    {canEdit && !isEditing && (
+      <button
+        type="button"
+        onClick={onStartEdit}
+        style={editButtonStyle(textColor)}
+        title="Edit message"
+      >
+        <FaPen size={10} />
+      </button>
+    )}
+  </div>
+);
+
+const EditForm = ({
+  editText,
+  setEditText,
+  onSubmit,
+  onCancel,
+  isDark,
+}: {
+  editText: string;
+  setEditText: (v: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  isDark: boolean;
+}) => (
+  <div style={{ marginTop: 4 }}>
+    <textarea
+      value={editText}
+      onInput={(e) => setEditText(e.currentTarget.value)}
+      style={editTextareaStyle}
+    />
+    <div style={editActionsStyle}>
+      <button type="button" onClick={onSubmit} style={saveButtonStyle(isDark)}>
+        Save
+      </button>
+      <button type="button" onClick={onCancel} style={cancelButtonStyle}>
+        Cancel
+      </button>
+    </div>
+  </div>
+);
 
 const Message = (
   {
-    msg: { authorId, authorName, authorAvatar, text, timestamp, attachments },
+    msg: {
+      authorId,
+      authorName,
+      authorAvatar,
+      text,
+      timestamp,
+      attachments,
+      editHistory,
+    },
     next,
     isOwn,
     onDecryptAttachment,
     sessionStart,
+    onEdit,
   }: MessageProps,
 ) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(text);
+  const [showHistory, setShowHistory] = useState(false);
   const isFirstOfSequence = !next || next.authorId !== authorId;
   const isDark = useDarkMode();
   const baseColor = isOwn
@@ -818,6 +975,9 @@ const Message = (
   const textColor = isLightColor(baseColor)
     ? (isDark ? "#fff" : "#222")
     : (isDark ? "#fff" : "#fff");
+  const canEdit = !!(isOwn && onEdit && Date.now() - timestamp < editWindowMs);
+  const hasEdits = !empty(editHistory ?? []);
+
   return (
     <div
       style={{
@@ -849,71 +1009,95 @@ const Message = (
           overflowWrap: "anywhere",
         }}
       >
-        <b style={{ fontSize: 11 }}>{authorName}</b>
-        {text && (
-          <div
-            dir="auto"
-            style={{
-              overflowWrap: "anywhere",
-              wordBreak: "break-word",
-            }}
-          >
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkHtmlToText]}
-              components={{
-                // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
-                p: MarkdownParagraph,
-                // @ts-expect-error react-markdown types are not fully compatible with Preact here
-                a: ({ children, href }) => {
-                  if (isVideoUrl(href)) {
-                    return (
-                      <video
-                        src={href}
-                        controls
-                        preload="metadata"
-                        playsInline
-                        style={bubbleVideoStyle}
-                      />
-                    );
-                  }
-                  if (isAudioUrl(href)) {
-                    return (
-                      <audio
-                        src={href}
-                        controls
-                        preload="metadata"
-                        style={bubbleAudioStyle}
-                      />
-                    );
-                  }
-                  return (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        color: textColor,
-                        textDecoration: "underline",
-                        overflowWrap: "anywhere",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {children}
-                    </a>
-                  );
-                },
-                // @ts-expect-error react-markdown types are not fully compatible with Preact here
-                img: ({ src, alt }) => (
-                  <img src={src} alt={alt} style={bubbleImgStyle} />
-                ),
-                // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
-                code: CodeBlock,
+        <div style={messageHeaderStyle}>
+          <b style={{ fontSize: 11 }}>{authorName}</b>
+          <MessageEditControls
+            hasEdits={hasEdits}
+            canEdit={canEdit}
+            isEditing={isEditing}
+            textColor={textColor}
+            onShowHistory={() => setShowHistory(true)}
+            onStartEdit={() => setIsEditing(true)}
+          />
+        </div>
+        {isEditing
+          ? (
+            <EditForm
+              editText={editText}
+              setEditText={setEditText}
+              onSubmit={() =>
+                onEdit && submitEdit(onEdit, editText, text)(setIsEditing)}
+              onCancel={() => {
+                setIsEditing(false);
+                setEditText(text);
+              }}
+              isDark={isDark}
+            />
+          )
+          : text && (
+            <div
+              dir="auto"
+              style={{
+                overflowWrap: "anywhere",
+                wordBreak: "break-word",
               }}
             >
-              {preprocessText(text)}
-            </ReactMarkdown>
-          </div>
-        )}
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkHtmlToText]}
+                components={{
+                  // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
+                  p: MarkdownParagraph,
+                  // @ts-expect-error react-markdown types are not fully compatible with Preact here
+                  a: ({ children, href }) => {
+                    if (isVideoUrl(href)) {
+                      return (
+                        <video
+                          src={href}
+                          controls
+                          preload="metadata"
+                          playsInline
+                          style={bubbleVideoStyle}
+                        />
+                      );
+                    }
+                    if (isAudioUrl(href)) {
+                      return (
+                        <audio
+                          src={href}
+                          controls
+                          preload="metadata"
+                          style={bubbleAudioStyle}
+                        />
+                      );
+                    }
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: textColor,
+                          textDecoration: "underline",
+                          overflowWrap: "anywhere",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {children}
+                      </a>
+                    );
+                  },
+                  // @ts-expect-error react-markdown types are not fully compatible with Preact here
+                  img: ({ src, alt }) => (
+                    <img src={src} alt={alt} style={bubbleImgStyle} />
+                  ),
+                  // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
+                  code: CodeBlock,
+                }}
+              >
+                {preprocessText(text)}
+              </ReactMarkdown>
+            </div>
+          )}
         {attachments && attachments.length > 0 && (
           <div style={attachmentContainerStyle}>
             {attachments.map((att, i) => (
@@ -940,17 +1124,123 @@ const Message = (
           {useTimeAgo(timestamp)}
         </span>
       </div>
+      {showHistory && editHistory && (
+        <EditHistoryPopup
+          edits={editHistory}
+          currentText={text}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 };
 
 export type AbstracChatMessage = {
+  id: string;
   authorId: string;
   authorName: string;
   authorAvatar?: string;
   text: string;
   timestamp: number;
   attachments?: Attachment[];
+  editHistory?: DecipheredEdit[];
+};
+
+const editWindowMs = 5 * 60 * 1000;
+
+const formatEditTime = (ts: number) => {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+const overlayStyle: JSX.CSSProperties = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  background: "rgba(0,0,0,0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 1000,
+};
+
+const historyPopupStyle = (isDark: boolean): JSX.CSSProperties => ({
+  background: isDark ? "#23272f" : "#fff",
+  borderRadius: 12,
+  padding: 16,
+  maxWidth: 400,
+  maxHeight: "80vh",
+  overflow: "auto",
+  border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
+  color: isDark ? "#eee" : "#222",
+});
+
+const historyEntryStyle = (isDark: boolean): JSX.CSSProperties => ({
+  marginBottom: 8,
+  padding: 8,
+  background: isDark ? "#1f2937" : "#f9fafb",
+  borderRadius: 8,
+  opacity: 0.8,
+});
+
+const historyCurrentStyle = (isDark: boolean): JSX.CSSProperties => ({
+  marginBottom: 12,
+  padding: 8,
+  background: isDark ? "#374151" : "#f3f4f6",
+  borderRadius: 8,
+});
+
+const historyCloseButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
+  marginTop: 8,
+  padding: "6px 12px",
+  background: isDark ? "#374151" : "#e5e7eb",
+  border: "none",
+  borderRadius: 6,
+  cursor: "pointer",
+  color: isDark ? "#eee" : "#222",
+});
+
+const labelStyle: JSX.CSSProperties = { fontSize: 10, opacity: 0.7 };
+
+const EditHistoryPopup = ({
+  edits,
+  currentText,
+  onClose,
+}: {
+  edits: DecipheredEdit[];
+  currentText: string;
+  onClose: () => void;
+}) => {
+  const isDark = useDarkMode();
+  return (
+    <div style={overlayStyle} onClick={onClose}>
+      <div
+        style={historyPopupStyle(isDark)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ fontWeight: "bold", marginBottom: 12 }}>Edit History</div>
+        <div style={historyCurrentStyle(isDark)}>
+          <div style={labelStyle}>Current</div>
+          <div>{currentText}</div>
+        </div>
+        {edits.map((edit, i) => (
+          <div key={i} style={historyEntryStyle(isDark)}>
+            <div style={labelStyle}>{formatEditTime(edit.timestamp)}</div>
+            <div>{edit.text}</div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={onClose}
+          style={historyCloseButtonStyle(isDark)}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
 };
 
 const CloseButton = ({ onClose }: { onClose: () => void }) => {
@@ -1077,6 +1367,7 @@ export const AbstractChatBox = (
     onDecryptAttachment,
     enableAttachments = false,
     enableAudioRecording = false,
+    onEdit,
   }: {
     userId: string;
     onSend: (input: string) => void;
@@ -1099,6 +1390,7 @@ export const AbstractChatBox = (
     onDecryptAttachment?: (url: string) => Promise<string>;
     enableAttachments?: boolean;
     enableAudioRecording?: boolean;
+    onEdit?: (messageId: string, newText: string) => void;
   },
 ): JSX.Element => {
   const isMobile = useIsMobile();
@@ -1311,12 +1603,14 @@ export const AbstractChatBox = (
                 arr,
               ) => (
                 <Message
-                  key={i}
+                  key={msg.id}
                   isOwn={msg.authorId === userId}
                   msg={msg}
                   next={arr[i + 1]}
                   onDecryptAttachment={onDecryptAttachment}
                   sessionStart={sessionStartRef.current}
+                  onEdit={onEdit &&
+                    ((newText: string) => onEdit(msg.id, newText))}
                 />
               ))}
               {/* Sending audio indicator */}
