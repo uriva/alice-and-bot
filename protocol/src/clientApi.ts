@@ -72,18 +72,20 @@ import {
 } from "./attachmentLimits.ts";
 export { fileSizeLimits, getFileSizeLimitByMimeType, maxTextLength, MB };
 
-type EditHistoryEntry = {
-  text: string;
-  attachments?: Attachment[];
-  timestamp: number;
-};
-
-type InternalMessage = {
+type TextMessage = {
   type: "text";
   text: string;
   attachments?: Attachment[];
-  editHistory?: EditHistoryEntry[];
 };
+
+type EditMessage = {
+  type: "edit";
+  editOf: string;
+  text: string;
+  attachments?: Attachment[];
+};
+
+type InternalMessage = TextMessage | EditMessage;
 
 export type Profile = {
   publicSignKey: string;
@@ -176,34 +178,6 @@ export const sendMessageWithKey = async ({
     },
   });
 
-type EditMessageParams = {
-  conversationKey: string;
-  credentials: Credentials;
-  messageId: string;
-  message: InternalMessage;
-};
-
-export const editMessageWithKey = async ({
-  conversationKey,
-  messageId,
-  credentials,
-  message,
-}: EditMessageParams): Promise<
-  | { success: true }
-  | { success: false; error: "message-not-found" | "edit-window-expired" }
-> =>
-  apiClient({
-    endpoint: "editMessage",
-    payload: {
-      messageId,
-      encryptedMessage: await encryptAndSign(
-        conversationKey,
-        credentials,
-        message,
-      ),
-    },
-  });
-
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
 const getConversationKey = async (creds: Credentials, convo: string) => {
@@ -239,15 +213,15 @@ export const handleWebhookUpdate = async (
   };
 };
 
-export type DecipheredEdit = {
+export type DecipheredMessage = {
+  id: string;
+  publicSignKey: string;
   timestamp: number;
+  type: "text" | "edit";
   text: string;
   attachments?: Attachment[];
+  editOf?: string;
 };
-
-export type DecipheredMessage =
-  & { id: string; publicSignKey: string; timestamp: number }
-  & InternalMessage;
 
 const decryptMessagePayload = (conversationSymmetricKey: string) =>
 async (
@@ -259,7 +233,16 @@ async (
       payload,
     );
   if (await verify(signature, publicSignKey, msgToStr(decryptedPayload))) {
-    return { publicSignKey, timestamp, ...decryptedPayload };
+    return {
+      publicSignKey,
+      timestamp,
+      type: decryptedPayload.type,
+      text: decryptedPayload.text,
+      attachments: decryptedPayload.attachments,
+      ...("editOf" in decryptedPayload
+        ? { editOf: decryptedPayload.editOf }
+        : {}),
+    };
   }
   throw new Error("Invalid signature");
 };

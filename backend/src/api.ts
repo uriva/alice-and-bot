@@ -129,20 +129,6 @@ export const backendApiSchema = {
     }),
     output: z.object({ messageId: z.string() }),
   }),
-  editMessage: endpoint({
-    authRequired: false,
-    input: z.object({
-      messageId: z.string(),
-      encryptedMessage: z.string().max(maxEncryptedMessageLength),
-    }),
-    output: z.union([
-      z.object({ success: z.literal(true) }),
-      z.object({
-        success: z.literal(false),
-        error: z.enum(["message-not-found", "edit-window-expired"]),
-      }),
-    ]),
-  }),
   sendTyping: endpoint({
     authRequired: false,
     input: z.object({

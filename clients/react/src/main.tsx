@@ -1,5 +1,5 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
-import { pipe } from "@uri/gamla";
+import { pipe, sortKey } from "@uri/gamla";
 import type { ComponentChildren, JSX } from "preact";
 import { useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
@@ -8,13 +8,13 @@ import {
   type Credentials,
   type DecipheredMessage,
   downloadAttachment,
-  editMessageWithKey,
   sendMessageWithKey,
   uploadAttachment,
 } from "../../../protocol/src/clientApi.ts";
 import {
   type AbstracChatMessage,
   AbstractChatBox,
+  type EditHistoryEntry,
 } from "./abstractChatBox.tsx";
 import type { CustomColors } from "./design.tsx";
 import {
@@ -47,7 +47,59 @@ const msgToUIMessage =
     text: msg.text,
     timestamp: msg.timestamp,
     attachments: msg.attachments,
-    editHistory: msg.editHistory,
+  });
+
+const editsForMessage = (edits: DecipheredMessage[]) => (msgId: string) =>
+  sortKey((e: DecipheredMessage) => e.timestamp)(
+    edits.filter((e) => e.type === "edit" && e.editOf === msgId),
+  );
+
+const buildEditHistory =
+  (edits: DecipheredMessage[]) =>
+  (original: DecipheredMessage): EditHistoryEntry[] => [
+    ...editsForMessage(edits)(original.id).slice(0, -1).map((e) => ({
+      text: e.text,
+      timestamp: e.timestamp,
+      attachments: e.attachments,
+    })),
+    {
+      text: original.text,
+      timestamp: original.timestamp,
+      attachments: original.attachments,
+    },
+  ];
+
+const applyLatestEdit =
+  (edits: DecipheredMessage[]) =>
+  (original: DecipheredMessage): DecipheredMessage => {
+    const msgEdits = editsForMessage(edits)(original.id);
+    if (!msgEdits.length) return original;
+    const latest = msgEdits[msgEdits.length - 1];
+    return { ...original, text: latest.text, attachments: latest.attachments };
+  };
+
+const foldEdits = (messages: DecipheredMessage[]) => {
+  const edits = messages.filter((m) => m.type === "edit");
+  const originals = messages.filter((m) => m.type === "text");
+  return originals.map((original) => ({
+    msg: applyLatestEdit(edits)(original),
+    editHistory:
+      edits.some((e) => e.type === "edit" && e.editOf === original.id)
+        ? buildEditHistory(edits)(original)
+        : undefined,
+  }));
+};
+
+const msgToUIMessageWithHistory =
+  (details: Record<string, { name: string; avatar?: string }>) =>
+  (
+    { msg, editHistory }: {
+      msg: DecipheredMessage;
+      editHistory?: EditHistoryEntry[];
+    },
+  ): AbstracChatMessage => ({
+    ...msgToUIMessage(details)(msg),
+    editHistory,
   });
 
 const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
@@ -64,7 +116,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       },
     },
   });
-  return messages.map(msgToUIMessage({
+  const details = {
     ...detailsCache,
     ...Object.fromEntries(
       (identitiesData?.identities ?? []).map((
@@ -77,7 +129,8 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
         },
       ]),
     ),
-  }));
+  };
+  return foldEdits(messages).map(msgToUIMessageWithHistory(details));
 };
 
 export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
@@ -158,23 +211,12 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   };
 
   const handleEdit = async (messageId: string, newText: string) => {
-    if (!convoKey || !decrypted) return;
-    const msg = decrypted.find((m) => m.id === messageId);
-    if (!msg) return;
-    const newHistory = [
-      { text: msg.text, attachments: msg.attachments, timestamp: Date.now() },
-      ...(msg.editHistory ?? []),
-    ];
-    await editMessageWithKey({
+    if (!convoKey) return;
+    await sendMessageWithKey({
       conversationKey: convoKey,
       credentials,
-      messageId,
-      message: {
-        type: "text",
-        text: newText,
-        attachments: msg.attachments,
-        editHistory: newHistory,
-      },
+      message: { type: "edit", editOf: messageId, text: newText },
+      conversation: conversationId,
     });
   };
 

@@ -1,5 +1,4 @@
 import { id } from "@instantdb/admin";
-import { empty } from "@uri/gamla";
 import { apiHandler } from "typed-api";
 import type { PushSubscriptionJSON } from "../../instant.schema.ts";
 import { isValidAlias, normalizeAlias } from "../../protocol/src/alias.ts";
@@ -69,25 +68,6 @@ const endpoints: BackendApiImpl = {
         console.error("push dispatch failed", e)
       );
       return { messageId };
-    },
-    editMessage: async ({ messageId, encryptedMessage }) => {
-      const editWindowMs = 5 * 60 * 1000;
-      const { messages } = await query({
-        messages: { $: { where: { id: messageId } } },
-      });
-      if (empty(messages)) {
-        return { success: false, error: "message-not-found" };
-      }
-      const message = messages[0];
-      if (Date.now() - message.timestamp > editWindowMs) {
-        return { success: false, error: "edit-window-expired" };
-      }
-      await transact(
-        tx.messages[messageId].update({
-          payload: encryptedMessage as EncryptedMessage,
-        }),
-      );
-      return { success: true };
     },
     sendTyping: async ({ conversation, isTyping, publicSignKey }) => {
       // Validate conversation & identity exist

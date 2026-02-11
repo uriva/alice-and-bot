@@ -14,10 +14,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ComponentChildren, JSX } from "preact";
-import type {
-  Attachment,
-  DecipheredEdit,
-} from "../../../protocol/src/clientApi.ts";
+import type { Attachment } from "../../../protocol/src/clientApi.ts";
 import {
   centerFillStyle,
   chatContainerStyle,
@@ -1135,6 +1132,12 @@ const Message = (
   );
 };
 
+export type EditHistoryEntry = {
+  text: string;
+  timestamp: number;
+  attachments?: Attachment[];
+};
+
 export type AbstracChatMessage = {
   id: string;
   authorId: string;
@@ -1143,7 +1146,7 @@ export type AbstracChatMessage = {
   text: string;
   timestamp: number;
   attachments?: Attachment[];
-  editHistory?: DecipheredEdit[];
+  editHistory?: EditHistoryEntry[];
 };
 
 const editWindowMs = 5 * 60 * 1000;
@@ -1209,7 +1212,7 @@ const EditHistoryPopup = ({
   currentText,
   onClose,
 }: {
-  edits: DecipheredEdit[];
+  edits: EditHistoryEntry[];
   currentText: string;
   onClose: () => void;
 }) => {

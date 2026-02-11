@@ -37,7 +37,6 @@ export {
   createIdentity,
   type Credentials,
   downloadAttachment,
-  editMessageWithKey,
   type FileAttachment,
   fileSizeLimits,
   handleWebhookUpdate,

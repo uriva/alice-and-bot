@@ -3,7 +3,9 @@ import webpush from "web-push";
 import type { WebhookUpdate } from "../../protocol/src/clientApi.ts";
 import { query, transact, tx } from "./db.ts";
 
-export const callWebhooks = async ({ messageId }: { messageId: string }) => {
+export const callWebhooks = async (
+  { messageId }: { messageId: string },
+) => {
   const { messages } = await query({
     messages: {
       conversation: { participants: {} },
