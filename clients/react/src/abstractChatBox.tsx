@@ -2,6 +2,7 @@ import { empty, sortKey } from "@uri/gamla";
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
   FaDownload,
+  FaEllipsisV,
   FaHistory,
   FaMicrophone,
   FaPaperclip,
@@ -803,23 +804,6 @@ type MessageProps = {
   onEdit?: (newText: string) => void;
 };
 
-const editButtonStyle = (textColor: string): JSX.CSSProperties => ({
-  background: "transparent",
-  border: "none",
-  cursor: "pointer",
-  padding: 2,
-  color: textColor,
-  opacity: 0.7,
-});
-
-const historyButtonStyle = (textColor: string): JSX.CSSProperties => ({
-  ...editButtonStyle(textColor),
-  fontSize: 10,
-  display: "flex",
-  alignItems: "center",
-  gap: 2,
-});
-
 const messageHeaderStyle: JSX.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
@@ -872,6 +856,51 @@ const submitEdit = (
   setIsEditing(false);
 };
 
+const kebabHoverCss =
+  `.msg-bubble .msg-kebab{opacity:0;transition:opacity .15s}.msg-bubble:hover .msg-kebab,.msg-kebab[data-open]{opacity:.7}`;
+
+const KebabHoverStyle = () => <style>{kebabHoverCss}</style>;
+
+const kebabMenuStyle = (textColor: string): JSX.CSSProperties => ({
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  padding: "2px 4px",
+  color: textColor,
+  borderRadius: 4,
+  display: "flex",
+  alignItems: "center",
+});
+
+const dropdownMenuStyle = (
+  isDark: boolean,
+  rect: DOMRect,
+): JSX.CSSProperties => ({
+  position: "fixed",
+  top: rect.bottom + 2,
+  right: globalThis.innerWidth - rect.right,
+  background: isDark ? "#1f2937" : "#fff",
+  borderRadius: 8,
+  boxShadow: isDark ? "0 4px 12px #0008" : "0 4px 12px #0003",
+  zIndex: 10000,
+  minWidth: 120,
+  overflow: "hidden",
+});
+
+const dropdownItemStyle = (isDark: boolean): JSX.CSSProperties => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  width: "100%",
+  padding: "8px 12px",
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  fontSize: 13,
+  color: isDark ? "#e5e7eb" : "#1f2937",
+  whiteSpace: "nowrap",
+});
+
 const MessageEditControls = ({
   hasEdits,
   canEdit,
@@ -886,31 +915,90 @@ const MessageEditControls = ({
   textColor: string;
   onShowHistory: () => void;
   onStartEdit: () => void;
-}) => (
-  <div style={{ display: "flex", gap: 4 }}>
-    {hasEdits && (
+}) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isDark = useDarkMode();
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const showMenu = canEdit || hasEdits;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  if (!showMenu || isEditing) return null;
+
+  const btnRect = btnRef.current?.getBoundingClientRect();
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      {hasEdits && <span style={{ fontSize: 10, opacity: 0.7 }}>edited</span>}
       <button
+        ref={btnRef}
         type="button"
-        onClick={onShowHistory}
-        style={historyButtonStyle(textColor)}
-        title="View edit history"
+        className="msg-kebab"
+        data-open={menuOpen || undefined}
+        onClick={() => setMenuOpen((v) => !v)}
+        style={kebabMenuStyle(textColor)}
+        title="More options"
       >
-        <FaHistory size={10} />
-        <span>edited</span>
+        <FaEllipsisV size={12} />
       </button>
-    )}
-    {canEdit && !isEditing && (
-      <button
-        type="button"
-        onClick={onStartEdit}
-        style={editButtonStyle(textColor)}
-        title="Edit message"
-      >
-        <FaPen size={10} />
-      </button>
-    )}
-  </div>
-);
+      {menuOpen && btnRect && (
+        <div ref={menuRef} style={dropdownMenuStyle(isDark, btnRect)}>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onStartEdit();
+              }}
+              style={dropdownItemStyle(isDark)}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isDark
+                ? "#374151"
+                : "#f3f4f6")}
+              onMouseLeave={(
+                e,
+              ) => (e.currentTarget.style.background = "transparent")}
+            >
+              <FaPen size={11} />
+              Edit
+            </button>
+          )}
+          {hasEdits && (
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onShowHistory();
+              }}
+              style={dropdownItemStyle(isDark)}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isDark
+                ? "#374151"
+                : "#f3f4f6")}
+              onMouseLeave={(
+                e,
+              ) => (e.currentTarget.style.background = "transparent")}
+            >
+              <FaHistory size={11} />
+              View history
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const EditForm = ({
   editText,
@@ -991,6 +1079,7 @@ const Message = (
         />
       )}
       <div
+        className="msg-bubble"
         style={{
           background: baseColor,
           color: textColor,
@@ -1543,17 +1632,20 @@ export const AbstractChatBox = (
     }
   }, [messages, isSending]);
 
-  // Scroll to bottom when messages or typing indicator change
-  useEffect(() => {
+  const scrollToBottom = (instant?: boolean) => {
     const el = messagesContainerRef.current;
     if (!el) return;
-    const isInitial = initialLoadRef.current;
+    const behavior = instant || initialLoadRef.current ? "instant" : "smooth";
     requestAnimationFrame(() => {
-      el.scrollTo({
-        top: el.scrollHeight,
-        behavior: isInitial ? "instant" : "smooth",
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior });
       });
     });
+  };
+
+  // Scroll to bottom when messages or typing indicator change
+  useEffect(() => {
+    scrollToBottom();
     if (messages.length > 0) initialLoadRef.current = false;
   }, [messages.length, typingUsers.length, isSending]);
 
@@ -1577,6 +1669,7 @@ export const AbstractChatBox = (
 
   return (
     <div style={chatContainerStyle(isDark, customColors)}>
+      <KebabHoverStyle />
       <div style={titleStyle(isDark, customColors)}>{title}</div>
       {onClose && <CloseButton onClose={onClose} />}
       <div
@@ -2059,6 +2152,7 @@ export const AbstractChatBox = (
         inputRef.current.focus();
         inputRef.current.style.height = "auto";
       }
+      scrollToBottom();
     }, 0);
   }
 };
