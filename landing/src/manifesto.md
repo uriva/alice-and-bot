@@ -64,9 +64,14 @@ This is useful for supervision over bots or other business use cases. APIs - we
 should be able to send messages via api and receive them via webhook. There
 should be no added cost to this, it should be trivial.
 
-### Storage
+### Storage and encryption
 
 Cloud storage should be baked in - so the chats are device independent.
+
+This might sound at odds with e2e encryption, but it's not: your encryption keys
+never leave your devices. The cloud only stores ciphertext it cannot decrypt.
+You get the convenience of syncing across devices without giving the server the
+ability to read your messages.
 
 ### Freedom
 
@@ -78,9 +83,8 @@ relevant.
 
 ## What was good and needed to be preserved?
 
-e2e encryption - this is already the standard, but it must be respected in any
-new solution. convenience of using chats on mobile or desktop, with seamless
-transition, including notifications
+e2e encryption and the convenience of using chats on mobile or desktop, with
+seamless transition, including notifications.
 
 ## The problem of spam
 
