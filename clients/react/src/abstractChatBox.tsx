@@ -805,11 +805,11 @@ type MessageProps = {
   customColors?: CustomColors;
 };
 
-const messageHeaderStyle: JSX.CSSProperties = {
+const messageFooterStyle: JSX.CSSProperties = {
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent: "flex-end",
   alignItems: "center",
-  gap: 8,
+  gap: 4,
 };
 
 const editTextareaStyle: JSX.CSSProperties = {
@@ -1102,18 +1102,8 @@ const Message = (
           overflowWrap: "anywhere",
         }}
       >
-        <div style={messageHeaderStyle}>
-          {isStartOfSequence && !customColors?.hideNames &&
-            <b style={{ fontSize: 11 }}>{authorName}</b>}
-          <MessageEditControls
-            hasEdits={hasEdits}
-            canEdit={canEdit}
-            isEditing={isEditing}
-            textColor={textColor}
-            onShowHistory={() => setShowHistory(true)}
-            onStartEdit={() => setIsEditing(true)}
-          />
-        </div>
+        {isStartOfSequence && !customColors?.hideNames &&
+          <b style={{ fontSize: 11 }}>{authorName}</b>}
         {isEditing
           ? (
             <EditForm
@@ -1208,15 +1198,24 @@ const Message = (
             ))}
           </div>
         )}
-        <span
-          style={{
-            color: isDark ? "#bbb" : (textColor === "#222" ? "#555" : "#eee"),
-            fontSize: 10,
-            float: "right",
-          }}
-        >
-          {useTimeAgo(timestamp)}
-        </span>
+        <div style={messageFooterStyle}>
+          <MessageEditControls
+            hasEdits={hasEdits}
+            canEdit={canEdit}
+            isEditing={isEditing}
+            textColor={textColor}
+            onShowHistory={() => setShowHistory(true)}
+            onStartEdit={() => setIsEditing(true)}
+          />
+          <span
+            style={{
+              color: isDark ? "#bbb" : (textColor === "#222" ? "#555" : "#eee"),
+              fontSize: 10,
+            }}
+          >
+            {useTimeAgo(timestamp)}
+          </span>
+        </div>
       </div>
       {showHistory && editHistory && (
         <EditHistoryPopup
@@ -1250,6 +1249,7 @@ export type ActiveSpinner = {
   authorName: string;
   text: string;
   elementId: string;
+  timestamp: number;
 };
 
 export type ActiveProgress = {
@@ -1257,6 +1257,40 @@ export type ActiveProgress = {
   text: string;
   percentage: number;
   elementId: string;
+  timestamp: number;
+};
+
+type TimelineEntry =
+  | { kind: "message"; msg: AbstracChatMessage; prevMsg?: AbstracChatMessage }
+  | { kind: "spinner"; spinner: ActiveSpinner }
+  | { kind: "progress"; progress: ActiveProgress };
+
+const buildTimeline = (
+  messages: AbstracChatMessage[],
+  spinners: ActiveSpinner[],
+  progress: ActiveProgress[],
+): TimelineEntry[] => {
+  const sorted = sortKey((x: AbstracChatMessage) => x.timestamp)(messages);
+  const msgEntries: TimelineEntry[] = sorted.map((msg, i) => ({
+    kind: "message",
+    msg,
+    prevMsg: sorted[i - 1],
+  }));
+  const spinnerEntries: TimelineEntry[] = spinners.map((s) => ({
+    kind: "spinner",
+    spinner: s,
+  }));
+  const progressEntries: TimelineEntry[] = progress.map((p) => ({
+    kind: "progress",
+    progress: p,
+  }));
+  const tsOf = (e: TimelineEntry): number =>
+    e.kind === "message"
+      ? e.msg.timestamp
+      : e.kind === "spinner"
+      ? e.spinner.timestamp
+      : e.progress.timestamp;
+  return sortKey(tsOf)([...msgEntries, ...spinnerEntries, ...progressEntries]);
 };
 
 const editWindowMs = 5 * 60 * 1000;
@@ -1359,7 +1393,7 @@ const EditHistoryPopup = ({
 const indicatorTextStyle = (isDark: boolean): JSX.CSSProperties => ({
   padding: "6px 12px 6px 44px",
   color: isDark ? "#cbd5e1" : "#475569",
-  fontSize: 12,
+  fontSize: 14,
 });
 
 const linearBarTrackStyle = (isDark: boolean): JSX.CSSProperties => ({
@@ -1785,41 +1819,39 @@ export const AbstractChatBox = (
           )
           : (
             <>
-              {sortKey((x: AbstracChatMessage) => x.timestamp)(messages).map((
-                msg,
-                i,
-                arr,
-              ) => (
-                <Message
-                  key={msg.id}
-                  isOwn={msg.authorId === userId}
-                  msg={msg}
-                  prev={arr[i - 1]}
-                  onDecryptAttachment={onDecryptAttachment}
-                  sessionStart={sessionStartRef.current}
-                  onEdit={onEdit &&
-                    ((newText: string) => onEdit(msg.id, newText))}
-                  customColors={customColors}
-                />
-              ))}
-              {/* Sending audio indicator */}
+              {buildTimeline(messages, activeSpinners, activeProgress).map(
+                (entry) =>
+                  entry.kind === "message"
+                    ? (
+                      <Message
+                        key={entry.msg.id}
+                        isOwn={entry.msg.authorId === userId}
+                        msg={entry.msg}
+                        prev={entry.prevMsg}
+                        onDecryptAttachment={onDecryptAttachment}
+                        sessionStart={sessionStartRef.current}
+                        onEdit={onEdit &&
+                          ((newText: string) => onEdit(entry.msg.id, newText))}
+                        customColors={customColors}
+                      />
+                    )
+                    : entry.kind === "spinner"
+                    ? (
+                      <SpinnerIndicator
+                        key={`spinner-${entry.spinner.elementId}`}
+                        spinner={entry.spinner}
+                        isDark={isDark}
+                      />
+                    )
+                    : (
+                      <ProgressIndicator
+                        key={`progress-${entry.progress.elementId}`}
+                        progress={entry.progress}
+                        isDark={isDark}
+                      />
+                    ),
+              )}
               {isSending && <SendingAudioIndicator isDark={isDark} />}
-              {/* Active spinners */}
-              {activeSpinners.map((s, i) => (
-                <SpinnerIndicator
-                  key={`spinner-${i}`}
-                  spinner={s}
-                  isDark={isDark}
-                />
-              ))}
-              {/* Active progress bars */}
-              {activeProgress.map((p, i) => (
-                <ProgressIndicator
-                  key={`progress-${i}`}
-                  progress={p}
-                  isDark={isDark}
-                />
-              ))}
               {/* Typing indicator */}
               {typingUsers.length > 0 && (
                 <TypingIndicator names={typingUsers} isDark={isDark} />

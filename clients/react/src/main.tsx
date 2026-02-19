@@ -139,6 +139,7 @@ const latestSpinners = (
           authorName: details[key]?.name ?? compactPublicKey(key),
           text: m.text,
           elementId: m.elementId,
+          timestamp: m.timestamp,
         });
       }
     }
@@ -170,6 +171,7 @@ const latestProgress = (
           text: m.text,
           percentage: pct,
           elementId: m.elementId,
+          timestamp: m.timestamp,
         });
       }
     }
@@ -241,12 +243,18 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       (el.percentage ?? 0) < 1
     )
     .map((
-      el: { elementId: string; text?: string; percentage?: number },
+      el: {
+        elementId: string;
+        text?: string;
+        percentage?: number;
+        updatedAt: number;
+      },
     ): ActiveProgress => ({
       authorName: "",
       text: el.text ?? "",
       percentage: el.percentage ?? 0,
       elementId: el.elementId,
+      timestamp: el.updatedAt,
     }));
   const standaloneSpinners: ActiveSpinner[] = uiElements
     .filter((el: { elementId: string; type: string; active?: boolean }) =>
@@ -255,11 +263,12 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       el.active !== false
     )
     .map((
-      el: { elementId: string; text?: string },
+      el: { elementId: string; text?: string; updatedAt: number },
     ): ActiveSpinner => ({
       authorName: "",
       text: el.text ?? "",
       elementId: el.elementId,
+      timestamp: el.updatedAt,
     }));
   return {
     chatMessages: foldEdits(textAndEdits).map(
