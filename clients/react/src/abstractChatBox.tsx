@@ -144,31 +144,37 @@ const isVideoUrl = (href?: string) =>
 const isAudioUrl = (href?: string) =>
   !!href && /\.(mp3|wav|ogg|m4a|flac)(\?.*)?$/i.test(href);
 
-const htmlMediaToLinks = (text: string) => {
-  let out = text;
-  // <video src="...">
-  out = out.replace(/<video\s+[^>]*>/gi, (tag) => {
-    const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
-    if (!/^https?:\/\//i.test(src)) return tag;
-    return src;
+const extractMediaSrc = (tag: string) =>
+  /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
+
+const isHttpUrl = (src: string) => /^https?:\/\//i.test(src);
+
+const htmlVideoToMarkdown = (text: string) =>
+  text.replace(
+    /<video[^>]*>[\s\S]*?<\/video>/gi,
+    (block) => {
+      const src = extractMediaSrc(block) ||
+        (/\ssrc=["']([^"']+)["']/i.exec(
+          /<source[^>]*>/i.exec(block)?.[0] ?? "",
+        )?.[1] ?? "");
+      return isHttpUrl(src) ? `![video](${src})` : block;
+    },
+  );
+
+const htmlAudioToMarkdown = (text: string) =>
+  text.replace(/<audio\s+[^>]*>/gi, (tag) => {
+    const src = extractMediaSrc(tag);
+    return isHttpUrl(src) ? `![audio](${src})` : tag;
   });
-  // <audio src="...">
-  out = out.replace(/<audio\s+[^>]*>/gi, (tag) => {
-    const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
-    if (!/^https?:\/\//i.test(src)) return tag;
-    return src;
-  });
-  // <source src="..."> (inside media)
-  out = out.replace(/<source\s+[^>]*>/gi, (tag) => {
-    const src = /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
-    if (!/^https?:\/\//i.test(src)) return tag;
-    return src;
-  });
-  return out;
-};
+
+const htmlMediaToMarkdown = (text: string) =>
+  htmlAudioToMarkdown(htmlVideoToMarkdown(text))
+    .replace(/<source\s+[^>]*>/gi, "")
+    .replace(/<\/video>/gi, "")
+    .replace(/<\/audio>/gi, "");
 
 const preprocessText = (text: string) =>
-  htmlImgToMarkdown(htmlMediaToLinks(text));
+  htmlImgToMarkdown(htmlMediaToMarkdown(text));
 
 const copyOverlayStyle = (
   { isDark }: { isDark: boolean },
@@ -1182,9 +1188,27 @@ const Message = (
                     );
                   },
                   // @ts-expect-error react-markdown types are not fully compatible with Preact here
-                  img: ({ src, alt }) => (
-                    <img src={src} alt={alt} style={bubbleImgStyle} />
-                  ),
+                  img: ({ src, alt }) =>
+                    alt === "video"
+                      ? (
+                        <video
+                          src={src}
+                          controls
+                          preload="metadata"
+                          playsInline
+                          style={bubbleVideoStyle}
+                        />
+                      )
+                      : alt === "audio"
+                      ? (
+                        <audio
+                          src={src}
+                          controls
+                          preload="metadata"
+                          style={bubbleAudioStyle}
+                        />
+                      )
+                      : <img src={src} alt={alt} style={bubbleImgStyle} />,
                   // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
                   code: CodeBlock,
                 }}
