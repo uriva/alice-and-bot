@@ -218,7 +218,7 @@ export const handleWebhookUpdate = async (
   credentials: Credentials,
 ): Promise<{
   conversationId: string;
-  message: Omit<DecipheredMessage, "id">;
+  message: DistributeOmit<DecipheredMessage, "id">;
   conversationKey: string;
 }> => {
   const key = await getConversationKey(credentials, whUpdate.conversationId);
@@ -263,15 +263,14 @@ export type DecipheredMessage =
   | DecipheredSpinnerMessage
   | DecipheredProgressMessage;
 
+type DistributeOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
+  : never;
+
 const decryptedPayloadToMessage = (
   publicSignKey: string,
   timestamp: number,
   decryptedPayload: InternalMessage,
-):
-  | Omit<DecipheredTextMessage, "id">
-  | Omit<DecipheredEditMessage, "id">
-  | Omit<DecipheredSpinnerMessage, "id">
-  | Omit<DecipheredProgressMessage, "id"> => {
+): DistributeOmit<DecipheredMessage, "id"> => {
   const base = { publicSignKey, timestamp, text: decryptedPayload.text };
   if (decryptedPayload.type === "spinner") {
     return { ...base, type: "spinner", active: decryptedPayload.active };
