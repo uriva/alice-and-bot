@@ -46,6 +46,7 @@ const _schema = i.schema({
     uiElements: i.entity({
       elementId: i.string().unique().indexed(),
       type: i.string(),
+      text: i.string().optional(),
       active: i.boolean().optional(),
       percentage: i.number().optional(),
       updatedAt: i.number(),

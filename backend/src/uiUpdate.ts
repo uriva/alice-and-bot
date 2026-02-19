@@ -5,6 +5,7 @@ type UiUpdateInput = {
   elementId: string;
   conversationId?: string;
   type?: string;
+  text?: string;
   active?: boolean;
   percentage?: number;
 };
@@ -12,7 +13,7 @@ type UiUpdateInput = {
 export const handleUiUpdate = async (
   input: UiUpdateInput,
 ): Promise<{ success: true } | { error: string }> => {
-  const { elementId, conversationId, type, active, percentage } = input;
+  const { elementId, conversationId, type, text, active, percentage } = input;
   if (!elementId) return { error: "elementId is required" };
   const { uiElements } = await query({
     uiElements: { $: { where: { elementId } } },
@@ -29,6 +30,7 @@ export const handleUiUpdate = async (
       tx.uiElements[newId].update({
         elementId,
         type,
+        ...(text !== undefined ? { text } : {}),
         ...(active !== undefined ? { active } : {}),
         ...(percentage !== undefined ? { percentage } : {}),
         updatedAt: Date.now(),
@@ -38,6 +40,7 @@ export const handleUiUpdate = async (
   } else {
     await transact(
       tx.uiElements[uiElements[0].id].update({
+        ...(text !== undefined ? { text } : {}),
         ...(active !== undefined ? { active } : {}),
         ...(percentage !== undefined ? { percentage } : {}),
         updatedAt: Date.now(),

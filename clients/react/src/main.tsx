@@ -197,10 +197,20 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       $: { where: { "conversation.id": conversationId } },
     },
   });
+  const uiElements = uiElementsData?.uiElements ?? [];
   const uiOverrides = new Map(
-    (uiElementsData?.uiElements ?? []).map((
-      el: { elementId: string; active?: boolean; percentage?: number },
-    ) => [el.elementId, { active: el.active, percentage: el.percentage }]),
+    uiElements.map((
+      el: {
+        elementId: string;
+        active?: boolean;
+        percentage?: number;
+        text?: string;
+      },
+    ) => [el.elementId, {
+      active: el.active,
+      percentage: el.percentage,
+      text: el.text,
+    }]),
   );
   const details = {
     ...detailsCache,
@@ -217,12 +227,52 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
     ),
   };
   const textAndEdits = messages.filter(isTextOrEdit);
+  const messageElementIds = new Set(
+    messages
+      .filter((m): m is DecipheredMessage & { elementId: string } =>
+        "elementId" in m
+      )
+      .map((m) => m.elementId),
+  );
+  const standaloneProgress: ActiveProgress[] = uiElements
+    .filter((el: { elementId: string; type: string; percentage?: number }) =>
+      el.type === "progress" &&
+      !messageElementIds.has(el.elementId) &&
+      (el.percentage ?? 0) < 1
+    )
+    .map((
+      el: { elementId: string; text?: string; percentage?: number },
+    ): ActiveProgress => ({
+      authorName: "",
+      text: el.text ?? "",
+      percentage: el.percentage ?? 0,
+      elementId: el.elementId,
+    }));
+  const standaloneSpinners: ActiveSpinner[] = uiElements
+    .filter((el: { elementId: string; type: string; active?: boolean }) =>
+      el.type === "spinner" &&
+      !messageElementIds.has(el.elementId) &&
+      el.active !== false
+    )
+    .map((
+      el: { elementId: string; text?: string },
+    ): ActiveSpinner => ({
+      authorName: "",
+      text: el.text ?? "",
+      elementId: el.elementId,
+    }));
   return {
     chatMessages: foldEdits(textAndEdits).map(
       msgToUIMessageWithHistory(details),
     ),
-    activeSpinners: latestSpinners(messages, details, uiOverrides),
-    activeProgress: latestProgress(messages, details, uiOverrides),
+    activeSpinners: [
+      ...latestSpinners(messages, details, uiOverrides),
+      ...standaloneSpinners,
+    ],
+    activeProgress: [
+      ...latestProgress(messages, details, uiOverrides),
+      ...standaloneProgress,
+    ],
   };
 };
 
