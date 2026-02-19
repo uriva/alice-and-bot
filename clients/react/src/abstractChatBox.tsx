@@ -937,7 +937,18 @@ const MessageEditControls = ({
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  if (!showMenu || isEditing) return null;
+  if (!showMenu || isEditing) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <button
+          type="button"
+          style={{ ...kebabMenuStyle(textColor), visibility: "hidden" }}
+        >
+          <FaEllipsisV size={12} />
+        </button>
+      </div>
+    );
+  }
 
   const btnRect = btnRef.current?.getBoundingClientRect();
 
