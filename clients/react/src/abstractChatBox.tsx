@@ -797,6 +797,7 @@ const AttachmentRenderer = (
 
 type MessageProps = {
   msg: AbstracChatMessage;
+  prev: AbstracChatMessage | undefined;
   next: AbstracChatMessage | undefined;
   isOwn: boolean;
   onDecryptAttachment?: (url: string) => Promise<string>;
@@ -1042,6 +1043,7 @@ const Message = (
       attachments,
       editHistory,
     },
+    prev,
     next,
     isOwn,
     onDecryptAttachment,
@@ -1054,6 +1056,7 @@ const Message = (
   const [editText, setEditText] = useState(text);
   const [showHistory, setShowHistory] = useState(false);
   const isFirstOfSequence = !next || next.authorId !== authorId;
+  const isStartOfSequence = !prev || prev.authorId !== authorId;
   const isDark = useDarkMode();
   const baseColor = isOwn
     ? (customColors?.primary ?? (isDark ? "#2563eb" : "#3182ce"))
@@ -1103,7 +1106,7 @@ const Message = (
         }}
       >
         <div style={messageHeaderStyle}>
-          <b style={{ fontSize: 11 }}>{authorName}</b>
+          {isStartOfSequence && <b style={{ fontSize: 11 }}>{authorName}</b>}
           <MessageEditControls
             hasEdits={hasEdits}
             canEdit={canEdit}
@@ -1787,6 +1790,7 @@ export const AbstractChatBox = (
                   key={msg.id}
                   isOwn={msg.authorId === userId}
                   msg={msg}
+                  prev={arr[i - 1]}
                   next={arr[i + 1]}
                   onDecryptAttachment={onDecryptAttachment}
                   sessionStart={sessionStartRef.current}
