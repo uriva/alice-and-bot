@@ -1103,7 +1103,8 @@ const Message = (
         }}
       >
         <div style={messageHeaderStyle}>
-          {isStartOfSequence && <b style={{ fontSize: 11 }}>{authorName}</b>}
+          {isStartOfSequence && !customColors?.hideNames &&
+            <b style={{ fontSize: 11 }}>{authorName}</b>}
           <MessageEditControls
             hasEdits={hasEdits}
             canEdit={canEdit}

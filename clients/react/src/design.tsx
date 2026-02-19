@@ -8,6 +8,7 @@ export type CustomColors = {
   hideTitle?: boolean;
   hideOwnAvatar?: boolean;
   hideOtherBubble?: boolean;
+  hideNames?: boolean;
   inputMaxWidth?: string;
   chatMaxWidth?: string;
   inputBackground?: string;
