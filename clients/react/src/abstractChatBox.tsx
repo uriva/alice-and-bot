@@ -1056,7 +1056,7 @@ const Message = (
   const isFirstOfSequence = !next || next.authorId !== authorId;
   const isDark = useDarkMode();
   const baseColor = isOwn
-    ? isDark ? "#2563eb" : "#3182ce"
+    ? (customColors?.primary ?? (isDark ? "#2563eb" : "#3182ce"))
     : stringToColor(authorId, isDark);
   const noBubble = !isOwn && customColors?.hideOtherBubble;
   const showAvatar = isFirstOfSequence &&
