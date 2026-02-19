@@ -433,8 +433,11 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return respondCors(null, { status: 204 });
   const url = new URL(req.url);
   if (url.pathname === "/ui-update") {
+    const body = await req.json();
+    const elementId = body.elementId ||
+      url.searchParams.get("elementId");
     return respondCors(
-      JSON.stringify(await handleUiUpdate(await req.json())),
+      JSON.stringify(await handleUiUpdate({ ...body, elementId })),
       {
         status: 200,
         headers: { "content-type": "application/json; charset=utf-8" },
