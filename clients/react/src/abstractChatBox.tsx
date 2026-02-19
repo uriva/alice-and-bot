@@ -1355,61 +1355,67 @@ const EditHistoryPopup = ({
   );
 };
 
-const SpinnerIndicator = (
-  { spinner, isDark }: { spinner: ActiveSpinner; isDark: boolean },
-) => (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      padding: "6px 12px 6px 44px",
-      color: isDark ? "#cbd5e1" : "#475569",
-      fontSize: 12,
-    }}
-  >
-    <Spinner />
-    <span>
-      {spinner.authorName}: {spinner.text}
-    </span>
-  </div>
-);
-
-const progressBarContainerStyle = (isDark: boolean): JSX.CSSProperties => ({
+const indicatorTextStyle = (isDark: boolean): JSX.CSSProperties => ({
   padding: "6px 12px 6px 44px",
   color: isDark ? "#cbd5e1" : "#475569",
   fontSize: 12,
 });
 
-const progressBarTrackStyle = (isDark: boolean): JSX.CSSProperties => ({
-  height: 6,
-  borderRadius: 3,
-  background: isDark ? "#374151" : "#e2e8f0",
+const linearBarTrackStyle = (isDark: boolean): JSX.CSSProperties => ({
+  width: 200,
+  height: 4,
+  border: `1px solid ${isDark ? "#cbd5e1" : "#475569"}`,
+  borderRadius: 4,
   marginTop: 4,
   overflow: "hidden",
 });
 
-const progressBarFillStyle = (
+const linearBarFillStyle = (
   percentage: number,
   isDark: boolean,
 ): JSX.CSSProperties => ({
   height: "100%",
-  borderRadius: 3,
-  background: isDark ? "#3b82f6" : "#2563eb",
+  backgroundColor: isDark ? "#cbd5e1" : "#475569",
+  borderRadius: 4,
   width: `${Math.min(100, Math.max(0, percentage * 100))}%`,
   transition: "width 0.3s ease",
 });
 
+const SpinnerIndicator = (
+  { spinner, isDark }: { spinner: ActiveSpinner; isDark: boolean },
+) => (
+  <div style={indicatorTextStyle(isDark)}>
+    <span>{spinner.authorName}: {spinner.text}</span>
+    <style>
+      {`@keyframes indeterminate {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(200px); }
+      }`}
+    </style>
+    <div style={linearBarTrackStyle(isDark)}>
+      <div
+        style={{
+          height: "100%",
+          width: 60,
+          backgroundColor: isDark ? "#cbd5e1" : "#475569",
+          borderRadius: 4,
+          animation: "indeterminate 1.2s linear infinite",
+        }}
+      />
+    </div>
+  </div>
+);
+
 const ProgressIndicator = (
   { progress, isDark }: { progress: ActiveProgress; isDark: boolean },
 ) => (
-  <div style={progressBarContainerStyle(isDark)}>
+  <div style={indicatorTextStyle(isDark)}>
     <span>
       {progress.authorName}: {progress.text}{" "}
       ({Math.round(progress.percentage * 100)}%)
     </span>
-    <div style={progressBarTrackStyle(isDark)}>
-      <div style={progressBarFillStyle(progress.percentage, isDark)} />
+    <div style={linearBarTrackStyle(isDark)}>
+      <div style={linearBarFillStyle(progress.percentage, isDark)} />
     </div>
   </div>
 );
