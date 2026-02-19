@@ -5,6 +5,12 @@ export type CustomColors = {
   background?: string;
   text?: string;
   primary?: string;
+  hideTitle?: boolean;
+  hideOwnAvatar?: boolean;
+  hideOtherBubble?: boolean;
+  inputMaxWidth?: string;
+  chatMaxWidth?: string;
+  inputBackground?: string;
 };
 
 export const widgetColors = (isDarkMode: boolean, custom?: CustomColors) => ({
@@ -24,6 +30,9 @@ export const chatContainerStyle = (
   minHeight: 0,
   ...widgetColors(isDarkMode, custom),
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
+  ...(custom?.chatMaxWidth
+    ? { maxWidth: custom.chatMaxWidth, margin: "0 auto", width: "100%" }
+    : {}),
 });
 
 export const loadingStyle = { fontSize: 12, color: "#bbb" };

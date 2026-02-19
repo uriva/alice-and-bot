@@ -802,6 +802,7 @@ type MessageProps = {
   onDecryptAttachment?: (url: string) => Promise<string>;
   sessionStart: number;
   onEdit?: (newText: string) => void;
+  customColors?: CustomColors;
 };
 
 const messageHeaderStyle: JSX.CSSProperties = {
@@ -1046,6 +1047,7 @@ const Message = (
     onDecryptAttachment,
     sessionStart,
     onEdit,
+    customColors,
   }: MessageProps,
 ) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -1056,10 +1058,15 @@ const Message = (
   const baseColor = isOwn
     ? isDark ? "#2563eb" : "#3182ce"
     : stringToColor(authorId, isDark);
-  const showAvatar = isFirstOfSequence;
-  const textColor = isLightColor(baseColor)
+  const noBubble = !isOwn && customColors?.hideOtherBubble;
+  const showAvatar = isFirstOfSequence &&
+    !(isOwn && customColors?.hideOwnAvatar);
+  const textColor = noBubble
+    ? (customColors?.text ?? (isDark ? "#f4f4f4" : "#222"))
+    : isLightColor(baseColor)
     ? (isDark ? "#fff" : "#222")
     : (isDark ? "#fff" : "#fff");
+  const avatarSpace = isOwn ? (customColors?.hideOwnAvatar ? 0 : 36) : 36;
   const canEdit = !!(isOwn && onEdit && Date.now() - timestamp < editWindowMs);
   const hasEdits = !empty(editHistory ?? []);
 
@@ -1081,13 +1088,13 @@ const Message = (
       <div
         className="msg-bubble"
         style={{
-          background: baseColor,
+          background: noBubble ? "transparent" : baseColor,
           color: textColor,
           alignSelf: isOwn ? "flex-end" : "flex-start",
-          borderRadius: 16,
-          padding: "6px 12px",
-          marginLeft: isOwn ? 0 : !isOwn && showAvatar ? 0 : 36,
-          marginRight: isOwn ? (showAvatar ? 0 : 36) : 0,
+          borderRadius: noBubble ? 0 : 16,
+          padding: noBubble ? "2px 0" : "6px 12px",
+          marginLeft: isOwn ? 0 : showAvatar ? 0 : avatarSpace,
+          marginRight: isOwn ? (showAvatar ? 0 : avatarSpace) : 0,
           maxWidth: "80%",
           overflowX: "hidden",
           overflowY: "hidden",
@@ -1746,7 +1753,9 @@ export const AbstractChatBox = (
   return (
     <div style={chatContainerStyle(isDark, customColors)}>
       <KebabHoverStyle />
-      <div style={titleStyle(isDark, customColors)}>{title}</div>
+      {!customColors?.hideTitle && (
+        <div style={titleStyle(isDark, customColors)}>{title}</div>
+      )}
       {onClose && <CloseButton onClose={onClose} />}
       <div
         ref={messagesContainerRef}
@@ -1783,6 +1792,7 @@ export const AbstractChatBox = (
                   sessionStart={sessionStartRef.current}
                   onEdit={onEdit &&
                     ((newText: string) => onEdit(msg.id, newText))}
+                  customColors={customColors}
                 />
               ))}
               {/* Sending audio indicator */}
@@ -1949,7 +1959,12 @@ export const AbstractChatBox = (
           gap: 8,
           flex: "0 0 auto",
           padding: "8px 12px",
-          background: isDark ? "#0f1318" : "#f8fafc",
+          background: customColors?.inputBackground ??
+            (isDark ? "#0f1318" : "#f8fafc"),
+          maxWidth: customColors?.inputMaxWidth,
+          ...(customColors?.inputMaxWidth
+            ? { margin: "0 auto", width: "100%" }
+            : {}),
         }}
       >
         <input
