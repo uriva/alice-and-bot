@@ -43,6 +43,13 @@ const _schema = i.schema({
     conversations: i.entity({ title: i.string() }),
     keys: i.entity({ key: i.json<EncryptedConversationKey>() }),
     typingStates: i.entity({ updatedAt: i.number() }),
+    uiElements: i.entity({
+      elementId: i.string().unique().indexed(),
+      type: i.string(),
+      active: i.boolean().optional(),
+      percentage: i.number().optional(),
+      updatedAt: i.number(),
+    }),
   },
   links: {
     conversationMessages: {
@@ -108,6 +115,15 @@ const _schema = i.schema({
         onDelete: "cascade",
       },
       reverse: { on: "conversations", label: "typingStates", has: "many" },
+    },
+    conversationUiElements: {
+      forward: {
+        on: "uiElements",
+        label: "conversation",
+        has: "one",
+        onDelete: "cascade",
+      },
+      reverse: { on: "conversations", label: "uiElements", has: "many" },
     },
   },
   rooms: {},

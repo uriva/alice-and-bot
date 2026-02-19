@@ -89,12 +89,14 @@ type SpinnerMessage = {
   type: "spinner";
   text: string;
   active: boolean;
+  elementId: string;
 };
 
 type ProgressMessage = {
   type: "progress";
   text: string;
   percentage: number;
+  elementId: string;
 };
 
 type InternalMessage =
@@ -250,11 +252,13 @@ type DecipheredEditMessage = DecipheredMessageBase & {
 type DecipheredSpinnerMessage = DecipheredMessageBase & {
   type: "spinner";
   active: boolean;
+  elementId: string;
 };
 
 type DecipheredProgressMessage = DecipheredMessageBase & {
   type: "progress";
   percentage: number;
+  elementId: string;
 };
 
 export type DecipheredMessage =
@@ -273,13 +277,19 @@ const decryptedPayloadToMessage = (
 ): DistributeOmit<DecipheredMessage, "id"> => {
   const base = { publicSignKey, timestamp, text: decryptedPayload.text };
   if (decryptedPayload.type === "spinner") {
-    return { ...base, type: "spinner", active: decryptedPayload.active };
+    return {
+      ...base,
+      type: "spinner",
+      active: decryptedPayload.active,
+      elementId: decryptedPayload.elementId,
+    };
   }
   if (decryptedPayload.type === "progress") {
     return {
       ...base,
       type: "progress",
       percentage: decryptedPayload.percentage,
+      elementId: decryptedPayload.elementId,
     };
   }
   if (decryptedPayload.type === "edit") {
@@ -547,3 +557,8 @@ export const downloadAttachment = async ({
   const encrypted = await response.arrayBuffer();
   return decryptBinary(conversationKey, encrypted);
 };
+
+export const uiUpdateUrl = "https://alice-and-bot.deno.dev/ui-update";
+
+export const buildUiUpdateUrl = (elementId: string): string =>
+  `${uiUpdateUrl}?elementId=${encodeURIComponent(elementId)}`;

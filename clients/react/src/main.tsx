@@ -119,6 +119,7 @@ const msgToUIMessageWithHistory =
 const latestSpinners = (
   messages: DecipheredMessage[],
   details: Record<string, { name: string; avatar?: string }>,
+  uiOverrides: Map<string, { active?: boolean; percentage?: number }>,
 ): ActiveSpinner[] => {
   const byAuthor = new Map<string, DecipheredMessage>();
   for (
@@ -130,11 +131,16 @@ const latestSpinners = (
   }
   const result: ActiveSpinner[] = [];
   for (const [key, m] of byAuthor) {
-    if (m.type === "spinner" && m.active) {
-      result.push({
-        authorName: details[key]?.name ?? compactPublicKey(key),
-        text: m.text,
-      });
+    if (m.type === "spinner") {
+      const override = uiOverrides.get(m.elementId);
+      const isActive = override?.active ?? m.active;
+      if (isActive) {
+        result.push({
+          authorName: details[key]?.name ?? compactPublicKey(key),
+          text: m.text,
+          elementId: m.elementId,
+        });
+      }
     }
   }
   return result;
@@ -143,6 +149,7 @@ const latestSpinners = (
 const latestProgress = (
   messages: DecipheredMessage[],
   details: Record<string, { name: string; avatar?: string }>,
+  uiOverrides: Map<string, { active?: boolean; percentage?: number }>,
 ): ActiveProgress[] => {
   const byAuthor = new Map<string, DecipheredMessage>();
   for (
@@ -154,12 +161,17 @@ const latestProgress = (
   }
   const result: ActiveProgress[] = [];
   for (const [key, m] of byAuthor) {
-    if (m.type === "progress" && m.percentage < 1) {
-      result.push({
-        authorName: details[key]?.name ?? compactPublicKey(key),
-        text: m.text,
-        percentage: m.percentage,
-      });
+    if (m.type === "progress") {
+      const override = uiOverrides.get(m.elementId);
+      const pct = override?.percentage ?? m.percentage;
+      if (pct < 1) {
+        result.push({
+          authorName: details[key]?.name ?? compactPublicKey(key),
+          text: m.text,
+          percentage: pct,
+          elementId: m.elementId,
+        });
+      }
     }
   }
   return result;
@@ -169,6 +181,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
 (
   messages: DecipheredMessage[],
   detailsCache: Record<string, { name: string; avatar?: string }>,
+  conversationId: string,
 ) => {
   const { data: identitiesData } = db.useQuery({
     identities: {
@@ -179,6 +192,16 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       },
     },
   });
+  const { data: uiElementsData } = db.useQuery({
+    uiElements: {
+      $: { where: { "conversation.id": conversationId } },
+    },
+  });
+  const uiOverrides = new Map(
+    (uiElementsData?.uiElements ?? []).map((
+      el: { elementId: string; active?: boolean; percentage?: number },
+    ) => [el.elementId, { active: el.active, percentage: el.percentage }]),
+  );
   const details = {
     ...detailsCache,
     ...Object.fromEntries(
@@ -198,8 +221,8 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
     chatMessages: foldEdits(textAndEdits).map(
       msgToUIMessageWithHistory(details),
     ),
-    activeSpinners: latestSpinners(messages, details),
-    activeProgress: latestProgress(messages, details),
+    activeSpinners: latestSpinners(messages, details, uiOverrides),
+    activeProgress: latestProgress(messages, details, uiOverrides),
   };
 };
 
@@ -292,7 +315,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
 
   const { chatMessages, activeSpinners, activeProgress } = processMessages(
     db(),
-  )(decrypted ?? [], identityDetails);
+  )(decrypted ?? [], identityDetails, conversationId);
 
   return (
     <AbstractChatBox

@@ -1241,12 +1241,14 @@ export type AbstracChatMessage = {
 export type ActiveSpinner = {
   authorName: string;
   text: string;
+  elementId: string;
 };
 
 export type ActiveProgress = {
   authorName: string;
   text: string;
   percentage: number;
+  elementId: string;
 };
 
 const editWindowMs = 5 * 60 * 1000;

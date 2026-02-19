@@ -13,6 +13,7 @@ import {
   vapidPublicKey,
 } from "./notificationService.ts";
 import { generateUploadUrl } from "./storage.ts";
+import { handleUiUpdate } from "./uiUpdate.ts";
 
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
@@ -430,6 +431,16 @@ const respondCors = (x: null | BodyInit, y: ResponseInit) =>
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return respondCors(null, { status: 204 });
+  const url = new URL(req.url);
+  if (url.pathname === "/ui-update") {
+    return respondCors(
+      JSON.stringify(await handleUiUpdate(await req.json())),
+      {
+        status: 200,
+        headers: { "content-type": "application/json; charset=utf-8" },
+      },
+    );
+  }
   return respondCors(
     JSON.stringify(
       await apiHandler(backendApiSchema, endpoints, await req.json()),

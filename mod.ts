@@ -33,6 +33,7 @@ export {
 export {
   type Attachment,
   type AudioAttachment,
+  buildUiUpdateUrl,
   chatWithMeLink,
   createIdentity,
   type Credentials,
@@ -44,6 +45,7 @@ export {
   sendMessage,
   sendMessageWithKey,
   setAlias,
+  uiUpdateUrl,
   uploadAttachment,
   type VideoAttachment,
   type WebhookUpdate,
