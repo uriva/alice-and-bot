@@ -1,5 +1,5 @@
 import { empty, sortKey } from "@uri/gamla";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   FaDownload,
   FaEllipsisV,
@@ -143,6 +143,79 @@ const isVideoUrl = (href?: string) =>
   !!href && /\.(mp4|webm|ogg|m4v|mov)(\?.*)?$/i.test(href);
 const isAudioUrl = (href?: string) =>
   !!href && /\.(mp3|wav|ogg|m4a|flac)(\?.*)?$/i.test(href);
+
+// @ts-expect-error react-markdown types are not fully compatible with Preact here
+const MarkdownImg = ({ src, alt }) =>
+  alt === "video"
+    ? (
+      <video
+        src={src}
+        controls
+        preload="metadata"
+        playsInline
+        style={bubbleVideoStyle}
+      />
+    )
+    : alt === "audio"
+    ? (
+      <audio
+        src={src}
+        controls
+        preload="metadata"
+        style={bubbleAudioStyle}
+      />
+    )
+    : <img src={src} alt={alt} style={bubbleImgStyle} />;
+
+const markdownLink =
+  (textColor: string) =>
+  ({ children, href }: { children?: ComponentChildren; href?: string }) => {
+    if (isVideoUrl(href)) {
+      return (
+        <video
+          src={href}
+          controls
+          preload="metadata"
+          playsInline
+          style={bubbleVideoStyle}
+        />
+      );
+    }
+    if (isAudioUrl(href)) {
+      return (
+        <audio
+          src={href}
+          controls
+          preload="metadata"
+          style={bubbleAudioStyle}
+        />
+      );
+    }
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          color: textColor,
+          textDecoration: "underline",
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+        }}
+      >
+        {children}
+      </a>
+    );
+  };
+
+const markdownComponents = (textColor: string) => ({
+  // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
+  p: MarkdownParagraph,
+  a: markdownLink(textColor),
+  img: MarkdownImg,
+  // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
+  code: CodeBlock,
+});
 
 const extractMediaSrc = (tag: string) =>
   /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
@@ -1086,6 +1159,9 @@ const Message = (
   const avatarSpace = isOwn ? (customColors?.hideOwnAvatar ? 0 : 36) : 36;
   const canEdit = !!(isOwn && onEdit && Date.now() - timestamp < editWindowMs);
   const hasEdits = !empty(editHistory ?? []);
+  const mdComponents = useMemo(() => markdownComponents(textColor), [
+    textColor,
+  ]);
 
   return (
     <div
@@ -1145,73 +1221,8 @@ const Message = (
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkHtmlToText]}
-                components={{
-                  // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
-                  p: MarkdownParagraph,
-                  // @ts-expect-error react-markdown types are not fully compatible with Preact here
-                  a: ({ children, href }) => {
-                    if (isVideoUrl(href)) {
-                      return (
-                        <video
-                          src={href}
-                          controls
-                          preload="metadata"
-                          playsInline
-                          style={bubbleVideoStyle}
-                        />
-                      );
-                    }
-                    if (isAudioUrl(href)) {
-                      return (
-                        <audio
-                          src={href}
-                          controls
-                          preload="metadata"
-                          style={bubbleAudioStyle}
-                        />
-                      );
-                    }
-                    return (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: textColor,
-                          textDecoration: "underline",
-                          overflowWrap: "anywhere",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {children}
-                      </a>
-                    );
-                  },
-                  // @ts-expect-error react-markdown types are not fully compatible with Preact here
-                  img: ({ src, alt }) =>
-                    alt === "video"
-                      ? (
-                        <video
-                          src={src}
-                          controls
-                          preload="metadata"
-                          playsInline
-                          style={bubbleVideoStyle}
-                        />
-                      )
-                      : alt === "audio"
-                      ? (
-                        <audio
-                          src={src}
-                          controls
-                          preload="metadata"
-                          style={bubbleAudioStyle}
-                        />
-                      )
-                      : <img src={src} alt={alt} style={bubbleImgStyle} />,
-                  // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
-                  code: CodeBlock,
-                }}
+                // @ts-ignore react-markdown types are not fully compatible with Preact here
+                components={mdComponents}
               >
                 {preprocessText(text)}
               </ReactMarkdown>
