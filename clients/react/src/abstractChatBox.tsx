@@ -1238,6 +1238,17 @@ export type AbstracChatMessage = {
   editHistory?: EditHistoryEntry[];
 };
 
+export type ActiveSpinner = {
+  authorName: string;
+  text: string;
+};
+
+export type ActiveProgress = {
+  authorName: string;
+  text: string;
+  percentage: number;
+};
+
 const editWindowMs = 5 * 60 * 1000;
 
 const formatEditTime = (ts: number) => {
@@ -1334,6 +1345,65 @@ const EditHistoryPopup = ({
     </div>
   );
 };
+
+const SpinnerIndicator = (
+  { spinner, isDark }: { spinner: ActiveSpinner; isDark: boolean },
+) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "6px 12px 6px 44px",
+      color: isDark ? "#cbd5e1" : "#475569",
+      fontSize: 12,
+    }}
+  >
+    <Spinner />
+    <span>
+      {spinner.authorName}: {spinner.text}
+    </span>
+  </div>
+);
+
+const progressBarContainerStyle = (isDark: boolean): JSX.CSSProperties => ({
+  padding: "6px 12px 6px 44px",
+  color: isDark ? "#cbd5e1" : "#475569",
+  fontSize: 12,
+});
+
+const progressBarTrackStyle = (isDark: boolean): JSX.CSSProperties => ({
+  height: 6,
+  borderRadius: 3,
+  background: isDark ? "#374151" : "#e2e8f0",
+  marginTop: 4,
+  overflow: "hidden",
+});
+
+const progressBarFillStyle = (
+  percentage: number,
+  isDark: boolean,
+): JSX.CSSProperties => ({
+  height: "100%",
+  borderRadius: 3,
+  background: isDark ? "#3b82f6" : "#2563eb",
+  width: `${Math.min(100, Math.max(0, percentage * 100))}%`,
+  transition: "width 0.3s ease",
+});
+
+const ProgressIndicator = (
+  { progress, isDark }: { progress: ActiveProgress; isDark: boolean },
+) => (
+  <div style={progressBarContainerStyle(isDark)}>
+    <span>
+      {progress.authorName}: {progress.text}{" "}
+      ({Math.round(progress.percentage * 100)}%)
+    </span>
+    <div style={progressBarTrackStyle(isDark)}>
+      <div style={progressBarFillStyle(progress.percentage, isDark)} />
+    </div>
+  </div>
+);
 
 const CloseButton = ({ onClose }: { onClose: () => void }) => {
   const isDark = useDarkMode();
@@ -1460,6 +1530,8 @@ export const AbstractChatBox = (
     enableAttachments = false,
     enableAudioRecording = false,
     onEdit,
+    activeSpinners = [],
+    activeProgress = [],
   }: {
     userId: string;
     onSend: (input: string) => void;
@@ -1483,6 +1555,8 @@ export const AbstractChatBox = (
     enableAttachments?: boolean;
     enableAudioRecording?: boolean;
     onEdit?: (messageId: string, newText: string) => void;
+    activeSpinners?: ActiveSpinner[];
+    activeProgress?: ActiveProgress[];
   },
 ): JSX.Element => {
   const isMobile = useIsMobile();
@@ -1711,6 +1785,22 @@ export const AbstractChatBox = (
               ))}
               {/* Sending audio indicator */}
               {isSending && <SendingAudioIndicator isDark={isDark} />}
+              {/* Active spinners */}
+              {activeSpinners.map((s, i) => (
+                <SpinnerIndicator
+                  key={`spinner-${i}`}
+                  spinner={s}
+                  isDark={isDark}
+                />
+              ))}
+              {/* Active progress bars */}
+              {activeProgress.map((p, i) => (
+                <ProgressIndicator
+                  key={`progress-${i}`}
+                  progress={p}
+                  isDark={isDark}
+                />
+              ))}
               {/* Typing indicator */}
               {typingUsers.length > 0 && (
                 <TypingIndicator names={typingUsers} isDark={isDark} />

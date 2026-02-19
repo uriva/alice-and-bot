@@ -1,5 +1,5 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
-import { pipe, sortKey } from "@uri/gamla";
+import { sortKey } from "@uri/gamla";
 import type { ComponentChildren, JSX } from "preact";
 import { useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
@@ -14,6 +14,8 @@ import {
 import {
   type AbstracChatMessage,
   AbstractChatBox,
+  type ActiveProgress,
+  type ActiveSpinner,
   type EditHistoryEntry,
 } from "./abstractChatBox.tsx";
 import type { CustomColors } from "./design.tsx";
@@ -36,6 +38,11 @@ export type ChatProps = {
   enableAudioRecording?: boolean;
 };
 
+const hasAttachments = (
+  msg: DecipheredMessage,
+): msg is DecipheredMessage & { attachments?: Attachment[] } =>
+  msg.type === "text" || msg.type === "edit";
+
 const msgToUIMessage =
   (details: Record<string, { name: string; avatar?: string }>) =>
   (msg: DecipheredMessage): AbstracChatMessage => ({
@@ -46,17 +53,24 @@ const msgToUIMessage =
     authorAvatar: details[msg.publicSignKey]?.avatar,
     text: msg.text,
     timestamp: msg.timestamp,
-    attachments: msg.attachments,
+    attachments: hasAttachments(msg) ? msg.attachments : undefined,
   });
 
-const editsForMessage = (edits: DecipheredMessage[]) => (msgId: string) =>
-  sortKey((e: DecipheredMessage) => e.timestamp)(
+type TextOrEditMessage = DecipheredMessage & {
+  type: "text" | "edit";
+};
+
+const isTextOrEdit = (m: DecipheredMessage): m is TextOrEditMessage =>
+  m.type === "text" || m.type === "edit";
+
+const editsForMessage = (edits: TextOrEditMessage[]) => (msgId: string) =>
+  sortKey((e: TextOrEditMessage) => e.timestamp)(
     edits.filter((e) => e.type === "edit" && e.editOf === msgId),
   );
 
 const buildEditHistory =
-  (edits: DecipheredMessage[]) =>
-  (original: DecipheredMessage): EditHistoryEntry[] => [
+  (edits: TextOrEditMessage[]) =>
+  (original: TextOrEditMessage): EditHistoryEntry[] => [
     ...editsForMessage(edits)(original.id).slice(0, -1).map((e) => ({
       text: e.text,
       timestamp: e.timestamp,
@@ -70,15 +84,15 @@ const buildEditHistory =
   ];
 
 const applyLatestEdit =
-  (edits: DecipheredMessage[]) =>
-  (original: DecipheredMessage): DecipheredMessage => {
+  (edits: TextOrEditMessage[]) =>
+  (original: TextOrEditMessage): TextOrEditMessage => {
     const msgEdits = editsForMessage(edits)(original.id);
     if (!msgEdits.length) return original;
     const latest = msgEdits[msgEdits.length - 1];
     return { ...original, text: latest.text, attachments: latest.attachments };
   };
 
-const foldEdits = (messages: DecipheredMessage[]) => {
+const foldEdits = (messages: TextOrEditMessage[]) => {
   const edits = messages.filter((m) => m.type === "edit");
   const originals = messages.filter((m) => m.type === "text");
   return originals.map((original) => ({
@@ -101,6 +115,55 @@ const msgToUIMessageWithHistory =
     ...msgToUIMessage(details)(msg),
     editHistory,
   });
+
+const latestSpinners = (
+  messages: DecipheredMessage[],
+  details: Record<string, { name: string; avatar?: string }>,
+): ActiveSpinner[] => {
+  const byAuthor = new Map<string, DecipheredMessage>();
+  for (
+    const m of sortKey((x: DecipheredMessage) => x.timestamp)(
+      messages.filter((m) => m.type === "spinner"),
+    )
+  ) {
+    byAuthor.set(m.publicSignKey, m);
+  }
+  const result: ActiveSpinner[] = [];
+  for (const [key, m] of byAuthor) {
+    if (m.type === "spinner" && m.active) {
+      result.push({
+        authorName: details[key]?.name ?? compactPublicKey(key),
+        text: m.text,
+      });
+    }
+  }
+  return result;
+};
+
+const latestProgress = (
+  messages: DecipheredMessage[],
+  details: Record<string, { name: string; avatar?: string }>,
+): ActiveProgress[] => {
+  const byAuthor = new Map<string, DecipheredMessage>();
+  for (
+    const m of sortKey((x: DecipheredMessage) => x.timestamp)(
+      messages.filter((m) => m.type === "progress"),
+    )
+  ) {
+    byAuthor.set(m.publicSignKey, m);
+  }
+  const result: ActiveProgress[] = [];
+  for (const [key, m] of byAuthor) {
+    if (m.type === "progress" && m.percentage < 1) {
+      result.push({
+        authorName: details[key]?.name ?? compactPublicKey(key),
+        text: m.text,
+        percentage: m.percentage,
+      });
+    }
+  }
+  return result;
+};
 
 const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
 (
@@ -130,7 +193,14 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       ]),
     ),
   };
-  return foldEdits(messages).map(msgToUIMessageWithHistory(details));
+  const textAndEdits = messages.filter(isTextOrEdit);
+  return {
+    chatMessages: foldEdits(textAndEdits).map(
+      msgToUIMessageWithHistory(details),
+    ),
+    activeSpinners: latestSpinners(messages, details),
+    activeProgress: latestProgress(messages, details),
+  };
 };
 
 export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
@@ -220,6 +290,10 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
     });
   };
 
+  const { chatMessages, activeSpinners, activeProgress } = processMessages(
+    db(),
+  )(decrypted ?? [], identityDetails);
+
   return (
     <AbstractChatBox
       title={conversationTitle}
@@ -239,11 +313,9 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       onSendWithAttachments={handleSendWithAttachments}
       onDecryptAttachment={handleDecryptAttachment}
       onEdit={handleEdit}
-      messages={pipe(
-        () => decrypted ?? [],
-        (x: DecipheredMessage[]) => x,
-        (msgs) => processMessages(db())(msgs, identityDetails),
-      )()}
+      messages={chatMessages}
+      activeSpinners={activeSpinners}
+      activeProgress={activeProgress}
       onSend={(input: string) => {
         if (!convoKey) {
           return null;

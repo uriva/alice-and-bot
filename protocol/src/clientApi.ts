@@ -85,7 +85,23 @@ type EditMessage = {
   attachments?: Attachment[];
 };
 
-type InternalMessage = TextMessage | EditMessage;
+type SpinnerMessage = {
+  type: "spinner";
+  text: string;
+  active: boolean;
+};
+
+type ProgressMessage = {
+  type: "progress";
+  text: string;
+  percentage: number;
+};
+
+type InternalMessage =
+  | TextMessage
+  | EditMessage
+  | SpinnerMessage
+  | ProgressMessage;
 
 export type Profile = {
   publicSignKey: string;
@@ -213,36 +229,86 @@ export const handleWebhookUpdate = async (
   };
 };
 
-export type DecipheredMessage = {
+type DecipheredMessageBase = {
   id: string;
   publicSignKey: string;
   timestamp: number;
-  type: "text" | "edit";
   text: string;
+};
+
+type DecipheredTextMessage = DecipheredMessageBase & {
+  type: "text";
   attachments?: Attachment[];
-  editOf?: string;
+};
+
+type DecipheredEditMessage = DecipheredMessageBase & {
+  type: "edit";
+  editOf: string;
+  attachments?: Attachment[];
+};
+
+type DecipheredSpinnerMessage = DecipheredMessageBase & {
+  type: "spinner";
+  active: boolean;
+};
+
+type DecipheredProgressMessage = DecipheredMessageBase & {
+  type: "progress";
+  percentage: number;
+};
+
+export type DecipheredMessage =
+  | DecipheredTextMessage
+  | DecipheredEditMessage
+  | DecipheredSpinnerMessage
+  | DecipheredProgressMessage;
+
+const decryptedPayloadToMessage = (
+  publicSignKey: string,
+  timestamp: number,
+  decryptedPayload: InternalMessage,
+):
+  | Omit<DecipheredTextMessage, "id">
+  | Omit<DecipheredEditMessage, "id">
+  | Omit<DecipheredSpinnerMessage, "id">
+  | Omit<DecipheredProgressMessage, "id"> => {
+  const base = { publicSignKey, timestamp, text: decryptedPayload.text };
+  if (decryptedPayload.type === "spinner") {
+    return { ...base, type: "spinner", active: decryptedPayload.active };
+  }
+  if (decryptedPayload.type === "progress") {
+    return {
+      ...base,
+      type: "progress",
+      percentage: decryptedPayload.percentage,
+    };
+  }
+  if (decryptedPayload.type === "edit") {
+    return {
+      ...base,
+      type: "edit",
+      editOf: decryptedPayload.editOf,
+      attachments: decryptedPayload.attachments,
+    };
+  }
+  return { ...base, type: "text", attachments: decryptedPayload.attachments };
 };
 
 const decryptMessagePayload = (conversationSymmetricKey: string) =>
 async (
   { payload, timestamp }: Omit<DbMessage, "id">,
-): Promise<Omit<DecipheredMessage, "id">> => {
+) => {
   const { signature, payload: decryptedPayload, publicSignKey } =
     await decryptSymmetric<SignedPayload<InternalMessage>>(
       conversationSymmetricKey,
       payload,
     );
   if (await verify(signature, publicSignKey, msgToStr(decryptedPayload))) {
-    return {
+    return decryptedPayloadToMessage(
       publicSignKey,
       timestamp,
-      type: decryptedPayload.type,
-      text: decryptedPayload.text,
-      attachments: decryptedPayload.attachments,
-      ...("editOf" in decryptedPayload
-        ? { editOf: decryptedPayload.editOf }
-        : {}),
-    };
+      decryptedPayload,
+    );
   }
   throw new Error("Invalid signature");
 };
@@ -255,7 +321,7 @@ async (
     payload,
     timestamp,
   });
-  return { id, ...base };
+  return { id, ...base } as DecipheredMessage;
 };
 
 // deno-lint-ignore ban-types
