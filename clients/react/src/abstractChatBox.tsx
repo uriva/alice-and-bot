@@ -1444,7 +1444,7 @@ const indicatorTextStyle = (isDark: boolean): JSX.CSSProperties => ({
 
 const linearBarTrackStyle = (isDark: boolean): JSX.CSSProperties => ({
   width: 200,
-  height: 4,
+  height: 8,
   border: `1px solid ${isDark ? "#cbd5e1" : "#475569"}`,
   borderRadius: 4,
   marginTop: 4,
