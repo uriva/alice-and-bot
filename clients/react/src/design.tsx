@@ -31,10 +31,12 @@ export const chatContainerStyle = (
   minHeight: 0,
   ...widgetColors(isDarkMode, custom),
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
-  ...(custom?.chatMaxWidth
-    ? { maxWidth: custom.chatMaxWidth, margin: "0 auto", width: "100%" }
-    : {}),
 });
+
+export const contentMaxWidthStyle = (custom?: CustomColors) =>
+  custom?.chatMaxWidth
+    ? { maxWidth: custom.chatMaxWidth, margin: "0 auto", width: "100%" }
+    : {};
 
 export const loadingStyle = { fontSize: 12, color: "#bbb" };
 

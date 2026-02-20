@@ -19,6 +19,7 @@ import type { Attachment } from "../../../protocol/src/clientApi.ts";
 import {
   centerFillStyle,
   chatContainerStyle,
+  contentMaxWidthStyle,
   type CustomColors,
   isLightColor,
   loadingStyle,
@@ -1560,11 +1561,9 @@ const messageContainerStyle = (isDark: boolean) => ({
   overscrollBehavior: "contain",
   WebkitOverflowScrolling: "touch",
   scrollbarGutter: "auto",
-  gap: 8,
   transition: "background 0.2s",
   flexDirection: "column",
   scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
-  padding: 4,
 });
 
 const messageContainerDataAttr = { "data-scrollable": true };
@@ -1841,7 +1840,9 @@ export const AbstractChatBox = (
     <div style={chatContainerStyle(isDark, customColors)}>
       <KebabHoverStyle />
       {!customColors?.hideTitle && (
-        <div style={titleStyle(isDark, customColors)}>{title}</div>
+        <div style={titleStyle(isDark, customColors)}>
+          <div style={contentMaxWidthStyle(customColors)}>{title}</div>
+        </div>
       )}
       {onClose && <CloseButton onClose={onClose} />}
       <div
@@ -1849,103 +1850,120 @@ export const AbstractChatBox = (
         style={messageContainerStyle(isDark)}
         {...messageContainerDataAttr}
       >
-        {isLoading
-          ? (
-            <div style={centerFillStyle(isDark)}>
-              <Spinner />
-            </div>
-          )
-          : messages.length === 0
-          ? (
-            <div
-              style={centerFillStyle(isDark)}
-            >
-              {emptyMessage ?? "No messages yet. Start the conversation!"}
-            </div>
-          )
-          : (
-            <>
-              {buildTimeline(messages, activeSpinners, activeProgress).map(
-                (entry) =>
-                  entry.kind === "message"
-                    ? (
-                      <Message
-                        key={entry.msg.id}
-                        isOwn={entry.msg.authorId === userId}
-                        msg={entry.msg}
-                        prev={entry.prevMsg}
-                        onDecryptAttachment={onDecryptAttachment}
-                        sessionStart={sessionStartRef.current}
-                        onEdit={onEdit &&
-                          ((newText: string) => onEdit(entry.msg.id, newText))}
-                        customColors={customColors}
-                      />
-                    )
-                    : entry.kind === "spinner"
-                    ? (
-                      <SpinnerIndicator
-                        key={`spinner-${entry.spinner.elementId}`}
-                        spinner={entry.spinner}
-                        isDark={isDark}
-                      />
-                    )
-                    : (
-                      <ProgressIndicator
-                        key={`progress-${entry.progress.elementId}`}
-                        progress={entry.progress}
-                        isDark={isDark}
-                      />
-                    ),
-              )}
-              {isSending && <SendingAudioIndicator isDark={isDark} />}
-              {/* Typing indicator */}
-              {typingUsers.length > 0 && (
-                <TypingIndicator names={typingUsers} isDark={isDark} />
-              )}
-              <div ref={messagesEndRef} />
-            </>
-          )}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            padding: 4,
+            flexGrow: 1,
+            ...contentMaxWidthStyle(customColors),
+          }}
+        >
+          {isLoading
+            ? (
+              <div style={centerFillStyle(isDark)}>
+                <Spinner />
+              </div>
+            )
+            : messages.length === 0
+            ? (
+              <div
+                style={centerFillStyle(isDark)}
+              >
+                {emptyMessage ?? "No messages yet. Start the conversation!"}
+              </div>
+            )
+            : (
+              <>
+                {buildTimeline(messages, activeSpinners, activeProgress).map(
+                  (entry) =>
+                    entry.kind === "message"
+                      ? (
+                        <Message
+                          key={entry.msg.id}
+                          isOwn={entry.msg.authorId === userId}
+                          msg={entry.msg}
+                          prev={entry.prevMsg}
+                          onDecryptAttachment={onDecryptAttachment}
+                          sessionStart={sessionStartRef.current}
+                          onEdit={onEdit &&
+                            ((newText: string) =>
+                              onEdit(entry.msg.id, newText))}
+                          customColors={customColors}
+                        />
+                      )
+                      : entry.kind === "spinner"
+                      ? (
+                        <SpinnerIndicator
+                          key={`spinner-${entry.spinner.elementId}`}
+                          spinner={entry.spinner}
+                          isDark={isDark}
+                        />
+                      )
+                      : (
+                        <ProgressIndicator
+                          key={`progress-${entry.progress.elementId}`}
+                          progress={entry.progress}
+                          isDark={isDark}
+                        />
+                      ),
+                )}
+                {isSending && <SendingAudioIndicator isDark={isDark} />}
+                {typingUsers.length > 0 && (
+                  <TypingIndicator names={typingUsers} isDark={isDark} />
+                )}
+                <div ref={messagesEndRef} />
+              </>
+            )}
+        </div>
       </div>
       {pendingFiles.length > 0 && (
         <div
           style={{
-            display: "flex",
-            gap: 8,
-            padding: "8px 12px",
             background: isDark ? "#1f2937" : "#e2e8f0",
-            flexWrap: "wrap",
           }}
         >
-          {pendingFiles.map((f, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                padding: "4px 8px",
-                background: isDark ? "#374151" : "#cbd5e1",
-                borderRadius: 4,
-                fontSize: 12,
-              }}
-            >
-              <span>{f.name}</span>
-              <button
-                type="button"
-                onClick={() =>
-                  setPendingFiles(pendingFiles.filter((_, j) => j !== i))}
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              padding: "8px 12px",
+              flexWrap: "wrap",
+              ...contentMaxWidthStyle(customColors),
+            }}
+          >
+            {pendingFiles.map((f, i) => (
+              <div
+                key={i}
                 style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: isDark ? "#9ca3af" : "#64748b",
-                  padding: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "4px 8px",
+                  background: isDark ? "#374151" : "#cbd5e1",
+                  borderRadius: 4,
+                  fontSize: 12,
                 }}
               >
-                ×
-              </button>
-            </div>
-          ))}
+                <span>{f.name}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPendingFiles(pendingFiles.filter((_, j) => j !== i))}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: isDark ? "#9ca3af" : "#64748b",
+                    padding: 2,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {isRecording && (
@@ -2039,283 +2057,294 @@ export const AbstractChatBox = (
       )}
       <div
         style={{
-          display: "flex",
-          alignItems: "flex-end",
-          gap: 8,
           flex: "0 0 auto",
           background: customColors?.inputBackground ??
             (isDark ? "#0f1318" : "#f8fafc"),
-          maxWidth: customColors?.inputMaxWidth,
-          ...(customColors?.inputMaxWidth
-            ? { margin: "0 auto", width: "100%" }
-            : {}),
         }}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const files = Array.from(e.currentTarget.files ?? []);
-            setPendingFiles([...pendingFiles, ...files]);
-            e.currentTarget.value = "";
-          }}
-        />
         <div
           style={{
-            position: "relative",
-            flexGrow: 1,
             display: "flex",
             alignItems: "flex-end",
+            gap: 8,
+            ...(customColors?.inputMaxWidth
+              ? {
+                maxWidth: customColors.inputMaxWidth,
+                margin: "0 auto",
+                width: "100%",
+              }
+              : contentMaxWidthStyle(customColors)),
           }}
         >
-          {enableAttachments && (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                position: "absolute",
-                right: 8,
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: isDark ? "#6b7280" : "#94a3b8",
-                padding: 4,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              title="Attach file"
-            >
-              <FaPaperclip size={16} />
-            </button>
-          )}
-          <textarea
-            dir="auto"
-            ref={inputRef}
-            value={input}
-            rows={1}
-            placeholder="Type a message..."
-            onInput={(e) => {
-              setInput(e.currentTarget.value);
-              resizeTextarea(e.currentTarget);
-              onInputActivity?.();
-            }}
-            onBlur={() => onInputActivity?.()}
-            style={{
-              width: "100%",
-              padding: enableAttachments ? "10px 36px 10px 16px" : "10px 16px",
-              border: "none",
-              borderRadius: 22,
-              background: isDark ? "#1f2937" : "#e2e8f0",
-              color: isDark ? "#f3f4f6" : "#1e293b",
-              fontSize: 16,
-              outline: "none",
-              resize: "none",
-              boxSizing: "border-box",
-              height: 44,
-              minHeight: 44,
-              margin: 0,
-              overflowY: "auto",
-              overflowX: "hidden",
-              maxHeight: 200,
-              lineHeight: 1.5,
-              transition: "background 0.2s, color 0.2s",
-              fontFamily: "inherit",
-              letterSpacing: 0.1,
-              scrollbarColor: isDark ? "#374151 #1f2937" : "#cbd5e1 #e2e8f0",
-              scrollbarWidth: "thin",
-            }}
-            onKeyDown={(e) => {
-              if (
-                (e.key === "PageUp" || e.key === "PageDown") && e.currentTarget
-              ) {
-                const ta = e.currentTarget;
-                const canScrollUp = ta.scrollTop > 0;
-                const canScrollDown =
-                  ta.scrollTop + ta.clientHeight < ta.scrollHeight;
-                if (
-                  (e.key === "PageUp" && canScrollUp) ||
-                  (e.key === "PageDown" && canScrollDown)
-                ) {
-                  e.stopPropagation();
-                  return;
-                }
-              }
-              if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
-                if (isMobile) return;
-                const canSend = input.trim() || pendingFiles.length > 0;
-                if (canSend && !isSending) {
-                  handleSend();
-                }
-                e.preventDefault();
-              } else if (
-                e.key === "Enter" && (e.shiftKey || e.ctrlKey)
-              ) {
-                const selectionStart = e.currentTarget.selectionStart ??
-                  input.length;
-                const selectionEnd = e.currentTarget.selectionEnd ??
-                  input.length;
-                const newValue = input.slice(0, selectionStart) + "\n" +
-                  input.slice(selectionEnd);
-                e.currentTarget.value = newValue;
-                resizeTextarea(e.currentTarget);
-                setInput(newValue);
-                setTimeout(() => {
-                  if (e.currentTarget) {
-                    e.currentTarget.selectionStart =
-                      e.currentTarget.selectionEnd =
-                        selectionStart + 1;
-                  }
-                }, 0);
-                e.preventDefault();
-              }
-              onInputActivity?.();
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const files = Array.from(e.currentTarget.files ?? []);
+              setPendingFiles([...pendingFiles, ...files]);
+              e.currentTarget.value = "";
             }}
           />
-        </div>
-        {(() => {
-          const hasContent = input.trim() || pendingFiles.length > 0;
-          const showMic = enableAudioRecording && !hasContent && !isRecording;
-          const showStop = isRecording && !isRecordingLocked;
-          const showSend = hasContent || (isRecording && isRecordingLocked);
-          const primaryColor = customColors?.primary ??
-            (isDark ? "#2563eb" : "#3182ce");
-
-          const handleButtonClick = () => {
-            if (showMic) {
-              if (!isMobile) startRecording();
-            } else if (showStop) {
-              if (!isMobile) stopRecording(true);
-            } else if (isRecordingLocked) {
-              stopRecording(true);
-            } else {
-              handleSend();
-            }
-          };
-
-          const handleTouchStart = isMobile
-            ? (e: TouchEvent) => {
-              e.preventDefault();
-              if (showSend && !isRecordingLocked) return;
-              if (isRecordingLocked) return;
-              const touch = e.touches[0];
-              touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-              setSwipeOffset({ x: 0, y: 0 });
-              if (showMic) startRecording();
-            }
-            : undefined;
-
-          const handleTouchMove = isMobile
-            ? (e: TouchEvent) => {
-              e.preventDefault();
-              if (!touchStartRef.current || isRecordingLocked) return;
-              const touch = e.touches[0];
-              const dx = touch.clientX - touchStartRef.current.x;
-              const dy = touch.clientY - touchStartRef.current.y;
-              setSwipeOffset({ x: dx, y: dy });
-              if (dx < -80) {
-                stopRecording(false);
-              } else if (dy < -60) {
-                setIsRecordingLocked(true);
-                setSwipeOffset({ x: 0, y: 0 });
-              }
-            }
-            : undefined;
-
-          const handleTouchEnd = isMobile
-            ? (e: TouchEvent) => {
-              e.preventDefault();
-              if (showSend && !isRecording) {
-                handleSend();
-                return;
-              }
-              if (isRecordingLocked) return;
-              if (isRecording) stopRecording(true);
-            }
-            : undefined;
-
-          const handleTouchCancel = isMobile
-            ? (e: TouchEvent) => {
-              e.preventDefault();
-              if (isRecordingLocked) return;
-              if (isRecording) stopRecording(false);
-            }
-            : undefined;
-
-          return (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={isMobile ? undefined : handleButtonClick}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onTouchCancel={handleTouchCancel}
-              style={{
-                ...sendButtonStyle(isDark, customColors),
-                background: showStop ? "#dc2626" : primaryColor,
-                touchAction: "none",
-                position: "relative",
-                overflow: "hidden",
+          <div
+            style={{
+              position: "relative",
+              flexGrow: 1,
+              display: "flex",
+              alignItems: "flex-end",
+            }}
+          >
+            {enableAttachments && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  position: "absolute",
+                  right: 8,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: isDark ? "#6b7280" : "#94a3b8",
+                  padding: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                title="Attach file"
+              >
+                <FaPaperclip size={16} />
+              </button>
+            )}
+            <textarea
+              dir="auto"
+              ref={inputRef}
+              value={input}
+              rows={1}
+              placeholder="Type a message..."
+              onInput={(e) => {
+                setInput(e.currentTarget.value);
+                resizeTextarea(e.currentTarget);
+                onInputActivity?.();
               }}
-              title={showMic
-                ? (isMobile ? "Hold to record" : "Record audio")
-                : showStop
-                ? "Stop recording"
-                : "Send"}
-            >
-              <span
+              onBlur={() => onInputActivity?.()}
+              style={{
+                width: "100%",
+                padding: enableAttachments
+                  ? "10px 36px 10px 16px"
+                  : "10px 16px",
+                border: "none",
+                borderRadius: 22,
+                background: isDark ? "#1f2937" : "#e2e8f0",
+                color: isDark ? "#f3f4f6" : "#1e293b",
+                fontSize: 16,
+                outline: "none",
+                resize: "none",
+                boxSizing: "border-box",
+                height: 44,
+                minHeight: 44,
+                margin: 0,
+                overflowY: "auto",
+                overflowX: "hidden",
+                maxHeight: 200,
+                lineHeight: 1.5,
+                transition: "background 0.2s, color 0.2s",
+                fontFamily: "inherit",
+                letterSpacing: 0.1,
+                scrollbarColor: isDark ? "#374151 #1f2937" : "#cbd5e1 #e2e8f0",
+                scrollbarWidth: "thin",
+              }}
+              onKeyDown={(e) => {
+                if (
+                  (e.key === "PageUp" || e.key === "PageDown") &&
+                  e.currentTarget
+                ) {
+                  const ta = e.currentTarget;
+                  const canScrollUp = ta.scrollTop > 0;
+                  const canScrollDown =
+                    ta.scrollTop + ta.clientHeight < ta.scrollHeight;
+                  if (
+                    (e.key === "PageUp" && canScrollUp) ||
+                    (e.key === "PageDown" && canScrollDown)
+                  ) {
+                    e.stopPropagation();
+                    return;
+                  }
+                }
+                if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
+                  if (isMobile) return;
+                  const canSend = input.trim() || pendingFiles.length > 0;
+                  if (canSend && !isSending) {
+                    handleSend();
+                  }
+                  e.preventDefault();
+                } else if (
+                  e.key === "Enter" && (e.shiftKey || e.ctrlKey)
+                ) {
+                  const selectionStart = e.currentTarget.selectionStart ??
+                    input.length;
+                  const selectionEnd = e.currentTarget.selectionEnd ??
+                    input.length;
+                  const newValue = input.slice(0, selectionStart) + "\n" +
+                    input.slice(selectionEnd);
+                  e.currentTarget.value = newValue;
+                  resizeTextarea(e.currentTarget);
+                  setInput(newValue);
+                  setTimeout(() => {
+                    if (e.currentTarget) {
+                      e.currentTarget.selectionStart =
+                        e.currentTarget.selectionEnd =
+                          selectionStart + 1;
+                    }
+                  }, 0);
+                  e.preventDefault();
+                }
+                onInputActivity?.();
+              }}
+            />
+          </div>
+          {(() => {
+            const hasContent = input.trim() || pendingFiles.length > 0;
+            const showMic = enableAudioRecording && !hasContent && !isRecording;
+            const showStop = isRecording && !isRecordingLocked;
+            const showSend = hasContent || (isRecording && isRecordingLocked);
+            const primaryColor = customColors?.primary ??
+              (isDark ? "#2563eb" : "#3182ce");
+
+            const handleButtonClick = () => {
+              if (showMic) {
+                if (!isMobile) startRecording();
+              } else if (showStop) {
+                if (!isMobile) stopRecording(true);
+              } else if (isRecordingLocked) {
+                stopRecording(true);
+              } else {
+                handleSend();
+              }
+            };
+
+            const handleTouchStart = isMobile
+              ? (e: TouchEvent) => {
+                e.preventDefault();
+                if (showSend && !isRecordingLocked) return;
+                if (isRecordingLocked) return;
+                const touch = e.touches[0];
+                touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+                setSwipeOffset({ x: 0, y: 0 });
+                if (showMic) startRecording();
+              }
+              : undefined;
+
+            const handleTouchMove = isMobile
+              ? (e: TouchEvent) => {
+                e.preventDefault();
+                if (!touchStartRef.current || isRecordingLocked) return;
+                const touch = e.touches[0];
+                const dx = touch.clientX - touchStartRef.current.x;
+                const dy = touch.clientY - touchStartRef.current.y;
+                setSwipeOffset({ x: dx, y: dy });
+                if (dx < -80) {
+                  stopRecording(false);
+                } else if (dy < -60) {
+                  setIsRecordingLocked(true);
+                  setSwipeOffset({ x: 0, y: 0 });
+                }
+              }
+              : undefined;
+
+            const handleTouchEnd = isMobile
+              ? (e: TouchEvent) => {
+                e.preventDefault();
+                if (showSend && !isRecording) {
+                  handleSend();
+                  return;
+                }
+                if (isRecordingLocked) return;
+                if (isRecording) stopRecording(true);
+              }
+              : undefined;
+
+            const handleTouchCancel = isMobile
+              ? (e: TouchEvent) => {
+                e.preventDefault();
+                if (isRecordingLocked) return;
+                if (isRecording) stopRecording(false);
+              }
+              : undefined;
+
+            return (
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={isMobile ? undefined : handleButtonClick}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchCancel}
                 style={{
-                  position: "absolute",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "transform 0.2s ease, opacity 0.2s ease",
-                  transform: showMic
-                    ? "scale(1) rotate(0deg)"
-                    : "scale(0) rotate(-90deg)",
-                  opacity: showMic ? 1 : 0,
+                  ...sendButtonStyle(isDark, customColors),
+                  background: showStop ? "#dc2626" : primaryColor,
+                  touchAction: "none",
+                  position: "relative",
+                  overflow: "hidden",
                 }}
+                title={showMic
+                  ? (isMobile ? "Hold to record" : "Record audio")
+                  : showStop
+                  ? "Stop recording"
+                  : "Send"}
               >
-                <FaMicrophone size={20} />
-              </span>
-              <span
-                style={{
-                  position: "absolute",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "transform 0.2s ease, opacity 0.2s ease",
-                  transform: showStop
-                    ? "scale(1) rotate(0deg)"
-                    : "scale(0) rotate(90deg)",
-                  opacity: showStop ? 1 : 0,
-                }}
-              >
-                <FaStop size={18} />
-              </span>
-              <span
-                style={{
-                  position: "absolute",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "transform 0.2s ease, opacity 0.2s ease",
-                  transform: showSend
-                    ? "scale(1) rotate(0deg)"
-                    : "scale(0) rotate(90deg)",
-                  opacity: showSend ? 1 : 0,
-                }}
-              >
-                <FaPaperPlane size={18} />
-              </span>
-            </button>
-          );
-        })()}
+                <span
+                  style={{
+                    position: "absolute",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "transform 0.2s ease, opacity 0.2s ease",
+                    transform: showMic
+                      ? "scale(1) rotate(0deg)"
+                      : "scale(0) rotate(-90deg)",
+                    opacity: showMic ? 1 : 0,
+                  }}
+                >
+                  <FaMicrophone size={20} />
+                </span>
+                <span
+                  style={{
+                    position: "absolute",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "transform 0.2s ease, opacity 0.2s ease",
+                    transform: showStop
+                      ? "scale(1) rotate(0deg)"
+                      : "scale(0) rotate(90deg)",
+                    opacity: showStop ? 1 : 0,
+                  }}
+                >
+                  <FaStop size={18} />
+                </span>
+                <span
+                  style={{
+                    position: "absolute",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "transform 0.2s ease, opacity 0.2s ease",
+                    transform: showSend
+                      ? "scale(1) rotate(0deg)"
+                      : "scale(0) rotate(90deg)",
+                    opacity: showSend ? 1 : 0,
+                  }}
+                >
+                  <FaPaperPlane size={18} />
+                </span>
+              </button>
+            );
+          })()}
+        </div>
       </div>
       {fetchingMore && <div style={loadingStyle}>Loading more...</div>}
     </div>
