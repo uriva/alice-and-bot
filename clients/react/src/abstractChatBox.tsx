@@ -36,6 +36,13 @@ const typingIndicatorStyle = (isDark: boolean) => ({
 
 const defaultPrimary = (isDark: boolean) => isDark ? "#2563eb" : "#3182ce";
 
+const recordingMimeType = typeof MediaRecorder !== "undefined" &&
+    MediaRecorder.isTypeSupported("audio/webm")
+  ? "audio/webm"
+  : "audio/mp4";
+
+const recordingExtension = recordingMimeType === "audio/webm" ? "webm" : "m4a";
+
 const SendingAudioIndicator = (
   { primaryColor }: { primaryColor: string },
 ) => {
@@ -1725,7 +1732,9 @@ export const AbstractChatBox = (
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const recorder = new MediaRecorder(stream);
+      const recorder = new MediaRecorder(stream, {
+        mimeType: recordingMimeType,
+      });
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
       recorder.ondataavailable = (e) => {
@@ -1741,10 +1750,14 @@ export const AbstractChatBox = (
           streamRef.current?.getTracks().forEach((t) => t.stop());
           return;
         }
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const file = new File([blob], `recording-${Date.now()}.webm`, {
-          type: "audio/webm",
+        const blob = new Blob(audioChunksRef.current, {
+          type: recordingMimeType,
         });
+        const file = new File(
+          [blob],
+          `recording-${Date.now()}.${recordingExtension}`,
+          { type: recordingMimeType },
+        );
         streamRef.current?.getTracks().forEach((t) => t.stop());
         setRecordingDuration(0);
         if (onSendWithAttachments) {
