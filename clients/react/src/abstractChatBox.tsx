@@ -2043,7 +2043,6 @@ export const AbstractChatBox = (
           alignItems: "flex-end",
           gap: 8,
           flex: "0 0 auto",
-          padding: "8px 12px",
           background: customColors?.inputBackground ??
             (isDark ? "#0f1318" : "#f8fafc"),
           maxWidth: customColors?.inputMaxWidth,
