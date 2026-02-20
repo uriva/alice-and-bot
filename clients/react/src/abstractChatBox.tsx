@@ -2100,7 +2100,12 @@ export const AbstractChatBox = (
         style={{
           flex: "0 0 auto",
           background: customColors?.inputBackground ??
-            (isDark ? "#0f1318" : "#f8fafc"),
+            (isDark ? "rgba(15, 19, 24, 0.85)" : "rgba(248, 250, 252, 0.85)"),
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          boxShadow: isDark
+            ? "0 -4px 12px rgba(0, 0, 0, 0.3)"
+            : "0 -4px 12px rgba(0, 0, 0, 0.08)",
         }}
       >
         <div
