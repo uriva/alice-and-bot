@@ -1897,7 +1897,7 @@ export const AbstractChatBox = (
           {isLoading
             ? (
               <div style={centerFillStyle(isDark)}>
-                <Spinner />
+                <Spinner color={customColors?.text} />
               </div>
             )
             : messages.length === 0

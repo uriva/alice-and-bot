@@ -78,16 +78,19 @@ export const isLightColor = (hsl: string) => {
   return lightness > 60;
 };
 
-const spinnerStyle = (isDark: boolean): JSX.CSSProperties => ({
+const spinnerStyle = (
+  isDark: boolean,
+  color?: string,
+): JSX.CSSProperties => ({
   width: 40,
   height: 40,
   border: `4px solid ${isDark ? "#ffffff1a" : "#00000010"}`,
-  borderTop: `4px solid ${isDark ? "#2563eb" : "#3182ce"}`,
+  borderTop: `4px solid ${color ?? (isDark ? "#ffffff80" : "#00000040")}`,
   borderRadius: "50%",
   animation: "spin 1s linear infinite",
 });
 
-export const Spinner = () => {
+export const Spinner = ({ color }: { color?: string } = {}) => {
   const isDark = useDarkMode();
   return (
     <>
@@ -99,7 +102,7 @@ export const Spinner = () => {
           }
         `}
       </style>
-      <div style={spinnerStyle(isDark)} />
+      <div style={spinnerStyle(isDark, color)} />
     </>
   );
 };
