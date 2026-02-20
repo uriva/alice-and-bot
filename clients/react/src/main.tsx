@@ -165,15 +165,13 @@ const latestProgress = (
     if (m.type === "progress") {
       const override = uiOverrides.get(m.elementId);
       const pct = override?.percentage ?? m.percentage;
-      if (pct < 1) {
-        result.push({
-          authorName: details[key]?.name ?? compactPublicKey(key),
-          text: m.text,
-          percentage: pct,
-          elementId: m.elementId,
-          timestamp: m.timestamp,
-        });
-      }
+      result.push({
+        authorName: details[key]?.name ?? compactPublicKey(key),
+        text: m.text,
+        percentage: pct,
+        elementId: m.elementId,
+        timestamp: m.timestamp,
+      });
     }
   }
   return result;
@@ -239,8 +237,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
   const standaloneProgress: ActiveProgress[] = uiElements
     .filter((el: { elementId: string; type: string; percentage?: number }) =>
       el.type === "progress" &&
-      !messageElementIds.has(el.elementId) &&
-      (el.percentage ?? 0) < 1
+      !messageElementIds.has(el.elementId)
     )
     .map((
       el: {

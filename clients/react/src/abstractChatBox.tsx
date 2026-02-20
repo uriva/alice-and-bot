@@ -34,13 +34,16 @@ const typingIndicatorStyle = (isDark: boolean) => ({
   fontSize: 12,
 });
 
-const SendingAudioIndicator = ({ isDark }: { isDark: boolean }) => {
-  const baseColor = isDark ? "#2563eb" : "#3182ce";
+const defaultPrimary = (isDark: boolean) => isDark ? "#2563eb" : "#3182ce";
+
+const SendingAudioIndicator = (
+  { primaryColor }: { primaryColor: string },
+) => {
   return (
     <div style={{ display: "flex", flexDirection: "row-reverse", gap: 6 }}>
       <div
         style={{
-          background: baseColor,
+          background: primaryColor,
           borderRadius: 16,
           padding: "10px 14px",
           display: "flex",
@@ -531,10 +534,11 @@ const audioPlayerStyle = (isDark: boolean): JSX.CSSProperties => ({
 });
 
 const AudioPlayer = (
-  { src, isDark, fallbackDuration }: {
+  { src, isDark, fallbackDuration, primaryColor }: {
     src: string;
     isDark: boolean;
     fallbackDuration?: number;
+    primaryColor: string;
   },
 ): JSX.Element => {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -597,7 +601,7 @@ const AudioPlayer = (
           height: 36,
           borderRadius: "50%",
           border: "none",
-          background: isDark ? "#3b82f6" : "#2563eb",
+          background: primaryColor,
           color: "#fff",
           cursor: "pointer",
           display: "flex",
@@ -635,7 +639,7 @@ const AudioPlayer = (
                   height,
                   borderRadius: 2,
                   background: isPlayed
-                    ? (isDark ? "#3b82f6" : "#2563eb")
+                    ? primaryColor
                     : (isDark ? "#ffffff40" : "#00000020"),
                   transition: "background 0.1s",
                 }}
@@ -683,6 +687,7 @@ const AttachmentRenderer = (
     isOwn,
     messageTimestamp,
     sessionStart,
+    primaryColor,
   }: {
     attachment: Attachment;
     textColor: string;
@@ -691,6 +696,7 @@ const AttachmentRenderer = (
     isOwn?: boolean;
     messageTimestamp?: number;
     sessionStart?: number;
+    primaryColor: string;
   },
 ) => {
   const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
@@ -723,6 +729,7 @@ const AttachmentRenderer = (
           src={decryptedUrl}
           isDark={isDark}
           fallbackDuration={attachment.duration}
+          primaryColor={primaryColor}
         />
       )
       : (
@@ -736,7 +743,7 @@ const AttachmentRenderer = (
               height: 36,
               borderRadius: "50%",
               border: "none",
-              background: isDark ? "#3b82f6" : "#2563eb",
+              background: primaryColor,
               color: "#fff",
               cursor: "pointer",
               display: "flex",
@@ -1241,6 +1248,7 @@ const Message = (
                 isOwn={isOwn}
                 messageTimestamp={timestamp}
                 sessionStart={sessionStart}
+                primaryColor={baseColor}
               />
             ))}
           </div>
@@ -1464,10 +1472,16 @@ const linearBarFillStyle = (
 });
 
 const SpinnerIndicator = (
-  { spinner, isDark }: { spinner: ActiveSpinner; isDark: boolean },
+  { spinner, isDark, hideNames }: {
+    spinner: ActiveSpinner;
+    isDark: boolean;
+    hideNames?: boolean;
+  },
 ) => (
   <div style={indicatorTextStyle(isDark)}>
-    <span>{spinner.authorName}: {spinner.text}</span>
+    <span>
+      {hideNames ? spinner.text : `${spinner.authorName}: ${spinner.text}`}
+    </span>
     <style>
       {`@keyframes indeterminate {
         0% { transform: translateX(-100%); }
@@ -1489,11 +1503,16 @@ const SpinnerIndicator = (
 );
 
 const ProgressIndicator = (
-  { progress, isDark }: { progress: ActiveProgress; isDark: boolean },
+  { progress, isDark, hideNames }: {
+    progress: ActiveProgress;
+    isDark: boolean;
+    hideNames?: boolean;
+  },
 ) => (
   <div style={indicatorTextStyle(isDark)}>
     <span>
-      {progress.authorName}: {progress.text}{" "}
+      {hideNames ? progress.text : `${progress.authorName}: ${progress.text}`}
+      {" "}
       ({Math.round(progress.percentage * 100)}%)
     </span>
     <div style={linearBarTrackStyle(isDark)}>
@@ -1558,6 +1577,7 @@ const messageContainerStyle = (isDark: boolean) => ({
   flex: "1 1 0",
   minHeight: 0,
   overflowY: "auto",
+  overflowX: "hidden",
   overscrollBehavior: "contain",
   WebkitOverflowScrolling: "touch",
   scrollbarGutter: "auto",
@@ -1857,6 +1877,7 @@ export const AbstractChatBox = (
             gap: 8,
             padding: 4,
             flexGrow: 1,
+            boxSizing: "border-box",
             ...contentMaxWidthStyle(customColors),
           }}
         >
@@ -1899,6 +1920,7 @@ export const AbstractChatBox = (
                           key={`spinner-${entry.spinner.elementId}`}
                           spinner={entry.spinner}
                           isDark={isDark}
+                          hideNames={customColors?.hideNames}
                         />
                       )
                       : (
@@ -1906,10 +1928,16 @@ export const AbstractChatBox = (
                           key={`progress-${entry.progress.elementId}`}
                           progress={entry.progress}
                           isDark={isDark}
+                          hideNames={customColors?.hideNames}
                         />
                       ),
                 )}
-                {isSending && <SendingAudioIndicator isDark={isDark} />}
+                {isSending && (
+                  <SendingAudioIndicator
+                    primaryColor={customColors?.primary ??
+                      defaultPrimary(isDark)}
+                  />
+                )}
                 {typingUsers.length > 0 && (
                   <TypingIndicator names={typingUsers} isDark={isDark} />
                 )}
