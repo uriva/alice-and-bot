@@ -1452,16 +1452,25 @@ const EditHistoryPopup = ({
   );
 };
 
-const indicatorTextStyle = (isDark: boolean): JSX.CSSProperties => ({
+const indicatorColor = (isDark: boolean, color?: string) =>
+  color ?? (isDark ? "#cbd5e1" : "#475569");
+
+const indicatorTextStyle = (
+  isDark: boolean,
+  color?: string,
+): JSX.CSSProperties => ({
   padding: "6px 12px 6px 44px",
-  color: isDark ? "#cbd5e1" : "#475569",
+  color: indicatorColor(isDark, color),
   fontSize: 14,
 });
 
-const linearBarTrackStyle = (isDark: boolean): JSX.CSSProperties => ({
+const linearBarTrackStyle = (
+  isDark: boolean,
+  color?: string,
+): JSX.CSSProperties => ({
   width: 200,
   height: 8,
-  border: `1px solid ${isDark ? "#cbd5e1" : "#475569"}`,
+  border: `1px solid ${indicatorColor(isDark, color)}`,
   borderRadius: 4,
   marginTop: 4,
   overflow: "hidden",
@@ -1470,22 +1479,24 @@ const linearBarTrackStyle = (isDark: boolean): JSX.CSSProperties => ({
 const linearBarFillStyle = (
   percentage: number,
   isDark: boolean,
+  color?: string,
 ): JSX.CSSProperties => ({
   height: "100%",
-  backgroundColor: isDark ? "#cbd5e1" : "#475569",
+  backgroundColor: indicatorColor(isDark, color),
   borderRadius: 4,
   width: `${Math.min(100, Math.max(0, percentage * 100))}%`,
   transition: "width 0.3s ease",
 });
 
 const SpinnerIndicator = (
-  { spinner, isDark, hideNames }: {
+  { spinner, isDark, hideNames, color }: {
     spinner: ActiveSpinner;
     isDark: boolean;
     hideNames?: boolean;
+    color?: string;
   },
 ) => (
-  <div style={indicatorTextStyle(isDark)}>
+  <div style={indicatorTextStyle(isDark, color)}>
     <span>
       {hideNames ? spinner.text : `${spinner.authorName}: ${spinner.text}`}
     </span>
@@ -1495,12 +1506,12 @@ const SpinnerIndicator = (
         100% { transform: translateX(200px); }
       }`}
     </style>
-    <div style={linearBarTrackStyle(isDark)}>
+    <div style={linearBarTrackStyle(isDark, color)}>
       <div
         style={{
           height: "100%",
           width: 60,
-          backgroundColor: isDark ? "#cbd5e1" : "#475569",
+          backgroundColor: indicatorColor(isDark, color),
           borderRadius: 4,
           animation: "indeterminate 1.2s linear infinite",
         }}
@@ -1510,20 +1521,21 @@ const SpinnerIndicator = (
 );
 
 const ProgressIndicator = (
-  { progress, isDark, hideNames }: {
+  { progress, isDark, hideNames, color }: {
     progress: ActiveProgress;
     isDark: boolean;
     hideNames?: boolean;
+    color?: string;
   },
 ) => (
-  <div style={indicatorTextStyle(isDark)}>
+  <div style={indicatorTextStyle(isDark, color)}>
     <span>
       {hideNames ? progress.text : `${progress.authorName}: ${progress.text}`}
       {" "}
       ({Math.round(progress.percentage * 100)}%)
     </span>
-    <div style={linearBarTrackStyle(isDark)}>
-      <div style={linearBarFillStyle(progress.percentage, isDark)} />
+    <div style={linearBarTrackStyle(isDark, color)}>
+      <div style={linearBarFillStyle(progress.percentage, isDark, color)} />
     </div>
   </div>
 );
@@ -1935,6 +1947,7 @@ export const AbstractChatBox = (
                           spinner={entry.spinner}
                           isDark={isDark}
                           hideNames={customColors?.hideNames}
+                          color={customColors?.text}
                         />
                       )
                       : (
@@ -1943,6 +1956,7 @@ export const AbstractChatBox = (
                           progress={entry.progress}
                           isDark={isDark}
                           hideNames={customColors?.hideNames}
+                          color={customColors?.text}
                         />
                       ),
                 )}
