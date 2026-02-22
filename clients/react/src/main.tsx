@@ -1,7 +1,7 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { sortKey } from "@uri/gamla";
 import type { ComponentChildren, JSX } from "preact";
-import { useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
   type Attachment,
@@ -177,12 +177,25 @@ const latestProgress = (
   return result;
 };
 
+const enforceMonotonic =
+  (maxRef: { current: Map<string, number> }) =>
+  (entries: ActiveProgress[]): ActiveProgress[] =>
+    entries.map((entry) => {
+      const monotonic = Math.max(
+        maxRef.current.get(entry.elementId) ?? 0,
+        entry.percentage,
+      );
+      maxRef.current.set(entry.elementId, monotonic);
+      return { ...entry, percentage: monotonic };
+    });
+
 const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
 (
   messages: DecipheredMessage[],
   detailsCache: Record<string, { name: string; avatar?: string }>,
   conversationId: string,
 ) => {
+  const progressMaxRef = useRef(new Map<string, number>());
   const { data: identitiesData } = db.useQuery({
     identities: {
       $: {
@@ -275,10 +288,10 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       ...latestSpinners(messages, details, uiOverrides),
       ...standaloneSpinners,
     ],
-    activeProgress: [
+    activeProgress: enforceMonotonic(progressMaxRef)([
       ...latestProgress(messages, details, uiOverrides),
       ...standaloneProgress,
-    ],
+    ]),
   };
 };
 
