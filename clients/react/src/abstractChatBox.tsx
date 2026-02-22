@@ -1847,22 +1847,35 @@ export const AbstractChatBox = (
     }
   }, [messages, isSending]);
 
-  const scrollToBottom = (instant?: boolean) => {
+  const isNearBottom = () => {
     const el = messagesContainerRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+  };
+
+  const scrollToBottom = (instant?: boolean) => {
+    const el = messagesEndRef.current;
     if (!el) return;
-    const behavior = instant || initialLoadRef.current ? "instant" : "smooth";
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        el.scrollTo({ top: el.scrollHeight, behavior });
-      });
+    el.scrollIntoView({
+      behavior: instant || initialLoadRef.current ? "instant" : "smooth",
+      block: "end",
     });
   };
 
-  // Scroll to bottom when messages or typing indicator change
   useEffect(() => {
     scrollToBottom();
     if (messages.length > 0) initialLoadRef.current = false;
   }, [messages.length, typingUsers.length, isSending]);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const observer = new MutationObserver(() => {
+      if (isNearBottom()) scrollToBottom();
+    });
+    observer.observe(container, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   // Helper to resize textarea
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
