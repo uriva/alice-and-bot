@@ -1742,7 +1742,6 @@ const messageContainerStyle = (isDark: boolean) => ({
   transition: "background 0.2s",
   flexDirection: "column",
   scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
-  paddingBottom: 72,
 });
 
 const messageContainerDataAttr = { "data-scrollable": true };
@@ -2133,7 +2132,7 @@ export const AbstractChatBox = (
             display: "flex",
             flexDirection: "column",
             gap: 8,
-            padding: 4,
+            padding: "4px 4px 72px 4px",
             flexGrow: 1,
             boxSizing: "border-box",
             ...contentMaxWidthStyle(customColors),
