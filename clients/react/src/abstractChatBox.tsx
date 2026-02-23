@@ -690,28 +690,44 @@ const fileAttachmentStyle = (isDark: boolean): JSX.CSSProperties => ({
 });
 
 const locationZoom = 15;
+const tileSize = 256;
+const locationCardWidth = 256;
+const locationCardHeight = 200;
 
-const osmTileUrl = (lat: number, lng: number) => {
+const latLngToTileFraction = (lat: number, lng: number) => {
   const n = Math.pow(2, locationZoom);
-  const x = Math.floor(((lng + 180) / 360) * n);
   const latRad = (lat * Math.PI) / 180;
-  const y = Math.floor(
-    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
-      n,
-  );
-  return `https://tile.openstreetmap.org/${locationZoom}/${x}/${y}.png`;
+  return {
+    x: ((lng + 180) / 360) * n,
+    y: ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) /
+      2) * n,
+  };
 };
 
-const osmPixelOffset = (lat: number, lng: number) => {
-  const n = Math.pow(2, locationZoom);
-  const xTile = ((lng + 180) / 360) * n;
-  const latRad = (lat * Math.PI) / 180;
-  const yTile =
-    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
-    n;
+const cartoTileUrl = (x: number, y: number) =>
+  `https://basemaps.cartocdn.com/rastertiles/voyager/${locationZoom}/${x}/${y}.png`;
+
+const locationTileGrid = (lat: number, lng: number) => {
+  const { x, y } = latLngToTileFraction(lat, lng);
+  const tx = Math.floor(x);
+  const ty = Math.floor(y);
+  const px = (x - tx) * tileSize;
+  const py = (y - ty) * tileSize;
+  const col0 = px >= tileSize / 2 ? tx : tx - 1;
+  const row0 = py >= tileSize / 2 ? ty : ty - 1;
+  const offsetX = locationCardWidth / 2 -
+    ((x - col0) * tileSize);
+  const offsetY = locationCardHeight / 2 -
+    ((y - row0) * tileSize);
   return {
-    x: Math.round((xTile - Math.floor(xTile)) * 256),
-    y: Math.round((yTile - Math.floor(yTile)) * 256),
+    tiles: [
+      { x: col0, y: row0 },
+      { x: col0 + 1, y: row0 },
+      { x: col0, y: row0 + 1 },
+      { x: col0 + 1, y: row0 + 1 },
+    ],
+    offsetX,
+    offsetY,
   };
 };
 
@@ -721,12 +737,22 @@ const googleMapsUrl = (lat: number, lng: number) =>
 const locationCardStyle: JSX.CSSProperties = {
   display: "block",
   position: "relative",
-  width: 256,
-  height: 200,
+  width: locationCardWidth,
+  height: locationCardHeight,
   borderRadius: 8,
   overflow: "hidden",
   textDecoration: "none",
   color: "inherit",
+};
+
+const locationPinStyle: JSX.CSSProperties = {
+  position: "absolute",
+  left: "50%",
+  top: "50%",
+  transform: "translate(-50%, -100%)",
+  fontSize: 24,
+  filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))",
+  pointerEvents: "none",
 };
 
 const locationLabelStyle: JSX.CSSProperties = {
@@ -748,7 +774,7 @@ const LocationCard = (
     label?: string;
   },
 ) => {
-  const offset = osmPixelOffset(latitude, longitude);
+  const { tiles, offsetX, offsetY } = locationTileGrid(latitude, longitude);
   return (
     <a
       href={googleMapsUrl(latitude, longitude)}
@@ -756,22 +782,27 @@ const LocationCard = (
       rel="noopener noreferrer"
       style={locationCardStyle}
     >
-      <img
-        src={osmTileUrl(latitude, longitude)}
-        alt={label ?? "Location"}
-        style={{ width: 256, height: 256, marginTop: -28 }}
-      />
       <div
         style={{
           position: "absolute",
-          left: offset.x - 12,
-          top: offset.y - 52,
-          fontSize: 24,
-          filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))",
+          left: offsetX,
+          top: offsetY,
+          width: tileSize * 2,
+          height: tileSize * 2,
+          display: "grid",
+          gridTemplateColumns: `${tileSize}px ${tileSize}px`,
         }}
       >
-        📍
+        {tiles.map(({ x, y }) => (
+          <img
+            key={`${x}-${y}`}
+            src={cartoTileUrl(x, y)}
+            alt=""
+            style={{ width: tileSize, height: tileSize, display: "block" }}
+          />
+        ))}
       </div>
+      <div style={locationPinStyle}>📍</div>
       {label && <div style={locationLabelStyle}>{label}</div>}
     </a>
   );
@@ -1747,12 +1778,6 @@ const recordingIndicatorStyle = (isDark: boolean): JSX.CSSProperties => ({
   justifyContent: "space-between",
 });
 
-const attachMenuOverlayStyle: JSX.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 99,
-};
-
 const attachMenuStyle = (isDark: boolean): JSX.CSSProperties => ({
   position: "absolute",
   bottom: "100%",
@@ -1878,6 +1903,7 @@ export const AbstractChatBox = (
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const recordingStartTimeRef = useRef<number>(0);
@@ -2052,6 +2078,18 @@ export const AbstractChatBox = (
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!showAttachMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        attachMenuRef.current &&
+        !attachMenuRef.current.contains(e.target as Node)
+      ) setShowAttachMenu(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showAttachMenu]);
 
   // Helper to resize textarea
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
@@ -2373,6 +2411,7 @@ export const AbstractChatBox = (
             >
               {enableAttachments && (
                 <div
+                  ref={attachMenuRef}
                   style={{
                     position: "absolute",
                     right: 8,
@@ -2399,60 +2438,54 @@ export const AbstractChatBox = (
                     <FaPaperclip size={16} />
                   </button>
                   {showAttachMenu && (
-                    <>
-                      <div
-                        style={attachMenuOverlayStyle}
-                        onClick={() => setShowAttachMenu(false)}
+                    <div style={attachMenuStyle(isDark)}>
+                      <AttachMenuItem
+                        icon={<FaCamera size={16} />}
+                        label="Camera"
+                        isDark={isDark}
+                        onClick={() => {
+                          setShowAttachMenu(false);
+                          cameraInputRef.current?.click();
+                        }}
                       />
-                      <div style={attachMenuStyle(isDark)}>
+                      <AttachMenuItem
+                        icon={<FaImage size={16} />}
+                        label="Photo & Video"
+                        isDark={isDark}
+                        onClick={() => {
+                          setShowAttachMenu(false);
+                          imageInputRef.current?.click();
+                        }}
+                      />
+                      <AttachMenuItem
+                        icon={<FaFile size={16} />}
+                        label="Document"
+                        isDark={isDark}
+                        onClick={() => {
+                          setShowAttachMenu(false);
+                          fileInputRef.current?.click();
+                        }}
+                      />
+                      {onSendLocation && (
                         <AttachMenuItem
-                          icon={<FaCamera size={16} />}
-                          label="Camera"
+                          icon={<FaMapMarkerAlt size={16} />}
+                          label="Location"
                           isDark={isDark}
                           onClick={() => {
                             setShowAttachMenu(false);
-                            cameraInputRef.current?.click();
+                            navigator.geolocation.getCurrentPosition(
+                              ({ coords }) =>
+                                onSendLocation(
+                                  coords.latitude,
+                                  coords.longitude,
+                                ),
+                              () => alert("Could not get your location."),
+                              { enableHighAccuracy: true, timeout: 10000 },
+                            );
                           }}
                         />
-                        <AttachMenuItem
-                          icon={<FaImage size={16} />}
-                          label="Photo & Video"
-                          isDark={isDark}
-                          onClick={() => {
-                            setShowAttachMenu(false);
-                            imageInputRef.current?.click();
-                          }}
-                        />
-                        <AttachMenuItem
-                          icon={<FaFile size={16} />}
-                          label="Document"
-                          isDark={isDark}
-                          onClick={() => {
-                            setShowAttachMenu(false);
-                            fileInputRef.current?.click();
-                          }}
-                        />
-                        {onSendLocation && (
-                          <AttachMenuItem
-                            icon={<FaMapMarkerAlt size={16} />}
-                            label="Location"
-                            isDark={isDark}
-                            onClick={() => {
-                              setShowAttachMenu(false);
-                              navigator.geolocation.getCurrentPosition(
-                                ({ coords }) =>
-                                  onSendLocation(
-                                    coords.latitude,
-                                    coords.longitude,
-                                  ),
-                                () => alert("Could not get your location."),
-                                { enableHighAccuracy: true, timeout: 10000 },
-                              );
-                            }}
-                          />
-                        )}
-                      </div>
-                    </>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
