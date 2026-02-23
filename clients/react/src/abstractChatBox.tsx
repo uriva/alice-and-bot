@@ -1894,8 +1894,6 @@ export const AbstractChatBox = (
 ): JSX.Element => {
   const isMobile = useIsMobile();
   const [fetchingMore, setFetchingMore] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const justSentRef = useRef(false);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -2057,14 +2055,9 @@ export const AbstractChatBox = (
   };
 
   const scrollToBottom = () => {
-    const el = messagesEndRef.current;
-    if (!el) return;
-    el.scrollIntoView({
-      behavior: initialLoadRef.current || justSentRef.current
-        ? "instant"
-        : "smooth",
-      block: "end",
-    });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
   };
 
   useEffect(() => {
@@ -2199,7 +2192,6 @@ export const AbstractChatBox = (
                 {typingUsers.length > 0 && (
                   <TypingIndicator names={typingUsers} isDark={isDark} />
                 )}
-                <div ref={messagesEndRef} />
               </>
             )}
         </div>
@@ -2742,10 +2734,6 @@ export const AbstractChatBox = (
     setInput("");
     setPendingFiles([]);
     onInputActivity?.();
-    justSentRef.current = true;
-    setTimeout(() => {
-      justSentRef.current = false;
-    }, 2000);
 
     if (files.length > 0 && onSendWithAttachments) {
       setIsSending(true);
