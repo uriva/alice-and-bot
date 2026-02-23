@@ -135,6 +135,25 @@ const Example = () => {
         title="ChatGPT Example"
         darkModeOverride
         customColors={chatGptColors}
+        enableAttachments
+        onSendLocation={(latitude, longitude, label) => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: String(nextId++),
+              authorId: userId,
+              authorName: "You",
+              text: "",
+              timestamp: Date.now(),
+              attachments: [{
+                type: "location" as const,
+                latitude,
+                longitude,
+                label,
+              }],
+            },
+          ]);
+        }}
       />
     </div>
   );

@@ -1,9 +1,13 @@
 import { empty, sortKey } from "@uri/gamla";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
+  FaCamera,
   FaDownload,
   FaEllipsisV,
+  FaFile,
   FaHistory,
+  FaImage,
+  FaMapMarkerAlt,
   FaMicrophone,
   FaPaperclip,
   FaPaperPlane,
@@ -1743,6 +1747,71 @@ const recordingIndicatorStyle = (isDark: boolean): JSX.CSSProperties => ({
   justifyContent: "space-between",
 });
 
+const attachMenuOverlayStyle: JSX.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 99,
+};
+
+const attachMenuStyle = (isDark: boolean): JSX.CSSProperties => ({
+  position: "absolute",
+  bottom: "100%",
+  right: 0,
+  marginBottom: 8,
+  background: isDark ? "#1f2937" : "#ffffff",
+  borderRadius: 12,
+  boxShadow: isDark
+    ? "0 4px 20px rgba(0,0,0,0.4)"
+    : "0 4px 20px rgba(0,0,0,0.12)",
+  padding: "6px 0",
+  minWidth: 180,
+  zIndex: 100,
+});
+
+const attachMenuItemStyle = (isDark: boolean): JSX.CSSProperties => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  padding: "10px 16px",
+  border: "none",
+  background: "none",
+  color: isDark ? "#e5e7eb" : "#1e293b",
+  fontSize: 14,
+  cursor: "pointer",
+  width: "100%",
+  textAlign: "left",
+  transition: "background 0.15s",
+});
+
+const attachMenuItemHoverBg = (isDark: boolean) =>
+  isDark ? "#374151" : "#f1f5f9";
+
+const AttachMenuItem = (
+  { icon, label, onClick, isDark }: {
+    icon: ComponentChildren;
+    label: string;
+    onClick: () => void;
+    isDark: boolean;
+  },
+): JSX.Element => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        ...attachMenuItemStyle(isDark),
+        ...(hovered ? { background: attachMenuItemHoverBg(isDark) } : {}),
+      }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+};
+
 export const AbstractChatBox = (
   {
     limit,
@@ -1763,6 +1832,7 @@ export const AbstractChatBox = (
     enableAttachments = false,
     enableAudioRecording = false,
     onEdit,
+    onSendLocation,
     activeSpinners = [],
     activeProgress = [],
   }: {
@@ -1788,6 +1858,11 @@ export const AbstractChatBox = (
     enableAttachments?: boolean;
     enableAudioRecording?: boolean;
     onEdit?: (messageId: string, newText: string) => void;
+    onSendLocation?: (
+      latitude: number,
+      longitude: number,
+      label?: string,
+    ) => void;
     activeSpinners?: ActiveSpinner[];
     activeProgress?: ActiveProgress[];
   },
@@ -1799,7 +1874,10 @@ export const AbstractChatBox = (
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const recordingStartTimeRef = useRef<number>(0);
@@ -2261,6 +2339,30 @@ export const AbstractChatBox = (
                 e.currentTarget.value = "";
               }}
             />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const files = Array.from(e.currentTarget.files ?? []);
+                setPendingFiles([...pendingFiles, ...files]);
+                e.currentTarget.value = "";
+              }}
+            />
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const files = Array.from(e.currentTarget.files ?? []);
+                setPendingFiles([...pendingFiles, ...files]);
+                e.currentTarget.value = "";
+              }}
+            />
             <div
               style={{
                 position: "relative",
@@ -2270,27 +2372,89 @@ export const AbstractChatBox = (
               }}
             >
               {enableAttachments && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                <div
                   style={{
                     position: "absolute",
                     right: 8,
                     top: "50%",
                     transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: isDark ? "#6b7280" : "#94a3b8",
-                    padding: 4,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    zIndex: 100,
                   }}
-                  title="Attach file"
                 >
-                  <FaPaperclip size={16} />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAttachMenu(!showAttachMenu)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: isDark ? "#6b7280" : "#94a3b8",
+                      padding: 4,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    title="Attach"
+                  >
+                    <FaPaperclip size={16} />
+                  </button>
+                  {showAttachMenu && (
+                    <>
+                      <div
+                        style={attachMenuOverlayStyle}
+                        onClick={() => setShowAttachMenu(false)}
+                      />
+                      <div style={attachMenuStyle(isDark)}>
+                        <AttachMenuItem
+                          icon={<FaCamera size={16} />}
+                          label="Camera"
+                          isDark={isDark}
+                          onClick={() => {
+                            setShowAttachMenu(false);
+                            cameraInputRef.current?.click();
+                          }}
+                        />
+                        <AttachMenuItem
+                          icon={<FaImage size={16} />}
+                          label="Photo & Video"
+                          isDark={isDark}
+                          onClick={() => {
+                            setShowAttachMenu(false);
+                            imageInputRef.current?.click();
+                          }}
+                        />
+                        <AttachMenuItem
+                          icon={<FaFile size={16} />}
+                          label="Document"
+                          isDark={isDark}
+                          onClick={() => {
+                            setShowAttachMenu(false);
+                            fileInputRef.current?.click();
+                          }}
+                        />
+                        {onSendLocation && (
+                          <AttachMenuItem
+                            icon={<FaMapMarkerAlt size={16} />}
+                            label="Location"
+                            isDark={isDark}
+                            onClick={() => {
+                              setShowAttachMenu(false);
+                              navigator.geolocation.getCurrentPosition(
+                                ({ coords }) =>
+                                  onSendLocation(
+                                    coords.latitude,
+                                    coords.longitude,
+                                  ),
+                                () => alert("Could not get your location."),
+                                { enableHighAccuracy: true, timeout: 10000 },
+                              );
+                            }}
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
               <textarea
                 dir="auto"

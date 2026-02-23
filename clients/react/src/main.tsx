@@ -405,6 +405,21 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       onSendWithAttachments={handleSendWithAttachments}
       onDecryptAttachment={handleDecryptAttachment}
       onEdit={handleEdit}
+      onSendLocation={(latitude: number, longitude: number, label?: string) => {
+        if (!convoKey) return;
+        sendMessageWithKey({
+          conversationKey: convoKey,
+          credentials,
+          message: {
+            type: "text",
+            text: "",
+            attachments: [{ type: "location", latitude, longitude, label }],
+          },
+          conversation: conversationId,
+        }).catch((err) => {
+          console.error("Failed to send location", err);
+        });
+      }}
       messages={chatMessages}
       activeSpinners={activeSpinners}
       activeProgress={activeProgress}
