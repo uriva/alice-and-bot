@@ -1,5 +1,11 @@
 import { empty, sortKey } from "@uri/gamla";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import {
   FaCamera,
   FaDownload,
@@ -1897,6 +1903,7 @@ export const AbstractChatBox = (
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -2060,18 +2067,19 @@ export const AbstractChatBox = (
     container.scrollTop = container.scrollHeight;
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     scrollToBottom();
+    requestAnimationFrame(scrollToBottom);
     if (messages.length > 0) initialLoadRef.current = false;
   }, [messages.length, typingUsers.length, isSending]);
 
   useEffect(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-    const observer = new MutationObserver(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    const observer = new ResizeObserver(() => {
       if (isNearBottom()) scrollToBottom();
     });
-    observer.observe(container, { childList: true, subtree: true });
+    observer.observe(content);
     return () => observer.disconnect();
   }, []);
 
@@ -2120,6 +2128,7 @@ export const AbstractChatBox = (
         {...messageContainerDataAttr}
       >
         <div
+          ref={contentRef}
           style={{
             display: "flex",
             flexDirection: "column",
@@ -2749,6 +2758,7 @@ export const AbstractChatBox = (
         inputRef.current.style.height = "auto";
       }
       scrollToBottom();
+      requestAnimationFrame(scrollToBottom);
     }, 0);
   }
 };
