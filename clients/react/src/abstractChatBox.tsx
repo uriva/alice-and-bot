@@ -1462,6 +1462,32 @@ export type ActiveProgress = {
   timestamp: number;
 };
 
+const oneMinuteMs = 60_000;
+
+const playNote =
+  (ctx: AudioContext) =>
+  (frequency: number, startTime: number, duration: number) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = frequency;
+    gain.gain.setValueAtTime(0.15, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  };
+
+const playNotificationSound = () => {
+  const ctx = new AudioContext();
+  const now = ctx.currentTime;
+  const note = playNote(ctx);
+  note(523.25, now, 0.15);
+  note(659.25, now + 0.12, 0.15);
+  note(783.99, now + 0.24, 0.25);
+};
+
 type TimelineEntry =
   | { kind: "message"; msg: AbstracChatMessage; prevMsg?: AbstracChatMessage }
   | { kind: "spinner"; spinner: ActiveSpinner }
@@ -1934,6 +1960,8 @@ export const AbstractChatBox = (
   const [isRecordingLocked, setIsRecordingLocked] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
+  const prevActiveSpinnerIdsRef = useRef<Set<string>>(new Set());
+  const prevMessageCountRef = useRef(0);
 
   const stopRecording = (save: boolean) => {
     if (recordingIntervalRef.current) {
@@ -2098,6 +2126,39 @@ export const AbstractChatBox = (
     observer.observe(content);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const prevIds = prevActiveSpinnerIdsRef.current;
+    const currentActive = new Set(
+      [
+        ...activeSpinners.filter((s) => s.active).map((s) => s.elementId),
+        ...activeProgress.filter((p) => p.percentage < 1).map((p) =>
+          p.elementId
+        ),
+      ],
+    );
+    const now = Date.now();
+    const justCompleted = [
+      ...activeSpinners.filter((s) =>
+        !s.active && prevIds.has(s.elementId) &&
+        now - s.timestamp > oneMinuteMs
+      ),
+      ...activeProgress.filter((p) =>
+        p.percentage >= 1 && prevIds.has(p.elementId) &&
+        now - p.timestamp > oneMinuteMs
+      ),
+    ];
+    if (justCompleted.length > 0) playNotificationSound();
+    prevActiveSpinnerIdsRef.current = currentActive;
+  }, [activeSpinners, activeProgress]);
+
+  useEffect(() => {
+    const prevCount = prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+    if (prevCount > 0 && messages.length > prevCount && document.hidden) {
+      playNotificationSound();
+    }
+  }, [messages.length]);
 
   useEffect(() => {
     if (!showAttachMenu) return;
