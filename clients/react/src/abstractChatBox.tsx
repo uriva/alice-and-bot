@@ -1895,6 +1895,7 @@ export const AbstractChatBox = (
   const isMobile = useIsMobile();
   const [fetchingMore, setFetchingMore] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const justSentRef = useRef(false);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -2055,11 +2056,13 @@ export const AbstractChatBox = (
     return el.scrollHeight - el.scrollTop - el.clientHeight < 150;
   };
 
-  const scrollToBottom = (instant?: boolean) => {
+  const scrollToBottom = () => {
     const el = messagesEndRef.current;
     if (!el) return;
     el.scrollIntoView({
-      behavior: instant || initialLoadRef.current ? "instant" : "smooth",
+      behavior: initialLoadRef.current || justSentRef.current
+        ? "instant"
+        : "smooth",
       block: "end",
     });
   };
@@ -2739,6 +2742,10 @@ export const AbstractChatBox = (
     setInput("");
     setPendingFiles([]);
     onInputActivity?.();
+    justSentRef.current = true;
+    setTimeout(() => {
+      justSentRef.current = false;
+    }, 2000);
 
     if (files.length > 0 && onSendWithAttachments) {
       setIsSending(true);
