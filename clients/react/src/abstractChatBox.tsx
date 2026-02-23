@@ -1451,6 +1451,7 @@ export type ActiveSpinner = {
   text: string;
   elementId: string;
   timestamp: number;
+  active: boolean;
 };
 
 export type ActiveProgress = {
@@ -1639,23 +1640,33 @@ const SpinnerIndicator = (
     <span>
       {hideNames ? spinner.text : `${spinner.authorName}: ${spinner.text}`}
     </span>
-    <style>
-      {`@keyframes indeterminate {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(200px); }
-      }`}
-    </style>
-    <div style={linearBarTrackStyle(isDark, color)}>
-      <div
-        style={{
-          height: "100%",
-          width: 60,
-          backgroundColor: indicatorColor(isDark, color),
-          borderRadius: 4,
-          animation: "indeterminate 1.2s linear infinite",
-        }}
-      />
-    </div>
+    {spinner.active
+      ? (
+        <>
+          <style>
+            {`@keyframes indeterminate {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(200px); }
+        }`}
+          </style>
+          <div style={linearBarTrackStyle(isDark, color)}>
+            <div
+              style={{
+                height: "100%",
+                width: 60,
+                backgroundColor: indicatorColor(isDark, color),
+                borderRadius: 4,
+                animation: "indeterminate 1.2s linear infinite",
+              }}
+            />
+          </div>
+        </>
+      )
+      : (
+        <div style={linearBarTrackStyle(isDark, color)}>
+          <div style={linearBarFillStyle(1, isDark, color)} />
+        </div>
+      )}
   </div>
 );
 
@@ -2070,7 +2081,13 @@ export const AbstractChatBox = (
     scrollToBottom();
     requestAnimationFrame(scrollToBottom);
     if (messages.length > 0) initialLoadRef.current = false;
-  }, [messages.length, typingUsers.length, isSending]);
+  }, [
+    messages.length,
+    typingUsers.length,
+    isSending,
+    activeSpinners.length,
+    activeProgress.length,
+  ]);
 
   useEffect(() => {
     const content = contentRef.current;

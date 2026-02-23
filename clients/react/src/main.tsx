@@ -133,15 +133,14 @@ const latestSpinners = (
   for (const [key, m] of byAuthor) {
     if (m.type === "spinner") {
       const override = uiOverrides.get(m.elementId);
-      const isActive = override?.active ?? m.active;
-      if (isActive) {
-        result.push({
-          authorName: details[key]?.name ?? compactPublicKey(key),
-          text: m.text,
-          elementId: m.elementId,
-          timestamp: m.timestamp,
-        });
-      }
+      const active = override?.active ?? m.active;
+      result.push({
+        authorName: details[key]?.name ?? compactPublicKey(key),
+        text: m.text,
+        elementId: m.elementId,
+        timestamp: m.timestamp,
+        active,
+      });
     }
   }
   return result;
@@ -269,16 +268,21 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
   const standaloneSpinners: ActiveSpinner[] = uiElements
     .filter((el: { elementId: string; type: string; active?: boolean }) =>
       el.type === "spinner" &&
-      !messageElementIds.has(el.elementId) &&
-      el.active !== false
+      !messageElementIds.has(el.elementId)
     )
     .map((
-      el: { elementId: string; text?: string; updatedAt: number },
+      el: {
+        elementId: string;
+        text?: string;
+        updatedAt: number;
+        active?: boolean;
+      },
     ): ActiveSpinner => ({
       authorName: "",
       text: el.text ?? "",
       elementId: el.elementId,
       timestamp: el.updatedAt,
+      active: el.active !== false,
     }));
   return {
     chatMessages: foldEdits(textAndEdits).map(
