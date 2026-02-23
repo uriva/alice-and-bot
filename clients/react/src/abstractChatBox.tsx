@@ -1962,6 +1962,7 @@ export const AbstractChatBox = (
   const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
   const prevActiveSpinnerIdsRef = useRef<Set<string>>(new Set());
   const prevMessageCountRef = useRef(0);
+  const stuckToBottomRef = useRef(true);
 
   const stopRecording = (save: boolean) => {
     if (recordingIntervalRef.current) {
@@ -2042,10 +2043,13 @@ export const AbstractChatBox = (
   };
 
   const handleScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    stuckToBottomRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 150;
     if (
-      messagesContainerRef.current &&
       !fetchingMore &&
-      messagesContainerRef.current.scrollTop === 0 &&
+      el.scrollTop === 0 &&
       messages.length === limit
     ) {
       setFetchingMore(true);
@@ -2093,12 +2097,6 @@ export const AbstractChatBox = (
     }
   }, [messages, isSending]);
 
-  const isNearBottom = () => {
-    const el = messagesContainerRef.current;
-    if (!el) return true;
-    return el.scrollHeight - el.scrollTop - el.clientHeight < 150;
-  };
-
   const scrollToBottom = () => {
     const container = messagesContainerRef.current;
     if (!container) return;
@@ -2106,6 +2104,7 @@ export const AbstractChatBox = (
   };
 
   useLayoutEffect(() => {
+    stuckToBottomRef.current = true;
     scrollToBottom();
     requestAnimationFrame(scrollToBottom);
     if (messages.length > 0) initialLoadRef.current = false;
@@ -2121,7 +2120,7 @@ export const AbstractChatBox = (
     const content = contentRef.current;
     if (!content) return;
     const observer = new ResizeObserver(() => {
-      if (isNearBottom()) scrollToBottom();
+      if (stuckToBottomRef.current) scrollToBottom();
     });
     observer.observe(content);
     return () => observer.disconnect();
