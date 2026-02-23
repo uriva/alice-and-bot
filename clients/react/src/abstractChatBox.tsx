@@ -685,6 +685,94 @@ const fileAttachmentStyle = (isDark: boolean): JSX.CSSProperties => ({
   color: "inherit",
 });
 
+const locationZoom = 15;
+
+const osmTileUrl = (lat: number, lng: number) => {
+  const n = Math.pow(2, locationZoom);
+  const x = Math.floor(((lng + 180) / 360) * n);
+  const latRad = (lat * Math.PI) / 180;
+  const y = Math.floor(
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
+      n,
+  );
+  return `https://tile.openstreetmap.org/${locationZoom}/${x}/${y}.png`;
+};
+
+const osmPixelOffset = (lat: number, lng: number) => {
+  const n = Math.pow(2, locationZoom);
+  const xTile = ((lng + 180) / 360) * n;
+  const latRad = (lat * Math.PI) / 180;
+  const yTile =
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
+    n;
+  return {
+    x: Math.round((xTile - Math.floor(xTile)) * 256),
+    y: Math.round((yTile - Math.floor(yTile)) * 256),
+  };
+};
+
+const googleMapsUrl = (lat: number, lng: number) =>
+  `https://www.google.com/maps?q=${lat},${lng}`;
+
+const locationCardStyle: JSX.CSSProperties = {
+  display: "block",
+  position: "relative",
+  width: 256,
+  height: 200,
+  borderRadius: 8,
+  overflow: "hidden",
+  textDecoration: "none",
+  color: "inherit",
+};
+
+const locationLabelStyle: JSX.CSSProperties = {
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
+  padding: "16px 8px 6px",
+  background: "linear-gradient(transparent, rgba(0,0,0,0.6))",
+  color: "#fff",
+  fontSize: 13,
+  fontWeight: 500,
+};
+
+const LocationCard = (
+  { latitude, longitude, label }: {
+    latitude: number;
+    longitude: number;
+    label?: string;
+  },
+) => {
+  const offset = osmPixelOffset(latitude, longitude);
+  return (
+    <a
+      href={googleMapsUrl(latitude, longitude)}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={locationCardStyle}
+    >
+      <img
+        src={osmTileUrl(latitude, longitude)}
+        alt={label ?? "Location"}
+        style={{ width: 256, height: 256, marginTop: -28 }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: offset.x - 12,
+          top: offset.y - 52,
+          fontSize: 24,
+          filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))",
+        }}
+      >
+        📍
+      </div>
+      {label && <div style={locationLabelStyle}>{label}</div>}
+    </a>
+  );
+};
+
 const AttachmentRenderer = (
   {
     attachment,
@@ -710,7 +798,7 @@ const AttachmentRenderer = (
   const [loading, setLoading] = useState(false);
 
   const handleDecrypt = async () => {
-    if (!onDecrypt || decryptedUrl) return;
+    if (!onDecrypt || decryptedUrl || attachment.type === "location") return;
     setLoading(true);
     const url = await onDecrypt(attachment.url);
     setDecryptedUrl(url);
@@ -728,6 +816,16 @@ const AttachmentRenderer = (
       handleDecrypt();
     }
   }, [isOwn, isFromThisSession, attachment.type, onDecrypt]);
+
+  if (attachment.type === "location") {
+    return (
+      <LocationCard
+        latitude={attachment.latitude}
+        longitude={attachment.longitude}
+        label={attachment.label}
+      />
+    );
+  }
 
   if (attachment.type === "audio") {
     return decryptedUrl

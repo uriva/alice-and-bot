@@ -72,6 +72,16 @@ const initialMessages: AbstracChatMessage[] = [
     "You're welcome! Let me know if you need help with anything else. Here's one more useful pattern — a generic comparator-based sort:\n\n```typescript\ntype Comparator<T> = (a: T, b: T) => number;\n\nconst sortBy = <T,>(cmp: Comparator<T>) =>\n  (arr: T[]): T[] =>\n    [...arr].sort(cmp);\n\nconst byAge = sortBy<{ name: string; age: number }>(\n  (a, b) => a.age - b.age,\n);\n```\n\nThis gives you a reusable, curried sorting utility.",
     14,
   ),
+  makeUserMsg("12", "By the way, I'm working from a café in Tel Aviv!", 10),
+  {
+    ...makeBotMsg("13", "Nice! Here's your location on the map:", 9),
+    attachments: [{
+      type: "location" as const,
+      latitude: 32.0853,
+      longitude: 34.7818,
+      label: "Tel Aviv, Israel",
+    }],
+  },
 ];
 
 const chatGptColors: CustomColors = {

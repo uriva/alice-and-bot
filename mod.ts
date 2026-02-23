@@ -42,6 +42,7 @@ export {
   fileSizeLimits,
   handleWebhookUpdate,
   type ImageAttachment,
+  type LocationAttachment,
   sendMessage,
   sendMessageWithKey,
   setAlias,

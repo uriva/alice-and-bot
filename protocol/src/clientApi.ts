@@ -58,11 +58,19 @@ export type FileAttachment = AttachmentBase & {
   mimeType: string;
 };
 
+export type LocationAttachment = {
+  type: "location";
+  latitude: number;
+  longitude: number;
+  label?: string;
+};
+
 export type Attachment =
   | ImageAttachment
   | AudioAttachment
   | VideoAttachment
-  | FileAttachment;
+  | FileAttachment
+  | LocationAttachment;
 
 import {
   fileSizeLimits,

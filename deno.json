@@ -46,6 +46,6 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.167",
+  "version": "0.0.168",
   "exports": "./mod.ts"
 }
