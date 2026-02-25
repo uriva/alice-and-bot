@@ -1963,6 +1963,9 @@ export const AbstractChatBox = (
   const prevActiveSpinnerIdsRef = useRef<Set<string>>(new Set());
   const prevMessageCountRef = useRef(0);
   const stuckToBottomRef = useRef(true);
+  const [optimisticMessages, setOptimisticMessages] = useState<
+    AbstracChatMessage[]
+  >([]);
 
   const stopRecording = (save: boolean) => {
     if (recordingIntervalRef.current) {
@@ -2079,10 +2082,20 @@ export const AbstractChatBox = (
         );
     }
   }, [limit, messages, fetchingMore]);
+
+  useEffect(() => {
+    if (optimisticMessages.length > 0) setOptimisticMessages([]);
+  }, [messages.length]);
+
   const systemDarkMode = useDarkMode();
   const isDark = darkModeOverride !== undefined
     ? darkModeOverride
     : systemDarkMode;
+
+  const allMessages = useMemo(
+    () => [...messages, ...optimisticMessages],
+    [messages, optimisticMessages],
+  );
 
   // Clear sending indicator when new message arrives
   useEffect(() => {
@@ -2221,7 +2234,7 @@ export const AbstractChatBox = (
                 <Spinner color={customColors?.text} />
               </div>
             )
-            : messages.length === 0
+            : allMessages.length === 0
             ? (
               <div
                 style={centerFillStyle(isDark)}
@@ -2231,7 +2244,7 @@ export const AbstractChatBox = (
             )
             : (
               <>
-                {buildTimeline(messages, activeSpinners, activeProgress).map(
+                {buildTimeline(allMessages, activeSpinners, activeProgress).map(
                   (entry) =>
                     entry.kind === "message"
                       ? (
@@ -2825,6 +2838,16 @@ export const AbstractChatBox = (
       await onSendWithAttachments(text, files);
       setIsSending(false);
     } else if (text) {
+      setOptimisticMessages((prev) => [
+        ...prev,
+        {
+          id: `optimistic-${Date.now()}`,
+          authorId: userId,
+          authorName: "",
+          text,
+          timestamp: Date.now(),
+        },
+      ]);
       onSend(text);
     }
 
