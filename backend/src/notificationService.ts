@@ -20,6 +20,7 @@ export const callWebhooks = async (
     conversationId: conversation.id,
     payload: message.payload,
     timestamp: message.timestamp,
+    messageId,
   };
   for (const webhook of webhooks) {
     if (!webhook) continue;

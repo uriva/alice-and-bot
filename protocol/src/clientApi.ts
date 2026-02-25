@@ -129,6 +129,7 @@ export type WebhookUpdate = {
   payload: EncryptedMessage;
   timestamp: number;
   conversationId: string;
+  messageId: string;
 };
 
 type SignedPayload<T> = {
@@ -230,12 +231,14 @@ export const handleWebhookUpdate = async (
   conversationId: string;
   message: DistributeOmit<DecipheredMessage, "id">;
   conversationKey: string;
+  messageId: string;
 }> => {
   const key = await getConversationKey(credentials, whUpdate.conversationId);
   return {
     conversationId: whUpdate.conversationId,
     message: await decryptMessagePayload(key)(whUpdate),
     conversationKey: key,
+    messageId: whUpdate.messageId,
   };
 };
 
