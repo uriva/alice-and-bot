@@ -2593,6 +2593,19 @@ export const AbstractChatBox = (
                   resizeTextarea(e.currentTarget);
                   onInputActivity?.();
                 }}
+                onPaste={(e) => {
+                  if (!onSendWithAttachments) return;
+                  const items = Array.from(e.clipboardData?.items ?? []);
+                  const imageFiles = items
+                    .filter((item) =>
+                      item.kind === "file" && item.type.startsWith("image/")
+                    )
+                    .map((item) => item.getAsFile())
+                    .filter((f): f is File => f !== null);
+                  if (imageFiles.length === 0) return;
+                  e.preventDefault();
+                  setPendingFiles((prev) => [...prev, ...imageFiles]);
+                }}
                 onBlur={() => onInputActivity?.()}
                 style={{
                   width: "100%",
