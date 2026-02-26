@@ -2659,26 +2659,6 @@ export const AbstractChatBox = (
                       handleSend();
                     }
                     e.preventDefault();
-                  } else if (
-                    e.key === "Enter" && (e.shiftKey || e.ctrlKey)
-                  ) {
-                    const selectionStart = e.currentTarget.selectionStart ??
-                      input.length;
-                    const selectionEnd = e.currentTarget.selectionEnd ??
-                      input.length;
-                    const newValue = input.slice(0, selectionStart) + "\n" +
-                      input.slice(selectionEnd);
-                    e.currentTarget.value = newValue;
-                    resizeTextarea(e.currentTarget);
-                    setInput(newValue);
-                    setTimeout(() => {
-                      if (e.currentTarget) {
-                        e.currentTarget.selectionStart =
-                          e.currentTarget.selectionEnd =
-                            selectionStart + 1;
-                      }
-                    }, 0);
-                    e.preventDefault();
                   }
                   onInputActivity?.();
                 }}
