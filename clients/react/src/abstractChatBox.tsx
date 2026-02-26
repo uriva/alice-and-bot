@@ -2122,7 +2122,7 @@ export const AbstractChatBox = (
     requestAnimationFrame(scrollToBottom);
     if (messages.length > 0) initialLoadRef.current = false;
   }, [
-    messages.length,
+    allMessages.length,
     typingUsers.length,
     isSending,
     activeSpinners.length,
