@@ -2083,19 +2083,22 @@ export const AbstractChatBox = (
     }
   }, [limit, messages, fetchingMore]);
 
-  useEffect(() => {
-    if (optimisticMessages.length > 0) setOptimisticMessages([]);
-  }, [messages.length]);
-
   const systemDarkMode = useDarkMode();
   const isDark = darkModeOverride !== undefined
     ? darkModeOverride
     : systemDarkMode;
 
-  const allMessages = useMemo(
-    () => [...messages, ...optimisticMessages],
-    [messages, optimisticMessages],
-  );
+  const allMessages = useMemo(() => {
+    if (optimisticMessages.length === 0) return messages;
+    const realTexts = new Set(
+      messages.filter((m) => m.authorId === userId).map((m) => m.text),
+    );
+    const remaining = optimisticMessages.filter((o) => !realTexts.has(o.text));
+    if (remaining.length < optimisticMessages.length) {
+      setTimeout(() => setOptimisticMessages(remaining), 0);
+    }
+    return remaining.length === 0 ? messages : [...messages, ...remaining];
+  }, [messages, optimisticMessages, userId]);
 
   // Clear sending indicator when new message arrives
   useEffect(() => {
