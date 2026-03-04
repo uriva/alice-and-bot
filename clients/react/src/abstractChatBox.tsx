@@ -23,6 +23,7 @@ import {
   FaStop,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import type { ComponentChildren, JSX } from "preact";
 import type { Attachment } from "../../../protocol/src/clientApi.ts";
@@ -1374,7 +1375,7 @@ const Message = (
               }}
             >
               <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkHtmlToText]}
+                remarkPlugins={[remarkGfm, remarkBreaks, remarkHtmlToText]}
                 // @ts-ignore react-markdown types are not fully compatible with Preact here
                 components={mdComponents}
               >
