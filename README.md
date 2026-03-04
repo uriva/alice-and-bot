@@ -305,6 +305,66 @@ Embed a chat UI in your React app:
 ></script>
 ```
 
+### ChatGPT-Style Design
+
+You can make the chat look like ChatGPT or other AI assistant UIs by using
+`AbstractChatBox` with `customColors`. This gives you a full-width, dark,
+bubble-less layout with centered content.
+
+```tsx
+import { AbstractChatBox } from "@alice-and-bot/core";
+import type { CustomColors } from "@alice-and-bot/core";
+
+const chatGptColors: CustomColors = {
+  background: "#0b1021", // dark background
+  text: "#e4e4e7", // light text
+  primary: "#6366f1", // accent color (send button, links)
+  inputBackground: "#1a1b2e", // input field background
+  hideTitle: true, // no header bar
+  hideOwnAvatar: true, // no avatar next to your messages
+  hideOtherBubble: true, // no bubble around bot messages
+  hideNames: true, // no author names above messages
+  chatMaxWidth: "768px", // center messages in a narrow column
+  inputMaxWidth: "768px", // center input in a narrow column
+};
+
+const App = () => (
+  <div
+    style={{
+      height: "100vh",
+      width: "100%",
+      display: "flex",
+      flexDirection: "column",
+    }}
+  >
+    <AbstractChatBox
+      userId="user-1"
+      onSend={(text) => {/* handle send */}}
+      messages={messages}
+      limit={100}
+      loadMore={() => {}}
+      title=""
+      darkModeOverride
+      customColors={chatGptColors}
+    />
+  </div>
+);
+```
+
+Key `CustomColors` options for this look:
+
+| Option            | Effect                                          |
+| ----------------- | ----------------------------------------------- |
+| `hideTitle`       | Removes the header/title bar                    |
+| `hideOwnAvatar`   | Hides avatar circle next to your messages       |
+| `hideOtherBubble` | Removes the bubble background from bot messages |
+| `hideNames`       | Hides author name labels above messages         |
+| `chatMaxWidth`    | Centers message content in a narrow column      |
+| `inputMaxWidth`   | Centers the input bar in a narrow column        |
+| `inputBackground` | Custom background for the text input field      |
+
+See `example/main.tsx` for a full working example with mock data.
+
 ### Generating the embed script programmatically
 
 You can generate the widget embed script using the exported `embedScript`
