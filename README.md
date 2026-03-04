@@ -365,6 +365,119 @@ Key `CustomColors` options for this look:
 
 See `example/main.tsx` for a full working example with mock data.
 
+### Full Integration with a Bot
+
+The `Chat` component handles encryption, real-time sync, and message rendering.
+You just need to create credentials, resolve the bot you want to talk to, and
+get or create a conversation.
+
+```tsx
+import {
+  aliasToPublicSignKey,
+  Chat,
+  createConversation,
+  createIdentity,
+  type Credentials,
+  getConversations,
+} from "@alice-and-bot/core";
+import { useEffect, useState } from "preact/hooks";
+
+// resolve the bot's public key from its alias (once, at module level)
+const botKeyPromise = aliasToPublicSignKey("your_bot_alias");
+
+// create or load credentials for the current user.
+// in production, persist these in your own DB (see below).
+const useCredentials = (userName: string): Credentials | null => {
+  const [creds, setCreds] = useState<Credentials | null>(null);
+  useEffect(() => {
+    createIdentity(userName).then(setCreds);
+  }, [userName]);
+  return creds;
+};
+
+// find an existing conversation or create one
+const useConversation = (
+  credentials: Credentials | null,
+  botKey: string | null,
+): string | null => {
+  const [id, setId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!credentials || !botKey) return;
+    const participants = [credentials.publicSignKey, botKey];
+    getConversations(participants).then((convos) => {
+      if (Array.isArray(convos) && convos.length > 0) {
+        setId(convos[0].id);
+        return;
+      }
+      createConversation(participants, "my-chat").then((result) => {
+        if ("conversationId" in result) setId(result.conversationId);
+      });
+    });
+  }, [credentials?.publicSignKey, botKey]);
+  return id;
+};
+
+const App = () => {
+  const credentials = useCredentials("user@example.com");
+  const [botKey, setBotKey] = useState<string | null>(null);
+  const conversationId = useConversation(credentials, botKey);
+
+  useEffect(() => {
+    botKeyPromise.then((r) => {
+      if ("publicSignKey" in r) setBotKey(r.publicSignKey);
+    });
+  }, []);
+
+  if (!credentials || !botKey || !conversationId) return <p>Loading...</p>;
+
+  return (
+    <div
+      style={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Chat
+        conversationId={conversationId}
+        credentials={credentials}
+        darkModeOverride
+        customColors={{
+          background: "#1a1a1a",
+          text: "#ccc",
+          primary: "#311d2b",
+          inputBackground: "transparent",
+          hideTitle: true,
+          hideOwnAvatar: true,
+          hideOtherBubble: true,
+          hideNames: true,
+          inputMaxWidth: "700px",
+          chatMaxWidth: "900px",
+        }}
+      />
+    </div>
+  );
+};
+```
+
+`Chat` props:
+
+| Prop                   | Type           | Description                           |
+| ---------------------- | -------------- | ------------------------------------- |
+| `credentials`          | `Credentials`  | User identity (from `createIdentity`) |
+| `conversationId`       | `string`       | Conversation to display               |
+| `onClose`              | `() => void`   | Optional close button callback        |
+| `emptyMessage`         | `JSX.Element`  | Shown when there are no messages yet  |
+| `darkModeOverride`     | `boolean`      | Force dark mode                       |
+| `customColors`         | `CustomColors` | Customize look and feel (see above)   |
+| `enableAttachments`    | `boolean`      | Show attachment menu (default `true`) |
+| `enableAudioRecording` | `boolean`      | Show mic button (default `true`)      |
+
+**Persisting credentials:** `createIdentity` generates a new keypair every time.
+In production, call it once and store the returned `Credentials` in your
+database. On subsequent visits, load them from your DB instead of calling
+`createIdentity` again.
+
 ### Generating the embed script programmatically
 
 You can generate the widget embed script using the exported `embedScript`
