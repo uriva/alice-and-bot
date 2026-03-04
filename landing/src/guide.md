@@ -164,6 +164,32 @@ messages arrive.
 
 All of it is end-to-end encrypted.
 
+## Using your own chat backend
+
+If you already have a message transport and just want the UI, you can use
+`AbstractChatBox` directly. It takes a `messages` array and an `onSend`
+callback, no alice-and-bot backend required. You supply the messages, it renders
+them.
+
+```tsx
+import { AbstractChatBox } from "@alice-and-bot/core";
+
+<AbstractChatBox
+  userId="user-1"
+  messages={yourMessages}
+  onSend={(text) => yourSendFunction(text)}
+  limit={100}
+  loadMore={() => {}}
+  title=""
+  darkModeOverride
+  customColors={yourColors}
+/>;
+```
+
+You still get all the rendering features, markdown, attachments, progress bars,
+the works. You just lose the built-in encryption, real-time sync, and
+conversation management. Whether that tradeoff makes sense is up to you.
+
 ## Next steps
 
 Check out the [GitHub repo](https://github.com/uriva/alice-and-bot) for the full
