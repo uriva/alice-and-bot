@@ -2,14 +2,16 @@ import { type AnyComponent, render } from "preact";
 import { ErrorBoundary, LocationProvider, Route, Router } from "preact-iso";
 import { Toaster } from "react-hot-toast";
 import { Messenger } from "./chat.tsx";
+import { Guide } from "./guide.tsx";
 import { LandingPage } from "./landing.tsx";
 import { Legal } from "./legal.tsx";
-import { chatPath, homePath, manifestoPath } from "./paths.ts";
+import { chatPath, guidePath, homePath, manifestoPath } from "./paths.ts";
 import { Manifesto } from "./manifesto.tsx";
 
 const routes: { path: string; component: AnyComponent }[] = [
   { path: homePath, component: LandingPage },
   { path: chatPath, component: Messenger },
+  { path: guidePath, component: Guide },
   { path: "/legal", component: Legal },
   { path: manifestoPath, component: Manifesto },
 ];

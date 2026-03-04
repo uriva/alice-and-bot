@@ -1,5 +1,5 @@
 import { useEffect } from "preact/hooks";
-import { chatPath, manifestoPath } from "./paths.ts";
+import { chatPath, guidePath, manifestoPath } from "./paths.ts";
 
 const features = [
   {
@@ -125,6 +125,13 @@ export const LandingPage = () => {
         </a>
         <a
           type="button"
+          href={guidePath}
+          class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
+        >
+          Build a bot UI
+        </a>
+        <a
+          type="button"
           href={manifestoPath}
           class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
         >
@@ -142,6 +149,12 @@ export const LandingPage = () => {
             </p>
           </div>
           <nav class="flex flex-wrap justify-center gap-6">
+            <a
+              href={guidePath}
+              class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
+            >
+              Guide
+            </a>
             <a
               href={manifestoPath}
               class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
