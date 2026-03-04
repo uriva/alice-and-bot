@@ -121,27 +121,25 @@ const latestSpinners = (
   details: Record<string, { name: string; avatar?: string }>,
   uiOverrides: Map<string, { active?: boolean; percentage?: number }>,
 ): ActiveSpinner[] => {
-  const byAuthor = new Map<string, DecipheredMessage>();
+  const spinnerMessages = messages.filter((m) => m.type === "spinner");
+  const byElement = new Map<string, (typeof spinnerMessages)[number]>();
   for (
-    const m of sortKey((x: DecipheredMessage) => x.timestamp)(
-      messages.filter((m) => m.type === "spinner"),
-    )
+    const m of sortKey((x: DecipheredMessage) => x.timestamp)(spinnerMessages)
   ) {
-    byAuthor.set(m.publicSignKey, m);
+    if (m.type === "spinner") byElement.set(m.elementId, m);
   }
   const result: ActiveSpinner[] = [];
-  for (const [key, m] of byAuthor) {
-    if (m.type === "spinner") {
-      const override = uiOverrides.get(m.elementId);
-      const active = override?.active ?? m.active;
-      result.push({
-        authorName: details[key]?.name ?? compactPublicKey(key),
-        text: m.text,
-        elementId: m.elementId,
-        timestamp: m.timestamp,
-        active,
-      });
-    }
+  for (const [, m] of byElement) {
+    const override = uiOverrides.get(m.elementId);
+    const active = override?.active ?? m.active;
+    result.push({
+      authorName: details[m.publicSignKey]?.name ??
+        compactPublicKey(m.publicSignKey),
+      text: m.text,
+      elementId: m.elementId,
+      timestamp: m.timestamp,
+      active,
+    });
   }
   return result;
 };
@@ -151,27 +149,25 @@ const latestProgress = (
   details: Record<string, { name: string; avatar?: string }>,
   uiOverrides: Map<string, { active?: boolean; percentage?: number }>,
 ): ActiveProgress[] => {
-  const byAuthor = new Map<string, DecipheredMessage>();
+  const progressMessages = messages.filter((m) => m.type === "progress");
+  const byElement = new Map<string, (typeof progressMessages)[number]>();
   for (
-    const m of sortKey((x: DecipheredMessage) => x.timestamp)(
-      messages.filter((m) => m.type === "progress"),
-    )
+    const m of sortKey((x: DecipheredMessage) => x.timestamp)(progressMessages)
   ) {
-    byAuthor.set(m.publicSignKey, m);
+    if (m.type === "progress") byElement.set(m.elementId, m);
   }
   const result: ActiveProgress[] = [];
-  for (const [key, m] of byAuthor) {
-    if (m.type === "progress") {
-      const override = uiOverrides.get(m.elementId);
-      const pct = override?.percentage ?? m.percentage;
-      result.push({
-        authorName: details[key]?.name ?? compactPublicKey(key),
-        text: m.text,
-        percentage: pct,
-        elementId: m.elementId,
-        timestamp: m.timestamp,
-      });
-    }
+  for (const [, m] of byElement) {
+    const override = uiOverrides.get(m.elementId);
+    const pct = override?.percentage ?? m.percentage;
+    result.push({
+      authorName: details[m.publicSignKey]?.name ??
+        compactPublicKey(m.publicSignKey),
+      text: m.text,
+      percentage: pct,
+      elementId: m.elementId,
+      timestamp: m.timestamp,
+    });
   }
   return result;
 };
