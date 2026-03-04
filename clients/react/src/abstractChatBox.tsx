@@ -1,5 +1,6 @@
 import { empty, sortKey } from "@uri/gamla";
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -145,6 +146,81 @@ const bubbleVideoStyle: JSX.CSSProperties = {
   background: "#000",
 };
 
+const videoPlaceholderStyle: JSX.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  maxWidth: "100%",
+  width: "100%",
+  aspectRatio: "16/9",
+  borderRadius: 8,
+  marginTop: 6,
+  background: "#1a1a2e",
+};
+
+const pulseKeyframes = `
+@keyframes video-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}`;
+
+const brokenVideoStyle: JSX.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  maxWidth: "100%",
+  width: "100%",
+  aspectRatio: "16/9",
+  borderRadius: 8,
+  marginTop: 6,
+  background: "#1a1a2e",
+  color: "#666",
+  fontSize: 13,
+};
+
+const VideoPlayer = ({ src }: { src?: string }) => {
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const onLoadedMetadata = useCallback(() => setState("ready"), []);
+  const onError = useCallback(() => setState("error"), []);
+  if (state === "error") {
+    return (
+      <div style={brokenVideoStyle}>
+        <FaPlay style={{ fontSize: 28, opacity: 0.5 }} />
+        <span>Video unavailable</span>
+      </div>
+    );
+  }
+  return (
+    <>
+      <style>{pulseKeyframes}</style>
+      {state === "loading" && (
+        <div style={videoPlaceholderStyle}>
+          <FaPlay
+            style={{
+              color: "#555",
+              fontSize: 36,
+              animation: "video-pulse 1.5s ease-in-out infinite",
+            }}
+          />
+        </div>
+      )}
+      <video
+        src={src}
+        controls
+        preload="metadata"
+        playsInline
+        style={state === "loading"
+          ? { ...bubbleVideoStyle, position: "absolute", opacity: 0 }
+          : bubbleVideoStyle}
+        onLoadedMetadata={onLoadedMetadata}
+        onError={onError}
+      />
+    </>
+  );
+};
+
 const bubbleAudioStyle: JSX.CSSProperties = {
   display: "block",
   width: "100%",
@@ -168,17 +244,7 @@ const isAudioUrl = (href?: string) =>
 
 // @ts-expect-error react-markdown types are not fully compatible with Preact here
 const MarkdownImg = ({ src, alt }) =>
-  alt === "video"
-    ? (
-      <video
-        src={src}
-        controls
-        preload="metadata"
-        playsInline
-        style={bubbleVideoStyle}
-      />
-    )
-    : alt === "audio"
+  alt === "video" ? <VideoPlayer src={src} /> : alt === "audio"
     ? (
       <audio
         src={src}
@@ -193,15 +259,7 @@ const markdownLink =
   (textColor: string) =>
   ({ children, href }: { children?: ComponentChildren; href?: string }) => {
     if (isVideoUrl(href)) {
-      return (
-        <video
-          src={href}
-          controls
-          preload="metadata"
-          playsInline
-          style={bubbleVideoStyle}
-        />
-      );
+      return <VideoPlayer src={href} />;
     }
     if (isAudioUrl(href)) {
       return (
@@ -268,8 +326,14 @@ const htmlMediaToMarkdown = (text: string) =>
     .replace(/<\/video>/gi, "")
     .replace(/<\/audio>/gi, "");
 
+const htmlAnchorToMarkdown = (text: string) =>
+  text.replace(
+    /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
+    (_, href, label) => `[${label}](${href})`,
+  );
+
 const preprocessText = (text: string) =>
-  htmlImgToMarkdown(htmlMediaToMarkdown(text));
+  htmlAnchorToMarkdown(htmlImgToMarkdown(htmlMediaToMarkdown(text)));
 
 const copyOverlayStyle = (
   { isDark }: { isDark: boolean },
@@ -2073,6 +2137,9 @@ export const AbstractChatBox = (
       globalThis.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.addEventListener("scroll", handleScroll);
