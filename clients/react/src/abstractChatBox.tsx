@@ -2309,7 +2309,8 @@ export const AbstractChatBox = (
         {pendingFiles.length > 0 && (
           <div
             style={{
-              background: isDark ? "#1f2937" : "#e2e8f0",
+              background: customColors?.inputBackground ??
+                (isDark ? "#1f2937" : "#e2e8f0"),
             }}
           >
             <div
@@ -2617,7 +2618,8 @@ export const AbstractChatBox = (
                     : "10px 16px",
                   border: "none",
                   borderRadius: 22,
-                  background: isDark ? "#1f2937" : "#e2e8f0",
+                  background: customColors?.inputBackground ??
+                    (isDark ? "#1f2937" : "#e2e8f0"),
                   color: isDark ? "#f3f4f6" : "#1e293b",
                   fontSize: 16,
                   outline: "none",
