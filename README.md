@@ -2,6 +2,10 @@
 
 Chat reimagined for the age of bots.
 
+## Motivation
+
+Read our [manifesto](https://aliceandbot.com/manifesto).
+
 ## Installation
 
 ### Using Deno (via JSR)
