@@ -127,7 +127,18 @@ const _schema = i.schema({
       reverse: { on: "conversations", label: "uiElements", has: "many" },
     },
   },
-  rooms: {},
+  rooms: {
+    conversations: {
+      presence: i.entity({}),
+      topics: {
+        ice_candidate: i.entity({
+          peerId: i.string(),
+          callId: i.string(),
+          candidate: i.any(),
+        }),
+      },
+    },
+  },
 });
 
 type _AppSchema = typeof _schema;

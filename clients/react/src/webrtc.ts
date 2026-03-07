@@ -16,34 +16,6 @@ export type CallState =
   | "active"
   | "ended";
 
-type CandidateEvent = {
-  data: {
-    peerId: string;
-    callId: string;
-    candidate: RTCIceCandidateInit;
-  };
-};
-
-type DatabaseWithRoom = Omit<InstantReactWebDatabase<typeof schema>, "room"> & {
-  room: (
-    type: string,
-    id: string,
-  ) => {
-    subscribeTopic: (
-      topic: "ice_candidate",
-      cb: (event: CandidateEvent) => void,
-    ) => () => void;
-    publishTopic: (
-      topic: "ice_candidate",
-      data: {
-        peerId: string;
-        callId: string;
-        candidate: RTCIceCandidateInit;
-      },
-    ) => void;
-  };
-};
-
 export const useVoiceCall = ({
   db,
   conversationId,
@@ -51,7 +23,7 @@ export const useVoiceCall = ({
   conversationKey,
   messages,
 }: {
-  db: DatabaseWithRoom;
+  db: InstantReactWebDatabase<typeof schema>;
   conversationId: string;
   credentials: Credentials;
   conversationKey: string | null;
@@ -95,25 +67,18 @@ export const useVoiceCall = ({
   }, [messages, callState, credentials.publicSignKey]);
 
   // Handle ICE candidates via InstantDB room
-  useEffect(() => {
-    if (!conversationId) return;
-    const room = db.room("conversations", conversationId);
+  const room = db.room("conversations", conversationId);
+  const publishIceCandidate = room.usePublishTopic("ice_candidate");
 
-    const unsub = room.subscribeTopic(
-      "ice_candidate",
-      (event: CandidateEvent) => {
-        if (event.data.peerId === credentials.publicSignKey) return; // skip own
-        if (event.data.callId !== activeCallIdRef.current) return; // skip old
-        if (pcRef.current && event.data.candidate) {
-          pcRef.current.addIceCandidate(event.data.candidate).catch(
-            console.error,
-          );
-        }
-      },
-    );
-
-    return unsub;
-  }, [db, conversationId, credentials.publicSignKey]);
+  room.useTopicEffect("ice_candidate", (event) => {
+    if (event.peerId === credentials.publicSignKey) return; // skip own
+    if (event.callId !== activeCallIdRef.current) return; // skip old
+    if (pcRef.current && event.candidate) {
+      pcRef.current.addIceCandidate(event.candidate).catch(
+        console.error,
+      );
+    }
+  });
 
   const cleanupCall = () => {
     if (localStreamRef.current) {
@@ -137,7 +102,7 @@ export const useVoiceCall = ({
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        db.room("conversations", conversationId).publishTopic("ice_candidate", {
+        publishIceCandidate({
           peerId: credentials.publicSignKey,
           callId,
           candidate: event.candidate,
