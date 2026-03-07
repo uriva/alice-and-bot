@@ -336,12 +336,13 @@ const chatWrapperStyle: JSX.CSSProperties = {
 };
 
 const WithCredentials = (
-  { dialTo, credentials, initialMessage, colors, isDark }: {
+  { dialTo, credentials, initialMessage, colors, isDark, enableVoiceCall }: {
     dialTo: string[];
     credentials: Credentials;
     initialMessage?: string;
     colors: WidgetModeColors;
     isDark: boolean;
+    enableVoiceCall?: boolean;
   },
 ) => {
   const conversation = useGetOrCreateConversation({
@@ -359,6 +360,7 @@ const WithCredentials = (
           credentials={coerce(credentials)}
           conversationId={conversation}
           darkModeOverride={isDark}
+          enableVoiceCall={enableVoiceCall}
           customColors={{
             background: colors.background,
             text: colors.text,
@@ -453,6 +455,7 @@ export type WidgetParams = {
   buttonText?: string;
   defaultName?: string;
   colorScheme?: WidgetColorScheme;
+  enableVoiceCall?: boolean;
 };
 
 type WidgetProps = {
@@ -469,6 +472,7 @@ const InnerWidget = ({
   startOpen,
   initialMessage,
   buttonText,
+  enableVoiceCall,
   appearance,
 }: InnerWidgetProps) => {
   const isMobile = useIsMobile();
@@ -532,6 +536,7 @@ const InnerWidget = ({
               credentials={credentials}
               colors={colors}
               isDark={isDark}
+              enableVoiceCall={enableVoiceCall}
             />
           )
           : <Loading colors={colors} />

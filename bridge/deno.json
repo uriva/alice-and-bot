@@ -1,0 +1,12 @@
+{
+  "name": "@alice-and-bot/bridge",
+  "version": "0.1.0",
+  "exports": "./main.ts",
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env --watch main.ts"
+  },
+  "imports": {
+    "werift": "npm:werift@0.22.9",
+    "@evan/opus": "npm:@evan/opus@1.0.3"
+  }
+}
