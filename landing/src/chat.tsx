@@ -14,7 +14,7 @@ import {
 } from "../..//clients/react/src/hooks.ts";
 import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import { ChatAvatar } from "../../clients/react/src/abstractChatBox.tsx";
-import { stringToColor } from "../../clients/react/src/design.tsx";
+import { Spinner, stringToColor } from "../../clients/react/src/design.tsx";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import { normalizeAlias } from "../../protocol/src/alias.ts";
@@ -632,13 +632,31 @@ const OpenChats = (
 ) => {
   const conversations = useConversations(() => db)(
     credentials?.publicSignKey ?? "",
-  ) ?? [];
+  );
+
+  const isLoading = conversations === null;
 
   const filtered = searchQuery?.trim()
-    ? conversations.filter((conv) =>
+    ? (conversations ?? []).filter((conv) =>
       conv.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
-    : conversations;
+    : (conversations ?? []);
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flexGrow: 1,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flexGrow: 1 }}>

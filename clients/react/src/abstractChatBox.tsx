@@ -1782,11 +1782,15 @@ const ProgressIndicator = (
   </div>
 );
 
-const CloseButton = ({ onClose }: { onClose: () => void }) => {
+const CloseButton = (
+  { onClose, customColors }: {
+    onClose: () => void;
+    customColors?: CustomColors;
+  },
+) => {
   const isDark = useDarkMode();
-  const baseBg = isDark ? "#23272f" : "#f3f4f6";
-  const hoverBg = isDark ? "#374151" : "#e5e7eb";
-  const color = isDark ? "#eee" : "#222";
+  const bg = customColors?.background ?? (isDark ? "#23272f" : "#f3f4f6");
+  const color = customColors?.text ?? (isDark ? "#eee" : "#222");
   return (
     <button
       type="button"
@@ -1796,7 +1800,7 @@ const CloseButton = ({ onClose }: { onClose: () => void }) => {
         position: "absolute",
         top: 8,
         right: 8,
-        background: baseBg,
+        background: "transparent",
         border: "none",
         borderRadius: "50%",
         width: 28,
@@ -1804,7 +1808,6 @@ const CloseButton = ({ onClose }: { onClose: () => void }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
         cursor: "pointer",
         fontSize: 22,
         color,
@@ -1813,8 +1816,8 @@ const CloseButton = ({ onClose }: { onClose: () => void }) => {
         fontWeight: 700,
         lineHeight: 1,
       }}
-      onMouseOver={(e) => (e.currentTarget.style.background = hoverBg)}
-      onMouseOut={(e) => (e.currentTarget.style.background = baseBg)}
+      onMouseOver={(e) => (e.currentTarget.style.background = bg)}
+      onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
     >
       <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1, color }}>
         &times;
@@ -2329,7 +2332,7 @@ export const AbstractChatBox = (
           </div>
         </div>
       )}
-      {onClose && <CloseButton onClose={onClose} />}
+      {onClose && <CloseButton onClose={onClose} customColors={customColors} />}
 
       {voiceCallState !== "idle" && (
         <div
