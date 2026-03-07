@@ -366,6 +366,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   }).data?.conversations[0]?.title || "Chat";
 
   const voiceCall = useVoiceCall({
+    // @ts-expect-error: InstantDB schema type is missing rooms definition
     db: database,
     conversationId,
     credentials,

@@ -5,6 +5,9 @@ import {
   sendMessageWithKey,
 } from "../../../protocol/src/clientApi.ts";
 
+import type { InstantReactWebDatabase } from "@instantdb/react";
+import type schema from "../../../instant.schema.ts";
+
 export type CallState =
   | "idle"
   | "calling"
@@ -13,6 +16,34 @@ export type CallState =
   | "active"
   | "ended";
 
+type CandidateEvent = {
+  data: {
+    peerId: string;
+    callId: string;
+    candidate: RTCIceCandidateInit;
+  };
+};
+
+type DatabaseWithRoom = Omit<InstantReactWebDatabase<typeof schema>, "room"> & {
+  room: (
+    type: string,
+    id: string,
+  ) => {
+    subscribeTopic: (
+      topic: "ice_candidate",
+      cb: (event: CandidateEvent) => void,
+    ) => () => void;
+    publishTopic: (
+      topic: "ice_candidate",
+      data: {
+        peerId: string;
+        callId: string;
+        candidate: RTCIceCandidateInit;
+      },
+    ) => void;
+  };
+};
+
 export const useVoiceCall = ({
   db,
   conversationId,
@@ -20,8 +51,7 @@ export const useVoiceCall = ({
   conversationKey,
   messages,
 }: {
-  // deno-lint-ignore no-explicit-any
-  db: any;
+  db: DatabaseWithRoom;
   conversationId: string;
   credentials: Credentials;
   conversationKey: string | null;
@@ -69,16 +99,18 @@ export const useVoiceCall = ({
     if (!conversationId) return;
     const room = db.room("conversations", conversationId);
 
-    // deno-lint-ignore no-explicit-any
-    const unsub = room.subscribeTopic("ice_candidate", (event: any) => {
-      if (event.data.peerId === credentials.publicSignKey) return; // skip own
-      if (event.data.callId !== activeCallIdRef.current) return; // skip old
-      if (pcRef.current && event.data.candidate) {
-        pcRef.current.addIceCandidate(event.data.candidate).catch(
-          console.error,
-        );
-      }
-    });
+    const unsub = room.subscribeTopic(
+      "ice_candidate",
+      (event: CandidateEvent) => {
+        if (event.data.peerId === credentials.publicSignKey) return; // skip own
+        if (event.data.callId !== activeCallIdRef.current) return; // skip old
+        if (pcRef.current && event.data.candidate) {
+          pcRef.current.addIceCandidate(event.data.candidate).catch(
+            console.error,
+          );
+        }
+      },
+    );
 
     return unsub;
   }, [db, conversationId, credentials.publicSignKey]);
@@ -166,9 +198,10 @@ export const useVoiceCall = ({
       // Find the offer
       const offerMsg = messages.find((m) =>
         m.type === "call" && m.callId === callId && m.action === "offer"
-        // deno-lint-ignore no-explicit-any
-      ) as any;
-      if (offerMsg?.sdp) {
+      );
+      if (
+        offerMsg?.type === "call" && offerMsg.action === "offer" && offerMsg.sdp
+      ) {
         await pc.setRemoteDescription({ type: "offer", sdp: offerMsg.sdp });
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
