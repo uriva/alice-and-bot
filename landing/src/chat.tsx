@@ -1031,6 +1031,10 @@ const LoggedInMessenger = (
                     <Chat
                       credentials={credentials}
                       conversationId={selectedConversation.value}
+                      enableVoiceCall={typeof globalThis !== "undefined" &&
+                        new URLSearchParams(globalThis.location?.search).has(
+                          "call",
+                        )}
                     />
                   )
                   : <EmptyChatsView onNewChat={() => setView("new_chat")} />}
@@ -1104,6 +1108,8 @@ const LoggedInMessenger = (
           <Chat
             credentials={credentials}
             conversationId={selectedConversation.value}
+            enableVoiceCall={typeof globalThis !== "undefined" &&
+              new URLSearchParams(globalThis.location?.search).has("call")}
             onClose={() => {
               selectedConversation.value = null;
             }}

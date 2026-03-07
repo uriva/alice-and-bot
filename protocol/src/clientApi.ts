@@ -107,11 +107,22 @@ type ProgressMessage = {
   elementId: string;
 };
 
+export type CallAction = "offer" | "answer" | "reject" | "end";
+
+export type CallMessage = {
+  type: "call";
+  callId: string;
+  action: CallAction;
+  sdp?: string;
+  duration?: number;
+};
+
 type InternalMessage =
   | TextMessage
   | EditMessage
   | SpinnerMessage
-  | ProgressMessage;
+  | ProgressMessage
+  | CallMessage;
 
 export type Profile = {
   publicSignKey: string;
@@ -272,11 +283,20 @@ type DecipheredProgressMessage = DecipheredMessageBase & {
   elementId: string;
 };
 
+type DecipheredCallMessage = DecipheredMessageBase & {
+  type: "call";
+  callId: string;
+  action: CallAction;
+  sdp?: string;
+  duration?: number;
+};
+
 export type DecipheredMessage =
   | DecipheredTextMessage
   | DecipheredEditMessage
   | DecipheredSpinnerMessage
-  | DecipheredProgressMessage;
+  | DecipheredProgressMessage
+  | DecipheredCallMessage;
 
 type DistributeOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
   : never;
@@ -286,7 +306,21 @@ const decryptedPayloadToMessage = (
   timestamp: number,
   decryptedPayload: InternalMessage,
 ): DistributeOmit<DecipheredMessage, "id"> => {
-  const base = { publicSignKey, timestamp, text: decryptedPayload.text };
+  const base = {
+    publicSignKey,
+    timestamp,
+    text: "text" in decryptedPayload ? decryptedPayload.text : "",
+  };
+  if (decryptedPayload.type === "call") {
+    return {
+      ...base,
+      type: "call",
+      callId: decryptedPayload.callId,
+      action: decryptedPayload.action,
+      sdp: decryptedPayload.sdp,
+      duration: decryptedPayload.duration,
+    };
+  }
   if (decryptedPayload.type === "spinner") {
     return {
       ...base,

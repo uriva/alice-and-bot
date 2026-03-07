@@ -1509,6 +1509,7 @@ export type AbstracChatMessage = {
   timestamp: number;
   attachments?: Attachment[];
   editHistory?: EditHistoryEntry[];
+  callDetails?: { action: string; duration?: number };
 };
 
 export type ActiveSpinner = {
@@ -1963,6 +1964,13 @@ export const AbstractChatBox = (
     onDecryptAttachment,
     enableAttachments = false,
     enableAudioRecording = false,
+    enableVoiceCall = false,
+    voiceCallState = "idle",
+    remoteStream = null,
+    onStartCall,
+    onAcceptCall,
+    onRejectCall,
+    onEndCall,
     onEdit,
     onSendLocation,
     activeSpinners = [],
@@ -1989,6 +1997,13 @@ export const AbstractChatBox = (
     onDecryptAttachment?: (url: string) => Promise<string>;
     enableAttachments?: boolean;
     enableAudioRecording?: boolean;
+    enableVoiceCall?: boolean;
+    voiceCallState?: string;
+    remoteStream?: MediaStream | null;
+    onStartCall?: () => void;
+    onAcceptCall?: () => void;
+    onRejectCall?: () => void;
+    onEndCall?: () => void;
     onEdit?: (messageId: string, newText: string) => void;
     onSendLocation?: (
       latitude: number,
@@ -2031,6 +2046,13 @@ export const AbstractChatBox = (
   const [optimisticMessages, setOptimisticMessages] = useState<
     AbstracChatMessage[]
   >([]);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
 
   const stopRecording = (save: boolean) => {
     if (recordingIntervalRef.current) {
@@ -2278,10 +2300,97 @@ export const AbstractChatBox = (
       <KebabHoverStyle />
       {!customColors?.hideTitle && (
         <div style={titleStyle(isDark, customColors)}>
-          <div style={contentMaxWidthStyle(customColors)}>{title}</div>
+          <div
+            style={{
+              ...contentMaxWidthStyle(customColors),
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "0 16px",
+            }}
+          >
+            <div style={{ flex: 1, textAlign: "center" }}>{title}</div>
+            {enableVoiceCall && voiceCallState === "idle" && (
+              <button
+                type="button"
+                onClick={onStartCall}
+                title="Start voice call"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#fff",
+                  padding: 4,
+                }}
+              >
+                📞
+              </button>
+            )}
+          </div>
         </div>
       )}
       {onClose && <CloseButton onClose={onClose} />}
+
+      {voiceCallState !== "idle" && (
+        <div
+          style={{
+            background: isDark ? "#374151" : "#e2e8f0",
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: `1px solid ${isDark ? "#1f2937" : "#cbd5e1"}`,
+          }}
+        >
+          <div style={{ color: isDark ? "#fff" : "#000", fontWeight: "bold" }}>
+            {voiceCallState === "calling" && "Calling..."}
+            {voiceCallState === "ringing" && "Incoming call..."}
+            {voiceCallState === "connecting" && "Connecting..."}
+            {voiceCallState === "active" && "Voice Call Active"}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {voiceCallState === "ringing" && onAcceptCall && (
+              <button
+                type="button"
+                onClick={onAcceptCall}
+                style={{
+                  background: "#22c55e",
+                  color: "#fff",
+                  border: "none",
+                  padding: "6px 12px",
+                  borderRadius: 16,
+                  cursor: "pointer",
+                }}
+              >
+                Accept
+              </button>
+            )}
+            {(voiceCallState === "ringing" || voiceCallState === "active" ||
+              voiceCallState === "calling" ||
+              voiceCallState === "connecting") && onEndCall && onRejectCall && (
+              <button
+                type="button"
+                onClick={voiceCallState === "ringing"
+                  ? onRejectCall
+                  : onEndCall}
+                style={{
+                  background: "#ef4444",
+                  color: "#fff",
+                  border: "none",
+                  padding: "6px 12px",
+                  borderRadius: 16,
+                  cursor: "pointer",
+                }}
+              >
+                {voiceCallState === "ringing" ? "Reject" : "End Call"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
+
       <div
         ref={messagesContainerRef}
         style={messageContainerStyle(isDark)}

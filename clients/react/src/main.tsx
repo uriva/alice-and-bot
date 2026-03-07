@@ -26,6 +26,7 @@ import {
   useIdentityDetailsMap,
   useTypingPresence,
 } from "./hooks.ts";
+import { useVoiceCall } from "./webrtc.ts";
 
 export type ChatProps = {
   credentials: Credentials;
@@ -36,6 +37,7 @@ export type ChatProps = {
   customColors?: CustomColors;
   enableAttachments?: boolean;
   enableAudioRecording?: boolean;
+  enableVoiceCall?: boolean;
 };
 
 const hasAttachments = (
@@ -43,25 +45,48 @@ const hasAttachments = (
 ): msg is DecipheredMessage & { attachments?: Attachment[] } =>
   msg.type === "text" || msg.type === "edit";
 
+const getCallText = (
+  msg: DecipheredMessage & { type: "call" },
+  isOwn: boolean,
+) => {
+  switch (msg.action) {
+    case "offer":
+      return isOwn ? "📞 Calling..." : "📞 Incoming call";
+    case "answer":
+      return "📞 Call answered";
+    case "reject":
+      return "📞 Call rejected";
+    case "end":
+      return "📞 Call ended";
+    default:
+      return "📞 Voice call";
+  }
+};
+
 const msgToUIMessage =
-  (details: Record<string, { name: string; avatar?: string }>) =>
+  (details: Record<string, { name: string; avatar?: string }>, ownId: string) =>
   (msg: DecipheredMessage): AbstracChatMessage => ({
     id: msg.id,
     authorId: msg.publicSignKey,
     authorName: details[msg.publicSignKey]?.name ??
       compactPublicKey(msg.publicSignKey),
     authorAvatar: details[msg.publicSignKey]?.avatar,
-    text: msg.text,
+    text: msg.type === "call"
+      ? getCallText(msg, msg.publicSignKey === ownId)
+      : msg.text,
     timestamp: msg.timestamp,
     attachments: hasAttachments(msg) ? msg.attachments : undefined,
+    callDetails: msg.type === "call"
+      ? { action: msg.action, duration: msg.duration }
+      : undefined,
   });
 
 type TextOrEditMessage = DecipheredMessage & {
   type: "text" | "edit";
 };
 
-const isTextOrEdit = (m: DecipheredMessage): m is TextOrEditMessage =>
-  m.type === "text" || m.type === "edit";
+const isTextOrEditOrCall = (m: DecipheredMessage): boolean =>
+  m.type === "text" || m.type === "edit" || m.type === "call";
 
 const editsForMessage = (edits: TextOrEditMessage[]) => (msgId: string) =>
   sortKey((e: TextOrEditMessage) => e.timestamp)(
@@ -85,34 +110,39 @@ const buildEditHistory =
 
 const applyLatestEdit =
   (edits: TextOrEditMessage[]) =>
-  (original: TextOrEditMessage): TextOrEditMessage => {
+  (original: DecipheredMessage): DecipheredMessage => {
+    if (original.type !== "text") return original;
     const msgEdits = editsForMessage(edits)(original.id);
     if (!msgEdits.length) return original;
     const latest = msgEdits[msgEdits.length - 1];
     return { ...original, text: latest.text, attachments: latest.attachments };
   };
 
-const foldEdits = (messages: TextOrEditMessage[]) => {
-  const edits = messages.filter((m) => m.type === "edit");
-  const originals = messages.filter((m) => m.type === "text");
-  return originals.map((original) => ({
+const foldEdits = (messages: DecipheredMessage[]) => {
+  const edits = messages.filter((m): m is TextOrEditMessage =>
+    m.type === "edit"
+  );
+  const originalsAndCalls = messages.filter((m) =>
+    m.type === "text" || m.type === "call"
+  );
+  return originalsAndCalls.map((original) => ({
     msg: applyLatestEdit(edits)(original),
-    editHistory:
-      edits.some((e) => e.type === "edit" && e.editOf === original.id)
-        ? buildEditHistory(edits)(original)
-        : undefined,
+    editHistory: original.type === "text" &&
+        edits.some((e) => e.type === "edit" && e.editOf === original.id)
+      ? buildEditHistory(edits)(original as TextOrEditMessage)
+      : undefined,
   }));
 };
 
 const msgToUIMessageWithHistory =
-  (details: Record<string, { name: string; avatar?: string }>) =>
+  (details: Record<string, { name: string; avatar?: string }>, ownId: string) =>
   (
     { msg, editHistory }: {
       msg: DecipheredMessage;
       editHistory?: EditHistoryEntry[];
     },
   ): AbstracChatMessage => ({
-    ...msgToUIMessage(details)(msg),
+    ...msgToUIMessage(details, ownId)(msg),
     editHistory,
   });
 
@@ -189,6 +219,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
   messages: DecipheredMessage[],
   detailsCache: Record<string, { name: string; avatar?: string }>,
   conversationId: string,
+  ownId: string,
 ) => {
   const progressMaxRef = useRef(new Map<string, number>());
   const { data: identitiesData } = db.useQuery({
@@ -234,7 +265,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       ]),
     ),
   };
-  const textAndEdits = messages.filter(isTextOrEdit);
+  const uiMessages = messages.filter(isTextOrEditOrCall);
   const messageElementIds = new Set(
     messages
       .filter((m): m is DecipheredMessage & { elementId: string } =>
@@ -281,8 +312,8 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       active: el.active !== false,
     }));
   return {
-    chatMessages: foldEdits(textAndEdits).map(
-      msgToUIMessageWithHistory(details),
+    chatMessages: foldEdits(uiMessages).map(
+      msgToUIMessageWithHistory(details, ownId),
     ),
     activeSpinners: [
       ...latestSpinners(messages, details, uiOverrides),
@@ -306,19 +337,21 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
     customColors,
     enableAttachments = true,
     enableAudioRecording = true,
+    enableVoiceCall = false,
   }: ChatProps,
 ): JSX.Element => {
-  const convoKey = useConversationKey(db())(conversationId, credentials);
+  const database = db();
+  const convoKey = useConversationKey(database)(conversationId, credentials);
   const [limit, setLimit] = useState(100);
   const decrypted = useDecryptedMessages(
-    db(),
+    database,
     limit,
     convoKey,
     conversationId,
   );
   const lastMsgAuthor = decrypted?.[0]?.publicSignKey ?? null;
   const typing = useTypingPresence(
-    db(),
+    database,
     conversationId,
     credentials.publicSignKey,
     lastMsgAuthor,
@@ -326,11 +359,19 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   const identityDetails = useIdentityDetailsMap(db)(
     (decrypted ?? []).map(({ publicSignKey }) => publicSignKey),
   );
-  const conversationTitle = db().useQuery({
+  const conversationTitle = database.useQuery({
     conversations: {
       $: { where: { id: conversationId } },
     },
   }).data?.conversations[0]?.title || "Chat";
+
+  const voiceCall = useVoiceCall({
+    db: database,
+    conversationId,
+    credentials,
+    conversationKey: convoKey,
+    messages: decrypted ?? [],
+  });
 
   const handleSendWithAttachments = async (
     text: string,
@@ -383,8 +424,13 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   };
 
   const { chatMessages, activeSpinners, activeProgress } = processMessages(
-    db(),
-  )(decrypted ?? [], identityDetails, conversationId);
+    database,
+  )(
+    decrypted ?? [],
+    identityDetails,
+    conversationId,
+    credentials.publicSignKey,
+  );
 
   return (
     <AbstractChatBox
@@ -402,6 +448,13 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       customColors={customColors}
       enableAttachments={enableAttachments}
       enableAudioRecording={enableAudioRecording}
+      enableVoiceCall={enableVoiceCall}
+      voiceCallState={voiceCall.callState}
+      remoteStream={voiceCall.remoteStream}
+      onStartCall={voiceCall.startCall}
+      onAcceptCall={voiceCall.acceptCall}
+      onRejectCall={voiceCall.rejectCall}
+      onEndCall={voiceCall.endCall}
       onSendWithAttachments={handleSendWithAttachments}
       onDecryptAttachment={handleDecryptAttachment}
       onEdit={handleEdit}
