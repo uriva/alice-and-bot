@@ -1299,6 +1299,7 @@ const MessengerLogin = ({ setCredentials }: {
 export const Messenger = () => {
   const location = useLocation();
   const [credentials, setCredentials] = useState<Credentials | null>(null);
+  const [credentialsChecked, setCredentialsChecked] = useState(false);
   const [initializedFromQuery, setInitializedFromQuery] = useState(false);
 
   const conversations = useConversations(() => db)(
@@ -1331,6 +1332,7 @@ export const Messenger = () => {
     } catch (e) {
       console.error("Failed to parse stored credentials", e);
     }
+    setCredentialsChecked(true);
   }, []);
   const chatWith = location.query["chatWith"];
   const route = useLocation().route;
@@ -1437,8 +1439,22 @@ export const Messenger = () => {
       class={`flex flex-col w-full overflow-hidden ${textColorStyle}`}
       style={{ height: "var(--app-height, 100dvh)" }}
     >
-      {!credentials && <MessengerLogin setCredentials={setCredentials} />}
-      {credentials && (
+      {!credentialsChecked && (
+        <div
+          style={{
+            display: "flex",
+            flexGrow: 1,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Spinner />
+        </div>
+      )}
+      {credentialsChecked && !credentials && (
+        <MessengerLogin setCredentials={setCredentials} />
+      )}
+      {credentialsChecked && credentials && (
         <LoggedInMessenger
           setView={setView}
           credentials={credentials}
