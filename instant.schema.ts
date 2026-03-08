@@ -130,13 +130,6 @@ const _schema = i.schema({
   rooms: {
     conversations: {
       presence: i.entity({}),
-      topics: {
-        ice_candidate: i.entity({
-          peerId: i.string(),
-          callId: i.string(),
-          candidate: i.any(),
-        }),
-      },
     },
   },
 });

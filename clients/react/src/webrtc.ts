@@ -17,7 +17,6 @@ export type CallState =
   | "ended";
 
 export const useVoiceCall = ({
-  db,
   conversationId,
   credentials,
   conversationKey,
@@ -177,21 +176,6 @@ export const useVoiceCall = ({
     }
   }, [messages, callState, credentials.publicSignKey]);
 
-  // Handle ICE candidates via InstantDB room
-  const room = db.room("conversations", conversationId);
-  const publishIceCandidate = room.usePublishTopic("ice_candidate");
-
-  room.useTopicEffect("ice_candidate", (event) => {
-    console.log("Received ICE candidate from InstantDB", event);
-    if (event.peerId === credentials.publicSignKey) return; // skip own
-    if (event.callId !== activeCallIdRef.current) return; // skip old
-    if (pcRef.current && event.candidate) {
-      pcRef.current.addIceCandidate(event.candidate).catch(
-        console.error,
-      );
-    }
-  });
-
   const startDurationTimer = () => {
     if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
     setCallDuration(0);
@@ -218,7 +202,7 @@ export const useVoiceCall = ({
     stopTone();
   };
 
-  const createPeerConnection = (callId: string) => {
+  const createPeerConnection = (_callId: string) => {
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
@@ -227,12 +211,7 @@ export const useVoiceCall = ({
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log("Publishing ICE candidate to InstantDB:", event.candidate);
-        publishIceCandidate({
-          peerId: credentials.publicSignKey,
-          callId,
-          candidate: event.candidate,
-        });
+        console.log("Gathered local ICE candidate:", event.candidate);
       }
     };
 
@@ -265,11 +244,34 @@ export const useVoiceCall = ({
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
+      await new Promise<void>((resolve) => {
+        if (pc.iceGatheringState === "complete") {
+          resolve();
+        } else {
+          const checkState = () => {
+            if (pc.iceGatheringState === "complete") {
+              pc.removeEventListener("icegatheringstatechange", checkState);
+              resolve();
+            }
+          };
+          pc.addEventListener("icegatheringstatechange", checkState);
+          setTimeout(() => {
+            pc.removeEventListener("icegatheringstatechange", checkState);
+            resolve();
+          }, 2000);
+        }
+      });
+
       await sendMessageWithKey({
         conversationKey,
         credentials,
         conversation: conversationId,
-        message: { type: "call", callId, action: "offer", sdp: offer.sdp },
+        message: {
+          type: "call",
+          callId,
+          action: "offer",
+          sdp: pc.localDescription!.sdp,
+        },
       });
     } catch (e) {
       console.error(e);
@@ -305,11 +307,34 @@ export const useVoiceCall = ({
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
+        await new Promise<void>((resolve) => {
+          if (pc.iceGatheringState === "complete") {
+            resolve();
+          } else {
+            const checkState = () => {
+              if (pc.iceGatheringState === "complete") {
+                pc.removeEventListener("icegatheringstatechange", checkState);
+                resolve();
+              }
+            };
+            pc.addEventListener("icegatheringstatechange", checkState);
+            setTimeout(() => {
+              pc.removeEventListener("icegatheringstatechange", checkState);
+              resolve();
+            }, 2000);
+          }
+        });
+
         await sendMessageWithKey({
           conversationKey,
           credentials,
           conversation: conversationId,
-          message: { type: "call", callId, action: "answer", sdp: answer.sdp },
+          message: {
+            type: "call",
+            callId,
+            action: "answer",
+            sdp: pc.localDescription!.sdp,
+          },
         });
         setCallState("connecting");
         startDurationTimer();
@@ -324,31 +349,33 @@ export const useVoiceCall = ({
   const rejectCall = async () => {
     if (!conversationKey || !activeCallIdRef.current) return;
     playHangupSound();
+    const callId = activeCallIdRef.current;
+    cleanupCall();
+    setCallState("idle");
     await sendMessageWithKey({
       conversationKey,
       credentials,
       conversation: conversationId,
       message: {
         type: "call",
-        callId: activeCallIdRef.current,
+        callId,
         action: "reject",
       },
     });
-    cleanupCall();
-    setCallState("idle");
   };
 
   const endCall = async () => {
     if (!conversationKey || !activeCallIdRef.current) return;
     playHangupSound();
+    const callId = activeCallIdRef.current;
+    cleanupCall();
+    setCallState("idle");
     await sendMessageWithKey({
       conversationKey,
       credentials,
       conversation: conversationId,
-      message: { type: "call", callId: activeCallIdRef.current, action: "end" },
+      message: { type: "call", callId, action: "end" },
     });
-    cleanupCall();
-    setCallState("idle");
   };
 
   return {
