@@ -62,10 +62,14 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
     const msg = JSON.parse(event.data);
 
     if (msg.type === "offer") {
+      console.log("Received offer");
       pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
 
+      pc.connectionStateChange.subscribe((state) => {
+        console.log("ICE connection state:", state);
+      });
       pc.onIceCandidate.subscribe((candidate) => {
         if (candidate) {
           socket.send(JSON.stringify({ type: "candidate", candidate }));
@@ -122,6 +126,7 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
 
       socket.send(JSON.stringify({ type: "answer", sdp: answer }));
     } else if (msg.type === "candidate") {
+      console.log("Received remote ICE candidate", msg.candidate);
       if (pc) {
         await pc.addIceCandidate(msg.candidate);
       }
