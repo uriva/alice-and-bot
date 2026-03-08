@@ -2059,6 +2059,7 @@ export const AbstractChatBox = (
   useEffect(() => {
     if (remoteAudioRef.current && remoteStream) {
       remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play().catch(console.error);
     }
   }, [remoteStream]);
 

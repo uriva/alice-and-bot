@@ -73,9 +73,7 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
       });
 
       outTrack = new MediaStreamTrack({ kind: "audio" });
-      pc.addTrack(outTrack);
-
-      const audioTransceiver = pc.addTransceiver("audio", {
+      const audioTransceiver = pc.addTransceiver(outTrack, {
         direction: "sendrecv",
       });
 

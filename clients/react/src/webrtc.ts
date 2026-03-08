@@ -144,7 +144,7 @@ export const useVoiceCall = ({
       setCallState("calling");
     } else if (latest.action === "reject" || latest.action === "end") {
       if (callState !== "idle") {
-        playHangupSound();
+        if (!isMine) playHangupSound();
         cleanupCall();
         setCallState("idle");
       }
