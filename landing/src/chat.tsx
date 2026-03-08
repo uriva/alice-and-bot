@@ -2,7 +2,7 @@ import { init as adminInit } from "@instantdb/admin";
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useState } from "preact/hooks";
 import { toast } from "react-hot-toast";
 import {
   type Conversation,
@@ -1302,11 +1302,11 @@ export const Messenger = () => {
     credentials?.publicSignKey ?? "",
   );
   const [view, setView] = useState<View>("chats");
-  useEffect(() => {
+  useLayoutEffect(() => {
     const cleanup = initViewportHeightListener();
     return cleanup;
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof document === "undefined") return;
     const { body, documentElement } = document;
     const prevBodyOverflow = body.style.overflow;
