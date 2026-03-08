@@ -84,14 +84,21 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
             // Browser sends us Opus RTP. Decode to 48kHz PCM.
             const pcm = decoder.decode(rtp.payload);
 
+            // Resample 48kHz to 16kHz to send less data to prompt2bot and Gemini
+            const outLength = Math.floor(pcm.length / 3);
+            const resampled = new Int16Array(outLength);
+            for (let i = 0; i < outLength; i++) {
+              resampled[i] = pcm[i * 3];
+            }
+
             // Base64 encode the raw Int16Array buffer
             const base64 = btoa(
-              String.fromCharCode(...new Uint8Array(pcm.buffer)),
+              String.fromCharCode(...new Uint8Array(resampled.buffer)),
             );
             socket.send(JSON.stringify({
               type: "audio",
               chunks: [{
-                mimeType: "audio/pcm;rate=48000",
+                mimeType: "audio/pcm;rate=16000",
                 dataBase64: base64,
               }],
             }));
