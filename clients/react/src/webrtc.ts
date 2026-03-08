@@ -130,6 +130,12 @@ export const useVoiceCall = ({
     // Ignore my own messages for answering logic, unless it's a reject/end
     const isMine = latest.publicSignKey === credentials.publicSignKey;
 
+    // Only process state changes if the message belongs to our active call,
+    // OR if we are idle and it's a new incoming offer
+    if (callState !== "idle" && latest.callId !== activeCallIdRef.current) {
+      return;
+    }
+
     if (latest.action === "offer" && callState === "idle" && !isMine) {
       activeCallIdRef.current = latest.callId;
       setCallState("ringing");
