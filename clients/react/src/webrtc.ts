@@ -37,9 +37,10 @@ export const useVoiceCall = ({
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
   const intervalRef = useRef<number | null>(null);
 
-  const playDialTone = () => {
+  const playRingbackTone = () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
     }
@@ -50,29 +51,61 @@ export const useVoiceCall = ({
     const gainNode = ctx.createGain();
 
     osc.type = "sine";
-    osc.frequency.setValueAtTime(425, ctx.currentTime);
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
 
     const pulseTone = () => {
       const t = ctx.currentTime;
       gainNode.gain.setValueAtTime(0, t);
       gainNode.gain.linearRampToValueAtTime(0.1, t + 0.1);
-      gainNode.gain.setValueAtTime(0.1, t + 2.0);
-      gainNode.gain.linearRampToValueAtTime(0, t + 2.1);
+      gainNode.gain.setValueAtTime(0.1, t + 1.5);
+      gainNode.gain.linearRampToValueAtTime(0, t + 1.6);
     };
 
     pulseTone();
+    // US ringback is typically 2s on, 4s off. We'll do 1.5s on, 2.5s off.
     intervalRef.current = setInterval(pulseTone, 4000);
 
     osc.connect(gainNode);
     gainNode.connect(ctx.destination);
     osc.start();
+
     oscillatorRef.current = osc;
+    gainNodeRef.current = gainNode;
   };
 
-  const stopDialTone = () => {
+  const playHangupSound = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    const ctx = audioContextRef.current;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(400, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
+
+    gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  };
+
+  const stopTone = () => {
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.setValueAtTime(
+        0,
+        audioContextRef.current?.currentTime || 0,
+      );
     }
     if (oscillatorRef.current) {
       try {
@@ -105,6 +138,7 @@ export const useVoiceCall = ({
       setCallState("calling");
     } else if (latest.action === "reject" || latest.action === "end") {
       if (callState !== "idle") {
+        playHangupSound();
         cleanupCall();
         setCallState("idle");
       }
@@ -113,7 +147,7 @@ export const useVoiceCall = ({
     ) {
       // remote answered our offer
       setCallState("connecting");
-      stopDialTone();
+      stopTone();
       if (pcRef.current && latest.sdp) {
         const sdpString = typeof latest.sdp === "string"
           ? latest.sdp
@@ -155,7 +189,7 @@ export const useVoiceCall = ({
     }
     setRemoteStream(null);
     activeCallIdRef.current = null;
-    stopDialTone();
+    stopTone();
   };
 
   const createPeerConnection = (callId: string) => {
@@ -178,7 +212,7 @@ export const useVoiceCall = ({
     pc.ontrack = (event) => {
       setRemoteStream(event.streams[0]);
       setCallState("active");
-      stopDialTone();
+      stopTone();
     };
 
     return pc;
@@ -190,11 +224,11 @@ export const useVoiceCall = ({
     activeCallIdRef.current = callId;
     setCallState("calling");
 
-    playDialTone();
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
+
+      playRingbackTone();
 
       const pc = createPeerConnection(callId);
       pcRef.current = pc;
@@ -211,7 +245,7 @@ export const useVoiceCall = ({
       });
     } catch (e) {
       console.error(e);
-      stopDialTone();
+      stopTone();
       cleanupCall();
       setCallState("idle");
     }
@@ -260,6 +294,7 @@ export const useVoiceCall = ({
 
   const rejectCall = async () => {
     if (!conversationKey || !activeCallIdRef.current) return;
+    playHangupSound();
     await sendMessageWithKey({
       conversationKey,
       credentials,
@@ -276,6 +311,7 @@ export const useVoiceCall = ({
 
   const endCall = async () => {
     if (!conversationKey || !activeCallIdRef.current) return;
+    playHangupSound();
     await sendMessageWithKey({
       conversationKey,
       credentials,
