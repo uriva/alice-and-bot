@@ -124,7 +124,27 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      socket.send(JSON.stringify({ type: "answer", sdp: answer }));
+      await new Promise<void>((resolve) => {
+        if (pc!.iceGatheringState === "complete") {
+          resolve();
+        } else {
+          const timeout = setTimeout(() => resolve(), 2000);
+          const sub = pc!.iceGatheringStateChange.subscribe((state) => {
+            if (state === "complete") {
+              clearTimeout(timeout);
+              sub.unSubscribe();
+              resolve();
+            }
+          });
+        }
+      });
+
+      socket.send(
+        JSON.stringify({
+          type: "answer",
+          sdp: { type: "answer", sdp: pc!.localDescription!.sdp },
+        }),
+      );
     } else if (msg.type === "candidate") {
       console.log("Received remote ICE candidate", msg.candidate);
       if (pc) {
