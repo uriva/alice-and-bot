@@ -1321,7 +1321,7 @@ export const Messenger = () => {
       documentElement.style.overflow = prevHtmlOverflow;
     };
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     try {
       const stored = localStorage.getItem("alicebot_credentials");
       if (stored) setCredentials(JSON.parse(stored));
