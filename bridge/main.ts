@@ -90,10 +90,10 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
             );
             socket.send(JSON.stringify({
               type: "audio",
-              chunk: {
+              chunks: [{
                 mimeType: "audio/pcm;rate=48000",
                 dataBase64: base64,
-              },
+              }],
             }));
           } catch (e) {
             console.error("Failed to decode RTP", e);
@@ -113,41 +113,45 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
       if (pc) {
         await pc.addIceCandidate(msg.candidate);
       }
-    } else if (msg.type === "audio" && msg.chunk) {
+    } else if (msg.type === "audio" && (msg.chunk || msg.chunks)) {
       if (outSequenceNumber === 0) {
         console.log("Received first audio chunk from Gemini!");
       }
       // Audio from prompt2bot (Gemini) -> browser
       // Gemini sends audio/pcm;rate=24000 (or 16000)
-      const mimeType = msg.chunk.mimeType as string;
-      const rateMatch = mimeType.match(/rate=(\d+)/);
-      const inputRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+      const chunks = msg.chunks || [msg.chunk];
 
-      const bytes = Uint8Array.from(
-        atob(msg.chunk.dataBase64),
-        (c) => c.charCodeAt(0),
-      );
-      const inputPcm = new Int16Array(
-        bytes.buffer,
-        bytes.byteOffset,
-        bytes.byteLength / 2,
-      );
+      for (const chunk of chunks) {
+        const mimeType = chunk.mimeType as string;
+        const rateMatch = mimeType.match(/rate=(\d+)/);
+        const inputRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
 
-      // Resample to 48000 Hz if needed
-      let resampled = inputPcm;
-      if (inputRate !== 48000) {
-        const ratio = 48000 / inputRate;
-        resampled = new Int16Array(inputPcm.length * ratio);
-        for (let i = 0; i < resampled.length; i++) {
-          resampled[i] = inputPcm[Math.floor(i / ratio)];
+        const bytes = Uint8Array.from(
+          atob(chunk.dataBase64),
+          (c) => c.charCodeAt(0),
+        );
+        const inputPcm = new Int16Array(
+          bytes.buffer,
+          bytes.byteOffset,
+          bytes.byteLength / 2,
+        );
+
+        // Resample to 48000 Hz if needed
+        let resampled = inputPcm;
+        if (inputRate !== 48000) {
+          const ratio = 48000 / inputRate;
+          resampled = new Int16Array(inputPcm.length * ratio);
+          for (let i = 0; i < resampled.length; i++) {
+            resampled[i] = inputPcm[Math.floor(i / ratio)];
+          }
         }
-      }
 
-      // Append to pcmBuffer
-      const newBuffer = new Int16Array(pcmBuffer.length + resampled.length);
-      newBuffer.set(pcmBuffer, 0);
-      newBuffer.set(resampled, pcmBuffer.length);
-      pcmBuffer = newBuffer;
+        // Append to pcmBuffer
+        const newBuffer = new Int16Array(pcmBuffer.length + resampled.length);
+        newBuffer.set(pcmBuffer, 0);
+        newBuffer.set(resampled, pcmBuffer.length);
+        pcmBuffer = newBuffer;
+      }
 
       processPcmBuffer();
     }
