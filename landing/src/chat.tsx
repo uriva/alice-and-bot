@@ -48,7 +48,12 @@ const nameFromPublicSignKey = async (publicSignKey: string) => {
   return data.identities[0].name ?? publicSignKey;
 };
 
-const selectedConversation = signal<string | null>(null);
+const initialConversationId = () => {
+  if (typeof globalThis.location === "undefined") return null;
+  return new URLSearchParams(globalThis.location.search).get("c") ?? null;
+};
+
+const selectedConversation = signal<string | null>(initialConversationId());
 
 const Chat = ChatNoDb(() => db);
 
