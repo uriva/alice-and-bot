@@ -100,9 +100,14 @@ export const useVoiceCall = ({
     if (latest.action === "offer" && callState === "idle" && !isMine) {
       activeCallIdRef.current = latest.callId;
       setCallState("ringing");
+    } else if (latest.action === "offer" && callState === "idle" && isMine) {
+      activeCallIdRef.current = latest.callId;
+      setCallState("calling");
     } else if (latest.action === "reject" || latest.action === "end") {
-      cleanupCall();
-      setCallState("idle");
+      if (callState !== "idle") {
+        cleanupCall();
+        setCallState("idle");
+      }
     } else if (
       latest.action === "answer" && callState === "calling" && !isMine
     ) {
@@ -110,10 +115,18 @@ export const useVoiceCall = ({
       setCallState("connecting");
       stopDialTone();
       if (pcRef.current && latest.sdp) {
-        pcRef.current.setRemoteDescription({ type: "answer", sdp: latest.sdp })
+        const sdpString = typeof latest.sdp === "string"
+          ? latest.sdp
+          : (latest.sdp as { sdp: string }).sdp;
+        pcRef.current.setRemoteDescription({ type: "answer", sdp: sdpString })
           .then(() => setCallState("active"))
           .catch(console.error);
+      } else if (!pcRef.current) {
+        setCallState("active");
       }
+    } else if (latest.action === "answer" && callState === "idle") {
+      activeCallIdRef.current = latest.callId;
+      setCallState("active");
     }
   }, [messages, callState, credentials.publicSignKey]);
 
@@ -223,7 +236,10 @@ export const useVoiceCall = ({
       if (
         offerMsg?.type === "call" && offerMsg.action === "offer" && offerMsg.sdp
       ) {
-        await pc.setRemoteDescription({ type: "offer", sdp: offerMsg.sdp });
+        const sdpString = typeof offerMsg.sdp === "string"
+          ? offerMsg.sdp
+          : (offerMsg.sdp as { sdp: string }).sdp;
+        await pc.setRemoteDescription({ type: "offer", sdp: sdpString });
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 

@@ -66,6 +66,12 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
 
+      pc.onIceCandidate.subscribe((candidate) => {
+        if (candidate) {
+          socket.send(JSON.stringify({ type: "candidate", candidate }));
+        }
+      });
+
       outTrack = new MediaStreamTrack({ kind: "audio" });
       pc.addTrack(outTrack);
 
@@ -97,7 +103,10 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
         });
       });
 
-      await pc.setRemoteDescription(msg.sdp);
+      await pc.setRemoteDescription({
+        type: "offer",
+        sdp: typeof msg.sdp === "string" ? msg.sdp : msg.sdp.sdp,
+      });
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
