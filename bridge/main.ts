@@ -79,7 +79,12 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
 
       audioTransceiver.onTrack.subscribe((track) => {
         console.log("Got remote audio track");
+        let firstRtp = false;
         track.onReceiveRtp.subscribe((rtp) => {
+          if (!firstRtp) {
+            console.log("Received first RTP packet from browser!");
+            firstRtp = true;
+          }
           try {
             // Browser sends us Opus RTP. Decode to 48kHz PCM.
             const pcm = decoder.decode(rtp.payload);
