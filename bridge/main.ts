@@ -114,6 +114,9 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
         await pc.addIceCandidate(msg.candidate);
       }
     } else if (msg.type === "audio" && msg.chunk) {
+      if (outSequenceNumber === 0) {
+        console.log("Received first audio chunk from Gemini!");
+      }
       // Audio from prompt2bot (Gemini) -> browser
       // Gemini sends audio/pcm;rate=24000 (or 16000)
       const mimeType = msg.chunk.mimeType as string;
