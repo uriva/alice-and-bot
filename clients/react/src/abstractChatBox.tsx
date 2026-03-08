@@ -1844,7 +1844,7 @@ const messageContainerStyle = (isDark: boolean) => ({
   overflowX: "hidden",
   overscrollBehavior: "contain",
   WebkitOverflowScrolling: "touch",
-  scrollbarGutter: "auto",
+  scrollbarGutter: "stable",
   transition: "background 0.2s",
   flexDirection: "column",
   scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
