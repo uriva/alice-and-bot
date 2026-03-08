@@ -443,6 +443,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       enableAudioRecording={enableAudioRecording}
       enableVoiceCall={enableVoiceCall}
       voiceCallState={voiceCall.callState}
+      voiceCallDuration={voiceCall.callDuration}
       remoteStream={voiceCall.remoteStream}
       onStartCall={voiceCall.startCall}
       onAcceptCall={voiceCall.acceptCall}

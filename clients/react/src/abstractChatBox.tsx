@@ -1974,6 +1974,7 @@ export const AbstractChatBox = (
     enableAudioRecording = false,
     enableVoiceCall = false,
     voiceCallState = "idle",
+    voiceCallDuration = 0,
     remoteStream = null,
     onStartCall,
     onAcceptCall,
@@ -2007,6 +2008,7 @@ export const AbstractChatBox = (
     enableAudioRecording?: boolean;
     enableVoiceCall?: boolean;
     voiceCallState?: string;
+    voiceCallDuration?: number;
     remoteStream?: MediaStream | null;
     onStartCall?: () => void;
     onAcceptCall?: () => void;
@@ -2058,6 +2060,7 @@ export const AbstractChatBox = (
 
   useEffect(() => {
     if (remoteAudioRef.current && remoteStream) {
+      console.log("Setting remote stream tracks:", remoteStream.getTracks());
       remoteAudioRef.current.srcObject = remoteStream;
       remoteAudioRef.current.play().catch(console.error);
     }
@@ -2355,7 +2358,14 @@ export const AbstractChatBox = (
             {voiceCallState === "calling" && "Calling..."}
             {voiceCallState === "ringing" && "Incoming call..."}
             {voiceCallState === "connecting" && "Connecting..."}
-            {voiceCallState === "active" && "Voice Call Active"}
+            {voiceCallState === "active" &&
+              `Voice Call Active ${
+                voiceCallDuration > 0
+                  ? `(${Math.floor(voiceCallDuration / 60)}:${
+                    (voiceCallDuration % 60).toString().padStart(2, "0")
+                  })`
+                  : ""
+              }`}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             {voiceCallState === "ringing" && onAcceptCall && (

@@ -30,10 +30,12 @@ export const useVoiceCall = ({
   messages: DecipheredMessage[];
 }) => {
   const [callState, setCallState] = useState<CallState>("idle");
+  const [callDuration, setCallDuration] = useState<number>(0);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const activeCallIdRef = useRef<string | null>(null);
+  const durationIntervalRef = useRef<number | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -159,14 +161,19 @@ export const useVoiceCall = ({
           ? latest.sdp
           : (latest.sdp as { sdp: string }).sdp;
         pcRef.current.setRemoteDescription({ type: "answer", sdp: sdpString })
-          .then(() => setCallState("active"))
+          .then(() => {
+            setCallState("active");
+            startDurationTimer();
+          })
           .catch(console.error);
       } else if (!pcRef.current) {
         setCallState("active");
+        startDurationTimer();
       }
     } else if (latest.action === "answer" && callState === "idle") {
       activeCallIdRef.current = latest.callId;
       setCallState("active");
+      startDurationTimer();
     }
   }, [messages, callState, credentials.publicSignKey]);
 
@@ -184,6 +191,14 @@ export const useVoiceCall = ({
     }
   });
 
+  const startDurationTimer = () => {
+    if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+    setCallDuration(0);
+    durationIntervalRef.current = setInterval(() => {
+      setCallDuration((prev) => prev + 1);
+    }, 1000) as unknown as number;
+  };
+
   const cleanupCall = () => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -192,6 +207,10 @@ export const useVoiceCall = ({
     if (pcRef.current) {
       pcRef.current.close();
       pcRef.current = null;
+    }
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
     }
     setRemoteStream(null);
     activeCallIdRef.current = null;
@@ -218,6 +237,7 @@ export const useVoiceCall = ({
     pc.ontrack = (event) => {
       setRemoteStream(event.streams[0]);
       setCallState("active");
+      startDurationTimer();
       stopTone();
     };
 
@@ -290,6 +310,7 @@ export const useVoiceCall = ({
           message: { type: "call", callId, action: "answer", sdp: answer.sdp },
         });
         setCallState("connecting");
+        startDurationTimer();
       }
     } catch (e) {
       console.error(e);
@@ -330,6 +351,7 @@ export const useVoiceCall = ({
 
   return {
     callState,
+    callDuration,
     remoteStream,
     startCall,
     acceptCall,
