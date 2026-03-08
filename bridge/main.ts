@@ -145,6 +145,8 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
           sdp: { type: "answer", sdp: pc!.localDescription!.sdp },
         }),
       );
+    } else if (msg.type === "error") {
+      console.error("Received error from prompt2bot:", msg.message);
     } else if (msg.type === "candidate") {
       console.log("Received remote ICE candidate", msg.candidate);
       if (pc) {
