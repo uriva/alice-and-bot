@@ -182,6 +182,7 @@ export const useVoiceCall = ({
   const publishIceCandidate = room.usePublishTopic("ice_candidate");
 
   room.useTopicEffect("ice_candidate", (event) => {
+    console.log("Received ICE candidate from InstantDB", event);
     if (event.peerId === credentials.publicSignKey) return; // skip own
     if (event.callId !== activeCallIdRef.current) return; // skip old
     if (pcRef.current && event.candidate) {
@@ -226,6 +227,7 @@ export const useVoiceCall = ({
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log("Publishing ICE candidate to InstantDB:", event.candidate);
         publishIceCandidate({
           peerId: credentials.publicSignKey,
           callId,
