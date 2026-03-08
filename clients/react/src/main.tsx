@@ -49,18 +49,11 @@ const getCallText = (
   msg: DecipheredMessage & { type: "call" },
   isOwn: boolean,
 ) => {
-  switch (msg.action) {
-    case "offer":
-      return isOwn ? "📞 Calling..." : "📞 Incoming call";
-    case "answer":
-      return "📞 Call answered";
-    case "reject":
-      return "📞 Call rejected";
-    case "end":
-      return "📞 Call ended";
-    default:
-      return "📞 Voice call";
-  }
+  if (msg.action === "offer") return isOwn ? "Calling..." : "Incoming call";
+  if (msg.action === "answer") return "Call answered";
+  if (msg.action === "reject") return "Call rejected";
+  if (msg.action === "end") return "Call ended";
+  return "Voice call";
 };
 
 const msgToUIMessage =

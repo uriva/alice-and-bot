@@ -20,6 +20,7 @@ import {
   FaPaperPlane,
   FaPause,
   FaPen,
+  FaPhoneAlt,
   FaPlay,
   FaStop,
 } from "react-icons/fa";
@@ -1350,6 +1351,7 @@ const Message = (
       timestamp,
       attachments,
       editHistory,
+      callDetails,
     },
     prev,
     isOwn,
@@ -1436,8 +1438,12 @@ const Message = (
               style={{
                 overflowWrap: "anywhere",
                 wordBreak: "break-word",
+                display: callDetails ? "flex" : "block",
+                alignItems: callDetails ? "center" : undefined,
+                gap: callDetails ? 8 : undefined,
               }}
             >
+              {callDetails && <FaPhoneAlt />}
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks, remarkHtmlToText]}
                 // @ts-ignore react-markdown types are not fully compatible with Preact here
@@ -2326,7 +2332,7 @@ export const AbstractChatBox = (
                   padding: 4,
                 }}
               >
-                📞
+                <FaPhoneAlt />
               </button>
             )}
           </div>

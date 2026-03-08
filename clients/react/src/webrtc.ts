@@ -35,6 +35,56 @@ export const useVoiceCall = ({
   const localStreamRef = useRef<MediaStream | null>(null);
   const activeCallIdRef = useRef<string | null>(null);
 
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const intervalRef = useRef<number | null>(null);
+
+  const playDialTone = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    const ctx = audioContextRef.current;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(425, ctx.currentTime);
+
+    const pulseTone = () => {
+      const t = ctx.currentTime;
+      gainNode.gain.setValueAtTime(0, t);
+      gainNode.gain.linearRampToValueAtTime(0.1, t + 0.1);
+      gainNode.gain.setValueAtTime(0.1, t + 2.0);
+      gainNode.gain.linearRampToValueAtTime(0, t + 2.1);
+    };
+
+    pulseTone();
+    intervalRef.current = setInterval(pulseTone, 4000);
+
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.start();
+    oscillatorRef.current = osc;
+  };
+
+  const stopDialTone = () => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (oscillatorRef.current) {
+      try {
+        oscillatorRef.current.stop();
+      } catch (_e) {
+        // ignore if already stopped
+      }
+      oscillatorRef.current.disconnect();
+      oscillatorRef.current = null;
+    }
+  };
+
   // Derive call state from messages? For simplicity, we just look at the latest call message for this conversation.
   useEffect(() => {
     const callMessages = messages.filter((m) => m.type === "call").sort((
@@ -58,6 +108,7 @@ export const useVoiceCall = ({
     ) {
       // remote answered our offer
       setCallState("connecting");
+      stopDialTone();
       if (pcRef.current && latest.sdp) {
         pcRef.current.setRemoteDescription({ type: "answer", sdp: latest.sdp })
           .then(() => setCallState("active"))
@@ -91,6 +142,7 @@ export const useVoiceCall = ({
     }
     setRemoteStream(null);
     activeCallIdRef.current = null;
+    stopDialTone();
   };
 
   const createPeerConnection = (callId: string) => {
@@ -113,6 +165,7 @@ export const useVoiceCall = ({
     pc.ontrack = (event) => {
       setRemoteStream(event.streams[0]);
       setCallState("active");
+      stopDialTone();
     };
 
     return pc;
@@ -123,6 +176,8 @@ export const useVoiceCall = ({
     const callId = crypto.randomUUID();
     activeCallIdRef.current = callId;
     setCallState("calling");
+
+    playDialTone();
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -143,6 +198,7 @@ export const useVoiceCall = ({
       });
     } catch (e) {
       console.error(e);
+      stopDialTone();
       cleanupCall();
       setCallState("idle");
     }
