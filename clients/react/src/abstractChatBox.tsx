@@ -1788,48 +1788,20 @@ const ProgressIndicator = (
   </div>
 );
 
-const CloseButton = (
-  { onClose, customColors }: {
-    onClose: () => void;
-    customColors?: CustomColors;
-  },
-) => {
-  const isDark = useDarkMode();
-  const bg = customColors?.background ?? (isDark ? "#23272f" : "#f3f4f6");
-  const color = customColors?.text ?? (isDark ? "#eee" : "#222");
-  return (
-    <button
-      type="button"
-      onClick={onClose}
-      title="Close chat"
-      style={{
-        position: "absolute",
-        top: 8,
-        right: 8,
-        background: "transparent",
-        border: "none",
-        borderRadius: "50%",
-        width: 28,
-        height: 28,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        fontSize: 22,
-        color,
-        zIndex: 10,
-        transition: "background 0.2s, color 0.2s",
-        fontWeight: 700,
-        lineHeight: 1,
-      }}
-      onMouseOver={(e) => (e.currentTarget.style.background = bg)}
-      onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
-    >
-      <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1, color }}>
-        &times;
-      </span>
-    </button>
-  );
+const headerButtonStyle: JSX.CSSProperties = {
+  background: "transparent",
+  border: "none",
+  borderRadius: "50%",
+  width: 28,
+  height: 28,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  color: "#fff",
+  transition: "background 0.2s",
+  padding: 0,
+  flexShrink: 0,
 };
 
 const titleStyle = (isDark: boolean, customColors?: CustomColors) => ({
@@ -2316,10 +2288,8 @@ export const AbstractChatBox = (
             style={{
               ...contentMaxWidthStyle(customColors),
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
               padding: "0 16px",
-              paddingRight: onClose ? 40 : 16,
             }}
           >
             <div style={{ flex: 1, textAlign: "center" }}>{title}</div>
@@ -2328,21 +2298,32 @@ export const AbstractChatBox = (
                 type="button"
                 onClick={onStartCall}
                 title="Start voice call"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#fff",
-                  padding: 4,
-                }}
+                style={headerButtonStyle}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.background = "rgba(255,255,255,0.15)")}
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.background = "transparent")}
               >
                 <FaPhoneAlt />
+              </button>
+            )}
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                title="Close chat"
+                style={{ ...headerButtonStyle, fontSize: 22, fontWeight: 700 }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.background = "rgba(255,255,255,0.15)")}
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.background = "transparent")}
+              >
+                &times;
               </button>
             )}
           </div>
         </div>
       )}
-      {onClose && <CloseButton onClose={onClose} customColors={customColors} />}
 
       {voiceCallState !== "idle" && (
         <div
