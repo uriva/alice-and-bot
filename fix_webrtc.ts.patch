@@ -1,0 +1,13 @@
+--- clients/react/src/webrtc.ts
++++ clients/react/src/webrtc.ts
+@@ -101,6 +101,11 @@
+       setCallState("ringing");
+     } else if (latest.action === "reject" || latest.action === "end") {
++      if (callState !== "idle") {
++        cleanupCall();
++        setCallState("idle");
++      }
+-      cleanupCall();
+-      setCallState("idle");
+     } else if (
+       latest.action === "answer" && callState === "calling" && !isMine

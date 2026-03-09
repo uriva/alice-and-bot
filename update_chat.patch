@@ -1,0 +1,24 @@
+--- landing/src/chat.tsx
++++ landing/src/chat.tsx
+@@ -1048,10 +1048,7 @@
+                     <Chat
+                       credentials={credentials}
+                       conversationId={selectedConversation.value}
+-                      enableVoiceCall={true} //
+-                        new URLSearchParams(globalThis.location?.search).has(
+-                          "call",
+-                        )}
++                      enableVoiceCall
+                     />
+                   )
+                   : <ChatPlaceholder />}
+@@ -1125,8 +1122,7 @@
+           <Chat
+             credentials={credentials}
+             conversationId={selectedConversation.value}
+-            enableVoiceCall={true} //
+-              new URLSearchParams(globalThis.location?.search).has("call")}
++            enableVoiceCall
+             onClose={() => {
+               selectedConversation.value = null;
+             }}

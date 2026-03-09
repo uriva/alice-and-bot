@@ -330,7 +330,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
     customColors,
     enableAttachments = true,
     enableAudioRecording = true,
-    enableVoiceCall = false,
+    enableVoiceCall = true,
   }: ChatProps,
 ): JSX.Element => {
   const database = db();

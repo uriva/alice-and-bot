@@ -2,7 +2,7 @@ import { init as adminInit } from "@instantdb/admin";
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
-import { useEffect, useLayoutEffect, useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { toast } from "react-hot-toast";
 import {
   type Conversation,
@@ -48,12 +48,7 @@ const nameFromPublicSignKey = async (publicSignKey: string) => {
   return data.identities[0].name ?? publicSignKey;
 };
 
-const initialConversationId = () => {
-  if (typeof globalThis.location === "undefined") return null;
-  return new URLSearchParams(globalThis.location.search).get("c") ?? null;
-};
-
-const selectedConversation = signal<string | null>(initialConversationId());
+const selectedConversation = signal<string | null>(null);
 
 const Chat = ChatNoDb(() => db);
 
@@ -1054,6 +1049,10 @@ const LoggedInMessenger = (
                     <Chat
                       credentials={credentials}
                       conversationId={selectedConversation.value}
+                      enableVoiceCall={true} //
+                        new URLSearchParams(globalThis.location?.search).has(
+                          "call",
+                        )}
                     />
                   )
                   : <EmptyChatsView onNewChat={() => setView("new_chat")} />}
@@ -1127,6 +1126,8 @@ const LoggedInMessenger = (
           <Chat
             credentials={credentials}
             conversationId={selectedConversation.value}
+            enableVoiceCall={true} //
+              new URLSearchParams(globalThis.location?.search).has("call")}
             onClose={() => {
               selectedConversation.value = null;
             }}
@@ -1305,11 +1306,11 @@ export const Messenger = () => {
     credentials?.publicSignKey ?? "",
   );
   const [view, setView] = useState<View>("chats");
-  useLayoutEffect(() => {
+  useEffect(() => {
     const cleanup = initViewportHeightListener();
     return cleanup;
   }, []);
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (typeof document === "undefined") return;
     const { body, documentElement } = document;
     const prevBodyOverflow = body.style.overflow;
@@ -1324,7 +1325,7 @@ export const Messenger = () => {
       documentElement.style.overflow = prevHtmlOverflow;
     };
   }, []);
-  useLayoutEffect(() => {
+  useEffect(() => {
     try {
       const stored = localStorage.getItem("alicebot_credentials");
       if (stored) setCredentials(JSON.parse(stored));

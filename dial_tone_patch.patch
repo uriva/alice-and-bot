@@ -1,0 +1,98 @@
+--- clients/react/src/webrtc.ts
++++ clients/react/src/webrtc.ts
+@@ -35,6 +35,27 @@
+   const pcRef = useRef<RTCPeerConnection | null>(null);
+   const localStreamRef = useRef<MediaStream | null>(null);
+   const activeCallIdRef = useRef<string | null>(null);
++  const audioContextRef = useRef<AudioContext | null>(null);
++  const oscillatorRef = useRef<OscillatorNode | null>(null);
++
++  const playDialTone = () => {
++    if (!audioContextRef.current) {
++      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
++    }
++    const ctx = audioContextRef.current;
++    if (ctx.state === "suspended") ctx.resume();
++    
++    const osc = ctx.createOscillator();
++    const gainNode = ctx.createGain();
++    
++    osc.type = "sine";
++    osc.frequency.setValueAtTime(425, ctx.currentTime); // Standard dial tone frequency
++    
++    // Create a rhythmic pulsing effect (US standard ringing: 2s on, 4s off)
++    // For simplicity, we just use a subtle gain modulation
++    gainNode.gain.setValueAtTime(0, ctx.currentTime);
++    gainNode.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.1);
++    gainNode.gain.setValueAtTime(0.1, ctx.currentTime + 2.0);
++    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.1);
++    
++    // Repeat the pulse every 6 seconds
++    setInterval(() => {
++      if (oscillatorRef.current !== osc) return; // Stop if we have a new oscillator or stopped
++      const t = ctx.currentTime;
++      gainNode.gain.setValueAtTime(0, t);
++      gainNode.gain.linearRampToValueAtTime(0.1, t + 0.1);
++      gainNode.gain.setValueAtTime(0.1, t + 2.0);
++      gainNode.gain.linearRampToValueAtTime(0, t + 2.1);
++    }, 6000);
++
++    osc.connect(gainNode);
++    gainNode.connect(ctx.destination);
++    osc.start();
++    oscillatorRef.current = osc;
++  };
++
++  const stopDialTone = () => {
++    if (oscillatorRef.current) {
++      try { oscillatorRef.current.stop(); } catch (e) {}
++      oscillatorRef.current.disconnect();
++      oscillatorRef.current = null;
++    }
++  };
+ 
+   // Derive call state from messages? For simplicity, we just look at the latest call message for this conversation.
+   useEffect(() => {
+@@ -52,15 +73,18 @@
+     if (latest.action === "offer" && callState === "idle" && !isMine) {
+       activeCallIdRef.current = latest.callId;
+       setCallState("ringing");
++      // Note: In a real app we'd play a ringtone here, not a dial tone.
+     } else if (latest.action === "reject" || latest.action === "end") {
+       cleanupCall();
+       setCallState("idle");
++      stopDialTone();
+     } else if (
+       latest.action === "answer" && callState === "calling" && !isMine
+     ) {
+       // remote answered our offer
+       setCallState("connecting");
++      stopDialTone();
+       if (pcRef.current && latest.sdp) {
+         pcRef.current.setRemoteDescription({ type: "answer", sdp: latest.sdp })
+           .then(() => setCallState("active"))
+@@ -87,6 +111,7 @@
+     }
+     setRemoteStream(null);
+     activeCallIdRef.current = null;
++    stopDialTone();
+   };
+ 
+   const createPeerConnection = (callId: string) => {
+@@ -124,6 +149,8 @@
+     activeCallIdRef.current = callId;
+     setCallState("calling");
+ 
++    playDialTone();
++
+     try {
+       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+       localStreamRef.current = stream;
+@@ -141,6 +168,7 @@
+       });
+     } catch (e) {
+       console.error(e);
++      stopDialTone();
+       cleanupCall();
+       setCallState("idle");
+     }
