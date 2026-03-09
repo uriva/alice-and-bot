@@ -91,7 +91,12 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
           }
           try {
             // Browser sends us Opus RTP. Decode to 48kHz PCM.
-            const pcm = decoder.decode(rtp.payload);
+            const pcmBytes = decoder.decode(rtp.payload);
+            const pcm = new Int16Array(
+              pcmBytes.buffer,
+              pcmBytes.byteOffset,
+              pcmBytes.byteLength / 2,
+            );
 
             // Resample 48kHz to 16kHz to send less data to prompt2bot and Gemini
             const outLength = Math.floor(pcm.length / 3);
