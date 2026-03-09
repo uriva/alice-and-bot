@@ -2312,13 +2312,14 @@ export const AbstractChatBox = (
       <KebabHoverStyle />
       {!customColors?.hideTitle && (
         <div style={titleStyle(isDark, customColors)}>
-          <div
+           <div
             style={{
               ...contentMaxWidthStyle(customColors),
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               padding: "0 16px",
+              paddingRight: onClose ? 40 : 16,
             }}
           >
             <div style={{ flex: 1, textAlign: "center" }}>{title}</div>
