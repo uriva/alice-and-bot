@@ -42,6 +42,7 @@ export const useVoiceCall = ({
   const intervalRef = useRef<number | null>(null);
 
   const playRingbackTone = () => {
+    stopTone();
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
     }
@@ -130,6 +131,7 @@ export const useVoiceCall = ({
 
     // Ignore my own messages for answering logic, unless it's a reject/end
     const isMine = latest.publicSignKey === credentials.publicSignKey;
+    const isStale = Date.now() - latest.timestamp > 45000;
 
     // Only process state changes if the message belongs to our active call,
     // OR if we are idle and it's a new incoming offer
@@ -138,11 +140,10 @@ export const useVoiceCall = ({
     }
 
     if (latest.action === "offer" && callState === "idle" && !isMine) {
-      activeCallIdRef.current = latest.callId;
-      setCallState("ringing");
-    } else if (latest.action === "offer" && callState === "idle" && isMine) {
-      activeCallIdRef.current = latest.callId;
-      setCallState("calling");
+      if (!isStale) {
+        activeCallIdRef.current = latest.callId;
+        setCallState("ringing");
+      }
     } else if (latest.action === "reject" || latest.action === "end") {
       if (callState !== "idle") {
         if (!isMine) playHangupSound();
@@ -169,10 +170,6 @@ export const useVoiceCall = ({
         setCallState("active");
         startDurationTimer();
       }
-    } else if (latest.action === "answer" && callState === "idle") {
-      activeCallIdRef.current = latest.callId;
-      setCallState("active");
-      startDurationTimer();
     }
   }, [messages, callState, credentials.publicSignKey]);
 
@@ -210,9 +207,7 @@ export const useVoiceCall = ({
     });
 
     pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        console.log("Gathered local ICE candidate:", event.candidate);
-      }
+      // ICE candidate gathered
     };
 
     pc.ontrack = (event) => {
@@ -347,35 +342,39 @@ export const useVoiceCall = ({
   };
 
   const rejectCall = async () => {
-    if (!conversationKey || !activeCallIdRef.current) return;
+    if (!conversationKey) return;
     playHangupSound();
     const callId = activeCallIdRef.current;
     cleanupCall();
     setCallState("idle");
-    await sendMessageWithKey({
-      conversationKey,
-      credentials,
-      conversation: conversationId,
-      message: {
-        type: "call",
-        callId,
-        action: "reject",
-      },
-    });
+    if (callId) {
+      await sendMessageWithKey({
+        conversationKey,
+        credentials,
+        conversation: conversationId,
+        message: {
+          type: "call",
+          callId,
+          action: "reject",
+        },
+      });
+    }
   };
 
   const endCall = async () => {
-    if (!conversationKey || !activeCallIdRef.current) return;
+    if (!conversationKey) return;
     playHangupSound();
     const callId = activeCallIdRef.current;
     cleanupCall();
     setCallState("idle");
-    await sendMessageWithKey({
-      conversationKey,
-      credentials,
-      conversation: conversationId,
-      message: { type: "call", callId, action: "end" },
-    });
+    if (callId) {
+      await sendMessageWithKey({
+        conversationKey,
+        credentials,
+        conversation: conversationId,
+        message: { type: "call", callId, action: "end" },
+      });
+    }
   };
 
   return {

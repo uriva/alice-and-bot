@@ -92,6 +92,9 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
           try {
             // Browser sends us Opus RTP. Decode to 48kHz PCM.
             const pcmBytes = decoder.decode(rtp.payload);
+            if (Math.random() < 0.05) {
+              console.log("Decoded PCM bytes length:", pcmBytes.length);
+            }
             const pcm = new Int16Array(
               pcmBytes.buffer,
               pcmBytes.byteOffset,
