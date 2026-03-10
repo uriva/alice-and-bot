@@ -168,6 +168,12 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
       if (pc) {
         await pc.addIceCandidate(msg.candidate);
       }
+    } else if (msg.type === "flush") {
+      pcmBuffer = new Int16Array(0);
+      if (pacingInterval) {
+        clearInterval(pacingInterval);
+        pacingInterval = null;
+      }
     } else if (msg.type === "audio" && (msg.chunk || msg.chunks)) {
       if (outSequenceNumber === 0) {
         console.log("Received first audio chunk from Gemini!");
