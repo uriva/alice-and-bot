@@ -1,6 +1,7 @@
 import { empty, sortKey } from "@uri/gamla";
 import {
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -27,6 +28,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import { createContext } from "preact";
 import type { ComponentChildren, JSX } from "preact";
 import type { Attachment } from "../../../protocol/src/clientApi.ts";
 import {
@@ -302,9 +304,15 @@ const markdownTableWrapStyle: JSX.CSSProperties = {
   maxWidth: "100%",
 };
 
+const insidePreContext = createContext(false);
+
 const MarkdownPre = (
   { children }: { children?: ComponentChildren },
-) => <pre style={markdownPreStyle}>{children}</pre>;
+) => (
+  <insidePreContext.Provider value>
+    <pre style={markdownPreStyle}>{children}</pre>
+  </insidePreContext.Provider>
+);
 
 const MarkdownTable = (
   { children }: { children?: ComponentChildren },
@@ -477,31 +485,33 @@ const useTimeAgo = (timestamp: number) => {
   return timeAgo;
 };
 
-const CodeBlock = (
-  { inline, className, children }: {
-    inline?: boolean;
+const inlineCodeStyle = (isDark: boolean): JSX.CSSProperties => ({
+  background: isDark ? "#ffffff22" : "#00000012",
+  padding: "0 4px",
+  borderRadius: 4,
+  fontFamily:
+    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  fontSize: 13,
+});
+
+const InlineCode = (
+  { className, children }: {
+    className?: string;
+    children?: ComponentChildren;
+  },
+) => (
+  <code class={className} style={inlineCodeStyle(useDarkMode())}>
+    {children}
+  </code>
+);
+
+const FencedCodeBlock = (
+  { className, children }: {
     className?: string;
     children?: ComponentChildren;
   },
 ) => {
   const isDark = useDarkMode();
-  if (inline) {
-    return (
-      <code
-        class={className}
-        style={{
-          background: isDark ? "#ffffff22" : "#00000012",
-          padding: "0 4px",
-          borderRadius: 4,
-          fontFamily:
-            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-          fontSize: 13,
-        }}
-      >
-        {children}
-      </code>
-    );
-  }
   const [hovered, setHovered] = useState(false);
   const [copied, setCopied] = useState(false);
   const codeStr = String(children ?? "").replace(/\n$/, "");
@@ -563,6 +573,16 @@ const CodeBlock = (
     </div>
   );
 };
+
+const CodeBlock = (
+  props: {
+    className?: string;
+    children?: ComponentChildren;
+  },
+) =>
+  useContext(insidePreContext)
+    ? <FencedCodeBlock {...props} />
+    : <InlineCode {...props} />;
 
 export const ChatAvatar = (
   { image, name, baseColor }: {

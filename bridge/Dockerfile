@@ -11,4 +11,4 @@ COPY main.ts ./
 RUN deno cache --no-lock main.ts
 
 # These are passed as runtime flags to deno run
-CMD ["run", "-A", "main.ts"]
+CMD ["run", "-A", "--no-lock", "main.ts"]

@@ -45,18 +45,20 @@ const hasAttachments = (
 ): msg is DecipheredMessage & { attachments?: Attachment[] } =>
   msg.type === "text" || msg.type === "edit";
 
-const msgToUIMessage =
-  (details: Record<string, { name: string; avatar?: string }>, ownId: string) =>
-  (msg: DecipheredMessage): AbstracChatMessage => ({
-    id: msg.id,
-    authorId: msg.publicSignKey,
-    authorName: details[msg.publicSignKey]?.name ??
-      compactPublicKey(msg.publicSignKey),
-    authorAvatar: details[msg.publicSignKey]?.avatar,
-    text: msg.text,
-    timestamp: msg.timestamp,
-    attachments: hasAttachments(msg) ? msg.attachments : undefined,
-  });
+const msgToUIMessage = (
+  details: Record<string, { name: string; avatar?: string }>,
+  _ownId: string,
+) =>
+(msg: DecipheredMessage): AbstracChatMessage => ({
+  id: msg.id,
+  authorId: msg.publicSignKey,
+  authorName: details[msg.publicSignKey]?.name ??
+    compactPublicKey(msg.publicSignKey),
+  authorAvatar: details[msg.publicSignKey]?.avatar,
+  text: msg.text,
+  timestamp: msg.timestamp,
+  attachments: hasAttachments(msg) ? msg.attachments : undefined,
+});
 
 type TextOrEditMessage = DecipheredMessage & {
   type: "text" | "edit";
@@ -99,9 +101,7 @@ const foldEdits = (messages: DecipheredMessage[]) => {
   const edits = messages.filter((m): m is TextOrEditMessage =>
     m.type === "edit"
   );
-  const originalsAndCalls = messages.filter((m) =>
-    m.type === "text"
-  );
+  const originalsAndCalls = messages.filter((m) => m.type === "text");
   return originalsAndCalls.map((original) => ({
     msg: applyLatestEdit(edits)(original),
     editHistory: original.type === "text" &&
