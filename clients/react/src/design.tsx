@@ -29,6 +29,7 @@ export const chatContainerStyle = (
   flexDirection: "column",
   flexGrow: 1,
   minHeight: 0,
+  minWidth: 0,
   ...widgetColors(isDarkMode, custom),
   transition: "background 0.2s, color 0.2s, border-color 0.2s",
 });

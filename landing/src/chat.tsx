@@ -845,7 +845,7 @@ const LoggedInMessenger = (
   return (
     <div
       class="flex flex-row h-full w-full overflow-hidden"
-      style={{ minHeight: 0 }}
+      style={{ minHeight: 0, minWidth: 0 }}
     >
       {!isMobile && (
         <div class="w-20 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col items-center py-6 gap-4">
@@ -969,7 +969,15 @@ const LoggedInMessenger = (
 
       {/* Desktop content area */}
       {!isMobile && (
-        <div style={{ display: "flex", flexGrow: 1, flexDirection: "row" }}>
+        <div
+          style={{
+            display: "flex",
+            flexGrow: 1,
+            flexDirection: "row",
+            minWidth: 0,
+            overflow: "hidden",
+          }}
+        >
           {view === "chats" && (
             <>
               {/* Chat list sidebar */}
@@ -995,8 +1003,7 @@ const LoggedInMessenger = (
                     <button
                       type="button"
                       class="w-10 h-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg transition-colors flex-shrink-0"
-                      onClick={() =>
-                        setView("new_chat")}
+                      onClick={() => setView("new_chat")}
                       title="New Chat"
                     >
                       <svg

@@ -206,8 +206,7 @@ export const useVoiceCall = ({
       ],
     });
 
-    pc.onicecandidate = (event) => {
-      // ICE candidate gathered
+    pc.onicecandidate = (_event) => {
     };
 
     pc.ontrack = (event) => {

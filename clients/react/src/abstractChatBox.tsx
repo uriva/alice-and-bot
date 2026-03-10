@@ -1390,6 +1390,7 @@ const Message = (
         display: "flex",
         gap: 6,
         flexDirection: isOwn ? "row-reverse" : "row",
+        minWidth: 0,
       }}
     >
       {showAvatar && (
@@ -1818,6 +1819,7 @@ const messageContainerStyle = (isDark: boolean) => ({
   display: "flex",
   flex: "1 1 0",
   minHeight: 0,
+  minWidth: 0,
   overflowY: "scroll",
   overflowX: "hidden",
   overscrollBehavior: "contain",
@@ -2284,7 +2286,7 @@ export const AbstractChatBox = (
       <KebabHoverStyle />
       {!customColors?.hideTitle && (
         <div style={titleStyle(isDark, customColors)}>
-           <div
+          <div
             style={{
               ...contentMaxWidthStyle(customColors),
               display: "flex",
@@ -2299,10 +2301,13 @@ export const AbstractChatBox = (
                 onClick={onStartCall}
                 title="Start voice call"
                 style={headerButtonStyle}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.15)")}
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.background = "transparent")}
+                onMouseOver={(
+                  e,
+                ) => (e.currentTarget.style.background =
+                  "rgba(255,255,255,0.15)")}
+                onMouseOut={(
+                  e,
+                ) => (e.currentTarget.style.background = "transparent")}
               >
                 <FaPhoneAlt />
               </button>
@@ -2313,10 +2318,13 @@ export const AbstractChatBox = (
                 onClick={onClose}
                 title="Close chat"
                 style={{ ...headerButtonStyle, fontSize: 22, fontWeight: 700 }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.15)")}
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.background = "transparent")}
+                onMouseOver={(
+                  e,
+                ) => (e.currentTarget.style.background =
+                  "rgba(255,255,255,0.15)")}
+                onMouseOut={(
+                  e,
+                ) => (e.currentTarget.style.background = "transparent")}
               >
                 &times;
               </button>
@@ -2406,6 +2414,8 @@ export const AbstractChatBox = (
             padding: "4px 4px 72px 4px",
             flexGrow: 1,
             boxSizing: "border-box",
+            minWidth: 0,
+            overflow: "hidden",
             ...contentMaxWidthStyle(customColors),
           }}
         >
