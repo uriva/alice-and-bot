@@ -45,17 +45,6 @@ const hasAttachments = (
 ): msg is DecipheredMessage & { attachments?: Attachment[] } =>
   msg.type === "text" || msg.type === "edit";
 
-const getCallText = (
-  msg: DecipheredMessage & { type: "call" },
-  isOwn: boolean,
-) => {
-  if (msg.action === "offer") return isOwn ? "Calling..." : "Incoming call";
-  if (msg.action === "answer") return "Call answered";
-  if (msg.action === "reject") return "Call rejected";
-  if (msg.action === "end") return "Call ended";
-  return "Voice call";
-};
-
 const msgToUIMessage =
   (details: Record<string, { name: string; avatar?: string }>, ownId: string) =>
   (msg: DecipheredMessage): AbstracChatMessage => ({
@@ -64,22 +53,17 @@ const msgToUIMessage =
     authorName: details[msg.publicSignKey]?.name ??
       compactPublicKey(msg.publicSignKey),
     authorAvatar: details[msg.publicSignKey]?.avatar,
-    text: msg.type === "call"
-      ? getCallText(msg, msg.publicSignKey === ownId)
-      : msg.text,
+    text: msg.text,
     timestamp: msg.timestamp,
     attachments: hasAttachments(msg) ? msg.attachments : undefined,
-    callDetails: msg.type === "call"
-      ? { action: msg.action, duration: msg.duration }
-      : undefined,
   });
 
 type TextOrEditMessage = DecipheredMessage & {
   type: "text" | "edit";
 };
 
-const isTextOrEditOrCall = (m: DecipheredMessage): boolean =>
-  m.type === "text" || m.type === "edit" || m.type === "call";
+const isTextOrEdit = (m: DecipheredMessage): boolean =>
+  m.type === "text" || m.type === "edit";
 
 const editsForMessage = (edits: TextOrEditMessage[]) => (msgId: string) =>
   sortKey((e: TextOrEditMessage) => e.timestamp)(
@@ -116,7 +100,7 @@ const foldEdits = (messages: DecipheredMessage[]) => {
     m.type === "edit"
   );
   const originalsAndCalls = messages.filter((m) =>
-    m.type === "text" || m.type === "call"
+    m.type === "text"
   );
   return originalsAndCalls.map((original) => ({
     msg: applyLatestEdit(edits)(original),
@@ -258,7 +242,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       ]),
     ),
   };
-  const uiMessages = messages.filter(isTextOrEditOrCall);
+  const uiMessages = messages.filter(isTextOrEdit);
   const messageElementIds = new Set(
     messages
       .filter((m): m is DecipheredMessage & { elementId: string } =>
