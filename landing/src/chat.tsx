@@ -25,6 +25,7 @@ import {
   type Credentials,
   instantAppId,
   setAlias,
+  setName,
 } from "../../protocol/src/clientApi.ts";
 import { registerPush } from "../../protocol/src/pushClient.ts";
 import { CopyableString } from "./components.tsx";
@@ -426,48 +427,69 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
   const publicSignKey = credentials.publicSignKey;
   const name = useUserName(() => db)(publicSignKey);
   const profile = useIdentityProfile(() => db)(publicSignKey);
+  const [nameInput, setNameInput] = useState(name ?? "");
   const [aliasInput, setAliasInput] = useState(profile?.alias ?? "");
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<
+  const [savingName, setSavingName] = useState(false);
+  const [savingAlias, setSavingAlias] = useState(false);
+  const [nameStatus, setNameStatus] = useState<
     null | { type: "success" | "error"; message: string }
   >(null);
-  // Keep alias input in sync if it appears later
+  const [aliasStatus, setAliasStatus] = useState<
+    null | { type: "success" | "error"; message: string }
+  >(null);
+  useEffect(() => {
+    setNameInput(name ?? "");
+  }, [name]);
   useEffect(() => {
     setAliasInput(profile?.alias ?? "");
   }, [profile?.alias]);
 
+  const onSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) {
+      setNameStatus({ type: "error", message: "Name can't be empty" });
+      return;
+    }
+    setSavingName(true);
+    setNameStatus(null);
+    const res = await setName({ name: trimmed, credentials });
+    setSavingName(false);
+    if (res.success) {
+      setNameStatus({ type: "success", message: "Name saved" });
+      setTimeout(() => setNameStatus(null), 2000);
+    } else {
+      const message = res.error === "invalid-name"
+        ? "Invalid name (max 50 characters)"
+        : res.error === "not-found"
+        ? "Identity not found"
+        : "Authentication failed";
+      setNameStatus({ type: "error", message });
+    }
+  };
+
   const onSaveAlias = async () => {
     const trimmed = aliasInput.trim();
     if (!trimmed) {
-      setStatus({ type: "error", message: "Alias can't be empty" });
+      setAliasStatus({ type: "error", message: "Alias can't be empty" });
       return;
     }
-    setSaving(true);
-    setStatus(null);
-    try {
-      const res = await setAlias({ alias: trimmed, credentials });
-      if (res.success) {
-        setStatus({ type: "success", message: "Alias saved" });
-        // Alias will reflect via reactive query; keep local field normalized (same as server)
-        setAliasInput(
-          trimmed.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 15),
-        );
-      } else {
-        let message = "Failed to set alias";
-        if (res.error === "alias-taken") message = "Alias already taken";
-        if (res.error === "invalid-alias") message = "Invalid alias";
-        if (res.error === "not-found") message = "Identity not found";
-        if (res.error === "invalid-auth") message = "Authentication failed";
-        setStatus({ type: "error", message });
-      }
-    } catch (e) {
-      console.error("Alias save error", e);
-      setStatus({ type: "error", message: "Unexpected error" });
-    } finally {
-      setSaving(false);
-      setTimeout(() => {
-        setStatus((s) => (s?.type === "success" ? null : s));
-      }, 2000);
+    setSavingAlias(true);
+    setAliasStatus(null);
+    const res = await setAlias({ alias: trimmed, credentials });
+    setSavingAlias(false);
+    if (res.success) {
+      setAliasStatus({ type: "success", message: "Alias saved" });
+      setAliasInput(
+        trimmed.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 15),
+      );
+      setTimeout(() => setAliasStatus(null), 2000);
+    } else {
+      let message = "Failed to set alias";
+      if (res.error === "alias-taken") message = "Alias already taken";
+      if (res.error === "invalid-alias") message = "Invalid alias";
+      if (res.error === "not-found") message = "Identity not found";
+      if (res.error === "invalid-auth") message = "Authentication failed";
+      setAliasStatus({ type: "error", message });
     }
   };
 
@@ -476,7 +498,37 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
       style={{ display: "flex", flexDirection: "column", gap: 16 }}
       class={`${textColorStyle} mb-2`}
     >
-      {name && <div>Your display name: {name}</div>}
+      <div class="flex flex-col gap-1 max-w-md">
+        <label class={labelSmallStyle}>Display name</label>
+        <div class="flex gap-2 items-center">
+          <input
+            class={inputStyle + " flex-grow"}
+            placeholder="Your name"
+            value={nameInput}
+            onInput={(e) => setNameInput(e.currentTarget.value.slice(0, 50))}
+            disabled={savingName}
+          />
+          <button
+            type="button"
+            class={buttonGreenStyle}
+            disabled={savingName || nameInput.trim() === (name ?? "")}
+            onClick={onSaveName}
+          >
+            {savingName ? "Saving..." : "Save"}
+          </button>
+        </div>
+        {nameStatus && (
+          <div
+            class={`text-xs ${
+              nameStatus.type === "success"
+                ? "text-green-600 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
+            }`}
+          >
+            {nameStatus.message}
+          </div>
+        )}
+      </div>
       <div>
         Your public key is <CopyableString str={publicSignKey} />
       </div>
@@ -495,30 +547,31 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
                 e.currentTarget.value.toLowerCase().replace(/[^a-z0-9_]/g, "")
                   .slice(0, 15),
               )}
-            disabled={saving}
+            disabled={savingAlias}
           />
           <button
             type="button"
             class={buttonGreenStyle}
-            disabled={saving}
+            disabled={savingAlias}
             onClick={onSaveAlias}
           >
-            {saving ? "Saving..." : profile?.alias ? "Update" : "Set"} alias
+            {savingAlias ? "Saving..." : profile?.alias ? "Update" : "Set"}{" "}
+            alias
           </button>
         </div>
         <div class={hintStyle}>
           Lowercase letters, numbers, underscore. Max 15 chars. Public &
           shareable.
         </div>
-        {status && (
+        {aliasStatus && (
           <div
             class={`text-xs ${
-              status.type === "success"
+              aliasStatus.type === "success"
                 ? "text-green-600 dark:text-green-400"
                 : "text-red-600 dark:text-red-400"
             }`}
           >
-            {status.message}
+            {aliasStatus.message}
           </div>
         )}
         {profile?.alias && (

@@ -46,6 +46,7 @@ export {
   sendMessage,
   sendMessageWithKey,
   setAlias,
+  setName,
   uiUpdateUrl,
   uploadAttachment,
   type VideoAttachment,

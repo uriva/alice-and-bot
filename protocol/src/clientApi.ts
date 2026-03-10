@@ -478,6 +478,23 @@ export const setAlias = async ({
     }),
   });
 
+export const setName = async ({
+  name,
+  credentials,
+}: { name: string; credentials: Credentials }): Promise<
+  | { success: true }
+  | {
+    success: false;
+    error: "not-found" | "invalid-auth" | "invalid-name";
+  }
+> =>
+  apiClient({
+    endpoint: "setName",
+    payload: await buildSignedRequest(credentials, "setName", {
+      name: name.trim(),
+    }),
+  });
+
 export const publicSignKeyToAlias = (
   publicSignKey: string,
 ): Promise<{ alias: string } | { error: "no-such-identity" | "no-alias" }> =>

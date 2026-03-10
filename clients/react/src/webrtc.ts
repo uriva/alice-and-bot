@@ -211,7 +211,10 @@ export const useVoiceCall = ({
     };
 
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
+      if (
+        pc.connectionState === "disconnected" ||
+        pc.connectionState === "failed" || pc.connectionState === "closed"
+      ) {
         cleanupCall();
         setCallState("idle");
       }

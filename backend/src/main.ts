@@ -285,6 +285,31 @@ const endpoints: BackendApiImpl = {
       );
       return { success: true };
     },
+    setName: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authOk = await verifyAuthToken({
+        action: "setName",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      const { name } = payload;
+      const trimmed = name.trim();
+      if (trimmed.length === 0 || trimmed.length > 50) {
+        return { success: false, error: "invalid-name" };
+      }
+      const { identities: identityMatches } = await query({
+        identities: { $: { where: { publicSignKey } } },
+      });
+      if (identityMatches.length === 0) {
+        return { success: false, error: "not-found" };
+      }
+      if (!authOk) return { success: false, error: "invalid-auth" };
+      await transact(
+        tx.identities[identityMatches[0].id].update({ name: trimmed }),
+      );
+      return { success: true };
+    },
     getVapidPublicKey: () => Promise.resolve({ publicKey: vapidPublicKey }),
     registerPushSubscription: async (
       { payload, publicSignKey, nonce, authToken },

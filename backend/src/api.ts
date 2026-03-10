@@ -67,6 +67,16 @@ export const backendApiSchema = {
       }),
     ]),
   ),
+  setName: authenticatedEndpoint(
+    z.object({ name: z.string() }),
+    z.union([
+      z.object({ success: z.literal(true) }),
+      z.object({
+        success: z.literal(false),
+        error: z.enum(["not-found", "invalid-auth", "invalid-name"]),
+      }),
+    ]),
+  ),
   conversationKey: endpoint({
     authRequired: false,
     input: z.object({
