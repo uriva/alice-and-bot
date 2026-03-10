@@ -23,12 +23,12 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t gcr.io/movie-quotes-368212/webrtc-bridge:latest bridge/
-          docker push gcr.io/movie-quotes-368212/webrtc-bridge:latest
+          docker build -t gcr.io/alice-and-bot/webrtc-bridge:latest bridge/
+          docker push gcr.io/alice-and-bot/webrtc-bridge:latest
 
       - name: Restart bridge on VM
         run: |
           gcloud compute ssh webrtc-bridge \
             --zone=us-central1-a \
-            --project=movie-quotes-368212 \
-            --command="sudo docker pull gcr.io/movie-quotes-368212/webrtc-bridge:latest && sudo docker stop bridge && sudo docker rm bridge && sudo docker run -d --name bridge --network host --restart always gcr.io/movie-quotes-368212/webrtc-bridge:latest"
+            --project=alice-and-bot \
+            --command="sudo docker pull gcr.io/alice-and-bot/webrtc-bridge:latest && sudo docker stop bridge && sudo docker rm bridge && sudo docker run -d --name bridge --network host --restart always gcr.io/alice-and-bot/webrtc-bridge:latest"
