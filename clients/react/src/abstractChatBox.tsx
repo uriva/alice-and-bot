@@ -2178,8 +2178,8 @@ export const AbstractChatBox = (
     };
   }, [onClose]);
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (!isMobile) inputRef.current?.focus();
+  }, [title, isMobile]);
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.addEventListener("scroll", handleScroll);
