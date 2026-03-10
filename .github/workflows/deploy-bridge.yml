@@ -32,4 +32,4 @@ jobs:
           gcloud compute ssh webrtc-bridge \
             --zone=us-central1-a \
             --project=alice-and-bot \
-            --command="sudo docker pull gcr.io/alice-and-bot/webrtc-bridge:latest && sudo docker stop bridge && sudo docker rm bridge && sudo docker run -d --name bridge --network host --restart always gcr.io/alice-and-bot/webrtc-bridge:latest"
+            --command="sudo HOME=/root docker-credential-gcr configure-docker --registries=gcr.io && sudo docker pull gcr.io/alice-and-bot/webrtc-bridge:latest && sudo docker stop bridge || true && sudo docker rm bridge || true && sudo docker run -d --name bridge --network host --restart always gcr.io/alice-and-bot/webrtc-bridge:latest"
