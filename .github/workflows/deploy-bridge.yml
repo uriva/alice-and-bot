@@ -1,0 +1,34 @@
+name: Deploy Bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "bridge/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t gcr.io/movie-quotes-368212/webrtc-bridge:latest bridge/
+          docker push gcr.io/movie-quotes-368212/webrtc-bridge:latest
+
+      - name: Restart bridge on VM
+        run: |
+          gcloud compute ssh webrtc-bridge \
+            --zone=us-central1-a \
+            --project=movie-quotes-368212 \
+            --command="sudo docker pull gcr.io/movie-quotes-368212/webrtc-bridge:latest && sudo docker stop bridge && sudo docker rm bridge && sudo docker run -d --name bridge --network host --restart always gcr.io/movie-quotes-368212/webrtc-bridge:latest"
