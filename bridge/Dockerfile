@@ -8,7 +8,7 @@ USER deno
 # Cache the dependencies as a layer
 COPY deno.json ./
 COPY main.ts ./
-RUN deno cache main.ts
+RUN deno cache --no-lock main.ts
 
 # These are passed as runtime flags to deno run
 CMD ["run", "-A", "main.ts"]
