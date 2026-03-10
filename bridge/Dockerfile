@@ -6,7 +6,7 @@ WORKDIR /app
 USER deno
 
 # Cache the dependencies as a layer
-COPY deno.json deno.lock ./
+COPY deno.json ./
 COPY main.ts ./
 RUN deno cache main.ts
 
