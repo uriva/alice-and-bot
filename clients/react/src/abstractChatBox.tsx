@@ -289,6 +289,31 @@ const markdownLink =
     );
   };
 
+const markdownPreStyle: JSX.CSSProperties = {
+  overflow: "hidden",
+  maxWidth: "100%",
+  margin: 0,
+  padding: 0,
+  whiteSpace: "pre-wrap",
+};
+
+const markdownTableWrapStyle: JSX.CSSProperties = {
+  overflow: "auto",
+  maxWidth: "100%",
+};
+
+const MarkdownPre = (
+  { children }: { children?: ComponentChildren },
+) => <pre style={markdownPreStyle}>{children}</pre>;
+
+const MarkdownTable = (
+  { children }: { children?: ComponentChildren },
+) => (
+  <div style={markdownTableWrapStyle}>
+    <table>{children}</table>
+  </div>
+);
+
 const markdownComponents = (textColor: string) => ({
   // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
   p: MarkdownParagraph,
@@ -296,6 +321,10 @@ const markdownComponents = (textColor: string) => ({
   img: MarkdownImg,
   // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
   code: CodeBlock,
+  // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
+  pre: MarkdownPre,
+  // @ts-ignore-error react-markdown types are not fully compatible with Preact here. `ignore` because works locally.
+  table: MarkdownTable,
 });
 
 const extractMediaSrc = (tag: string) =>
@@ -480,7 +509,7 @@ const CodeBlock = (
     .toUpperCase();
   return (
     <div
-      style={{ position: "relative" }}
+      style={{ position: "relative", minWidth: 0, overflow: "hidden" }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -510,6 +539,8 @@ const CodeBlock = (
           position: "relative",
           padding: "10px 12px",
           overflow: "auto",
+          maxWidth: "100%",
+          boxSizing: "border-box",
           background: isDark ? "#0b1220" : "#f3f4f6",
           color: isDark ? "#e5e7eb" : "#111827",
           borderRadius: 8,
@@ -1439,6 +1470,7 @@ const Message = (
               style={{
                 overflowWrap: "anywhere",
                 wordBreak: "break-word",
+                minWidth: 0,
                 display: callDetails ? "flex" : "block",
                 alignItems: callDetails ? "center" : undefined,
                 gap: callDetails ? 8 : undefined,
