@@ -27,31 +27,39 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
 
   // We buffer outgoing PCM so we can slice it into exactly 20ms frames (960 samples @ 48kHz = 1920 bytes of Int16)
   let pcmBuffer = new Int16Array(0);
+  const FRAME_SIZE = 960; // 20ms at 48000 Hz
+  let pacingInterval: ReturnType<typeof setInterval> | null = null;
+
+  const sendOneFrame = () => {
+    if (!outTrack || pcmBuffer.length < FRAME_SIZE) {
+      if (pacingInterval) {
+        clearInterval(pacingInterval);
+        pacingInterval = null;
+      }
+      return;
+    }
+    const frame = pcmBuffer.slice(0, FRAME_SIZE);
+    pcmBuffer = pcmBuffer.slice(FRAME_SIZE);
+    try {
+      const opusData = encoder.encode(frame);
+      const header = new RtpHeader({
+        sequenceNumber: outSequenceNumber++,
+        timestamp: outTimestamp,
+        payloadType: outTrack.codec?.payloadType ?? 111,
+        extension: false,
+        marker: false,
+      });
+      outTimestamp += FRAME_SIZE;
+      const rtp = new RtpPacket(header, Buffer.from(opusData));
+      outTrack.writeRtp(rtp);
+    } catch (e) {
+      console.error("Failed to encode/send audio", e);
+    }
+  };
 
   const processPcmBuffer = () => {
-    if (!outTrack) return;
-    const FRAME_SIZE = 960; // 20ms at 48000 Hz
-
-    while (pcmBuffer.length >= FRAME_SIZE) {
-      const frame = pcmBuffer.slice(0, FRAME_SIZE);
-      pcmBuffer = pcmBuffer.slice(FRAME_SIZE);
-
-      try {
-        const opusData = encoder.encode(frame);
-        const header = new RtpHeader({
-          sequenceNumber: outSequenceNumber++,
-          timestamp: outTimestamp,
-          payloadType: outTrack.codec?.payloadType ?? 111,
-          extension: false,
-          marker: false,
-        });
-        outTimestamp += FRAME_SIZE;
-        const rtp = new RtpPacket(header, Buffer.from(opusData));
-        outTrack.writeRtp(rtp);
-      } catch (e) {
-        console.error("Failed to encode/send audio", e);
-      }
-    }
+    if (!outTrack || pcmBuffer.length < FRAME_SIZE || pacingInterval) return;
+    pacingInterval = setInterval(sendOneFrame, 20);
   };
 
   socket.onopen = () => {
@@ -207,6 +215,7 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
   socket.onerror = (e) => console.error("WebSocket error:", e);
   socket.onclose = () => {
     console.log("WebSocket closed");
+    if (pacingInterval) clearInterval(pacingInterval);
     if (pc) pc.close();
   };
 
