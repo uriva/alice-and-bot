@@ -120,7 +120,8 @@ export const useVoiceCall = ({
     }
   };
 
-  // Derive call state from messages? For simplicity, we just look at the latest call message for this conversation.
+  useEffect(() => () => cleanupCall(), []);
+
   useEffect(() => {
     const callMessages = messages.filter((m) => m.type === "call").sort((
       a,
@@ -207,6 +208,13 @@ export const useVoiceCall = ({
     });
 
     pc.onicecandidate = (_event) => {
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
+        cleanupCall();
+        setCallState("idle");
+      }
     };
 
     pc.ontrack = (event) => {
