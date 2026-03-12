@@ -70,7 +70,15 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
     const msg = JSON.parse(event.data);
 
     if (msg.type === "offer") {
-      console.log("Received offer");
+      const offerSdp = typeof msg.sdp === "string" ? msg.sdp : msg.sdp.sdp;
+      console.log(
+        "Received offer. Candidates:",
+        offerSdp.split("\n").filter((l: string) => l.startsWith("a=candidate")),
+      );
+      console.log(
+        "Offer media lines:",
+        offerSdp.split("\n").filter((l: string) => l.startsWith("m=")),
+      );
       pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
@@ -155,10 +163,21 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
         }
       });
 
+      const answerSdp = pc!.localDescription!.sdp;
+      console.log(
+        "Answer candidates:",
+        answerSdp.split("\n").filter((l: string) =>
+          l.startsWith("a=candidate")
+        ),
+      );
+      console.log(
+        "Answer media lines:",
+        answerSdp.split("\n").filter((l: string) => l.startsWith("m=")),
+      );
       socket.send(
         JSON.stringify({
           type: "answer",
-          sdp: { type: "answer", sdp: pc!.localDescription!.sdp },
+          sdp: { type: "answer", sdp: answerSdp },
         }),
       );
     } else if (msg.type === "error") {
