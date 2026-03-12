@@ -336,11 +336,14 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   const identityDetails = useIdentityDetailsMap(db)(
     (decrypted ?? []).map(({ publicSignKey }) => publicSignKey),
   );
-  const conversationTitle = database.useQuery({
+  const conversation = database.useQuery({
     conversations: {
+      participants: {},
       $: { where: { id: conversationId } },
     },
-  }).data?.conversations[0]?.title || "Chat";
+  }).data?.conversations[0];
+  const conversationTitle = conversation?.title || "Chat";
+  const isGroupChat = (conversation?.participants.length ?? 0) > 2;
 
   const voiceCall = useVoiceCall({
     db: database,
@@ -454,6 +457,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       messages={chatMessages}
       activeSpinners={activeSpinners}
       activeProgress={activeProgress}
+      isGroupChat={isGroupChat}
       onSend={(input: string) => {
         if (!convoKey) {
           return null;

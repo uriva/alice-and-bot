@@ -1779,17 +1779,23 @@ const linearBarFillStyle = (
   transition: "width 0.3s ease",
 });
 
+const showAuthorName = (hideNames?: boolean, isGroupChat?: boolean) =>
+  !hideNames && isGroupChat;
+
 const SpinnerIndicator = (
-  { spinner, isDark, hideNames, color }: {
+  { spinner, isDark, hideNames, isGroupChat, color }: {
     spinner: ActiveSpinner;
     isDark: boolean;
     hideNames?: boolean;
+    isGroupChat?: boolean;
     color?: string;
   },
 ) => (
   <div style={indicatorTextStyle(isDark, color)}>
     <span>
-      {hideNames ? spinner.text : `${spinner.authorName}: ${spinner.text}`}
+      {showAuthorName(hideNames, isGroupChat)
+        ? `${spinner.authorName}: ${spinner.text}`
+        : spinner.text}
     </span>
     {spinner.active
       ? (
@@ -1822,18 +1828,19 @@ const SpinnerIndicator = (
 );
 
 const ProgressIndicator = (
-  { progress, isDark, hideNames, color }: {
+  { progress, isDark, hideNames, isGroupChat, color }: {
     progress: ActiveProgress;
     isDark: boolean;
     hideNames?: boolean;
+    isGroupChat?: boolean;
     color?: string;
   },
 ) => (
   <div style={indicatorTextStyle(isDark, color)}>
     <span>
-      {hideNames ? progress.text : `${progress.authorName}: ${progress.text}`}
-      {" "}
-      ({Math.round(progress.percentage * 100)}%)
+      {showAuthorName(hideNames, isGroupChat)
+        ? `${progress.authorName}: ${progress.text}`
+        : progress.text} ({Math.round(progress.percentage * 100)}%)
     </span>
     <div style={linearBarTrackStyle(isDark, color)}>
       <div style={linearBarFillStyle(progress.percentage, isDark, color)} />
@@ -2010,6 +2017,7 @@ export const AbstractChatBox = (
     onSendLocation,
     activeSpinners = [],
     activeProgress = [],
+    isGroupChat = false,
   }: {
     userId: string;
     onSend: (input: string) => void;
@@ -2048,6 +2056,7 @@ export const AbstractChatBox = (
     ) => void;
     activeSpinners?: ActiveSpinner[];
     activeProgress?: ActiveProgress[];
+    isGroupChat?: boolean;
   },
 ): JSX.Element => {
   const isMobile = useIsMobile();
@@ -2510,6 +2519,7 @@ export const AbstractChatBox = (
                           spinner={entry.spinner}
                           isDark={isDark}
                           hideNames={customColors?.hideNames}
+                          isGroupChat={isGroupChat}
                           color={customColors?.text}
                         />
                       )
@@ -2519,6 +2529,7 @@ export const AbstractChatBox = (
                           progress={entry.progress}
                           isDark={isDark}
                           hideNames={customColors?.hideNames}
+                          isGroupChat={isGroupChat}
                           color={customColors?.text}
                         />
                       ),
