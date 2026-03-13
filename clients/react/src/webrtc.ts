@@ -134,6 +134,17 @@ export const useVoiceCall = ({
     const isMine = latest.publicSignKey === credentials.publicSignKey;
     const isStale = Date.now() - latest.timestamp > 45000;
 
+    console.log(
+      "[webrtc] Call msg:",
+      latest.action,
+      "state:",
+      callState,
+      "isMine:",
+      isMine,
+      "callId match:",
+      latest.callId === activeCallIdRef.current,
+    );
+
     // Only process state changes if the message belongs to our active call,
     // OR if we are idle and it's a new incoming offer
     if (callState !== "idle" && latest.callId !== activeCallIdRef.current) {
@@ -155,18 +166,36 @@ export const useVoiceCall = ({
       latest.action === "answer" && callState === "calling" && !isMine
     ) {
       // remote answered our offer
+      console.log(
+        "[webrtc] Answer received, hasPc:",
+        !!pcRef.current,
+        "hasSdp:",
+        !!latest.sdp,
+      );
       setCallState("connecting");
       stopTone();
       if (pcRef.current && latest.sdp) {
         const sdpString = typeof latest.sdp === "string"
           ? latest.sdp
           : (latest.sdp as { sdp: string }).sdp;
+        console.log(
+          "[webrtc] Setting remote description, candidates:",
+          sdpString.split("\n").filter((l: string) =>
+            l.startsWith("a=candidate")
+          ).length,
+        );
         pcRef.current.setRemoteDescription({ type: "answer", sdp: sdpString })
           .then(() => {
+            console.log(
+              "[webrtc] setRemoteDescription success, ICE:",
+              pcRef.current?.iceConnectionState,
+            );
             setCallState("active");
             startDurationTimer();
           })
-          .catch(console.error);
+          .catch((e) => {
+            console.error("[webrtc] setRemoteDescription FAILED:", e);
+          });
       } else if (!pcRef.current) {
         setCallState("active");
         startDurationTimer();
@@ -210,7 +239,12 @@ export const useVoiceCall = ({
     pc.onicecandidate = (_event) => {
     };
 
+    pc.oniceconnectionstatechange = () => {
+      console.log("[webrtc] ICE connection state:", pc.iceConnectionState);
+    };
+
     pc.onconnectionstatechange = () => {
+      console.log("[webrtc] Connection state:", pc.connectionState);
       if (
         pc.connectionState === "disconnected" ||
         pc.connectionState === "failed" || pc.connectionState === "closed"
