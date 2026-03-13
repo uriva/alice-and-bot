@@ -143,6 +143,10 @@ export const useVoiceCall = ({
       isMine,
       "callId match:",
       latest.callId === activeCallIdRef.current,
+      "msgCallId:",
+      latest.callId,
+      "activeCallId:",
+      activeCallIdRef.current,
     );
 
     // Only process state changes if the message belongs to our active call,
