@@ -1,7 +1,7 @@
 import { verify } from "../../protocol/src/crypto.ts";
 import { canonicalStringForAuthSign } from "./api.ts";
 
-const kv = await Deno.openKv();
+export const kv = await Deno.openKv();
 
 const NONCE_TTL_MS = 2 * 60 * 1000;
 

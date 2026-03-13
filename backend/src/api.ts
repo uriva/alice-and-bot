@@ -230,6 +230,19 @@ export const backendApiSchema = {
     z.object({ endpoint: z.string() }),
     z.object({ success: z.literal(true) }),
   ),
+  storeTransferPayload: endpoint({
+    authRequired: false,
+    input: z.object({ encryptedPayload: z.string() }),
+    output: z.object({ relayId: z.string() }),
+  }),
+  retrieveTransferPayload: endpoint({
+    authRequired: false,
+    input: z.object({ relayId: z.string() }),
+    output: z.union([
+      z.object({ encryptedPayload: z.string() }),
+      z.object({ error: z.enum(["not-found"]) }),
+    ]),
+  }),
   getUploadUrl: authenticatedEndpoint(
     z.object({
       conversationId: z.string(),
@@ -424,6 +437,19 @@ export const sendTyping = (
   params: { conversation: string; isTyping: boolean; publicSignKey: string },
 ): Promise<{ success: true }> =>
   apiClient({ endpoint: "sendTyping", payload: params });
+
+export const storeTransferPayload = (
+  encryptedPayload: string,
+): Promise<{ relayId: string }> =>
+  apiClient({
+    endpoint: "storeTransferPayload",
+    payload: { encryptedPayload },
+  });
+
+export const retrieveTransferPayload = (
+  relayId: string,
+): Promise<{ encryptedPayload: string } | { error: "not-found" }> =>
+  apiClient({ endpoint: "retrieveTransferPayload", payload: { relayId } });
 
 export const getUploadUrl = async (
   credentials: Credentials,

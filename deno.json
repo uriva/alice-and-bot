@@ -26,6 +26,7 @@
     "posthog-js": "npm:posthog-js@1.313.0",
     "preact-iso": "npm:preact-iso@2.9.1",
     "preact": "npm:preact@10.26.7",
+    "qrcode": "npm:qrcode@1.5.4",
     "preact/hooks": "npm:preact@10.26.7/hooks",
     "preact/jsx-runtime": "npm:preact@10.26.7/jsx-runtime",
     "react-hot-toast": "npm:react-hot-toast@2.5.2",
@@ -47,6 +48,6 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.212",
+  "version": "0.0.213",
   "exports": "./mod.ts"
 }

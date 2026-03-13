@@ -4,7 +4,7 @@ import type { PushSubscriptionJSON } from "../../instant.schema.ts";
 import { isValidAlias, normalizeAlias } from "../../protocol/src/alias.ts";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
-import { issueNonceHelper, verifyAuthToken } from "./auth.ts";
+import { issueNonceHelper, kv, verifyAuthToken } from "./auth.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import {
@@ -29,6 +29,10 @@ const createIdentityForAccount = async (
   );
   return { success: true };
 };
+
+const TRANSFER_TTL_MS = 5 * 60 * 1000;
+
+const transferKey = (relayId: string) => ["transfer", relayId];
 
 const endpoints: BackendApiImpl = {
   authenticate: (token: string) => auth.verifyToken(token),
@@ -408,6 +412,20 @@ const endpoints: BackendApiImpl = {
         }
       }
       return { success: true };
+    },
+    storeTransferPayload: async ({ encryptedPayload }) => {
+      const relayId = crypto.randomUUID();
+      await kv.set(transferKey(relayId), encryptedPayload, {
+        expireIn: TRANSFER_TTL_MS,
+      });
+      return { relayId };
+    },
+    retrieveTransferPayload: async ({ relayId }) => {
+      const k = transferKey(relayId);
+      const { value } = await kv.get<string>(k);
+      if (!value) return { error: "not-found" };
+      await kv.delete(k);
+      return { encryptedPayload: value };
     },
     getUploadUrl: async ({ payload, publicSignKey, nonce, authToken }) => {
       const authed = await verifyAuthToken<{

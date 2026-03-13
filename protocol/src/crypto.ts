@@ -183,3 +183,12 @@ export const decryptBinary = async (
   const cryptoKey = await importSymmetricKey(key, ["decrypt"]);
   return crypto.subtle.decrypt({ ...aesAlgo, iv }, cryptoKey, ciphertext);
 };
+
+export const base64ToBase64Url = (b64: string) =>
+  b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+export const base64UrlToBase64 = (b64url: string) => {
+  const padded = b64url.replace(/-/g, "+").replace(/_/g, "/");
+  const mod = padded.length % 4;
+  return mod ? padded + "=".repeat(4 - mod) : padded;
+};

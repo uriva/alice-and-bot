@@ -27,6 +27,18 @@ import {
   setAlias,
   setName,
 } from "../../protocol/src/clientApi.ts";
+import {
+  base64ToBase64Url,
+  base64UrlToBase64,
+  decryptSymmetric,
+  type EncryptedSymmetric,
+  encryptSymmetric,
+  generateSymmetricKey,
+} from "../../protocol/src/crypto.ts";
+import {
+  retrieveTransferPayload,
+  storeTransferPayload,
+} from "../../backend/src/api.ts";
 import { registerPush } from "../../protocol/src/pushClient.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath, homePath } from "./paths.ts";
@@ -423,6 +435,68 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
   );
 };
 
+const generateTransferQr = async (credentials: Credentials) => {
+  const aesKey = await generateSymmetricKey();
+  const encrypted = await encryptSymmetric(aesKey, credentials);
+  const { relayId } = await storeTransferPayload(encrypted);
+  const fragment = `transfer=${relayId}:${base64ToBase64Url(aesKey)}`;
+  const url = `https://aliceandbot.com${chatPath}#${fragment}`;
+  const QRCode = (await import("qrcode")).default;
+  return QRCode.toDataURL(url, { width: 256, margin: 2 });
+};
+
+const QrCodeTransfer = ({ credentials }: { credentials: Credentials }) => {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onGenerate = async () => {
+    setLoading(true);
+    setError(null);
+    setQrDataUrl(null);
+    try {
+      setQrDataUrl(await generateTransferQr(credentials));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to generate QR code");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div class="flex flex-col gap-2">
+      <button
+        type="button"
+        class={buttonBlueStyle}
+        disabled={loading}
+        onClick={onGenerate}
+      >
+        {loading
+          ? "Generating..."
+          : qrDataUrl
+          ? "Regenerate QR code"
+          : "Connect another device"}
+      </button>
+      <div class={hintStyle}>
+        Scan the QR code with your phone camera to sign in with the same
+        identity. The code expires in 5 minutes and can only be used once.
+      </div>
+      {error && (
+        <div class="text-xs text-red-600 dark:text-red-400">{error}</div>
+      )}
+      {qrDataUrl && (
+        <div class="flex justify-center p-4 bg-white rounded-lg">
+          <img
+            src={qrDataUrl}
+            alt="Transfer QR code"
+            width={256}
+            height={256}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const YourKey = ({ credentials }: { credentials: Credentials }) => {
   const publicSignKey = credentials.publicSignKey;
   const name = useUserName(() => db)(publicSignKey);
@@ -599,6 +673,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           Enable push notifications
         </button>
       </div>
+      <QrCodeTransfer credentials={credentials} />
       <DangerZone />
     </div>
   );
@@ -1355,6 +1430,31 @@ const MessengerLogin = ({ setCredentials }: {
   );
 };
 
+const parseTransferFragment = (hash: string) => {
+  const match = hash.match(/^#?transfer=([^:]+):(.+)$/);
+  if (!match) return null;
+  return { relayId: match[1], aesKey: base64UrlToBase64(match[2]) };
+};
+
+const handleTransferImport = async () => {
+  if (typeof globalThis.location === "undefined") return;
+  const parsed = parseTransferFragment(globalThis.location.hash);
+  if (!parsed) return;
+  globalThis.location.hash = "";
+  const result = await retrieveTransferPayload(parsed.relayId);
+  if ("error" in result) {
+    toast.error("Transfer link expired or already used");
+    return;
+  }
+  const creds = await decryptSymmetric<Credentials>(
+    parsed.aesKey,
+    result.encryptedPayload as EncryptedSymmetric<Credentials>,
+  );
+  localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
+  toast.success("Credentials imported — reloading…");
+  setTimeout(() => globalThis.location.reload(), 500);
+};
+
 export const Messenger = () => {
   const location = useLocation();
   const [credentials, setCredentials] = useState<Credentials | null>(null);
@@ -1392,6 +1492,9 @@ export const Messenger = () => {
       console.error("Failed to parse stored credentials", e);
     }
     setCredentialsChecked(true);
+  }, []);
+  useEffect(() => {
+    handleTransferImport();
   }, []);
   const chatWith = location.query["chatWith"];
   const route = useLocation().route;
