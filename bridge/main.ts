@@ -84,7 +84,13 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
       });
 
       pc.connectionStateChange.subscribe((state) => {
-        console.log("ICE connection state:", state);
+        console.log("Connection state:", state);
+      });
+      pc.iceConnectionStateChange.subscribe((state) => {
+        console.log("ICE state:", state);
+      });
+      pc.iceGatheringStateChange.subscribe((state) => {
+        console.log("ICE gathering:", state);
       });
       pc.onIceCandidate.subscribe((candidate) => {
         if (candidate) {
@@ -145,8 +151,20 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
         type: "offer",
         sdp: typeof msg.sdp === "string" ? msg.sdp : msg.sdp.sdp,
       });
+      console.log(
+        "setRemoteDescription done. ICE:",
+        pc.iceConnectionState,
+        "Gathering:",
+        pc.iceGatheringState,
+      );
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      console.log(
+        "setLocalDescription done. ICE:",
+        pc.iceConnectionState,
+        "Gathering:",
+        pc.iceGatheringState,
+      );
 
       await new Promise<void>((resolve) => {
         if (pc!.iceGatheringState === "complete") {
@@ -164,15 +182,12 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
       });
 
       const answerSdp = pc!.localDescription!.sdp;
+      console.log("Full answer SDP:\n" + answerSdp);
       console.log(
-        "Answer candidates:",
-        answerSdp.split("\n").filter((l: string) =>
-          l.startsWith("a=candidate")
-        ),
-      );
-      console.log(
-        "Answer media lines:",
-        answerSdp.split("\n").filter((l: string) => l.startsWith("m=")),
+        "Post-gathering ICE:",
+        pc!.iceConnectionState,
+        "Connection:",
+        pc!.connectionState,
       );
       socket.send(
         JSON.stringify({
