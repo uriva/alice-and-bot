@@ -31,6 +31,7 @@ import remarkGfm from "remark-gfm";
 import { createContext } from "preact";
 import type { ComponentChildren, JSX } from "preact";
 import type { Attachment } from "../../../protocol/src/clientApi.ts";
+import { maxTextLength } from "../../../protocol/src/attachmentLimits.ts";
 import {
   centerFillStyle,
   chatContainerStyle,
@@ -1986,6 +1987,22 @@ const AttachMenuItem = (
   );
 };
 
+const estimateSerializedLength = (text: string) =>
+  JSON.stringify({ text, type: "text" }).length;
+
+const charCountThreshold = 500;
+
+const charCountStyle = (
+  isDark: boolean,
+  overLimit: boolean,
+): Record<string, string | number> => ({
+  fontSize: 11,
+  textAlign: "right",
+  padding: "2px 12px 0",
+  color: overLimit ? "#ef4444" : isDark ? "#6b7280" : "#94a3b8",
+  fontVariantNumeric: "tabular-nums",
+});
+
 export const AbstractChatBox = (
   {
     limit,
@@ -3066,6 +3083,19 @@ export const AbstractChatBox = (
               );
             })()}
           </div>
+          {(() => {
+            const remaining = maxTextLength -
+              estimateSerializedLength(input);
+            return remaining < charCountThreshold
+              ? (
+                <div style={charCountStyle(isDark, remaining < 0)}>
+                  {remaining < 0
+                    ? `${-remaining} characters over limit`
+                    : `${remaining} characters remaining`}
+                </div>
+              )
+              : null;
+          })()}
         </div>
       </div>
       {fetchingMore && <div style={loadingStyle}>Loading more...</div>}
@@ -3076,6 +3106,9 @@ export const AbstractChatBox = (
     const text = input.trim();
     const files = [...pendingFiles];
     if (!text && files.length === 0) return;
+    if (files.length === 0 && estimateSerializedLength(text) > maxTextLength) {
+      return;
+    }
 
     setInput("");
     setPendingFiles([]);
