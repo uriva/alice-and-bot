@@ -237,6 +237,11 @@ export const useVoiceCall = ({
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
+        {
+          urls: "turn:34.71.16.134:3478",
+          username: "turnuser",
+          credential: "c4667414eb0867040af94292a6c5e3c0",
+        },
       ],
     });
 

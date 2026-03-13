@@ -80,7 +80,14 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
         offerSdp.split("\n").filter((l: string) => l.startsWith("m=")),
       );
       pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          {
+            urls: "turn:34.71.16.134:3478",
+            username: "turnuser",
+            credential: "c4667414eb0867040af94292a6c5e3c0",
+          },
+        ],
       });
 
       pc.connectionStateChange.subscribe((state) => {
