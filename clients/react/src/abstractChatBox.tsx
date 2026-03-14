@@ -24,6 +24,7 @@ import {
   FaPhoneAlt,
   FaPlay,
   FaStop,
+  FaVideoSlash,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -150,7 +151,7 @@ const bubbleVideoStyle: JSX.CSSProperties = {
   background: "#000",
 };
 
-const videoPlaceholderStyle: JSX.CSSProperties = {
+const videoPlaceholderStyle = (isDark: boolean): JSX.CSSProperties => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -159,8 +160,8 @@ const videoPlaceholderStyle: JSX.CSSProperties = {
   aspectRatio: "16/9",
   borderRadius: 8,
   marginTop: 6,
-  background: "#1a1a2e",
-};
+  background: isDark ? "#1a1a2e" : "#e5e7eb",
+});
 
 const pulseKeyframes = `
 @keyframes video-pulse {
@@ -168,7 +169,7 @@ const pulseKeyframes = `
   50% { opacity: 1; }
 }`;
 
-const brokenVideoStyle: JSX.CSSProperties = {
+const brokenVideoStyle = (isDark: boolean): JSX.CSSProperties => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -179,20 +180,21 @@ const brokenVideoStyle: JSX.CSSProperties = {
   aspectRatio: "16/9",
   borderRadius: 8,
   marginTop: 6,
-  background: "#1a1a2e",
-  color: "#666",
+  background: isDark ? "#1a1a2e" : "#e5e7eb",
+  color: isDark ? "#6b7280" : "#9ca3af",
   fontSize: 13,
-};
+});
 
 const VideoPlayer = ({ src }: { src?: string }) => {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const isDark = useDarkMode();
   const onLoadedMetadata = useCallback(() => setState("ready"), []);
   const onError = useCallback(() => setState("error"), []);
   if (state === "error") {
     return (
-      <div style={brokenVideoStyle}>
-        <FaPlay style={{ fontSize: 28, opacity: 0.5 }} />
-        <span>Video unavailable</span>
+      <div style={brokenVideoStyle(isDark)}>
+        <FaVideoSlash style={{ fontSize: 32, opacity: 0.5 }} />
+        <span>Video unavailable :(</span>
       </div>
     );
   }
@@ -200,10 +202,10 @@ const VideoPlayer = ({ src }: { src?: string }) => {
     <>
       <style>{pulseKeyframes}</style>
       {state === "loading" && (
-        <div style={videoPlaceholderStyle}>
+        <div style={videoPlaceholderStyle(isDark)}>
           <FaPlay
             style={{
-              color: "#555",
+              color: isDark ? "#555" : "#9ca3af",
               fontSize: 36,
               animation: "video-pulse 1.5s ease-in-out infinite",
             }}
