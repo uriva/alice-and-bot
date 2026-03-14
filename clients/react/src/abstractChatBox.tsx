@@ -2495,6 +2495,7 @@ export const AbstractChatBox = (
             flexGrow: 1,
             boxSizing: "border-box",
             minWidth: 0,
+            overflow: "hidden",
             ...contentMaxWidthStyle(customColors),
           }}
         >
