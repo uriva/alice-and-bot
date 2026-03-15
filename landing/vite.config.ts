@@ -3,10 +3,13 @@ import preact from "@preact/preset-vite";
 import deno from "@deno/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
+import { globSync } from "node:fs";
 
-const decodePath = resolve(
-  __dirname,
-  "../node_modules/.deno/decode-named-character-reference@1.2.0/node_modules/decode-named-character-reference/index.js",
+const [decodePath] = globSync(
+  resolve(
+    __dirname,
+    "../node_modules/.deno/decode-named-character-reference@*/node_modules/decode-named-character-reference/index.js",
+  ),
 );
 
 export default defineConfig({
