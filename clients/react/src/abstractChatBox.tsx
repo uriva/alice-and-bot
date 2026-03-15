@@ -2495,7 +2495,6 @@ export const AbstractChatBox = (
             flexGrow: 1,
             boxSizing: "border-box",
             minWidth: 0,
-            overflow: "hidden",
             ...contentMaxWidthStyle(customColors),
           }}
         >
@@ -3026,7 +3025,7 @@ export const AbstractChatBox = (
                     background: showStop ? "#dc2626" : primaryColor,
                     touchAction: "none",
                     position: "relative",
-                    overflowX: "hidden",
+                    overflow: "hidden",
                   }}
                   title={showMic
                     ? (isMobile ? "Hold to record" : "Record audio")
