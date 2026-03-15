@@ -36,7 +36,7 @@ export const callWebhooks = async (
 };
 
 type Participant = { publicSignKey: string; webhook?: string };
-type Conversation = { id: string; participants: Participant[] };
+type Conversation = { id: string; title: string; participants: Participant[] };
 
 export const vapidPublicKey = coerce(Deno.env.get("VAPID_PUBLIC_KEY"));
 
@@ -73,8 +73,9 @@ export const sendPushToParticipants = async (
   const payload = {
     type: "message",
     conversationId: conversation.id,
+    conversationTitle: conversation.title,
     timestamp: message.timestamp,
-  } as const;
+  };
   for (
     const sub of pushSubscriptions.filter((s) =>
       !s.conversation || s.conversation.id === conversation.id

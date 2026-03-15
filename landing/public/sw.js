@@ -5,11 +5,10 @@ self.addEventListener("push", (event) => {
   } catch (_) {
     // ignore malformed payloads
   }
+  const title = data.conversationTitle || "New message";
   event.waitUntil(
-    self.registration.showNotification("New message", {
-      body: data.conversationId
-        ? `Conversation: ${data.conversationId}`
-        : "You have a new message",
+    self.registration.showNotification(title, {
+      body: "You have a new message",
       icon: "/icon.png",
       badge: "/icon.png",
       data,
@@ -17,11 +16,20 @@ self.addEventListener("push", (event) => {
   );
 });
 
-self.addEventListener("notificationclick", function (event) {
+self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const d = event.notification.data || {};
   const url = d.conversationId
-    ? `/chat?conversation=${encodeURIComponent(d.conversationId)}`
-    : "/";
-  event.waitUntil(clients.openWindow(url));
+    ? `/chat?c=${encodeURIComponent(d.conversationId)}`
+    : "/chat";
+  event.waitUntil(
+    clients.matchAll({ type: "window" }).then((windowClients) => {
+      const existing = windowClients.find((w) => w.url.includes("/chat"));
+      if (existing) {
+        existing.navigate(url);
+        return existing.focus();
+      }
+      return clients.openWindow(url);
+    }),
+  );
 });
