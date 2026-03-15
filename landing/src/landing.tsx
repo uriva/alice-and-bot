@@ -110,6 +110,32 @@ export const LandingPage = () => {
         </ul>
       </section>
       <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
+        <h3 class="text-2xl font-bold mb-4 text-center">
+          AI Agent Skill
+        </h3>
+        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-4">
+          Give your AI coding agent the ability to build bots on Alice&Bot.
+          Install the skill and your agent will know how to create identities,
+          send messages, set up webhooks, and more.
+        </p>
+        <pre class="w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
+          <code>
+            {`mkdir -p ~/.agents/skills/alice-and-bot
+curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
+  https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md`}
+          </code>
+        </pre>
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
+          Works with any agent that supports{" "}
+          <a
+            href="https://github.com/anomalyco/opencode"
+            class="underline text-blue-600 dark:text-blue-400"
+          >
+            OpenCode
+          </a>-style skills.
+        </p>
+      </section>
+      <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
         <h3 class="text-2xl font-bold mb-6 text-center">
           Install on your phone
         </h3>
