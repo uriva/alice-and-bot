@@ -3026,7 +3026,7 @@ export const AbstractChatBox = (
                     background: showStop ? "#dc2626" : primaryColor,
                     touchAction: "none",
                     position: "relative",
-                    overflow: "hidden",
+                    overflowX: "hidden",
                   }}
                   title={showMic
                     ? (isMobile ? "Hold to record" : "Record audio")
