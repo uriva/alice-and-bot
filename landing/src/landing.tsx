@@ -1,4 +1,5 @@
 import { useEffect } from "preact/hooks";
+import { FaAndroid, FaApple } from "react-icons/fa";
 import { chatPath, guidePath, manifestoPath } from "./paths.ts";
 
 const features = [
@@ -107,6 +108,56 @@ export const LandingPage = () => {
           <li>Bring your own identity (public/private key)</li>
           <li>White label and embed anywhere</li>
         </ul>
+      </section>
+      <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
+        <h3 class="text-2xl font-bold mb-6 text-center">
+          Install on your phone
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+          <div class="flex flex-col items-center p-6 bg-white/90 dark:bg-blue-950/80 rounded-2xl border border-blue-100 dark:border-blue-900 shadow-xl">
+            <FaAndroid size={40} className="text-green-500 mb-3" />
+            <strong class="text-lg font-semibold text-blue-700 dark:text-blue-300 mb-2">
+              Android
+            </strong>
+            <ol class="text-gray-700 dark:text-gray-200 text-sm space-y-1 list-decimal list-inside">
+              <li>
+                Open{" "}
+                <a
+                  href={chatPath}
+                  class="underline text-blue-600 dark:text-blue-400"
+                >
+                  aliceandbot.com/chat
+                </a>{" "}
+                in Chrome
+              </li>
+              <li>Tap the menu (three dots)</li>
+              <li>Tap "Add to Home screen"</li>
+            </ol>
+          </div>
+          <div class="flex flex-col items-center p-6 bg-white/90 dark:bg-blue-950/80 rounded-2xl border border-blue-100 dark:border-blue-900 shadow-xl">
+            <FaApple
+              size={40}
+              className="text-gray-700 dark:text-gray-300 mb-3"
+            />
+            <strong class="text-lg font-semibold text-blue-700 dark:text-blue-300 mb-2">
+              iPhone / iPad
+            </strong>
+            <ol class="text-gray-700 dark:text-gray-200 text-sm space-y-1 list-decimal list-inside">
+              <li>
+                Open{" "}
+                <a
+                  href={chatPath}
+                  class="underline text-blue-600 dark:text-blue-400"
+                >
+                  aliceandbot.com/chat
+                </a>{" "}
+                in Safari
+              </li>
+              <li>Tap the share button</li>
+              <li>Tap "Add to Home Screen"</li>
+            </ol>
+          </div>
+        </div>
       </section>
       <div class="flex flex-wrap justify-center mb-12 gap-4">
         <a
