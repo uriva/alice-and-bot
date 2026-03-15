@@ -280,7 +280,7 @@ export const useDecryptedMessages = (
         b.timestamp - a.timestamp
       );
       Promise.all(sorted.map(decryptMessage(conversationKey))).then(
-        setMessages,
+        (msgs) => setMessages(msgs.filter((m) => m !== undefined)),
       );
     }
   }, [conversationKey, encryptedMessages]);

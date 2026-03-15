@@ -238,16 +238,21 @@ const getConversationKey = async (creds: Credentials, convo: string) => {
 export const handleWebhookUpdate = async (
   whUpdate: WebhookUpdate,
   credentials: Credentials,
-): Promise<{
-  conversationId: string;
-  message: DistributeOmit<DecipheredMessage, "id">;
-  conversationKey: string;
-  messageId: string;
-}> => {
+): Promise<
+  | {
+    conversationId: string;
+    message: DistributeOmit<DecipheredMessage, "id">;
+    conversationKey: string;
+    messageId: string;
+  }
+  | undefined
+> => {
   const key = await getConversationKey(credentials, whUpdate.conversationId);
+  const message = await decryptMessagePayload(key)(whUpdate);
+  if (!message) return undefined;
   return {
     conversationId: whUpdate.conversationId,
-    message: await decryptMessagePayload(key)(whUpdate),
+    message,
     conversationKey: key,
     messageId: whUpdate.messageId,
   };
@@ -357,24 +362,25 @@ async (
       conversationSymmetricKey,
       payload,
     );
-  if (await verify(signature, publicSignKey, msgToStr(decryptedPayload))) {
-    return decryptedPayloadToMessage(
-      publicSignKey,
-      timestamp,
-      decryptedPayload,
-    );
+  if (!(await verify(signature, publicSignKey, msgToStr(decryptedPayload)))) {
+    return undefined;
   }
-  throw new Error("Invalid signature");
+  return decryptedPayloadToMessage(
+    publicSignKey,
+    timestamp,
+    decryptedPayload,
+  );
 };
 
 export const decryptMessage = (conversationSymmetricKey: string) =>
 async (
   { id, payload, timestamp }: DbMessage,
-): Promise<DecipheredMessage> => {
+) => {
   const base = await decryptMessagePayload(conversationSymmetricKey)({
     payload,
     timestamp,
   });
+  if (!base) return undefined;
   return { id, ...base } as DecipheredMessage;
 };
 
