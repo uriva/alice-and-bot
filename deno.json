@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "build-landing": "cd landing; deno run -A --node-modules-dir=auto npm:vite build",
+    "build-landing": "rm -f landing/node_modules && ln -s ../node_modules landing/node_modules && mkdir -p node_modules/vite-prerender-plugin && deno run -A --node-modules-dir=auto npm:vite build --config landing/vite.config.ts",
     "landing": "cd landing; deno run -A --node-modules-dir=auto npm:vite",
     "widget": "cd widget && deno run -A --node-modules-dir=auto npm:vite build --config vite.config.ts",
     "dev": "cd clients/react; deno run -A --node-modules-dir=auto npm:vite",
@@ -36,6 +36,9 @@
     "remark-gfm": "npm:remark-gfm@4.0.1",
     "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
     "typed-api": "jsr:@uri/typed-api@0.0.10",
+    "@tailwindcss/vite": "npm:@tailwindcss/vite@4.2.1",
+    "tailwindcss": "npm:tailwindcss@4.2.1",
+    "vite-prerender-plugin": "npm:vite-prerender-plugin@0.5.12",
     "vite": "npm:vite@^7.0.2",
     "web-push": "npm:web-push@3.6.7",
     "zod": "npm:zod@3.25.57"

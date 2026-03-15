@@ -1,4 +1,5 @@
-import { type AnyComponent, render } from "preact";
+import type { AnyComponent } from "preact";
+import hydrate from "preact-iso/hydrate";
 import { ErrorBoundary, LocationProvider, Route, Router } from "preact-iso";
 import { Toaster } from "react-hot-toast";
 import { Messenger } from "./chat.tsx";
@@ -7,6 +8,7 @@ import { LandingPage } from "./landing.tsx";
 import { Legal } from "./legal.tsx";
 import { chatPath, guidePath, homePath, manifestoPath } from "./paths.ts";
 import { Manifesto } from "./manifesto.tsx";
+import "./app.css";
 
 const routes: { path: string; component: AnyComponent }[] = [
   { path: homePath, component: LandingPage },
@@ -34,8 +36,8 @@ const NotFound = () => (
 );
 
 const App = () => (
-  <LocationProvider>
-    <Toaster />
+  <>
+    {typeof window !== "undefined" && <Toaster />}
     <ErrorBoundary>
       <Router>
         {routes.map(({ path, component }) => (
@@ -44,7 +46,13 @@ const App = () => (
         <Route default component={NotFound} />
       </Router>
     </ErrorBoundary>
+  </>
+);
+
+export const App_ = () => (
+  <LocationProvider>
+    <App />
   </LocationProvider>
 );
 
-render(<App />, document.getElementById("root")!);
+hydrate(<App_ />);
