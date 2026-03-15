@@ -212,7 +212,7 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
           href={manifestoPath}
           class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
         >
-          Read more
+          Our Manifesto
         </a>
       </div>
       <footer class="w-full bg-gradient-to-r from-blue-900 dark:from-gray-950 to-blue-800 dark:to-gray-900 border-t border-blue-700 dark:border-gray-700 mt-16">
