@@ -39,7 +39,7 @@ import {
   retrieveTransferPayload,
   storeTransferPayload,
 } from "../../backend/src/api.ts";
-import { registerPush } from "../../protocol/src/pushClient.ts";
+import { registerPush, reportActive } from "../../protocol/src/pushClient.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath, homePath } from "./paths.ts";
 
@@ -1596,6 +1596,21 @@ export const Messenger = () => {
     }
     if (!initializedFromQuery) setInitializedFromQuery(true);
   }, [credentials, JSON.stringify(location.query)]);
+  useEffect(() => {
+    if (!credentials) return;
+    const fire = () => reportActive(credentials);
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      fire();
+    };
+    fire();
+    const id = setInterval(fire, 30_000);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [credentials]);
   return (
     <div
       class={`flex flex-col w-full overflow-hidden ${textColorStyle}`}

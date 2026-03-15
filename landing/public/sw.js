@@ -7,12 +7,19 @@ self.addEventListener("push", (event) => {
   }
   const title = data.conversationTitle || "New message";
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: "You have a new message",
-      icon: "/icon.png",
-      badge: "/icon.png",
-      data,
-    }),
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windowClients) => {
+        if (windowClients.some((c) => c.focused && c.url.includes("/chat"))) {
+          return;
+        }
+        return self.registration.showNotification(title, {
+          body: "You have a new message",
+          icon: "/icon.png",
+          badge: "/icon.png",
+          data,
+        });
+      }),
   );
 });
 

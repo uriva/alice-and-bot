@@ -34,6 +34,7 @@ const _schema = i.schema({
       publicSignKey: i.string().unique().indexed(),
       webhook: i.string().indexed().optional(),
       alias: i.string().unique().indexed().optional(),
+      lastActiveAt: i.number().optional(),
     }),
     pushSubscriptions: i.entity({
       endpoint: i.string().unique().indexed(),

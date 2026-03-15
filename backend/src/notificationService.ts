@@ -63,11 +63,19 @@ export const sendPushToParticipants = async (
   const { identities } = await query({
     identities: { $: { where: { publicSignKey: { $in: participantKeys } } } },
   });
+  const activeThreshold = Date.now() - 60_000;
+  const inactiveIdentities = identities.filter(
+    (i: { lastActiveAt?: number }) =>
+      !i.lastActiveAt || i.lastActiveAt < activeThreshold,
+  );
+  if (inactiveIdentities.length === 0) return {};
   const { pushSubscriptions } = await query({
     pushSubscriptions: {
       owner: {},
       conversation: {},
-      $: { where: { "owner.id": { $in: identities.map((i) => i.id) } } },
+      $: {
+        where: { "owner.id": { $in: inactiveIdentities.map((i) => i.id) } },
+      },
     },
   });
   const payload = {

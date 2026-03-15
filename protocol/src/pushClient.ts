@@ -1,5 +1,6 @@
 import {
   getVapidPublicKey,
+  heartbeatSigned,
   registerPushSubscription,
   unregisterPushSubscription,
 } from "../../backend/src/api.ts";
@@ -60,3 +61,6 @@ export const unregisterPush = async (credentials: Credentials) => {
   );
   await sub.unsubscribe();
 };
+
+export const reportActive = (credentials: Credentials) =>
+  heartbeatSigned(credentials);

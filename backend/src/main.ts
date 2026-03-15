@@ -413,6 +413,24 @@ const endpoints: BackendApiImpl = {
       }
       return { success: true };
     },
+    heartbeat: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authed = await verifyAuthToken<Record<string, never>>({
+        action: "heartbeat",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authed) return { success: true };
+      const { identities } = await query({
+        identities: { $: { where: { publicSignKey } } },
+      });
+      if (identities.length === 0) return { success: true };
+      await transact(
+        tx.identities[identities[0].id].update({ lastActiveAt: Date.now() }),
+      );
+      return { success: true };
+    },
     storeTransferPayload: async ({ encryptedPayload }) => {
       const relayId = crypto.randomUUID();
       await kv.set(transferKey(relayId), encryptedPayload, {

@@ -230,6 +230,10 @@ export const backendApiSchema = {
     z.object({ endpoint: z.string() }),
     z.object({ success: z.literal(true) }),
   ),
+  heartbeat: authenticatedEndpoint(
+    z.object({}),
+    z.object({ success: z.literal(true) }),
+  ),
   storeTransferPayload: endpoint({
     authRequired: false,
     input: z.object({ encryptedPayload: z.string() }),
@@ -450,6 +454,14 @@ export const retrieveTransferPayload = (
   relayId: string,
 ): Promise<{ encryptedPayload: string } | { error: "not-found" }> =>
   apiClient({ endpoint: "retrieveTransferPayload", payload: { relayId } });
+
+export const heartbeatSigned = async (
+  credentials: Credentials,
+): Promise<{ success: true }> =>
+  apiClient({
+    endpoint: "heartbeat",
+    payload: await buildSignedRequest(credentials, "heartbeat", {}),
+  });
 
 export const getUploadUrl = async (
   credentials: Credentials,
