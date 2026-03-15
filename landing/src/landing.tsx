@@ -1,5 +1,5 @@
 import { useEffect } from "preact/hooks";
-import { FaAndroid, FaApple } from "react-icons/fa";
+import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
 import { chatPath, guidePath, manifestoPath } from "./paths.ts";
 
 const features = [
@@ -191,7 +191,7 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
           href="https://github.com/uriva/alice-and-bot"
           class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
         >
-          Start building
+          <FaGithub size={28} />
         </a>
         <a
           type="button"

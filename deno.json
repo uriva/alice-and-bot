@@ -1,7 +1,7 @@
 {
   "tasks": {
-    "build-landing": "rm -f landing/node_modules && ln -s ../node_modules landing/node_modules && mkdir -p node_modules/vite-prerender-plugin && deno run -A --node-modules-dir=auto npm:vite build --config landing/vite.config.ts",
-    "landing": "cd landing; deno run -A --node-modules-dir=auto npm:vite",
+    "build-landing": "mkdir -p landing/node_modules/vite-prerender-plugin && deno run -A --node-modules-dir=auto npm:vite build",
+    "landing": "deno run -A --node-modules-dir=auto npm:vite",
     "widget": "cd widget && deno run -A --node-modules-dir=auto npm:vite build --config vite.config.ts",
     "dev": "cd clients/react; deno run -A --node-modules-dir=auto npm:vite",
     "example": "cd example; deno run -A --node-modules-dir=auto npm:vite",
