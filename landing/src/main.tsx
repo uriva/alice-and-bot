@@ -55,4 +55,12 @@ export const App_ = () => (
   </LocationProvider>
 );
 
+if (
+  typeof window !== "undefined" &&
+  location.pathname.startsWith(chatPath) &&
+  location.search
+) {
+  document.querySelector("script[type=isodata]")?.remove();
+}
+
 hydrate(<App_ />);
