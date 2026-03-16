@@ -154,6 +154,7 @@ const getStartButtonStyle = (colors: WidgetModeColors): JSX.CSSProperties => ({
   outline: "none",
   margin: "8px",
   display: "inline-block",
+  whiteSpace: "nowrap",
 });
 
 const chatOpen = signal(false);
