@@ -57,8 +57,7 @@ export const App_ = () => (
 
 if (
   typeof window !== "undefined" &&
-  location.pathname.startsWith(chatPath) &&
-  location.search
+  location.pathname.startsWith(chatPath)
 ) {
   document.querySelector("script[type=isodata]")?.remove();
 }
