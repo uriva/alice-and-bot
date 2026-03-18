@@ -86,7 +86,7 @@ const SendingAudioIndicator = (
 const paragraphSpacingStyle: JSX.CSSProperties = { margin: "0 0 8px 0" };
 
 const MarkdownParagraph = ({ children }: { children?: ComponentChildren }) => (
-  <div style={paragraphSpacingStyle}>{children}</div>
+  <div dir="auto" style={paragraphSpacingStyle}>{children}</div>
 );
 
 const TypingIndicator = (
