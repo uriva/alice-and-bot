@@ -2024,6 +2024,7 @@ export const AbstractChatBox = (
     activeSpinners = [],
     activeProgress = [],
     isGroupChat = false,
+    disableAutoFocus = false,
   }: {
     userId: string;
     onSend: (input: string) => void;
@@ -2063,6 +2064,7 @@ export const AbstractChatBox = (
     activeSpinners?: ActiveSpinner[];
     activeProgress?: ActiveProgress[];
     isGroupChat?: boolean;
+    disableAutoFocus?: boolean;
   },
 ): JSX.Element => {
   const isMobile = useIsMobile();
@@ -2213,8 +2215,8 @@ export const AbstractChatBox = (
     };
   }, [onClose]);
   useEffect(() => {
-    if (!isMobile) inputRef.current?.focus();
-  }, [title, isMobile]);
+    if (!isMobile && !disableAutoFocus) inputRef.current?.focus();
+  }, [title, isMobile, disableAutoFocus]);
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.addEventListener("scroll", handleScroll);
