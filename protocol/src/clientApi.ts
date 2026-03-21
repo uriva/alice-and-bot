@@ -501,6 +501,29 @@ export const setName = async ({
     }),
   });
 
+export const renameConversation = async ({
+  conversationId,
+  title,
+  credentials,
+}: {
+  conversationId: string;
+  title: string;
+  credentials: Credentials;
+}): Promise<
+  | { success: true }
+  | {
+    success: false;
+    error: "not-found" | "invalid-auth" | "not-admin" | "invalid-title";
+  }
+> =>
+  apiClient({
+    endpoint: "renameConversation",
+    payload: await buildSignedRequest(credentials, "renameConversation", {
+      conversationId,
+      title,
+    }),
+  });
+
 export const publicSignKeyToAlias = (
   publicSignKey: string,
 ): Promise<{ alias: string } | { error: "no-such-identity" | "no-alias" }> =>

@@ -263,6 +263,21 @@ export const backendApiSchema = {
       z.object({ error: z.enum(["not-participant", "invalid-conversation"]) }),
     ]),
   ),
+  renameConversation: authenticatedEndpoint(
+    z.object({ conversationId: z.string(), title: z.string() }),
+    z.union([
+      z.object({ success: z.literal(true) }),
+      z.object({
+        success: z.literal(false),
+        error: z.enum([
+          "not-found",
+          "invalid-auth",
+          "not-admin",
+          "invalid-title",
+        ]),
+      }),
+    ]),
+  ),
 } as const;
 
 export const apiClient = apiClientMaker(
@@ -479,4 +494,25 @@ export const getUploadUrl = async (
   apiClient({
     endpoint: "getUploadUrl",
     payload: await buildSignedRequest(credentials, "getUploadUrl", payload),
+  });
+
+export const renameConversationSigned = async (
+  { conversationId, title, credentials }: {
+    conversationId: string;
+    title: string;
+    credentials: Credentials;
+  },
+): Promise<
+  | { success: true }
+  | {
+    success: false;
+    error: "not-found" | "invalid-auth" | "not-admin" | "invalid-title";
+  }
+> =>
+  apiClient({
+    endpoint: "renameConversation",
+    payload: await buildSignedRequest(credentials, "renameConversation", {
+      conversationId,
+      title,
+    }),
   });

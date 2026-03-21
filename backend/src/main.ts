@@ -314,6 +314,40 @@ const endpoints: BackendApiImpl = {
       );
       return { success: true };
     },
+    renameConversation: async (
+      { payload, publicSignKey, nonce, authToken },
+    ) => {
+      const authOk = await verifyAuthToken({
+        action: "renameConversation",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) return { success: false, error: "invalid-auth" };
+      const { conversationId, title } = payload;
+      const trimmed = title.trim();
+      if (trimmed.length === 0 || trimmed.length > 100) {
+        return { success: false, error: "invalid-title" };
+      }
+      const { conversations } = await query({
+        conversations: {
+          admins: {},
+          $: { where: { id: conversationId } },
+        },
+      });
+      if (conversations.length === 0) {
+        return { success: false, error: "not-found" };
+      }
+      const isAdmin = conversations[0].admins.some(
+        (a: { publicSignKey: string }) => a.publicSignKey === publicSignKey,
+      );
+      if (!isAdmin) return { success: false, error: "not-admin" };
+      await transact(
+        tx.conversations[conversationId].update({ title: trimmed }),
+      );
+      return { success: true };
+    },
     getVapidPublicKey: () => Promise.resolve({ publicKey: vapidPublicKey }),
     registerPushSubscription: async (
       { payload, publicSignKey, nonce, authToken },

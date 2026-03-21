@@ -43,6 +43,7 @@ export {
   handleWebhookUpdate,
   type ImageAttachment,
   type LocationAttachment,
+  renameConversation,
   sendMessage,
   sendMessageWithKey,
   setAlias,
