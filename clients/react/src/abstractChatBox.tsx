@@ -971,7 +971,9 @@ const AttachmentRenderer = (
 
   useEffect(() => {
     if (!onDecrypt || decryptedUrl) return;
-    if (attachment.type === "image") handleDecrypt();
+    if (attachment.type === "image" || attachment.type === "video") {
+      handleDecrypt();
+    }
     if (isOwn && isFromThisSession && attachment.type === "audio") {
       handleDecrypt();
     }
@@ -1104,21 +1106,9 @@ const AttachmentRenderer = (
         </video>
       )
       : (
-        <button
-          type="button"
-          onClick={handleDecrypt}
-          disabled={loading}
-          style={{
-            ...fileAttachmentStyle(isDark),
-            cursor: "pointer",
-            border: "none",
-          }}
-        >
-          <span>🎬</span>
-          <span style={{ color: textColor, fontSize: 13 }}>
-            {loading ? "Loading..." : attachment.name}
-          </span>
-        </button>
+        <div style={videoPlaceholderStyle(isDark)}>
+          <Spinner />
+        </div>
       );
   }
 
