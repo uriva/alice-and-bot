@@ -970,10 +970,9 @@ const AttachmentRenderer = (
     messageTimestamp >= sessionStart;
 
   useEffect(() => {
-    if (
-      isOwn && isFromThisSession && attachment.type === "audio" && onDecrypt &&
-      !decryptedUrl
-    ) {
+    if (!onDecrypt || decryptedUrl) return;
+    if (attachment.type === "image") handleDecrypt();
+    if (isOwn && isFromThisSession && attachment.type === "audio") {
       handleDecrypt();
     }
   }, [isOwn, isFromThisSession, attachment.type, onDecrypt]);
@@ -1077,21 +1076,19 @@ const AttachmentRenderer = (
         />
       )
       : (
-        <button
-          type="button"
-          onClick={handleDecrypt}
-          disabled={loading}
+        <div
           style={{
-            ...fileAttachmentStyle(isDark),
-            cursor: "pointer",
-            border: "none",
+            width: 200,
+            height: 150,
+            borderRadius: 8,
+            background: isDark ? "#ffffff10" : "#00000008",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <span>🖼️</span>
-          <span style={{ color: textColor, fontSize: 13 }}>
-            {loading ? "Loading..." : attachment.name}
-          </span>
-        </button>
+          <Spinner />
+        </div>
       );
   }
 
