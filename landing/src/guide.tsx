@@ -1,10 +1,10 @@
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import guideText from "./guide.md?raw";
+import docsText from "./docs.md?raw";
 import { homePath } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
-export const Guide = () => {
+export const Docs = () => {
   useClearViewportStyles();
   return (
     <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-blue-950">
@@ -42,6 +42,12 @@ export const Guide = () => {
               <h3 class="text-xl font-semibold mt-6 mb-2 text-blue-100">
                 {children}
               </h3>
+            ),
+            // @ts-expect-error Markdown types are not fully compatible with Preact
+            h4: ({ children }) => (
+              <h4 class="text-lg font-semibold mt-4 mb-2 text-blue-100">
+                {children}
+              </h4>
             ),
             // @ts-expect-error Markdown types are not fully compatible with Preact
             p: ({ children }) => (
@@ -115,6 +121,12 @@ export const Guide = () => {
               </ul>
             ),
             // @ts-expect-error Markdown types are not fully compatible with Preact
+            ol: ({ children }) => (
+              <ol class="list-decimal list-inside my-4 pl-4 text-gray-300">
+                {children}
+              </ol>
+            ),
+            // @ts-expect-error Markdown types are not fully compatible with Preact
             li: ({ children }) => <li class="mb-1">{children}</li>,
             // @ts-expect-error Markdown types are not fully compatible with Preact
             strong: ({ children }) => (
@@ -122,7 +134,7 @@ export const Guide = () => {
             ),
           }}
         >
-          {guideText}
+          {docsText}
         </Markdown>
       </div>
     </div>

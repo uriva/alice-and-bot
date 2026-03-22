@@ -1,5 +1,5 @@
 import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
-import { chatPath, guidePath, manifestoPath } from "./paths.ts";
+import { chatPath, docsPath, manifestoPath } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
 const features = [
@@ -190,10 +190,10 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
         </a>
         <a
           type="button"
-          href={guidePath}
+          href={docsPath}
           class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
         >
-          Build a bot UI
+          Docs
         </a>
         <a
           type="button"
@@ -215,10 +215,10 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
           </div>
           <nav class="flex flex-wrap justify-center gap-6">
             <a
-              href={guidePath}
+              href={docsPath}
               class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
             >
-              Guide
+              Docs
             </a>
             <a
               href={manifestoPath}
@@ -243,9 +243,7 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               Discord
             </a>
             <a
-              href="https://github.com/uriva/alice-and-bot"
-              target="_blank"
-              rel="noopener noreferrer"
+              href={docsPath}
               class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
             >
               API Docs

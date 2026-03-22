@@ -3,17 +3,18 @@ import hydrate from "preact-iso/hydrate";
 import { ErrorBoundary, LocationProvider, Route, Router } from "preact-iso";
 import { Toaster } from "react-hot-toast";
 import { Messenger } from "./chat.tsx";
-import { Guide } from "./guide.tsx";
+import { Docs } from "./guide.tsx";
 import { LandingPage } from "./landing.tsx";
 import { Legal } from "./legal.tsx";
-import { chatPath, guidePath, homePath, manifestoPath } from "./paths.ts";
+import { chatPath, docsPath, guidePath, homePath, manifestoPath } from "./paths.ts";
 import { Manifesto } from "./manifesto.tsx";
 import "./app.css";
 
 const routes: { path: string; component: AnyComponent }[] = [
   { path: homePath, component: LandingPage },
   { path: chatPath, component: Messenger },
-  { path: guidePath, component: Guide },
+  { path: docsPath, component: Docs },
+  { path: guidePath, component: Docs },
   { path: "/legal", component: Legal },
   { path: manifestoPath, component: Manifesto },
 ];

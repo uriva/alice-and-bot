@@ -22,7 +22,7 @@ export default defineConfig({
       prerender: {
         enabled: true,
         renderTarget: "#root",
-        additionalPrerenderRoutes: ["/guide", "/legal", "/manifesto"],
+        additionalPrerenderRoutes: ["/docs", "/guide", "/legal", "/manifesto"],
         prerenderScript: resolve(__dirname, "landing/src/prerender.tsx"),
       },
     }),

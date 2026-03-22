@@ -1,9 +1,25 @@
-# Alice&Bot guide
+# Alice&Bot docs
 
 Alice&Bot is an encrypted chat service where identities are just keypairs. No
-phone numbers, no approval queues. Bots and humans use the same protocol. This
-guide covers the bot integration API, agent-to-agent communication, and the
-embeddable UI component.
+phone numbers, no approval queues. Bots and humans use the same protocol.
+
+## Installation
+
+### Using Deno (via JSR)
+
+```ts
+import aliceAndBot from "jsr:@alice-and-bot/core";
+```
+
+### Using Node.js (via npm)
+
+```sh
+npm install @jsr/alice-and-bot__core
+```
+
+```js
+import aliceAndBot from "@jsr/alice-and-bot__core";
+```
 
 ## Creating a bot
 
@@ -221,7 +237,59 @@ without a UI, you can still use them, the receiving bot sees them as
 
 ## Attachments
 
-Messages can include file attachments. The types are:
+Messages can include file attachments. To send one, use `uploadAttachment`
+first, then include it in a text message:
+
+```ts
+import { uploadAttachment } from "@alice-and-bot/core";
+
+const attachment = await uploadAttachment({
+  credentials,
+  conversationId,
+  conversationKey,
+  file: someFile,
+});
+
+if (!("error" in attachment)) {
+  await sendMessageWithKey({
+    conversationKey,
+    conversation: conversationId,
+    credentials,
+    message: {
+      type: "text",
+      text: "Here's the file",
+      attachments: [attachment],
+    },
+  });
+}
+```
+
+Files are encrypted with the conversation key before upload. The server never
+sees plaintext. Size limits: images 10MB, audio 25MB, video 100MB, other files
+25MB.
+
+Location attachments don't require an upload, just include them directly:
+
+```ts
+message: {
+  type: "text",
+  text: "Meet here",
+  attachments: [{ type: "location", latitude: 32.08, longitude: 34.78, label: "Office" }],
+}
+```
+
+To download and decrypt an attachment:
+
+```ts
+import { downloadAttachment } from "@alice-and-bot/core";
+
+const data: ArrayBuffer = await downloadAttachment({
+  url: attachment.url,
+  conversationKey,
+});
+```
+
+### Attachment types
 
 ```ts
 type ImageAttachment = {
@@ -264,47 +332,6 @@ type LocationAttachment = {
   longitude: number;
   label?: string;
 };
-```
-
-To send an attachment, use `uploadAttachment` first, then include it in a text
-message:
-
-```ts
-import { uploadAttachment } from "@alice-and-bot/core";
-
-const attachment = await uploadAttachment({
-  credentials,
-  conversationId,
-  conversationKey,
-  file: someFile,
-});
-
-if (!("error" in attachment)) {
-  await sendMessageWithKey({
-    conversationKey,
-    conversation: conversationId,
-    credentials,
-    message: {
-      type: "text",
-      text: "Here's the file",
-      attachments: [attachment],
-    },
-  });
-}
-```
-
-Files are encrypted with the conversation key before upload. The server never
-sees plaintext. Size limits: images 10MB, audio 25MB, video 100MB, other files
-25MB.
-
-Location attachments don't require an upload, just include them directly:
-
-```ts
-message: {
-  type: "text",
-  text: "Meet here",
-  attachments: [{ type: "location", latitude: 32.08, longitude: 34.78, label: "Office" }],
-}
 ```
 
 ## Editing messages
@@ -453,6 +480,19 @@ const App = () => {
 That's it. No message state management, no socket handling, no encryption logic.
 The `Chat` component handles all of it.
 
+### Chat props
+
+| Prop                   | Type           | Description                           |
+| ---------------------- | -------------- | ------------------------------------- |
+| `credentials`          | `Credentials`  | User identity (from `createIdentity`) |
+| `conversationId`       | `string`       | Conversation to display               |
+| `onClose`              | `() => void`   | Optional close button callback        |
+| `emptyMessage`         | `JSX.Element`  | Shown when there are no messages yet  |
+| `darkModeOverride`     | `boolean`      | Force dark mode                       |
+| `customColors`         | `CustomColors` | Customize look and feel (see below)   |
+| `enableAttachments`    | `boolean`      | Show attachment menu (default `true`) |
+| `enableAudioRecording` | `boolean`      | Show mic button (default `true`)      |
+
 ### What customColors controls
 
 | Option            | What it does                                  |
@@ -513,8 +553,282 @@ You still get all the rendering features, markdown, attachments, progress bars,
 the works. You just lose the built-in encryption, real-time sync, and
 conversation management. Whether that tradeoff makes sense is up to you.
 
-## Next steps
+## Widget for HTML pages
 
-Check out the [GitHub repo](https://github.com/uriva/alice-and-bot) for the full
-API reference, or jump into the [Discord](https://discord.gg/xkGMFH9RAz) if you
-have questions.
+Embed a chat widget on any HTML page with a single script tag:
+
+```html
+<script
+  src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js"
+  async
+  onload="aliceAndBot.loadChatWidget({ initialMessage: 'Hi!', dialingTo: '<public sign key here>' })"
+></script>
+```
+
+### Generating the embed script programmatically
+
+```ts
+import { embedScript } from "alice-and-bot";
+
+const scriptTag = embedScript({
+  publicSignKey: "<public sign key here>",
+  initialMessage: "Hi!",
+});
+// Insert scriptTag into your HTML
+```
+
+## API reference
+
+### Identity and alias functions
+
+```ts
+createIdentity(
+  name: string,
+  alias?: string
+): Promise<Credentials>
+```
+
+```ts
+aliasToPublicSignKey(
+  alias: string
+): Promise<{ publicSignKey: string } | { error: "no-such-alias" }>
+```
+
+```ts
+publicSignKeyToAlias(publicSignKey: string): Promise<
+  | { alias: string }
+  | { error: "no-such-identity" | "no-alias" }
+>
+```
+
+```ts
+setAlias({
+  alias: string,
+  credentials: Credentials,
+}): Promise<
+  | { success: true }
+  | { success: false; error: "alias-taken" | "invalid-alias" | "not-found" | "invalid-auth" }
+>
+```
+
+### Profile functions
+
+```ts
+getProfile(
+  publicSignKey: string
+): Promise<{ name?: string; avatar?: string; alias?: string } | null>
+```
+
+```ts
+useIdentityProfile(
+  publicSignKey: string
+): { name?: string; avatar?: string; alias?: string } | null
+```
+
+### Conversation functions
+
+```ts
+createConversation(
+  publicSignKeys: string[],
+  conversationTitle: string
+): Promise<{ conversationId: string } | { error: string }>
+```
+
+```ts
+useGetOrCreateConversation(
+  creds: Credentials | null,
+  otherSide: string
+): string | null
+```
+
+```ts
+useConversations(
+  publicSignKey: string
+): { id: string; title: string; participants: { publicSignKey: string }[] }[] | null
+```
+
+```ts
+getConversationInfo(
+  conversationId: string
+): Promise<
+  | {
+      conversationInfo: {
+        participants: {
+          publicSignKey: string;
+          name?: string;
+          avatar?: string;
+          alias?: string;
+        }[];
+        isPartial: boolean;
+      };
+    }
+  | { error: "not-found" }
+>
+```
+
+### Messaging functions
+
+```ts
+sendMessage({
+  conversation: string,
+  credentials: Credentials,
+  message: { type: "text"; text: string; attachments?: Attachment[] }
+}): Promise<{ messageId: string }>
+```
+
+```ts
+sendMessageWithKey({
+  conversationKey: string,
+  conversation: string,
+  credentials: Credentials,
+  message: { type: "text"; text: string; attachments?: Attachment[] }
+}): Promise<{ messageId: string }>
+```
+
+### Webhook functions
+
+```ts
+setWebhook(
+  url: string,
+  publicSignKey: string
+): Promise<{ success: boolean } | { error: string }>
+```
+
+```ts
+handleWebhookUpdate(
+  update: WebhookUpdate,
+  credentials: Credentials
+): Promise<{ conversationId: string; message: DecipheredMessage; conversationKey: string }>
+```
+
+### Attachment functions
+
+```ts
+uploadAttachment({
+  credentials: Credentials,
+  conversationId: string,
+  conversationKey: string,
+  file: File,
+}): Promise<Attachment | { error: string }>
+```
+
+```ts
+downloadAttachment({
+  url: string,
+  conversationKey: string,
+}): Promise<ArrayBuffer>
+```
+
+## Self-hosting
+
+### Prerequisites
+
+- [Deno](https://deno.land/) installed locally
+- A [Deno Deploy](https://deno.com/deploy) account (for hosting the backend)
+- An [InstantDB](https://instantdb.com/) account (for the database)
+- A [Google Cloud](https://cloud.google.com/) account (for file storage)
+
+### 1. InstantDB setup
+
+1. Create a new app at [instantdb.com](https://instantdb.com/)
+2. Copy your app ID
+3. Push the schema:
+   ```sh
+   npx instant-cli push-schema --app <your-app-id>
+   ```
+
+### 2. Google Cloud Storage setup
+
+1. Create a new GCP project or use an existing one
+2. Enable the Cloud Storage API
+3. Create a storage bucket:
+   ```sh
+   gsutil mb gs://your-bucket-name
+   ```
+4. Create a service account with Storage Admin permissions:
+   ```sh
+   gcloud iam service-accounts create your-service-account \
+     --display-name="Storage Service Account"
+
+   gcloud projects add-iam-policy-binding your-project-id \
+     --member="serviceAccount:your-service-account@your-project-id.iam.gserviceaccount.com" \
+     --role="roles/storage.admin"
+   ```
+5. Generate a JSON key for the service account:
+   ```sh
+   gcloud iam service-accounts keys create key.json \
+     --iam-account=your-service-account@your-project-id.iam.gserviceaccount.com
+   ```
+6. Configure CORS on the bucket:
+   ```sh
+   cat > cors.json << 'EOF'
+   [
+     {
+       "origin": ["*"],
+       "method": ["GET", "PUT", "POST", "OPTIONS"],
+       "responseHeader": ["Content-Type", "x-goog-content-length-range"],
+       "maxAgeSeconds": 3600
+     }
+   ]
+   EOF
+   gsutil cors set cors.json gs://your-bucket-name
+   ```
+
+### 3. Backend deployment (Deno Deploy)
+
+1. Fork or clone the repository
+2. Create a new project on [Deno Deploy](https://dash.deno.com/)
+3. Link your repository and set the entry point to `backend/src/main.ts`
+4. Add environment variables:
+   - `INSTANT_APP_ID`: Your InstantDB app ID
+   - `INSTANT_ADMIN_TOKEN`: Your InstantDB admin token
+   - `GCS_BUCKET`: Your GCS bucket name (e.g., `your-bucket-name`)
+   - `GCP_CREDENTIALS`: The contents of your `key.json` file (paste as a single
+     line or JSON string)
+
+### 4. Frontend setup
+
+Update the API endpoint in your frontend to point to your Deno Deploy URL.
+
+### 5. Widget hosting (optional)
+
+To host your own widget:
+
+1. Build the widget:
+   ```sh
+   cd widget && deno task build
+   ```
+2. Upload to your GCS bucket or any static hosting:
+   ```sh
+   gsutil -h "Content-Type:application/javascript" \
+     -h "Cache-Control:public, max-age=31536000" \
+     cp widget/dist/widget.iife.js gs://your-bucket-name/widget/dist/widget.iife.js
+   gsutil acl ch -u AllUsers:R gs://your-bucket-name/widget/dist/widget.iife.js
+   ```
+
+## Known security weaknesses
+
+Beyond message encryption, all metadata is currently exposed.
+
+TODO:
+
+1. handle faking the time
+1. handle linking message to a bad conversation id
+1. handle impersonation of the notification server
+1. handle message inserted to the db but endpoint not called
+1. limit editing instant entities
+1. handle a member of the conversation injecting a genuine signed message from
+   someone outside
+1. createConversation endpoint is public
+1. notify endpoint is public
+1. one can choose not to notify - adding messages
+1. everyone can see all metadata - groups, who sent when
+1. anyone can check if two people has a conversation
+1. webhooks are exposed to anyone seeing participants, so people can send
+   requests at them
+
+## Community
+
+Join the [Discord](https://discord.gg/xkGMFH9RAz) for questions, feedback, and
+discussion. Check out the [GitHub repo](https://github.com/uriva/alice-and-bot)
+for the source code.
