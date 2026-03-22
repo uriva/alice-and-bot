@@ -1,6 +1,5 @@
 import type { InstantAdminDatabase } from "@instantdb/admin";
 import type { InstaQLEntity } from "@instantdb/core";
-import { map, pipe } from "@uri/gamla";
 import stringify from "safe-stable-stringify";
 import { apiClient, getUploadUrl } from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
@@ -403,15 +402,14 @@ async (
   if (identities.length !== publicSignKeys.length) {
     return { error: "invalid-participants" };
   }
-  const signKeyToEncrypionKey = pipe(
-    map(({ publicSignKey, publicEncryptKey }: Identity) =>
+  const signKeyToEncrypionKey = Object.fromEntries(
+    identities.map(({ publicSignKey, publicEncryptKey }) =>
       [publicSignKey, publicEncryptKey] as const
     ),
-    Object.fromEntries<string>,
-  )(identities);
+  );
   const symmetricKey = await generateSymmetricKey();
-  return pipe(
-    map(async (publicSignKey: string) =>
+  const entries = await Promise.all(
+    publicSignKeys.map(async (publicSignKey) =>
       [
         publicSignKey,
         await encryptAsymmetric(
@@ -420,16 +418,15 @@ async (
         ),
       ] as const
     ),
-    Object.fromEntries<EncryptedConversationKey>,
-    (publicSignKeyToEncryptedSymmetricKey) =>
-      apiClient({
-        endpoint: "createConversation",
-        payload: {
-          publicSignKeyToEncryptedSymmetricKey,
-          title: conversationTitle,
-        },
-      }),
-  )(publicSignKeys);
+  );
+  const publicSignKeyToEncryptedSymmetricKey = Object.fromEntries(entries);
+  return apiClient({
+    endpoint: "createConversation",
+    payload: {
+      publicSignKeyToEncryptedSymmetricKey,
+      title: conversationTitle,
+    },
+  });
 };
 
 export type Credentials = {

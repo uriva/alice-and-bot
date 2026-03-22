@@ -6,7 +6,13 @@ import { Messenger } from "./chat.tsx";
 import { Docs } from "./guide.tsx";
 import { LandingPage } from "./landing.tsx";
 import { Legal } from "./legal.tsx";
-import { chatPath, docsPath, guidePath, homePath, manifestoPath } from "./paths.ts";
+import {
+  chatPath,
+  docsPath,
+  guidePath,
+  homePath,
+  manifestoPath,
+} from "./paths.ts";
 import { Manifesto } from "./manifesto.tsx";
 import "./app.css";
 
