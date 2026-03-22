@@ -1358,12 +1358,14 @@ const EditForm = ({
   onSubmit,
   onCancel,
   isDark,
+  canSave,
 }: {
   editText: string;
   setEditText: (v: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
   isDark: boolean;
+  canSave: boolean;
 }) => (
   <div style={{ marginTop: 4 }}>
     <textarea
@@ -1372,7 +1374,15 @@ const EditForm = ({
       style={editTextareaStyle}
     />
     <div style={editActionsStyle}>
-      <button type="button" onClick={onSubmit} style={saveButtonStyle(isDark)}>
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={!canSave}
+        style={{
+          ...saveButtonStyle(isDark),
+          ...(canSave ? {} : { opacity: 0.4, cursor: "default" }),
+        }}
+      >
         Save
       </button>
       <button type="button" onClick={onCancel} style={cancelButtonStyle}>
@@ -1465,6 +1475,7 @@ const Message = (
             <EditForm
               editText={editText}
               setEditText={setEditText}
+              canSave={!!editText.trim() && editText !== text}
               onSubmit={() =>
                 onEdit && submitEdit(onEdit, editText, text)(setIsEditing)}
               onCancel={() => {
@@ -1694,6 +1705,77 @@ const historyCloseButtonStyle = (isDark: boolean): JSX.CSSProperties => ({
 
 const labelStyle: JSX.CSSProperties = { fontSize: 10, opacity: 0.7 };
 
+type DiffPart = { text: string; kind: "same" | "add" | "del" };
+
+const splitWords = (s: string) => s.split(/(\s+)/).filter(Boolean);
+
+const buildLcsRow = (prev: number[], a_i: string, b: string[]) =>
+  b.reduce<number[]>(
+    (row, bj, j) => {
+      row[j + 1] = a_i === bj ? prev[j] + 1 : Math.max(prev[j + 1], row[j]);
+      return row;
+    },
+    [0, ...Array<number>(b.length).fill(0)],
+  );
+
+const buildLcsTable = (a: string[], b: string[]) =>
+  a.reduce<number[][]>(
+    (table, ai) => [...table, buildLcsRow(table[table.length - 1], ai, b)],
+    [Array<number>(b.length + 1).fill(0)],
+  );
+
+const backtrackDiff = (
+  table: number[][],
+  a: string[],
+  b: string[],
+  i: number,
+  j: number,
+): DiffPart[] => {
+  if (i === 0 && j === 0) return [];
+  if (i > 0 && j > 0 && a[i - 1] === b[j - 1])
+    return [...backtrackDiff(table, a, b, i - 1, j - 1), { text: a[i - 1], kind: "same" }];
+  if (j > 0 && (i === 0 || table[i][j - 1] >= table[i - 1][j]))
+    return [...backtrackDiff(table, a, b, i, j - 1), { text: b[j - 1], kind: "add" }];
+  return [...backtrackDiff(table, a, b, i - 1, j), { text: a[i - 1], kind: "del" }];
+};
+
+const mergeDiffParts = (parts: DiffPart[]) =>
+  parts.reduce<DiffPart[]>(
+    (acc, part) =>
+      !empty(acc) && acc[acc.length - 1].kind === part.kind
+        ? [...acc.slice(0, -1), { text: acc[acc.length - 1].text + part.text, kind: part.kind }]
+        : [...acc, part],
+    [],
+  );
+
+const wordDiff = (oldText: string, newText: string) => {
+  const a = splitWords(oldText);
+  const b = splitWords(newText);
+  return mergeDiffParts(backtrackDiff(buildLcsTable(a, b), a, b, a.length, b.length));
+};
+
+const successorText = (edits: EditHistoryEntry[], currentText: string, i: number) =>
+  i === edits.length - 1
+    ? edits.length > 1 ? edits[0].text : currentText
+    : i === edits.length - 2
+      ? currentText
+      : edits[i + 1].text;
+
+const diffPartStyle = (kind: DiffPart["kind"], isDark: boolean): JSX.CSSProperties =>
+  kind === "add"
+    ? { background: isDark ? "#16532e" : "#d4edda", color: isDark ? "#6ee7b7" : "#155724" }
+    : kind === "del"
+      ? { background: isDark ? "#5c1d1d" : "#f8d7da", color: isDark ? "#fca5a5" : "#721c24", textDecoration: "line-through" }
+      : {};
+
+const DiffView = ({ parts, isDark }: { parts: DiffPart[]; isDark: boolean }) => (
+  <span>
+    {parts.map((p, i) => (
+      <span key={i} style={diffPartStyle(p.kind, isDark)}>{p.text}</span>
+    ))}
+  </span>
+);
+
 const EditHistoryPopup = ({
   edits,
   currentText,
@@ -1718,7 +1800,7 @@ const EditHistoryPopup = ({
         {edits.map((edit, i) => (
           <div key={i} style={historyEntryStyle(isDark)}>
             <div style={labelStyle}>{formatEditTime(edit.timestamp)}</div>
-            <div>{edit.text}</div>
+            <div><DiffView parts={wordDiff(edit.text, successorText(edits, currentText, i))} isDark={isDark} /></div>
           </div>
         ))}
         <button
