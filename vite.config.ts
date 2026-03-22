@@ -31,16 +31,6 @@ export default defineConfig({
   ],
   build: { sourcemap: true, outDir: resolve(__dirname, "landing/dist") },
   resolve: {
-    alias: {
-      "decode-named-character-reference": decodePath,
-      "@uri/gamla": resolve(
-        __dirname,
-        "node_modules/@jsr/uri__gamla/src/index.ts",
-      ),
-      "typed-api": resolve(
-        __dirname,
-        "node_modules/@jsr/uri__typed-api/src/main.ts",
-      ),
-    },
+    alias: { "decode-named-character-reference": decodePath },
   },
 });

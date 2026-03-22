@@ -75,9 +75,7 @@ const editsForMessage = (edits: TextOrEditMessage[]) => (msgId: string) =>
 const buildEditHistory =
   (edits: TextOrEditMessage[]) =>
   (original: TextOrEditMessage): EditHistoryEntry[] => [
-    ...editsForMessage(edits)(original.id).slice(0, -1).map((
-      e: TextOrEditMessage,
-    ) => ({
+    ...editsForMessage(edits)(original.id).slice(0, -1).map((e) => ({
       text: e.text,
       timestamp: e.timestamp,
       attachments: e.attachments,
