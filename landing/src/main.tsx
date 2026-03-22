@@ -38,7 +38,7 @@ const NotFound = () => (
 
 const App = () => (
   <>
-    {typeof window !== "undefined" && <Toaster />}
+    <Toaster />
     <ErrorBoundary>
       <Router>
         {routes.map(({ path, component }) => (

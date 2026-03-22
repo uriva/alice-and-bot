@@ -3,6 +3,8 @@ import remarkGfm from "remark-gfm";
 import docsText from "./docs.md?raw";
 import { homePath } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github-dark.css";
 
 export const Docs = () => {
   useClearViewportStyles();
@@ -24,6 +26,7 @@ export const Docs = () => {
       <div style={{ color: "white" }}>
         <Markdown
           remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeHighlight]}
           components={{
             // @ts-expect-error Markdown types are not fully compatible with Preact
             h1: ({ children }) => (
@@ -82,7 +85,7 @@ export const Docs = () => {
             ),
             // @ts-expect-error Markdown types are not fully compatible with Preact
             code: ({ children, className }) => {
-              const isBlock = className?.startsWith("language-");
+              const isBlock = className?.includes("language-") || className?.includes("hljs");
               if (isBlock) return <code class={className}>{children}</code>;
               return (
                 <code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded text-sm">
