@@ -1732,18 +1732,32 @@ const backtrackDiff = (
   j: number,
 ): DiffPart[] => {
   if (i === 0 && j === 0) return [];
-  if (i > 0 && j > 0 && a[i - 1] === b[j - 1])
-    return [...backtrackDiff(table, a, b, i - 1, j - 1), { text: a[i - 1], kind: "same" }];
-  if (j > 0 && (i === 0 || table[i][j - 1] >= table[i - 1][j]))
-    return [...backtrackDiff(table, a, b, i, j - 1), { text: b[j - 1], kind: "add" }];
-  return [...backtrackDiff(table, a, b, i - 1, j), { text: a[i - 1], kind: "del" }];
+  if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
+    return [...backtrackDiff(table, a, b, i - 1, j - 1), {
+      text: a[i - 1],
+      kind: "same",
+    }];
+  }
+  if (j > 0 && (i === 0 || table[i][j - 1] >= table[i - 1][j])) {
+    return [...backtrackDiff(table, a, b, i, j - 1), {
+      text: b[j - 1],
+      kind: "add",
+    }];
+  }
+  return [...backtrackDiff(table, a, b, i - 1, j), {
+    text: a[i - 1],
+    kind: "del",
+  }];
 };
 
 const mergeDiffParts = (parts: DiffPart[]) =>
   parts.reduce<DiffPart[]>(
     (acc, part) =>
       !empty(acc) && acc[acc.length - 1].kind === part.kind
-        ? [...acc.slice(0, -1), { text: acc[acc.length - 1].text + part.text, kind: part.kind }]
+        ? [...acc.slice(0, -1), {
+          text: acc[acc.length - 1].text + part.text,
+          kind: part.kind,
+        }]
         : [...acc, part],
     [],
   );
@@ -1751,24 +1765,42 @@ const mergeDiffParts = (parts: DiffPart[]) =>
 const wordDiff = (oldText: string, newText: string) => {
   const a = splitWords(oldText);
   const b = splitWords(newText);
-  return mergeDiffParts(backtrackDiff(buildLcsTable(a, b), a, b, a.length, b.length));
+  return mergeDiffParts(
+    backtrackDiff(buildLcsTable(a, b), a, b, a.length, b.length),
+  );
 };
 
-const successorText = (edits: EditHistoryEntry[], currentText: string, i: number) =>
+const successorText = (
+  edits: EditHistoryEntry[],
+  currentText: string,
+  i: number,
+) =>
   i === edits.length - 1
     ? edits.length > 1 ? edits[0].text : currentText
     : i === edits.length - 2
-      ? currentText
-      : edits[i + 1].text;
+    ? currentText
+    : edits[i + 1].text;
 
-const diffPartStyle = (kind: DiffPart["kind"], isDark: boolean): JSX.CSSProperties =>
+const diffPartStyle = (
+  kind: DiffPart["kind"],
+  isDark: boolean,
+): JSX.CSSProperties =>
   kind === "add"
-    ? { background: isDark ? "#16532e" : "#d4edda", color: isDark ? "#6ee7b7" : "#155724" }
+    ? {
+      background: isDark ? "#16532e" : "#d4edda",
+      color: isDark ? "#6ee7b7" : "#155724",
+    }
     : kind === "del"
-      ? { background: isDark ? "#5c1d1d" : "#f8d7da", color: isDark ? "#fca5a5" : "#721c24", textDecoration: "line-through" }
-      : {};
+    ? {
+      background: isDark ? "#5c1d1d" : "#f8d7da",
+      color: isDark ? "#fca5a5" : "#721c24",
+      textDecoration: "line-through",
+    }
+    : {};
 
-const DiffView = ({ parts, isDark }: { parts: DiffPart[]; isDark: boolean }) => (
+const DiffView = (
+  { parts, isDark }: { parts: DiffPart[]; isDark: boolean },
+) => (
   <span>
     {parts.map((p, i) => (
       <span key={i} style={diffPartStyle(p.kind, isDark)}>{p.text}</span>
@@ -1800,7 +1832,15 @@ const EditHistoryPopup = ({
         {edits.map((edit, i) => (
           <div key={i} style={historyEntryStyle(isDark)}>
             <div style={labelStyle}>{formatEditTime(edit.timestamp)}</div>
-            <div><DiffView parts={wordDiff(edit.text, successorText(edits, currentText, i))} isDark={isDark} /></div>
+            <div>
+              <DiffView
+                parts={wordDiff(
+                  edit.text,
+                  successorText(edits, currentText, i),
+                )}
+                isDark={isDark}
+              />
+            </div>
           </div>
         ))}
         <button
