@@ -2,9 +2,12 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import guideText from "./guide.md?raw";
 import { homePath } from "./paths.ts";
+import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
-export const Guide = () => (
-  <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-blue-950">
+export const Guide = () => {
+  useClearViewportStyles();
+  return (
+    <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-blue-950">
     <div
       style={{
         maxWidth: 800,
@@ -124,4 +127,5 @@ export const Guide = () => (
       </div>
     </div>
   </div>
-);
+  );
+};

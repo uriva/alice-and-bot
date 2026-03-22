@@ -1,6 +1,6 @@
-import { useEffect } from "preact/hooks";
 import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
 import { chatPath, guidePath, manifestoPath } from "./paths.ts";
+import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
 const features = [
   {
@@ -36,19 +36,7 @@ const features = [
 ];
 
 export const LandingPage = () => {
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const root = document.getElementById("root");
-    const targets = [document.documentElement, document.body, root].filter(
-      Boolean,
-    ) as HTMLElement[];
-    targets.forEach((el) => {
-      el.style.height = "";
-      el.style.maxHeight = "";
-      el.style.minHeight = "";
-      el.style.overflow = "";
-    });
-  }, []);
+  useClearViewportStyles();
 
   return (
     <main class="text-blue-800 dark:text-blue-200 min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-900 dark:via-gray-950 dark:to-blue-950 px-0 py-0">

@@ -1,5 +1,9 @@
-export const Legal = () => (
-  <div style={{ maxWidth: 700, margin: "0 auto", padding: 24 }}>
+import { useClearViewportStyles } from "./useClearViewportStyles.ts";
+
+export const Legal = () => {
+  useClearViewportStyles();
+  return (
+    <div style={{ maxWidth: 700, margin: "0 auto", padding: 24 }}>
     <h1>Legal Notice</h1>
     <p>
       Welcome to Alice&amp;Bot. By using this chat service, you agree to the
@@ -34,4 +38,5 @@ export const Legal = () => (
       For questions or concerns, please contact the service administrators.
     </p>
   </div>
-);
+  );
+};

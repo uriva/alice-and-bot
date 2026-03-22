@@ -2,8 +2,10 @@ import { toast } from "react-hot-toast";
 import Markdown from "react-markdown";
 import { baseUrl } from "../../protocol/src/clientApi.ts";
 import manifestoText from "./manifesto.md?raw";
+import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
 export const Manifesto = () => {
+  useClearViewportStyles();
   const manifestoUrl = baseUrl + "/";
 
   const shareText = encodeURIComponent(
