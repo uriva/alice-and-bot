@@ -1,1 +1,1 @@
-export const serverBaseUrl = "https://alice-and-bot.deno.dev";
+export const serverBaseUrl = "https://api.aliceandbot.com";
