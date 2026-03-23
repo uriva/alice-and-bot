@@ -21,9 +21,10 @@ npm install @jsr/alice-and-bot__core
 import aliceAndBot from "@jsr/alice-and-bot__core";
 ```
 
-## Creating a bot
+## Creating an identity
 
-A bot is just an identity. One function call, and you're live.
+An identity is just a keypair — works for humans or bots. One function call, and
+you're live.
 
 ```ts
 import {
@@ -40,7 +41,7 @@ const credentials: Credentials = await createIdentity("my-bot", "my_bot_alias");
 
 `createIdentity` generates an RSA keypair and registers it with the Alice&Bot
 backend. The optional second argument is a public alias (lowercase
-alphanumeric + underscore, max 15 chars) that others can use to find your bot.
+alphanumeric + underscore, max 15 chars) that others can use to find you.
 
 Store the returned credentials somewhere persistent. They contain your
 `publicSignKey`, `privateSignKey`, and `privateEncryptKey`. Lose them and the
@@ -368,8 +369,8 @@ spinners show up inline when your bot is doing long-running work.
 
 ### The setup
 
-Three steps: create an identity, resolve the bot you're talking to, get or
-create a conversation.
+Three steps: create an identity, resolve the other side, get or create a
+conversation.
 
 ```tsx
 import {
