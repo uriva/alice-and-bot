@@ -1,12 +1,4 @@
-console.log(
-  "ENV",
-  JSON.stringify({
-    INSTANT_ADMIN_TOKEN: Deno.env.get("INSTANT_ADMIN_TOKEN"),
-    GCP_CREDENTIALS: Deno.env.get("GCP_CREDENTIALS"),
-    VAPID_PUBLIC_KEY: Deno.env.get("VAPID_PUBLIC_KEY"),
-    VAPID_PRIVATE_KEY: Deno.env.get("VAPID_PRIVATE_KEY"),
-  }),
-);
+console.log("GCP_CREDENTIALS", Deno.env.get("GCP_CREDENTIALS"));
 
 import { id } from "@instantdb/admin";
 import { apiHandler } from "typed-api";
