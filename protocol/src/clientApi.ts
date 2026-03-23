@@ -649,7 +649,9 @@ export const downloadAttachment = async ({
   return decryptBinary(conversationKey, encrypted);
 };
 
-export const uiUpdateUrl = "https://alice-and-bot.deno.dev/ui-update";
+import { serverBaseUrl } from "./serverUrl.ts";
+
+export const uiUpdateUrl: string = `${serverBaseUrl}/ui-update`;
 
 export const buildUiUpdateUrl = (elementId: string): string =>
   `${uiUpdateUrl}?elementId=${encodeURIComponent(elementId)}`;
