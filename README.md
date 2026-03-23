@@ -31,8 +31,10 @@ import aliceAndBot from "@jsr/alice-and-bot__core";
 1. unlimited identities
 1. basic UI to deploy on a react app or a script to embed in any page
 
-Alice in bot is in its early days, API is likely to change often, but it already
-works i produciton, powering build-chatbot.com and other sites.
+All functions work in both browser and server environments (Deno, Node.js).
+
+Alice&Bot is in its early days, API is likely to change often, but it already
+works in production, powering build-chatbot.com and other sites.
 
 ## Community
 
@@ -41,83 +43,118 @@ discussion.
 
 ## Usage
 
-### Functions
+### Creating an identity
 
-Get or create a conversation ID between the current user and another:
-
-```ts
-useGetOrCreateConversation(
-  creds: Credentials | null,
-  otherSide: string
-): string | null
-```
-
-List all conversations for a user:
+An identity is just a keypair — works for humans or bots. One function call, and
+you're live.
 
 ```ts
-useConversations(
-  publicSignKey: string
-): { id: string; title: string; participants: { publicSignKey: string }[] }[] | null
+import { createIdentity, type Credentials } from "@alice-and-bot/core";
+
+const credentials: Credentials = await createIdentity("my-name", "my_alias");
 ```
 
-Create a new group conversation:
+`createIdentity` generates an RSA keypair and registers it with the Alice&Bot
+backend. The optional second argument is a public alias (lowercase
+alphanumeric + underscore, max 15 chars) that others can use to find you.
+
+The returned `Credentials` contain:
+
+- `publicSignKey` — share this with others so they can start conversations with
+  you or look you up.
+- `privateSignKey` and `privateEncryptKey` — keep these secret. Anyone with
+  these keys can read your messages and impersonate you.
+
+Store credentials somewhere persistent. Lose them and the identity is gone.
+
+### Creating conversations
+
+To start a conversation, you need the public sign keys of all participants. You
+can look up a key by alias:
 
 ```ts
-createConversation(
-  publicSignKeys: string[],
-  conversationTitle: string
-): Promise<{ conversationId: string } | { error: string }>
+import { aliasToPublicSignKey, createConversation } from "@alice-and-bot/core";
+
+const other = await aliasToPublicSignKey("other_alias");
+if ("error" in other) throw new Error("not found");
+
+const result = await createConversation(
+  [credentials.publicSignKey, other.publicSignKey],
+  "conversation title",
+);
+if ("error" in result) throw new Error(result.error);
+
+const conversationId = result.conversationId;
 ```
 
-Set a webhook for receiving updates:
+`createConversation` generates a fresh AES-256-GCM symmetric key, encrypts it
+individually for each participant's RSA public key, and stores it. Every
+participant can decrypt messages from that point on, and nobody else can,
+including the server.
+
+### Sending messages
+
+Use `sendMessage` to send a message. It fetches the conversation key
+automatically:
 
 ```ts
-setWebhook(
-  url: string,
-  publicSignKey: string
-): Promise<{ success: boolean } | { error: string }>
+import { sendMessage } from "@alice-and-bot/core";
+
+await sendMessage({
+  credentials,
+  conversation: conversationId,
+  message: { type: "text", text: "Hello!" },
+});
 ```
 
-Create an account for a human or a bot:
+If you already have the conversation key (e.g. from a webhook handler), use
+`sendMessageWithKey` to skip the extra round trip:
 
 ```ts
-createIdentity(
-  name: string,
-  alias?: string // optional public alias to set at creation
-): Promise<Credentials>
+import { sendMessageWithKey } from "@alice-and-bot/core";
+
+await sendMessageWithKey({
+  conversationKey,
+  conversation: conversationId,
+  credentials,
+  message: { type: "text", text: "Hello!" },
+});
 ```
 
-Handle incoming webhook updates:
+### Receiving messages via webhook
+
+Set a webhook URL and Alice&Bot will POST encrypted messages to it:
 
 ```ts
-handleWebhookUpdate(
-  update: WebhookUpdate,
-  credentials: Credentials
-): Promise<{ conversationId: string; message: DecipheredMessage; conversationKey: string }>
+import {
+  handleWebhookUpdate,
+  setWebhook,
+  type WebhookUpdate,
+} from "@alice-and-bot/core";
+
+await setWebhook({
+  url: "https://my-server.com/webhook",
+  credentials,
+});
 ```
 
-Send a message to a conversation (have the library fetch/decrypt the
-conversation key for you):
+When a message arrives, decrypt it with `handleWebhookUpdate`:
 
 ```ts
-sendMessage({
-  conversation: string,
-  credentials: Credentials,
-  message: { type: "text"; text: string; attachments?: Attachment[] }
-}): Promise<{ messageId: string }>
+const handleIncoming = async (webhookPayload: WebhookUpdate) => {
+  const { message, conversationKey, conversationId } =
+    await handleWebhookUpdate(webhookPayload, credentials);
+
+  console.log(message.text);
+  console.log(message.publicSignKey); // sender's public key
+
+  // conversationKey is reusable for replies, cache it
+  return { conversationKey, conversationId };
+};
 ```
 
-Send a message if you already possess the decrypted `conversationKey` (e.g.
-after handling a webhook update) to avoid the extra key fetch:
-
-```ts
-sendMessageWithKey({
-  conversationKey: string,
-  conversation: string,
-  credentials: Credentials,
-  message: { type: "text"; text: string; attachments?: Attachment[] }
-}): Promise<{ messageId: string }>
-```
+The `conversationKey` returned here is the decrypted symmetric key for this
+conversation. Hold onto it so you don't re-fetch it on every reply.
 
 ### Attachments
 
@@ -219,7 +256,9 @@ type Attachment =
   | FileAttachment;
 ```
 
-Look up a public sign key by alias (public):
+### Identity and alias functions
+
+Look up a public sign key by alias:
 
 ```ts
 aliasToPublicSignKey(
@@ -236,15 +275,21 @@ publicSignKeyToAlias(publicSignKey: string): Promise<
 >
 ```
 
-Fetch basic profile (name / avatar / alias) for an identity (null if not found):
+Set or update an alias (lowercase letters, numbers, underscore, max 15 chars):
 
 ```ts
-useIdentityProfile(
-  publicSignKey: string
-): { name?: string; avatar?: string; alias?: string } | null
+setAlias({
+  alias: string,
+  credentials: Credentials,
+}): Promise<
+  | { success: true }
+  | { success: false; error: "alias-taken" | "invalid-alias" | "not-found" | "invalid-auth" }
+>
 ```
 
-Non-React one-off fetch (no hook / subscription):
+### Profile functions
+
+Fetch basic profile for an identity (null if not found):
 
 ```ts
 getProfile(
@@ -252,8 +297,15 @@ getProfile(
 ): Promise<{ name?: string; avatar?: string; alias?: string } | null>
 ```
 
-Fetch (partial) conversation info (first 10 participant profiles + isPartial
-flag):
+React hook that subscribes to profile updates:
+
+```ts
+useIdentityProfile(
+  publicSignKey: string
+): { name?: string; avatar?: string; alias?: string } | null
+```
+
+### Conversation functions
 
 ```ts
 getConversationInfo(
@@ -267,23 +319,10 @@ getConversationInfo(
           avatar?: string;
           alias?: string;
         }[];
-        isPartial: boolean; // true if more than 10 participants
+        isPartial: boolean;
       };
     }
   | { error: "not-found" }
->
-```
-
-Set or update an alias (signature-based auth handled internally, no session
-required). Aliases: lowercase letters, numbers, underscore, max 15 chars:
-
-```ts
-setAlias({
-  alias: string,
-  credentials: Credentials,
-}): Promise<
-  | { success: true }
-  | { success: false; error: "alias-taken" | "invalid-alias" | "not-found" | "invalid-auth" }
 >
 ```
 

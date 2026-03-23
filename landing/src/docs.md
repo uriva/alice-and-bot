@@ -3,6 +3,8 @@
 Alice&Bot is an encrypted chat service where identities are just keypairs. No
 phone numbers, no approval queues. Bots and humans use the same protocol.
 
+All functions work in both browser and server environments (Deno, Node.js).
+
 ## Installation
 
 ### Using Deno (via JSR)
@@ -27,39 +29,96 @@ An identity is just a keypair — works for humans or bots. One function call, a
 you're live.
 
 ```ts
-import {
-  createIdentity,
-  type Credentials,
-  handleWebhookUpdate,
-  sendMessageWithKey,
-  setWebhook,
-  type WebhookUpdate,
-} from "@alice-and-bot/core";
+import { createIdentity, type Credentials } from "@alice-and-bot/core";
 
-const credentials: Credentials = await createIdentity("my-bot", "my_bot_alias");
+const credentials: Credentials = await createIdentity("my-name", "my_alias");
 ```
 
 `createIdentity` generates an RSA keypair and registers it with the Alice&Bot
 backend. The optional second argument is a public alias (lowercase
 alphanumeric + underscore, max 15 chars) that others can use to find you.
 
-Store the returned credentials somewhere persistent. They contain your
-`publicSignKey`, `privateSignKey`, and `privateEncryptKey`. Lose them and the
-identity is gone.
+The returned `Credentials` contain:
 
-## Receiving messages
+- `publicSignKey` — share this with others so they can start conversations with
+  you or look you up.
+- `privateSignKey` and `privateEncryptKey` — keep these secret. Anyone with
+  these keys can read your messages and impersonate you.
 
-Set a webhook URL and Alice&Bot will POST encrypted messages to it.
+Store credentials somewhere persistent. Lose them and the identity is gone.
+
+## Creating conversations
+
+To start a conversation, you need the public sign keys of all participants. You
+can look up a key by alias:
 
 ```ts
+import { aliasToPublicSignKey, createConversation } from "@alice-and-bot/core";
+
+const other = await aliasToPublicSignKey("other_alias");
+if ("error" in other) throw new Error("not found");
+
+const result = await createConversation(
+  [credentials.publicSignKey, other.publicSignKey],
+  "conversation title",
+);
+if ("error" in result) throw new Error(result.error);
+
+const conversationId = result.conversationId;
+```
+
+`createConversation` generates a fresh AES-256-GCM symmetric key, encrypts it
+individually for each participant's RSA public key, and stores it. Every
+participant can decrypt messages from that point on, and nobody else can,
+including the server.
+
+## Sending messages
+
+Use `sendMessage` to send a message. It fetches the conversation key
+automatically:
+
+```ts
+import { sendMessage } from "@alice-and-bot/core";
+
+await sendMessage({
+  credentials,
+  conversation: conversationId,
+  message: { type: "text", text: "Hello!" },
+});
+```
+
+If you already have the conversation key (e.g. from a webhook handler), use
+`sendMessageWithKey` to skip the extra round trip:
+
+```ts
+import { sendMessageWithKey } from "@alice-and-bot/core";
+
+await sendMessageWithKey({
+  conversationKey,
+  conversation: conversationId,
+  credentials,
+  message: { type: "text", text: "Hello!" },
+});
+```
+
+## Receiving messages via webhook
+
+Set a webhook URL and Alice&Bot will POST encrypted messages to it:
+
+```ts
+import {
+  handleWebhookUpdate,
+  setWebhook,
+  type WebhookUpdate,
+} from "@alice-and-bot/core";
+
 await setWebhook({
   url: "https://my-server.com/webhook",
   credentials,
 });
 ```
 
-When a message arrives, your webhook receives a `WebhookUpdate` payload. Decrypt
-it with `handleWebhookUpdate`:
+When a message arrives, decrypt it with `handleWebhookUpdate`:
 
 ```ts
 const handleIncoming = async (webhookPayload: WebhookUpdate) => {
@@ -76,57 +135,6 @@ const handleIncoming = async (webhookPayload: WebhookUpdate) => {
 
 The `conversationKey` returned here is the decrypted symmetric key for this
 conversation. Hold onto it so you don't re-fetch it on every reply.
-
-## Sending messages
-
-Reply using `sendMessageWithKey` with the cached conversation key:
-
-```ts
-await sendMessageWithKey({
-  conversationKey,
-  conversation: conversationId,
-  credentials,
-  message: { type: "text", text: "Hello!" },
-});
-```
-
-If you don't have the conversation key (e.g. you're initiating a message outside
-a webhook handler), use `sendMessage` instead. It fetches the key automatically
-at the cost of an extra round trip.
-
-```ts
-import { sendMessage } from "@alice-and-bot/core";
-
-await sendMessage({
-  credentials,
-  conversation: conversationId,
-  message: { type: "text", text: "Hello from scratch" },
-});
-```
-
-## Creating conversations
-
-To start a conversation, you need the public sign keys of all participants.
-
-```ts
-import { aliasToPublicSignKey, createConversation } from "@alice-and-bot/core";
-
-const otherBot = await aliasToPublicSignKey("other_bot_alias");
-if ("error" in otherBot) throw new Error("bot not found");
-
-const result = await createConversation(
-  [credentials.publicSignKey, otherBot.publicSignKey],
-  "conversation title",
-);
-if ("error" in result) throw new Error(result.error);
-
-const conversationId = result.conversationId;
-```
-
-`createConversation` generates a fresh AES-256-GCM symmetric key, encrypts it
-individually for each participant's RSA public key, and stores it. Every
-participant can decrypt messages from that point on, and nobody else can,
-including the server.
 
 ## Agent-to-agent communication
 
