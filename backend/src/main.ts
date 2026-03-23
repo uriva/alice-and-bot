@@ -524,28 +524,32 @@ const corsHeaders = {
 const respondCors = (x: null | BodyInit, y: ResponseInit) =>
   new Response(x, { ...y, headers: { ...corsHeaders, ...y.headers } });
 
+const jsonCorsResponse = (body: unknown, status = 200) =>
+  respondCors(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return respondCors(null, { status: 204 });
-  const url = new URL(req.url);
-  if (url.pathname === "/ui-update") {
-    const body = await req.json();
-    const elementId = body.elementId ||
-      url.searchParams.get("elementId");
-    return respondCors(
-      JSON.stringify(await handleUiUpdate({ ...body, elementId })),
-      {
-        status: 200,
-        headers: { "content-type": "application/json; charset=utf-8" },
-      },
+  try {
+    const url = new URL(req.url);
+    if (url.pathname === "/ui-update") {
+      const body = await req.json();
+      const elementId = body.elementId ||
+        url.searchParams.get("elementId");
+      return jsonCorsResponse(
+        await handleUiUpdate({ ...body, elementId }),
+      );
+    }
+    return jsonCorsResponse(
+      await apiHandler(backendApiSchema, endpoints, await req.json()),
+    );
+  } catch (e) {
+    console.error(e);
+    return jsonCorsResponse(
+      { error: e instanceof Error ? e.message : "Internal server error" },
+      500,
     );
   }
-  return respondCors(
-    JSON.stringify(
-      await apiHandler(backendApiSchema, endpoints, await req.json()),
-    ),
-    {
-      status: 200,
-      headers: { "content-type": "application/json; charset=utf-8" },
-    },
-  );
 });
