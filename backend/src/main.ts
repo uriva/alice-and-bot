@@ -1,4 +1,4 @@
-console.log("VAPID_PUBLIC_KEY", Deno.env.get("VAPID_PUBLIC_KEY"));
+console.log("VAPID_PRIVATE_KEY", Deno.env.get("VAPID_PRIVATE_KEY"));
 
 import { id } from "@instantdb/admin";
 import { apiHandler } from "typed-api";
