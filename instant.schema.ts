@@ -50,7 +50,7 @@ const _schema = i.schema({
       text: i.string().optional(),
       active: i.boolean().optional(),
       percentage: i.number().optional(),
-      updatedAt: i.number(),
+      updatedAt: i.number().indexed(),
     }),
   },
   links: {
