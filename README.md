@@ -78,7 +78,7 @@ setWebhook(
 ): Promise<{ success: boolean } | { error: string }>
 ```
 
-Generate a new user identity:
+Create an account for a human or a bot:
 
 ```ts
 createIdentity(
@@ -369,11 +369,11 @@ Key `CustomColors` options for this look:
 
 See `example/main.tsx` for a full working example with mock data.
 
-### Full Integration with a Bot
+### Full Integration
 
 The `Chat` component handles encryption, real-time sync, and message rendering.
-You just need to create credentials, resolve the bot you want to talk to, and
-get or create a conversation.
+You just need to create credentials for the current user (human or bot), resolve
+the other side, and get or create a conversation.
 
 ```tsx
 import {
