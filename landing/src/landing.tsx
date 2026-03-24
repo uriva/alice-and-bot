@@ -1,6 +1,11 @@
+import hljs from "highlight.js/lib/core";
+import typescript from "highlight.js/lib/languages/typescript";
+import "highlight.js/styles/github-dark.css";
 import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
 import { chatPath, docsPath, manifestoPath } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
+
+hljs.registerLanguage("typescript", typescript);
 
 const codeExample =
   `import { createIdentity, createConversation, sendMessage, setWebhook } from "@alice-and-bot/core";
@@ -25,26 +30,48 @@ await sendMessage({
 // receive messages via webhook
 await setWebhook({ url: "https://my-server.com/hook", credentials: bot });`;
 
-const features = [
+const highlightedCode = hljs.highlight(codeExample, { language: "typescript" })
+  .value;
+
+const featureCardClass =
+  "flex flex-col p-8 bg-white/90 dark:bg-blue-950/80 rounded-2xl border border-blue-100 dark:border-blue-900 shadow-xl hover:scale-105 hover:shadow-2xl transition-transform duration-200 ease-out";
+
+const FeatureCard = ({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) => (
+  <li class={featureCardClass}>
+    <strong class="block text-blue-700 dark:text-blue-300 font-semibold text-xl mb-2">
+      {title}
+    </strong>
+    <div class="text-gray-700 dark:text-gray-200 text-base">{description}</div>
+  </li>
+);
+
+const FeatureGrid = ({
+  items,
+}: {
+  items: { title: string; description: string }[];
+}) => (
+  <ul class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full mb-8">
+    {items.map(({ title, description }, i) => (
+      <FeatureCard key={i} title={title} description={description} />
+    ))}
+  </ul>
+);
+
+const sectionClass = "w-full max-w-6xl px-4 flex flex-col items-center mb-16";
+
+const sectionHeadingClass = "text-3xl font-bold mb-3 text-center";
+
+const humanFeatures = [
   {
-    title: "Unlimited, Unlinked Identities",
+    title: "No Phone Number Required",
     description:
-      "Create and manage as many identities as you want, with no phone or email required. Perfect for business, privacy, and creative use cases.",
-  },
-  {
-    title: "Bot-First, Human-Ready",
-    description:
-      "Easily create accounts for bots or nonhumans. Build AI-powered chat experiences without bureaucracy or arbitrary restrictions.",
-  },
-  {
-    title: "White Label & Embed Anywhere",
-    description:
-      "Integrate chat into your website or app. Bring anyone into a conversation, move seamlessly between devices, and enable supervision or observation as needed.",
-  },
-  {
-    title: "APIs & Webhooks by Default",
-    description:
-      "Send and receive messages via API and webhooks. No extra cost, no friction. Cloud storage is built in for device independence.",
+      "Create and manage as many identities as you want, with no phone or email required. Perfect for privacy and creative use cases.",
   },
   {
     title: "Portable, Secure Identity",
@@ -55,6 +82,42 @@ const features = [
     title: "Spam Resistant by Design",
     description:
       "Each account can set a price for being contacted. Approve trusted identities for free. No more endless spam, no more captchas.",
+  },
+];
+
+const aiFeatures = [
+  {
+    title: "Bot-First Design",
+    description:
+      "Create accounts for bots or AI agents without bureaucracy. No phone verification, no arbitrary restrictions.",
+  },
+  {
+    title: "Unlimited Identities",
+    description:
+      "Spin up as many identities as your agents need. Each one is a lightweight key pair, ready in milliseconds.",
+  },
+  {
+    title: "Webhook-Driven",
+    description:
+      "Receive messages via webhooks. Your AI agent gets a POST request for every incoming message, ready to respond.",
+  },
+];
+
+const developerFeatures = [
+  {
+    title: "APIs & Webhooks by Default",
+    description:
+      "Send and receive messages via API and webhooks. No extra cost, no friction. Cloud storage is built in for device independence.",
+  },
+  {
+    title: "White Label & Embed Anywhere",
+    description:
+      "Integrate chat into your website or app. Bring anyone into a conversation, move seamlessly between devices, and enable supervision or observation as needed.",
+  },
+  {
+    title: "Browser & Server",
+    description:
+      "All functions work in both browser and server environments. Build from wherever you are.",
   },
 ];
 
@@ -77,26 +140,6 @@ export const LandingPage = () => {
           communication.
         </p>
       </header>
-      <section class="w-full max-w-6xl px-4 flex flex-col items-center">
-        <h2 class="text-3xl font-bold mb-8 text-center">
-          Everything missing from chat today
-        </h2>
-        <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full mb-12">
-          {features.map((f, i) => (
-            <li
-              key={i}
-              class="flex flex-col p-8 bg-white/90 dark:bg-blue-950/80 rounded-2xl border border-blue-100 dark:border-blue-900 shadow-xl hover:scale-105 hover:shadow-2xl transition-transform duration-200 ease-out"
-            >
-              <strong class="block text-blue-700 dark:text-blue-300 font-semibold text-xl mb-2">
-                {f.title}
-              </strong>
-              <div class="text-gray-700 dark:text-gray-200 text-base">
-                {f.description}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
       <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
         <h3 class="text-2xl font-bold mb-4 text-center">
           Philosophy
@@ -109,50 +152,12 @@ export const LandingPage = () => {
           wants to build the future of communication.
         </p>
       </section>
-      <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
-        <h3 class="text-2xl font-bold mb-4">
-          For Developers
-        </h3>
-        <ul class="list-disc list-inside text-lg text-gray-700 dark:text-gray-200 space-y-2 text-center">
-          <li>APIs and webhooks for full automation</li>
-          <li>Cloud storage for device independence</li>
-          <li>Bring your own identity (public/private key)</li>
-          <li>White label and embed anywhere</li>
-        </ul>
-        <pre class="w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
-          <code>{codeExample}</code>
-        </pre>
-        <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
-          All functions work in both browser and server environments.
+      <section class={sectionClass}>
+        <h2 class={sectionHeadingClass}>For Humans</h2>
+        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
+          Private, spam-free messaging you control.
         </p>
-      </section>
-      <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
-        <h3 class="text-2xl font-bold mb-4 text-center">
-          AI Agent Skill
-        </h3>
-        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-4">
-          Give your AI coding agent the ability to build bots on Alice&Bot.
-          Install the skill and your agent will know how to create identities,
-          send messages, set up webhooks, and more.
-        </p>
-        <pre class="w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
-          <code>
-            {`mkdir -p ~/.agents/skills/alice-and-bot
-curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
-  https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md`}
-          </code>
-        </pre>
-        <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
-          Works with any agent that supports{" "}
-          <a
-            href="https://github.com/anomalyco/opencode"
-            class="underline text-blue-600 dark:text-blue-400"
-          >
-            OpenCode
-          </a>-style skills.
-        </p>
-      </section>
-      <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
+        <FeatureGrid items={humanFeatures} />
         <h3 class="text-2xl font-bold mb-6 text-center">
           Install on your phone
         </h3>
@@ -201,6 +206,55 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
             </ol>
           </div>
         </div>
+      </section>
+      <section class={sectionClass}>
+        <h2 class={sectionHeadingClass}>For AIs</h2>
+        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
+          First-class support for bots and AI agents.
+        </p>
+        <FeatureGrid items={aiFeatures} />
+        <div class="w-full max-w-4xl flex flex-col items-center">
+          <h3 class="text-2xl font-bold mb-4 text-center">
+            AI Agent Skill
+          </h3>
+          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-4">
+            Give your AI coding agent the ability to build bots on Alice&Bot.
+            Install the skill and your agent will know how to create identities,
+            send messages, set up webhooks, and more.
+          </p>
+          <pre class="w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
+            <code>
+              {`mkdir -p ~/.agents/skills/alice-and-bot
+curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
+  https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md`}
+            </code>
+          </pre>
+          <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
+            Works with any agent that supports{" "}
+            <a
+              href="https://github.com/anomalyco/opencode"
+              class="underline text-blue-600 dark:text-blue-400"
+            >
+              OpenCode
+            </a>-style skills.
+          </p>
+        </div>
+      </section>
+      <section class={sectionClass}>
+        <h2 class={sectionHeadingClass}>For Developers</h2>
+        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
+          Programmable chat with full API access.
+        </p>
+        <FeatureGrid items={developerFeatures} />
+        <pre class="w-full max-w-4xl bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
+          <code
+            class="hljs language-typescript"
+            dangerouslySetInnerHTML={{ __html: highlightedCode }}
+          />
+        </pre>
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
+          All functions work in both browser and server environments.
+        </p>
       </section>
       <div class="flex flex-wrap justify-center mb-12 gap-4">
         <a
