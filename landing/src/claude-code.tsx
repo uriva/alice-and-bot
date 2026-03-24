@@ -1,5 +1,10 @@
+import hljs from "highlight.js/lib/core";
+import typescript from "highlight.js/lib/languages/typescript";
+import "highlight.js/styles/github-dark.css";
 import { homePath } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
+
+hljs.registerLanguage("json", typescript);
 
 const stepCardClass =
   "w-full bg-white/90 dark:bg-blue-950/80 rounded-2xl border border-blue-100 dark:border-blue-900 shadow-xl p-8 mb-6";
@@ -7,8 +12,17 @@ const stepCardClass =
 const stepNumberClass =
   "inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-lg mr-3 shrink-0";
 
-const codeBlockClass =
-  "w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg font-mono select-all cursor-pointer";
+const codeBlockStyle = {
+  borderRadius: "0.75rem",
+  padding: "1rem",
+  fontSize: "0.875rem",
+  fontFamily: "monospace",
+  whiteSpace: "pre-wrap" as const,
+  wordBreak: "break-word" as const,
+  background: "#0f172a",
+  border: "1px solid #1e3a5f",
+  overflow: "hidden",
+};
 
 const denoInstall = "curl -fsSL https://deno.land/install.sh | sh";
 
@@ -36,6 +50,27 @@ const mcpConfig = (home: string) =>
     null,
     2,
   );
+
+const highlight = (code: string, lang: string) =>
+  hljs.highlight(code, { language: lang }).value;
+
+const HighlightedCode = (
+  { code, lang }: { code: string; lang: string },
+) => (
+  <pre style={codeBlockStyle}>
+    <code
+      style={{ background: "transparent", overflow: "hidden", padding: 0 }}
+      class={`hljs language-${lang}`}
+      dangerouslySetInnerHTML={{ __html: highlight(code, lang) }}
+    />
+  </pre>
+);
+
+const ShellCode = ({ code }: { code: string }) => (
+  <pre style={{ ...codeBlockStyle, color: "#93c5fd", cursor: "pointer" }}>
+    <code>{code}</code>
+  </pre>
+);
 
 const Step = ({
   number,
@@ -80,9 +115,7 @@ export const ClaudeCode = () => {
           <p class="text-gray-300 mb-3">
             Paste this in your terminal:
           </p>
-          <pre class={codeBlockClass}>
-            <code>{denoInstall}</code>
-          </pre>
+          <ShellCode code={denoInstall} />
           <p class="text-sm text-gray-400 mt-2">
             Already have Deno? Skip this step.
           </p>
@@ -92,9 +125,7 @@ export const ClaudeCode = () => {
           <p class="text-gray-300 mb-3">
             Paste this in your terminal:
           </p>
-          <pre class={codeBlockClass}>
-            <code>{downloadCommands}</code>
-          </pre>
+          <ShellCode code={downloadCommands} />
         </Step>
 
         <Step number={3} title="Add to Claude Code">
@@ -106,15 +137,17 @@ export const ClaudeCode = () => {
           </p>
           <div class="mb-4">
             <p class="text-sm text-gray-400 mb-2 font-semibold">macOS:</p>
-            <pre class={codeBlockClass}>
-              <code>{mcpConfig("/Users/YOUR_USERNAME")}</code>
-            </pre>
+            <HighlightedCode
+              code={mcpConfig("/Users/YOUR_USERNAME")}
+              lang="json"
+            />
           </div>
           <div>
             <p class="text-sm text-gray-400 mb-2 font-semibold">Linux:</p>
-            <pre class={codeBlockClass}>
-              <code>{mcpConfig("/home/YOUR_USERNAME")}</code>
-            </pre>
+            <HighlightedCode
+              code={mcpConfig("/home/YOUR_USERNAME")}
+              lang="json"
+            />
           </div>
           <p class="text-sm text-gray-400 mt-3">
             Replace{" "}
@@ -129,9 +162,7 @@ export const ClaudeCode = () => {
           <p class="text-gray-300 mb-3">
             In Claude Code, type:
           </p>
-          <pre class={codeBlockClass}>
-            <code>Set up Alice&Bot so I can message this session from my phone</code>
-          </pre>
+          <ShellCode code="Set up Alice&Bot so I can message this session from my phone" />
           <p class="text-gray-300 mt-4">
             Claude will show a QR code. Scan it with your phone. That's it —
             you're chatting with your coding session.
