@@ -14,9 +14,9 @@ import {
   handleWebhookUpdate,
   sendMessage,
   sendMessageWithKey,
+  setWebhook,
   type WebhookUpdate,
-} from "../protocol/src/clientApi.ts";
-import { setWebhook } from "../backend/src/api.ts";
+} from "@alice-and-bot/core";
 
 const configDir = `${Deno.env.get("HOME")}/.config/aliceandbot-mcp`;
 const credentialsPath = `${configDir}/credentials.json`;

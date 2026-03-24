@@ -21,10 +21,12 @@ Works with any editor that supports MCP: Claude Code, Cursor, Windsurf, VS Code
 curl -fsSL https://deno.land/install.sh | sh
 ```
 
-### 2. Clone the repo
+### 2. Download the MCP server
 
 ```bash
-git clone https://github.com/uriva/alice-and-bot.git
+mkdir -p ~/.local/share/aliceandbot-mcp && cd ~/.local/share/aliceandbot-mcp
+curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/mcp.ts
+curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/deno.json
 ```
 
 ### 3. Add the MCP server to your editor
@@ -36,7 +38,13 @@ git clone https://github.com/uriva/alice-and-bot.git
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
+      "args": [
+        "run",
+        "-A",
+        "--config",
+        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
+        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
+      ]
     }
   }
 }
@@ -50,13 +58,20 @@ git clone https://github.com/uriva/alice-and-bot.git
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
+      "args": [
+        "run",
+        "-A",
+        "--config",
+        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
+        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
+      ]
     }
   }
 }
 ```
 
-Replace `/path/to/alice-and-bot` with the actual path where you cloned the repo.
+Replace `<HOME>` with your home directory (e.g. `/Users/you` on macOS,
+`/home/you` on Linux).
 
 ### 4. Use it
 

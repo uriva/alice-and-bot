@@ -23,16 +23,20 @@ The MCP server runs on [Deno](https://deno.land). If you don't have it:
 curl -fsSL https://deno.land/install.sh | sh
 ```
 
-## Step 2: Clone the Repo
+## Step 2: Download the MCP Server
+
+No need to clone the full repo — just grab two files:
 
 ```bash
-git clone https://github.com/uriva/alice-and-bot.git
+mkdir -p ~/.local/share/aliceandbot-mcp && cd ~/.local/share/aliceandbot-mcp
+curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/mcp.ts
+curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/deno.json
 ```
 
 ## Step 3: Configure Your Editor
 
-Add the MCP server to your editor's configuration. Replace
-`/path/to/alice-and-bot` with the actual path where you cloned the repo.
+Add the MCP server to your editor's configuration. Replace `<HOME>` with your
+home directory (e.g. `/Users/you` on macOS, `/home/you` on Linux).
 
 ### Claude Code
 
@@ -43,7 +47,13 @@ Add to `.claude/settings.json` (or ask Claude to add it for you):
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
+      "args": [
+        "run",
+        "-A",
+        "--config",
+        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
+        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
+      ]
     }
   }
 }
@@ -58,7 +68,13 @@ Add to `.cursor/mcp.json`:
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
+      "args": [
+        "run",
+        "-A",
+        "--config",
+        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
+        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
+      ]
     }
   }
 }
@@ -73,7 +89,13 @@ Add to `.windsurf/mcp.json`:
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
+      "args": [
+        "run",
+        "-A",
+        "--config",
+        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
+        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
+      ]
     }
   }
 }
@@ -89,7 +111,13 @@ Add to your VS Code `settings.json`:
     "servers": {
       "aliceandbot": {
         "command": "deno",
-        "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
+        "args": [
+          "run",
+          "-A",
+          "--config",
+          "<HOME>/.local/share/aliceandbot-mcp/deno.json",
+          "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
+        ]
       }
     }
   }

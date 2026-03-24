@@ -556,17 +556,30 @@ supports MCP.
 
 ### Quick start
 
-1. Install [Deno](https://deno.land) and clone this repo.
+1. Install [Deno](https://deno.land) and download the MCP server:
+
+   ```bash
+   mkdir -p ~/.local/share/aliceandbot-mcp && cd ~/.local/share/aliceandbot-mcp
+   curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/mcp.ts
+   curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/deno.json
+   ```
 
 2. Add the MCP server to your editor's config (e.g. `.claude/settings.json`,
-   `.cursor/mcp.json`, or VS Code settings):
+   `.cursor/mcp.json`, or VS Code settings). Replace `<HOME>` with your home
+   directory:
 
    ```json
    {
      "mcpServers": {
        "aliceandbot": {
          "command": "deno",
-         "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
+         "args": [
+           "run",
+           "-A",
+           "--config",
+           "<HOME>/.local/share/aliceandbot-mcp/deno.json",
+           "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
+         ]
        }
      }
    }
