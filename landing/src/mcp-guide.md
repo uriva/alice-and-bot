@@ -11,10 +11,9 @@ any editor that supports [MCP](https://modelcontextprotocol.io/).
 Your editor runs a local MCP server that creates an Alice&Bot identity. You scan
 a QR code, and you're chatting — encrypted end-to-end.
 
-```
-Phone  →  Alice&Bot  →  Relay  →  MCP Server  →  Editor
-                              ←               ←
-```
+**Phone** sends a message through **Alice&Bot**, which forwards it to a
+**Relay**, which delivers it to the **MCP Server** running in your **Editor** —
+and replies flow back the same way. The relay never sees plaintext.
 
 ## Step 1: Install Deno
 

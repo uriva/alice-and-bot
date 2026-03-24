@@ -8,11 +8,6 @@ Works with any editor that supports MCP: Claude Code, Cursor, Windsurf, VS Code
 
 ## How It Works
 
-```
-You (phone)  →  Alice&Bot  →  Relay  →  MCP Server  →  Editor
-                                     ←              ←
-```
-
 1. Ask your editor to set up Alice&Bot — you get a QR code
 2. Scan it with your phone — opens an Alice&Bot conversation
 3. Send messages from your phone — your AI agent sees them and replies
