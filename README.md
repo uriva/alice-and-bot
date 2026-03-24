@@ -545,6 +545,48 @@ const scriptTag = embedScript({
 // Insert scriptTag into your HTML
 ```
 
+## MCP Server (AI Code Editors)
+
+Chat with your coding sessions from your phone. The MCP server gives your AI
+code editor three tools — setup, check, and reply — that let you open an
+encrypted Alice&Bot conversation with any active session.
+
+Works with Claude Code, Cursor, Windsurf, VS Code (Copilot), and any editor that
+supports MCP.
+
+### Quick start
+
+1. Deploy the relay (a tiny Deno Deploy service that buffers encrypted
+   webhooks):
+
+   ```bash
+   cd mcp
+   deno deploy --entrypoint relay.ts
+   ```
+
+2. Add the MCP server to your editor's config (e.g. `.claude/settings.json`,
+   `.cursor/mcp.json`, or VS Code settings):
+
+   ```json
+   {
+     "mcpServers": {
+       "aliceandbot": {
+         "command": "deno",
+         "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"],
+         "env": {
+           "ALICEANDBOT_RELAY_URL": "https://your-relay.deno.dev"
+         }
+       }
+     }
+   }
+   ```
+
+3. Ask your AI agent to "set up Alice&Bot". It calls `aliceandbot_setup`, shows
+   a QR code — scan it with your phone to start messaging.
+
+See [`mcp/README.md`](mcp/README.md) for architecture details and the full tool
+reference.
+
 ## Self-Hosting
 
 To run your own alice-and-bot server:

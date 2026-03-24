@@ -2,7 +2,7 @@ import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/github-dark.css";
 import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
-import { chatPath, docsPath, manifestoPath } from "./paths.ts";
+import { chatPath, docsPath, manifestoPath, mcpGuidePath } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
 hljs.registerLanguage("typescript", typescript);
@@ -241,7 +241,37 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
         </div>
       </section>
       <section class={sectionClass}>
-        <h2 class={sectionHeadingClass}>For Developers</h2>
+        <h2 class={sectionHeadingClass}>For AI Code Editors</h2>
+        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
+          Chat with your coding sessions from your phone.
+        </p>
+        <FeatureGrid
+          items={[
+            {
+              title: "Works Everywhere",
+              description:
+                "Claude Code, Cursor, Windsurf, VS Code — any editor that supports MCP.",
+            },
+            {
+              title: "QR Code Setup",
+              description:
+                "Ask your agent to set up Alice&Bot. Scan the QR code, and you're chatting with your session.",
+            },
+            {
+              title: "End-to-End Encrypted",
+              description:
+                "Messages are encrypted on your device. The relay never sees plaintext.",
+            },
+          ]}
+        />
+        <a
+          href={mcpGuidePath}
+          class="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 text-white text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
+        >
+          Setup Guide
+        </a>
+      </section>
+      <section class={sectionClass}>
         <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
           Programmable chat with full API access.
         </p>
@@ -326,10 +356,10 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               Discord
             </a>
             <a
-              href={docsPath}
+              href={mcpGuidePath}
               class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
             >
-              API Docs
+              MCP Guide
             </a>
           </nav>
           <div class="border-t border-blue-700 dark:border-gray-700 w-full pt-6 text-center text-sm text-blue-100 dark:text-gray-400">

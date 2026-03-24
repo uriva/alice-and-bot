@@ -12,8 +12,10 @@ import {
   guidePath,
   homePath,
   manifestoPath,
+  mcpGuidePath,
 } from "./paths.ts";
 import { Manifesto } from "./manifesto.tsx";
+import { McpGuide } from "./mcp-guide.tsx";
 import "./app.css";
 
 const routes: { path: string; component: AnyComponent }[] = [
@@ -23,6 +25,7 @@ const routes: { path: string; component: AnyComponent }[] = [
   { path: guidePath, component: Docs },
   { path: "/legal", component: Legal },
   { path: manifestoPath, component: Manifesto },
+  { path: mcpGuidePath, component: McpGuide },
 ];
 
 const NotFound = () => (

@@ -1,0 +1,20 @@
+{
+  "tasks": {
+    "relay": "deno run -A --unstable-kv relay.ts",
+    "mcp": "deno run -A mcp.ts"
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.unstable", "dom"]
+  },
+  "imports": {
+    "@instantdb/admin": "npm:@instantdb/admin@0.22.41",
+    "@instantdb/core": "npm:@instantdb/core@0.22.41",
+    "@uri/gamla": "jsr:@uri/gamla@0.0.14",
+    "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
+    "typed-api": "jsr:@uri/typed-api@0.0.10",
+    "zod": "npm:zod@3.25.57",
+    "buffer": "npm:buffer@6.0.3",
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@1.12.1",
+    "qrcode": "npm:qrcode@1.5.4"
+  }
+}
