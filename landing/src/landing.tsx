@@ -2,6 +2,29 @@ import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
 import { chatPath, docsPath, manifestoPath } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
+const codeExample =
+  `import { createIdentity, createConversation, sendMessage, setWebhook } from "@alice-and-bot/core";
+
+// create two identities (works in browser or server)
+const alice = await createIdentity("Alice", "alice");
+const bot = await createIdentity("My Bot", "my_bot");
+
+// start a conversation
+const { conversationId } = await createConversation(
+  [alice.publicSignKey, bot.publicSignKey],
+  "Hello",
+);
+
+// send a message
+await sendMessage({
+  credentials: alice,
+  conversation: conversationId,
+  message: { type: "text", text: "Hey bot!" },
+});
+
+// receive messages via webhook
+await setWebhook({ url: "https://my-server.com/hook", credentials: bot });`;
+
 const features = [
   {
     title: "Unlimited, Unlinked Identities",
@@ -96,6 +119,12 @@ export const LandingPage = () => {
           <li>Bring your own identity (public/private key)</li>
           <li>White label and embed anywhere</li>
         </ul>
+        <pre class="w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
+          <code>{codeExample}</code>
+        </pre>
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
+          All functions work in both browser and server environments.
+        </p>
       </section>
       <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
         <h3 class="text-2xl font-bold mb-4 text-center">
