@@ -2,7 +2,7 @@ import { init as adminInit } from "@instantdb/admin";
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
-import { useEffect, useLayoutEffect, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { toast } from "react-hot-toast";
 import {
   type Conversation,
@@ -1499,11 +1499,14 @@ export const Messenger = () => {
   const chatWith = location.query["chatWith"];
   const route = useLocation().route;
   const [handledChatWith, setHandledChatWith] = useState<string | null>(null);
+  const chatWithInFlight = useRef(false);
   useEffect(() => {
     if (!credentials || !conversations) return;
     const cw = (chatWith as string | undefined) ?? undefined;
     if (!cw) return;
     if (handledChatWith === cw) return; // already processed this value
+    if (chatWithInFlight.current) return; // creation already in progress
+    chatWithInFlight.current = true;
     (async () => {
       // Resolve alias to public sign key if needed
       let resolvedKey = cw;
@@ -1523,7 +1526,10 @@ export const Messenger = () => {
         conversationId = existing.id;
       } else {
         conversationId = await startConversation(credentials, cw);
-        if (!conversationId) return; // failed to create
+        if (!conversationId) {
+          chatWithInFlight.current = false;
+          return; // failed to create
+        }
       }
       // Build a stable URL: remove chatWith, set c=<id>, ensure chats view
       const params = new URLSearchParams(globalThis.location.search);
@@ -1534,6 +1540,7 @@ export const Messenger = () => {
       const newUrl = `${chatPath}?${params.toString()}`;
       route(newUrl, true);
       setHandledChatWith(cw);
+      chatWithInFlight.current = false;
     })();
   }, [credentials, chatWith, conversations, handledChatWith]);
 
