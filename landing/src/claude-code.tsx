@@ -108,7 +108,8 @@ export const ClaudeCode = () => {
             Downloads a single binary to{" "}
             <code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded text-sm">
               ~/.local/bin/alice-and-bot-mcp
-            </code>. No runtime needed.
+            </code>. The binary is ~100MB because Deno embeds its entire runtime
+            — even a hello world is ~90MB.
           </p>
         </Step>
 

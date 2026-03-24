@@ -23,7 +23,10 @@ A single command downloads the binary for your platform:
 curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
 ```
 
-This installs `alice-and-bot-mcp` to `~/.local/bin/`. No runtime needed.
+This installs `alice-and-bot-mcp` to `~/.local/bin/`.
+
+The binary is ~100MB because Deno embeds its entire runtime — even a hello world
+is ~90MB. The actual MCP server code adds very little on top.
 
 ## Step 2: Configure Your Editor
 
