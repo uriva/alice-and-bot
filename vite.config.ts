@@ -28,6 +28,7 @@ export default defineConfig({
           "/legal",
           "/manifesto",
           "/mcp",
+          "/claude-code",
         ],
         prerenderScript: resolve(__dirname, "landing/src/prerender.tsx"),
       },

@@ -1,0 +1,149 @@
+import { homePath } from "./paths.ts";
+import { useClearViewportStyles } from "./useClearViewportStyles.ts";
+
+const stepCardClass =
+  "w-full bg-white/90 dark:bg-blue-950/80 rounded-2xl border border-blue-100 dark:border-blue-900 shadow-xl p-8 mb-6";
+
+const stepNumberClass =
+  "inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-lg mr-3 shrink-0";
+
+const codeBlockClass =
+  "w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg font-mono select-all cursor-pointer";
+
+const denoInstall = "curl -fsSL https://deno.land/install.sh | sh";
+
+const downloadCommands = `mkdir -p ~/.local/share/aliceandbot-mcp
+cd ~/.local/share/aliceandbot-mcp
+curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/mcp.ts
+curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/deno.json`;
+
+const mcpConfig = (home: string) =>
+  JSON.stringify(
+    {
+      mcpServers: {
+        aliceandbot: {
+          command: "deno",
+          args: [
+            "run",
+            "-A",
+            "--config",
+            `${home}/.local/share/aliceandbot-mcp/deno.json`,
+            `${home}/.local/share/aliceandbot-mcp/mcp.ts`,
+          ],
+        },
+      },
+    },
+    null,
+    2,
+  );
+
+const Step = ({
+  number,
+  title,
+  children,
+}: {
+  number: number;
+  title: string;
+  children: preact.ComponentChildren;
+}) => (
+  <div class={stepCardClass}>
+    <div class="flex items-center mb-4">
+      <span class={stepNumberClass}>{number}</span>
+      <h2 class="text-xl font-bold text-blue-700 dark:text-blue-300">
+        {title}
+      </h2>
+    </div>
+    {children}
+  </div>
+);
+
+export const ClaudeCode = () => {
+  useClearViewportStyles();
+  return (
+    <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-blue-950">
+      <div style={{ maxWidth: 700, margin: "0 auto", padding: "24px" }}>
+        <a
+          href={homePath}
+          class="inline-block mb-6 text-blue-400 hover:text-blue-300 transition font-medium"
+        >
+          &larr; Back to Alice&Bot
+        </a>
+
+        <h1 class="text-4xl font-extrabold text-blue-300 text-center mb-2">
+          Claude Code + Alice&Bot
+        </h1>
+        <p class="text-lg text-gray-300 text-center mb-10">
+          Chat with your coding session from your phone. End-to-end encrypted.
+        </p>
+
+        <Step number={1} title="Install Deno (if you don't have it)">
+          <p class="text-gray-300 mb-3">
+            Paste this in your terminal:
+          </p>
+          <pre class={codeBlockClass}>
+            <code>{denoInstall}</code>
+          </pre>
+          <p class="text-sm text-gray-400 mt-2">
+            Already have Deno? Skip this step.
+          </p>
+        </Step>
+
+        <Step number={2} title="Download the MCP server">
+          <p class="text-gray-300 mb-3">
+            Paste this in your terminal:
+          </p>
+          <pre class={codeBlockClass}>
+            <code>{downloadCommands}</code>
+          </pre>
+        </Step>
+
+        <Step number={3} title="Add to Claude Code">
+          <p class="text-gray-300 mb-3">
+            Add this to your{" "}
+            <code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded text-sm">
+              .claude/settings.json
+            </code>:
+          </p>
+          <div class="mb-4">
+            <p class="text-sm text-gray-400 mb-2 font-semibold">macOS:</p>
+            <pre class={codeBlockClass}>
+              <code>{mcpConfig("/Users/YOUR_USERNAME")}</code>
+            </pre>
+          </div>
+          <div>
+            <p class="text-sm text-gray-400 mb-2 font-semibold">Linux:</p>
+            <pre class={codeBlockClass}>
+              <code>{mcpConfig("/home/YOUR_USERNAME")}</code>
+            </pre>
+          </div>
+          <p class="text-sm text-gray-400 mt-3">
+            Replace{" "}
+            <code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded text-sm">
+              YOUR_USERNAME
+            </code>{" "}
+            with your actual username, or just ask Claude to add it for you.
+          </p>
+        </Step>
+
+        <Step number={4} title="Start chatting">
+          <p class="text-gray-300 mb-3">
+            In Claude Code, type:
+          </p>
+          <pre class={codeBlockClass}>
+            <code>Set up Alice&Bot so I can message this session from my phone</code>
+          </pre>
+          <p class="text-gray-300 mt-4">
+            Claude will show a QR code. Scan it with your phone. That's it —
+            you're chatting with your coding session.
+          </p>
+        </Step>
+
+        <div class="text-center mt-10 mb-8">
+          <p class="text-gray-400 text-sm">
+            Messages are end-to-end encrypted. The relay never sees plaintext.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};

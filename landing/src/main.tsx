@@ -8,6 +8,7 @@ import { LandingPage } from "./landing.tsx";
 import { Legal } from "./legal.tsx";
 import {
   chatPath,
+  claudeCodePath,
   docsPath,
   guidePath,
   homePath,
@@ -16,6 +17,7 @@ import {
 } from "./paths.ts";
 import { Manifesto } from "./manifesto.tsx";
 import { McpGuide } from "./mcp-guide.tsx";
+import { ClaudeCode } from "./claude-code.tsx";
 import "./app.css";
 
 const routes: { path: string; component: AnyComponent }[] = [
@@ -26,6 +28,7 @@ const routes: { path: string; component: AnyComponent }[] = [
   { path: "/legal", component: Legal },
   { path: manifestoPath, component: Manifesto },
   { path: mcpGuidePath, component: McpGuide },
+  { path: claudeCodePath, component: ClaudeCode },
 ];
 
 const NotFound = () => (
