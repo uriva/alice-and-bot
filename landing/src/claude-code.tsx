@@ -24,32 +24,20 @@ const codeBlockStyle = {
   overflow: "hidden",
 };
 
-const denoInstall = "curl -fsSL https://deno.land/install.sh | sh";
+const installCommand =
+  "curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh";
 
-const downloadCommands = `mkdir -p ~/.local/share/aliceandbot-mcp
-cd ~/.local/share/aliceandbot-mcp
-curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/mcp.ts
-curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/deno.json`;
-
-const mcpConfig = (home: string) =>
-  JSON.stringify(
-    {
-      mcpServers: {
-        aliceandbot: {
-          command: "deno",
-          args: [
-            "run",
-            "-A",
-            "--config",
-            `${home}/.local/share/aliceandbot-mcp/deno.json`,
-            `${home}/.local/share/aliceandbot-mcp/mcp.ts`,
-          ],
-        },
+const mcpConfig = JSON.stringify(
+  {
+    mcpServers: {
+      aliceandbot: {
+        command: "alice-and-bot-mcp",
       },
     },
-    null,
-    2,
-  );
+  },
+  null,
+  2,
+);
 
 const highlight = (code: string, lang: string) =>
   hljs.highlight(code, { language: lang }).value;
@@ -111,54 +99,33 @@ export const ClaudeCode = () => {
           Chat with your coding session from your phone. End-to-end encrypted.
         </p>
 
-        <Step number={1} title="Install Deno (if you don't have it)">
+        <Step number={1} title="Install the MCP server">
           <p class="text-gray-300 mb-3">
             Paste this in your terminal:
           </p>
-          <ShellCode code={denoInstall} />
+          <ShellCode code={installCommand} />
           <p class="text-sm text-gray-400 mt-2">
-            Already have Deno? Skip this step.
+            Downloads a single binary to{" "}
+            <code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded text-sm">
+              ~/.local/bin/alice-and-bot-mcp
+            </code>. No runtime needed.
           </p>
         </Step>
 
-        <Step number={2} title="Download the MCP server">
-          <p class="text-gray-300 mb-3">
-            Paste this in your terminal:
-          </p>
-          <ShellCode code={downloadCommands} />
-        </Step>
-
-        <Step number={3} title="Add to Claude Code">
+        <Step number={2} title="Add to Claude Code">
           <p class="text-gray-300 mb-3">
             Add this to your{" "}
             <code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded text-sm">
               .claude/settings.json
             </code>:
           </p>
-          <div class="mb-4">
-            <p class="text-sm text-gray-400 mb-2 font-semibold">macOS:</p>
-            <HighlightedCode
-              code={mcpConfig("/Users/YOUR_USERNAME")}
-              lang="json"
-            />
-          </div>
-          <div>
-            <p class="text-sm text-gray-400 mb-2 font-semibold">Linux:</p>
-            <HighlightedCode
-              code={mcpConfig("/home/YOUR_USERNAME")}
-              lang="json"
-            />
-          </div>
+          <HighlightedCode code={mcpConfig} lang="json" />
           <p class="text-sm text-gray-400 mt-3">
-            Replace{" "}
-            <code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded text-sm">
-              YOUR_USERNAME
-            </code>{" "}
-            with your actual username, or just ask Claude to add it for you.
+            Or just ask Claude to add it for you.
           </p>
         </Step>
 
-        <Step number={4} title="Start chatting">
+        <Step number={3} title="Start chatting">
           <p class="text-gray-300 mb-3">
             In Claude Code, type:
           </p>

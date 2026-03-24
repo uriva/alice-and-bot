@@ -15,21 +15,15 @@ Works with any editor that supports MCP: Claude Code, Cursor, Windsurf, VS Code
 
 ## Install
 
-### 1. Install Deno
+### 1. Download the binary
 
 ```bash
-curl -fsSL https://deno.land/install.sh | sh
+curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
 ```
 
-### 2. Download the MCP server
+This installs `alice-and-bot-mcp` to `~/.local/bin/`. No runtime needed.
 
-```bash
-mkdir -p ~/.local/share/aliceandbot-mcp && cd ~/.local/share/aliceandbot-mcp
-curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/mcp.ts
-curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/deno.json
-```
-
-### 3. Add the MCP server to your editor
+### 2. Add the MCP server to your editor
 
 **Claude Code** — add to `.claude/settings.json`:
 
@@ -37,43 +31,39 @@ curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/deno.
 {
   "mcpServers": {
     "aliceandbot": {
-      "command": "deno",
-      "args": [
-        "run",
-        "-A",
-        "--config",
-        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
-        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
-      ]
+      "command": "alice-and-bot-mcp"
     }
   }
 }
 ```
 
-**Cursor / Windsurf / VS Code** — add to your MCP config (typically
-`.cursor/mcp.json`, `.windsurf/mcp.json`, or VS Code settings):
+**Cursor / Windsurf** — add to `.cursor/mcp.json` or `.windsurf/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "aliceandbot": {
-      "command": "deno",
-      "args": [
-        "run",
-        "-A",
-        "--config",
-        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
-        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
-      ]
+      "command": "alice-and-bot-mcp"
     }
   }
 }
 ```
 
-Replace `<HOME>` with your home directory (e.g. `/Users/you` on macOS,
-`/home/you` on Linux).
+**VS Code (GitHub Copilot)** — add to your VS Code `settings.json`:
 
-### 4. Use it
+```json
+{
+  "mcp": {
+    "servers": {
+      "aliceandbot": {
+        "command": "alice-and-bot-mcp"
+      }
+    }
+  }
+}
+```
+
+### 3. Use it
 
 Ask your AI agent to "set up Alice&Bot" or use the `aliceandbot` prompt. It will
 call `aliceandbot_setup` and show you a QR code. Scan it with your phone.

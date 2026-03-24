@@ -15,28 +15,19 @@ a QR code, and you're chatting — encrypted end-to-end.
 **Relay**, which delivers it to the **MCP Server** running in your **Editor** —
 and replies flow back the same way. The relay never sees plaintext.
 
-## Step 1: Install Deno
+## Step 1: Install the MCP Server
 
-The MCP server runs on [Deno](https://deno.land). If you don't have it:
-
-```bash
-curl -fsSL https://deno.land/install.sh | sh
-```
-
-## Step 2: Download the MCP Server
-
-No need to clone the full repo — just grab two files:
+A single command downloads the binary for your platform:
 
 ```bash
-mkdir -p ~/.local/share/aliceandbot-mcp && cd ~/.local/share/aliceandbot-mcp
-curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/mcp.ts
-curl -fsSLO https://raw.githubusercontent.com/uriva/alice-and-bot/main/mcp/deno.json
+curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
 ```
 
-## Step 3: Configure Your Editor
+This installs `alice-and-bot-mcp` to `~/.local/bin/`. No runtime needed.
 
-Add the MCP server to your editor's configuration. Replace `<HOME>` with your
-home directory (e.g. `/Users/you` on macOS, `/home/you` on Linux).
+## Step 2: Configure Your Editor
+
+Add the MCP server to your editor's configuration.
 
 ### Claude Code
 
@@ -46,14 +37,7 @@ Add to `.claude/settings.json` (or ask Claude to add it for you):
 {
   "mcpServers": {
     "aliceandbot": {
-      "command": "deno",
-      "args": [
-        "run",
-        "-A",
-        "--config",
-        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
-        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
-      ]
+      "command": "alice-and-bot-mcp"
     }
   }
 }
@@ -67,14 +51,7 @@ Add to `.cursor/mcp.json`:
 {
   "mcpServers": {
     "aliceandbot": {
-      "command": "deno",
-      "args": [
-        "run",
-        "-A",
-        "--config",
-        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
-        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
-      ]
+      "command": "alice-and-bot-mcp"
     }
   }
 }
@@ -88,14 +65,7 @@ Add to `.windsurf/mcp.json`:
 {
   "mcpServers": {
     "aliceandbot": {
-      "command": "deno",
-      "args": [
-        "run",
-        "-A",
-        "--config",
-        "<HOME>/.local/share/aliceandbot-mcp/deno.json",
-        "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
-      ]
+      "command": "alice-and-bot-mcp"
     }
   }
 }
@@ -110,21 +80,14 @@ Add to your VS Code `settings.json`:
   "mcp": {
     "servers": {
       "aliceandbot": {
-        "command": "deno",
-        "args": [
-          "run",
-          "-A",
-          "--config",
-          "<HOME>/.local/share/aliceandbot-mcp/deno.json",
-          "<HOME>/.local/share/aliceandbot-mcp/mcp.ts"
-        ]
+        "command": "alice-and-bot-mcp"
       }
     }
   }
 }
 ```
 
-## Step 4: Start Chatting
+## Step 3: Start Chatting
 
 1. Ask your AI agent to **"set up Alice&Bot"** (or use the `aliceandbot` prompt
    if your editor supports MCP prompts)

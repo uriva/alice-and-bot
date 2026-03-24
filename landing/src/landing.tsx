@@ -2,7 +2,13 @@ import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/github-dark.css";
 import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
-import { chatPath, docsPath, manifestoPath, mcpGuidePath } from "./paths.ts";
+import {
+  chatPath,
+  claudeCodePath,
+  docsPath,
+  manifestoPath,
+  mcpGuidePath,
+} from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
 hljs.registerLanguage("typescript", typescript);
@@ -264,12 +270,20 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
             },
           ]}
         />
-        <a
-          href={mcpGuidePath}
-          class="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 text-white text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
-        >
-          Setup Guide
-        </a>
+        <div class="flex flex-wrap justify-center gap-4">
+          <a
+            href={mcpGuidePath}
+            class="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 text-white text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
+          >
+            Setup Guide
+          </a>
+          <a
+            href={claudeCodePath}
+            class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
+          >
+            Claude Code Guide
+          </a>
+        </div>
       </section>
       <section class={sectionClass}>
         <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
@@ -360,6 +374,12 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
             >
               MCP Guide
+            </a>
+            <a
+              href={claudeCodePath}
+              class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
+            >
+              Claude Code
             </a>
           </nav>
           <div class="border-t border-blue-700 dark:border-gray-700 w-full pt-6 text-center text-sm text-blue-100 dark:text-gray-400">

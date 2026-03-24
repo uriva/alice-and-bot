@@ -1,0 +1,49 @@
+name: Deploy MCP CLI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mcp/**"
+      - "protocol/**"
+      - "backend/src/api.ts"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: actions/checkout@v4
+      - name: Compile binaries for all platforms
+        working-directory: mcp
+        run: |
+          mkdir -p dist
+          deno compile -A --no-check --target x86_64-unknown-linux-gnu -o dist/alice-and-bot-mcp-linux-x64 mcp.ts
+          deno compile -A --no-check --target aarch64-apple-darwin -o dist/alice-and-bot-mcp-darwin-arm64 mcp.ts
+          deno compile -A --no-check --target x86_64-apple-darwin -o dist/alice-and-bot-mcp-darwin-x64 mcp.ts
+          deno compile -A --no-check --target x86_64-pc-windows-msvc -o dist/alice-and-bot-mcp-windows-x64.exe mcp.ts
+      - name: Confirm binaries are built
+        run: ls -lh mcp/dist/
+      - name: Set up Google Cloud credentials
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Upload binaries to Google Cloud Storage
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: mcp/dist
+          destination: alice-and-bot/cli/
+          process_gcloudignore: false
+      - name: Upload install script
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: mcp/install.sh
+          destination: alice-and-bot/cli/
+          process_gcloudignore: false
+          headers: |-
+            content-type: text/plain
