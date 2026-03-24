@@ -71,29 +71,32 @@ is ~90MB. The actual MCP server code adds very little on top.
 Ask your AI agent to "set up Alice&Bot" or use the `aliceandbot` prompt. It will
 call `aliceandbot_setup` and show you a QR code. Scan it with your phone.
 
-Then ask it to "check for Alice&Bot messages" whenever you want it to poll.
+Messages arrive automatically — the MCP server polls in the background and
+notifies your editor when new messages come in. A dynamic `aliceandbot_read`
+tool appears in the tool list so the agent can read them.
 
 ## MCP Tools
 
-| Tool                | Description                                               |
-| ------------------- | --------------------------------------------------------- |
-| `aliceandbot_setup` | Creates identity (first run), sets webhook, shows QR code |
-| `aliceandbot_check` | Polls for new messages, decrypts them                     |
-| `aliceandbot_reply` | Sends an encrypted reply to a conversation                |
+| Tool                | Description                                                   |
+| ------------------- | ------------------------------------------------------------- |
+| `aliceandbot_setup` | Creates identity (first run), sets webhook, shows QR code     |
+| `aliceandbot_read`  | Reads new messages (appears dynamically when messages arrive) |
+| `aliceandbot_reply` | Sends an encrypted reply to a conversation                    |
 
 ## Architecture
 
 - **MCP server** (`mcp.ts`) — runs locally via your editor's MCP system. Manages
-  a persistent A&B identity stored at `~/.config/aliceandbot-mcp/`. Communicates
-  with the relay via HTTP.
+  a persistent A&B identity stored at `~/.config/aliceandbot-mcp/`. After setup,
+  polls the relay every 3 seconds in the background. When messages arrive, sends
+  a `tools/list_changed` notification so the editor discovers the new
+  `aliceandbot_read` tool.
 
 - **Relay** — hosted at `api.aliceandbot.com`. Receives A&B webhooks, stores
   encrypted payloads (1hr TTL), serves them when the MCP server polls. Never
   sees plaintext — messages are E2E encrypted.
 
-## Limitations (v0.1)
+## Limitations (v0.2)
 
 - One active session at a time receives messages (last session to call `setup`
   wins the webhook)
-- Polling is manual — the agent checks when you ask it to
 - No message history across sessions
