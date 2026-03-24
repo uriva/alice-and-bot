@@ -8,13 +8,12 @@ any editor that supports [MCP](https://modelcontextprotocol.io/).
 
 ## How It Works
 
-Your editor runs a local MCP server that creates an Alice&Bot identity. A
-lightweight relay bridges webhooks to the editor. You scan a QR code, and you're
-chatting — encrypted end-to-end. The relay never sees plaintext.
+Your editor runs a local MCP server that creates an Alice&Bot identity. You scan
+a QR code, and you're chatting — encrypted end-to-end.
 
 ```
 Phone  →  Alice&Bot  →  Relay  →  MCP Server  →  Editor
-                               ←               ←
+                              ←               ←
 ```
 
 ## Step 1: Install Deno
@@ -31,36 +30,21 @@ curl -fsSL https://deno.land/install.sh | sh
 git clone https://github.com/uriva/alice-and-bot.git
 ```
 
-## Step 3: Deploy the Relay
-
-The relay is a tiny service that buffers encrypted webhook payloads. Deploy it
-to [Deno Deploy](https://deno.com/deploy):
-
-```bash
-cd alice-and-bot/mcp
-deno deploy --entrypoint relay.ts
-```
-
-Note the URL you get (e.g. `https://your-relay.deno.dev`).
-
-## Step 4: Configure Your Editor
+## Step 3: Configure Your Editor
 
 Add the MCP server to your editor's configuration. Replace
-`/path/to/alice-and-bot` with the actual path, and use your relay URL.
+`/path/to/alice-and-bot` with the actual path where you cloned the repo.
 
 ### Claude Code
 
-Add to `.claude/settings.json`:
+Add to `.claude/settings.json` (or ask Claude to add it for you):
 
 ```json
 {
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"],
-      "env": {
-        "ALICEANDBOT_RELAY_URL": "https://your-relay.deno.dev"
-      }
+      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
     }
   }
 }
@@ -75,10 +59,7 @@ Add to `.cursor/mcp.json`:
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"],
-      "env": {
-        "ALICEANDBOT_RELAY_URL": "https://your-relay.deno.dev"
-      }
+      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
     }
   }
 }
@@ -93,10 +74,7 @@ Add to `.windsurf/mcp.json`:
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"],
-      "env": {
-        "ALICEANDBOT_RELAY_URL": "https://your-relay.deno.dev"
-      }
+      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
     }
   }
 }
@@ -112,17 +90,14 @@ Add to your VS Code `settings.json`:
     "servers": {
       "aliceandbot": {
         "command": "deno",
-        "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"],
-        "env": {
-          "ALICEANDBOT_RELAY_URL": "https://your-relay.deno.dev"
-        }
+        "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
       }
     }
   }
 }
 ```
 
-## Step 5: Start Chatting
+## Step 4: Start Chatting
 
 1. Ask your AI agent to **"set up Alice&Bot"** (or use the `aliceandbot` prompt
    if your editor supports MCP prompts)
@@ -139,7 +114,7 @@ end-to-end encryption.
 | Tool                | What it does                                                                   |
 | ------------------- | ------------------------------------------------------------------------------ |
 | `aliceandbot_setup` | Creates your identity (first run only), sets up the webhook, shows the QR code |
-| `aliceandbot_check` | Polls the relay for new messages and decrypts them                             |
+| `aliceandbot_check` | Polls for new messages and decrypts them                                       |
 | `aliceandbot_reply` | Sends an encrypted reply back to a conversation                                |
 
 ## Notes

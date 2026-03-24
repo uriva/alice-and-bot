@@ -1,6 +1,5 @@
 {
   "tasks": {
-    "relay": "deno run -A --unstable-kv relay.ts",
     "mcp": "deno run -A mcp.ts"
   },
   "compilerOptions": {

@@ -22,7 +22,7 @@ const configDir = `${Deno.env.get("HOME")}/.config/aliceandbot-mcp`;
 const credentialsPath = `${configDir}/credentials.json`;
 const statePath = `${configDir}/state.json`;
 const relayUrl = Deno.env.get("ALICEANDBOT_RELAY_URL") ||
-  "https://aliceandbot-mcp-relay.deno.dev";
+  "https://api.aliceandbot.com/relay";
 
 type State = { relayToken: string };
 type ConvState = { conversationKey: string };

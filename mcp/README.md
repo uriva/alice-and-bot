@@ -9,8 +9,8 @@ Works with any editor that supports MCP: Claude Code, Cursor, Windsurf, VS Code
 ## How It Works
 
 ```
-You (phone)  →  Alice&Bot  →  webhook  →  Relay  →  MCP Server  →  Editor
-                                                  ←              ←
+You (phone)  →  Alice&Bot  →  Relay  →  MCP Server  →  Editor
+                                     ←              ←
 ```
 
 1. Ask your editor to set up Alice&Bot — you get a QR code
@@ -20,18 +20,19 @@ You (phone)  →  Alice&Bot  →  webhook  →  Relay  →  MCP Server  →  Edi
 
 ## Install
 
-### 1. Deploy the relay
-
-The relay is a tiny Deno Deploy service that buffers encrypted webhook payloads.
+### 1. Install Deno
 
 ```bash
-cd mcp
-deno deploy --entrypoint relay.ts
+curl -fsSL https://deno.land/install.sh | sh
 ```
 
-Note the URL (e.g. `https://your-relay.deno.dev`).
+### 2. Clone the repo
 
-### 2. Add the MCP server to your editor
+```bash
+git clone https://github.com/uriva/alice-and-bot.git
+```
+
+### 3. Add the MCP server to your editor
 
 **Claude Code** — add to `.claude/settings.json`:
 
@@ -40,10 +41,7 @@ Note the URL (e.g. `https://your-relay.deno.dev`).
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"],
-      "env": {
-        "ALICEANDBOT_RELAY_URL": "https://your-relay.deno.dev"
-      }
+      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
     }
   }
 }
@@ -57,16 +55,15 @@ Note the URL (e.g. `https://your-relay.deno.dev`).
   "mcpServers": {
     "aliceandbot": {
       "command": "deno",
-      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"],
-      "env": {
-        "ALICEANDBOT_RELAY_URL": "https://your-relay.deno.dev"
-      }
+      "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
     }
   }
 }
 ```
 
-### 3. Use it
+Replace `/path/to/alice-and-bot` with the actual path where you cloned the repo.
+
+### 4. Use it
 
 Ask your AI agent to "set up Alice&Bot" or use the `aliceandbot` prompt. It will
 call `aliceandbot_setup` and show you a QR code. Scan it with your phone.
@@ -78,7 +75,7 @@ Then ask it to "check for Alice&Bot messages" whenever you want it to poll.
 | Tool                | Description                                               |
 | ------------------- | --------------------------------------------------------- |
 | `aliceandbot_setup` | Creates identity (first run), sets webhook, shows QR code |
-| `aliceandbot_check` | Polls relay for new messages, decrypts them               |
+| `aliceandbot_check` | Polls for new messages, decrypts them                     |
 | `aliceandbot_reply` | Sends an encrypted reply to a conversation                |
 
 ## Architecture
@@ -87,9 +84,9 @@ Then ask it to "check for Alice&Bot messages" whenever you want it to poll.
   a persistent A&B identity stored at `~/.config/aliceandbot-mcp/`. Communicates
   with the relay via HTTP.
 
-- **Relay** (`relay.ts`) — deployed to Deno Deploy. Receives A&B webhooks,
-  stores encrypted payloads in Deno KV (1hr TTL), serves them when the MCP
-  server polls. Never sees plaintext — messages are E2E encrypted.
+- **Relay** — hosted at `api.aliceandbot.com`. Receives A&B webhooks, stores
+  encrypted payloads (1hr TTL), serves them when the MCP server polls. Never
+  sees plaintext — messages are E2E encrypted.
 
 ## Limitations (v0.1)
 

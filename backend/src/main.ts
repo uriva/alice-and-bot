@@ -515,6 +515,27 @@ const endpoints: BackendApiImpl = {
   },
 };
 
+const RELAY_MSG_TTL_MS = 3600_000;
+
+const relayStore = async (token: string, req: Request) => {
+  const body = await req.json();
+  await kv.set(["relay", token, crypto.randomUUID()], body, {
+    expireIn: RELAY_MSG_TTL_MS,
+  });
+  return { ok: true };
+};
+
+const relayDrain = async (token: string) => {
+  const entries: Deno.KvEntry<unknown>[] = [];
+  for await (const entry of kv.list({ prefix: ["relay", token] })) {
+    entries.push(entry);
+  }
+  const op = kv.atomic();
+  entries.forEach(({ key }) => op.delete(key));
+  await op.commit();
+  return { messages: entries.map(({ value }) => value) };
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -530,10 +551,27 @@ const jsonCorsResponse = (body: unknown, status = 200) =>
     headers: { "content-type": "application/json; charset=utf-8" },
   });
 
+const relayRoute = (url: URL, method: string) => {
+  const match = url.pathname.match(/^\/relay\/(webhook|poll)\/([^/]+)$/);
+  if (!match) return null;
+  const [, action, token] = match;
+  if (method === "POST" && action === "webhook") return { action, token };
+  if (method === "GET" && action === "poll") return { action, token };
+  return null;
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return respondCors(null, { status: 204 });
   try {
     const url = new URL(req.url);
+    const relay = relayRoute(url, req.method);
+    if (relay) {
+      return jsonCorsResponse(
+        relay.action === "webhook"
+          ? await relayStore(relay.token, req)
+          : await relayDrain(relay.token),
+      );
+    }
     if (url.pathname === "/ui-update") {
       const body = await req.json();
       const elementId = body.elementId ||

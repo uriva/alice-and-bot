@@ -556,13 +556,7 @@ supports MCP.
 
 ### Quick start
 
-1. Deploy the relay (a tiny Deno Deploy service that buffers encrypted
-   webhooks):
-
-   ```bash
-   cd mcp
-   deno deploy --entrypoint relay.ts
-   ```
+1. Install [Deno](https://deno.land) and clone this repo.
 
 2. Add the MCP server to your editor's config (e.g. `.claude/settings.json`,
    `.cursor/mcp.json`, or VS Code settings):
@@ -572,10 +566,7 @@ supports MCP.
      "mcpServers": {
        "aliceandbot": {
          "command": "deno",
-         "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"],
-         "env": {
-           "ALICEANDBOT_RELAY_URL": "https://your-relay.deno.dev"
-         }
+         "args": ["run", "-A", "/path/to/alice-and-bot/mcp/mcp.ts"]
        }
      }
    }
@@ -584,8 +575,8 @@ supports MCP.
 3. Ask your AI agent to "set up Alice&Bot". It calls `aliceandbot_setup`, shows
    a QR code — scan it with your phone to start messaging.
 
-See [`mcp/README.md`](mcp/README.md) for architecture details and the full tool
-reference.
+See [`mcp/README.md`](mcp/README.md) for full details, or the
+[setup guide](https://aliceandbot.com/mcp).
 
 ## Self-Hosting
 
