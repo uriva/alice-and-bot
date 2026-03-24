@@ -11,6 +11,7 @@ import {
   chatWithMeLink,
   createIdentity,
   type Credentials,
+  downloadAttachment,
   handleWebhookUpdate,
   sendMessage,
   sendMessageWithKey,
@@ -86,9 +87,36 @@ const pollRelay = async () => {
           if (!result) return null;
           const { conversationId, message, conversationKey } = result;
           conversations.set(conversationId, { conversationKey });
+          let text = message.text;
+
+          if ("attachments" in message && message.attachments) {
+            for (const att of message.attachments) {
+              if (att.type === "audio") {
+                try {
+                  const data = await downloadAttachment({
+                    url: att.url,
+                    conversationKey,
+                  });
+                  let ext = "ogg";
+                  const match = att.mimeType.match(/\/(.*?)(;|$)/);
+                  if (match && match[1]) ext = match[1];
+                  const filename = `/tmp/alice_voice_${Date.now()}_${
+                    Math.random().toString(36).slice(2, 8)
+                  }.${ext}`;
+                  await Deno.writeFile(filename, new Uint8Array(data));
+                  text += (text ? "\n" : "") +
+                    `[Voice message saved to ${filename}]`;
+                } catch (e) {
+                  text += (text ? "\n" : "") +
+                    `[Failed to download voice message: ${e}]`;
+                }
+              }
+            }
+          }
+
           return {
             conversationId,
-            text: message.text,
+            text,
             type: message.type,
           };
         }),
