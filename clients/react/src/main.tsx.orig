@@ -16,7 +16,6 @@ import {
   AbstractChatBox,
   type ActiveProgress,
   type ActiveSpinner,
-  type ActiveStream,
   type EditHistoryEntry,
 } from "./abstractChatBox.tsx";
 import type { CustomColors } from "./design.tsx";
@@ -100,6 +99,10 @@ const applyLatestEdit =
 
 const foldEdits = (
   messages: DecipheredMessage[],
+  uiOverrides: Map<
+    string,
+    { active?: boolean; percentage?: number; text?: string; type?: string }
+  >,
 ) => {
   const edits = messages.filter((m): m is TextOrEditMessage =>
     m.type === "edit"
@@ -107,6 +110,13 @@ const foldEdits = (
   const originalsAndCalls = messages.filter((m) => m.type === "text");
   return originalsAndCalls.map((original) => {
     const msg = applyLatestEdit(edits)(original);
+    const override = uiOverrides.get(msg.id);
+    if (
+      override && override.type === "stream" && override.active !== false &&
+      override.text !== undefined
+    ) {
+      msg.text = override.text;
+    }
     return {
       msg,
       editHistory: original.type === "text" &&
@@ -296,25 +306,8 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       timestamp: el.updatedAt,
       active: el.active !== false,
     }));
-  const standaloneStreams: ActiveStream[] = uiElements
-    .filter((el: { elementId: string; type: string }) =>
-      el.type === "stream" &&
-      !messageElementIds.has(el.elementId)
-    )
-    .map((
-      el: {
-        elementId: string;
-        text?: string;
-        updatedAt: number;
-      },
-    ): ActiveStream => ({
-      authorName: "Assistant", // We can use a better default or extract if available
-      text: el.text ?? "",
-      elementId: el.elementId,
-      timestamp: el.updatedAt,
-    }));
   return {
-    chatMessages: foldEdits(uiMessages).map(
+    chatMessages: foldEdits(uiMessages, uiOverrides).map(
       msgToUIMessageWithHistory(details, ownId),
     ),
     activeSpinners: [
@@ -325,7 +318,6 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       ...latestProgress(messages, details, uiOverrides),
       ...standaloneProgress,
     ]),
-    activeStreams: standaloneStreams,
   };
 };
 
@@ -429,15 +421,14 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
     });
   };
 
-  const { chatMessages, activeSpinners, activeProgress, activeStreams } =
-    processMessages(
-      database,
-    )(
-      decrypted ?? [],
-      identityDetails,
-      conversationId,
-      credentials.publicSignKey,
-    );
+  const { chatMessages, activeSpinners, activeProgress } = processMessages(
+    database,
+  )(
+    decrypted ?? [],
+    identityDetails,
+    conversationId,
+    credentials.publicSignKey,
+  );
 
   return (
     <AbstractChatBox
@@ -484,7 +475,6 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       messages={chatMessages}
       activeSpinners={activeSpinners}
       activeProgress={activeProgress}
-      activeStreams={activeStreams}
       isGroupChat={isGroupChat}
       onSend={(input: string) => {
         if (!convoKey) {

@@ -2165,6 +2165,7 @@ export const AbstractChatBox = (
     onSendLocation,
     activeSpinners = [],
     activeProgress = [],
+    activeStreams = [],
     isGroupChat = false,
     disableAutoFocus = false,
   }: {
@@ -2205,6 +2206,7 @@ export const AbstractChatBox = (
     ) => void;
     activeSpinners?: ActiveSpinner[];
     activeProgress?: ActiveProgress[];
+    activeStreams?: ActiveStream[];
     isGroupChat?: boolean;
     disableAutoFocus?: boolean;
   },
@@ -2650,7 +2652,12 @@ export const AbstractChatBox = (
             )
             : (
               <>
-                {buildTimeline(allMessages, activeSpinners, activeProgress).map(
+                {buildTimeline(
+                  allMessages,
+                  activeSpinners,
+                  activeProgress,
+                  activeStreams,
+                ).map(
                   (entry) =>
                     entry.kind === "message"
                       ? (
@@ -2664,6 +2671,24 @@ export const AbstractChatBox = (
                           onEdit={onEdit &&
                             ((newText: string) =>
                               onEdit(entry.msg.id, newText))}
+                          customColors={customColors}
+                        />
+                      )
+                      : entry.kind === "stream"
+                      ? (
+                        <Message
+                          key={`stream-${entry.stream.elementId}`}
+                          isOwn={false}
+                          msg={{
+                            id: entry.stream.elementId,
+                            authorId: entry.stream.authorName, // using authorName as authorId
+                            authorName: entry.stream.authorName,
+                            text: entry.stream.text,
+                            timestamp: entry.stream.timestamp,
+                          }}
+                          prev={undefined}
+                          onDecryptAttachment={onDecryptAttachment}
+                          sessionStart={sessionStartRef.current}
                           customColors={customColors}
                         />
                       )
