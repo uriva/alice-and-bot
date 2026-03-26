@@ -14,6 +14,9 @@ curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-p
 curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/index.ts -o index.ts
 curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/tunnel.ts -o tunnel.ts
 
+# Add npmrc for JSR resolution
+echo "@jsr:registry=https://npm.jsr.io" > .npmrc
+
 echo "Installing dependencies..."
 if command -v bun &> /dev/null; then
     bun install
