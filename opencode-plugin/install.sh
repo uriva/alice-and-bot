@@ -3,21 +3,31 @@ set -e
 
 echo "Installing Alice&Bot OpenCode plugin..."
 
-# Build the plugin
-echo "Building plugin..."
-bun install
-bun run build
-
-# Create directories
-echo "Creating OpenCode plugin directory..."
-mkdir -p ~/.config/opencode/plugins/alice
+PLUGIN_DIR="$HOME/.config/opencode/plugins/alice"
+mkdir -p "$PLUGIN_DIR"
 mkdir -p ~/.config/opencode/commands
 
-# Copy files
-echo "Copying files..."
-cp -r dist/index.js package.json node_modules ~/.config/opencode/plugins/alice/
+cd "$PLUGIN_DIR"
 
-# Set up the command macro for autocomplete
+echo "Downloading plugin source..."
+curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/package.json -o package.json
+curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/index.ts -o index.ts
+curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/tunnel.ts -o tunnel.ts
+
+echo "Installing dependencies..."
+if command -v bun &> /dev/null; then
+    bun install
+    echo "Building plugin..."
+    bun build index.ts --target=node --outfile=index.js
+elif command -v npm &> /dev/null; then
+    npm install
+    echo "Building plugin..."
+    npx esbuild index.ts --bundle --platform=node --outfile=index.js
+else
+    echo "Error: Need 'bun' or 'npm' installed to build the plugin."
+    exit 1
+fi
+
 echo "Setting up command macro..."
 cat << 'MD' > ~/.config/opencode/commands/aliceandbot.md
 ---
@@ -26,16 +36,15 @@ description: Connect your phone via Alice&Bot
 ALICE_AND_BOT_COMMAND_INTERNAL
 MD
 
-# Update opencode.json
+echo "Updating opencode.json..."
 CONFIG_FILE=~/.config/opencode/opencode.json
-PLUGIN_PATH="$HOME/.config/opencode/plugins/alice"
 
 if [ -f "$CONFIG_FILE" ]; then
   # Use node to safely update the JSON file without needing jq
   node -e "
     const fs = require('fs');
     const file = '$CONFIG_FILE';
-    const pluginPath = '$PLUGIN_PATH';
+    const pluginPath = '$PLUGIN_DIR';
     try {
       const data = JSON.parse(fs.readFileSync(file, 'utf8'));
       if (!data.plugin) data.plugin = [];
@@ -52,7 +61,7 @@ if [ -f "$CONFIG_FILE" ]; then
   "
 else
   echo "Warning: ~/.config/opencode/opencode.json not found."
-  echo "Please manually add '$PLUGIN_PATH' to your 'plugin' array."
+  echo "Please manually add '$PLUGIN_DIR' to your 'plugin' array."
 fi
 
 echo ""

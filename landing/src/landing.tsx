@@ -8,6 +8,7 @@ import {
   docsPath,
   manifestoPath,
   mcpGuidePath,
+  opencodePath,
 } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
@@ -283,6 +284,12 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
           >
             Claude Code Guide
           </a>
+          <a
+            href={opencodePath}
+            class="px-8 py-4 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-blue-900 text-white text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
+          >
+            OpenCode Guide
+          </a>
         </div>
       </section>
       <section class={sectionClass}>
@@ -380,6 +387,12 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
             >
               Claude Code
+            </a>
+            <a
+              href={opencodePath}
+              class="text-blue-100 dark:text-gray-300 hover:text-white transition font-medium"
+            >
+              OpenCode
             </a>
           </nav>
           <div class="border-t border-blue-700 dark:border-gray-700 w-full pt-6 text-center text-sm text-blue-100 dark:text-gray-400">

@@ -14,10 +14,12 @@ import {
   homePath,
   manifestoPath,
   mcpGuidePath,
+  opencodePath,
 } from "./paths.ts";
 import { Manifesto } from "./manifesto.tsx";
 import { McpGuide } from "./mcp-guide.tsx";
 import { ClaudeCode } from "./claude-code.tsx";
+import { OpenCodePage } from "./opencode.tsx";
 import "./app.css";
 
 const routes: { path: string; component: AnyComponent }[] = [
@@ -29,6 +31,7 @@ const routes: { path: string; component: AnyComponent }[] = [
   { path: manifestoPath, component: Manifesto },
   { path: mcpGuidePath, component: McpGuide },
   { path: claudeCodePath, component: ClaudeCode },
+  { path: opencodePath, component: OpenCodePage },
 ];
 
 const NotFound = () => (
