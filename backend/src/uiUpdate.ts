@@ -1,5 +1,9 @@
 import { id } from "@instantdb/admin";
+import { init as coreInit } from "@instantdb/core";
 import { query, transact, tx } from "./db.ts";
+import { instantAppId } from "../../protocol/src/clientApi.ts";
+
+const coreDb = coreInit({ appId: instantAppId });
 
 type UiUpdateInput = {
   elementId: string;
@@ -24,6 +28,23 @@ export const handleUiUpdate = async (
     authorId,
   } = input;
   if (!elementId) return { error: "elementId is required" };
+
+  // For streams, we use ephemeral topics instead of persisting to the database
+  if (type === "stream") {
+    if (!conversationId) {
+      return { error: "conversationId is required for stream" };
+    }
+    const room = coreDb.joinRoom("conversations", conversationId);
+    room.publishTopic("stream", {
+      elementId,
+      text: text ?? "",
+      active: active ?? true,
+      authorId,
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  }
+
   const { uiElements } = await query({
     uiElements: { $: { where: { elementId } } },
   });
@@ -49,6 +70,7 @@ export const handleUiUpdate = async (
       tx.uiElements[newId].link({ conversation: conversationId }),
     ]);
   } else {
+    // Clean up old streams that were persisted before the migration to ephemeral topics
     if (active === false && uiElements[0].type === "stream") {
       await transact(tx.uiElements[uiElements[0].id].delete());
     } else {

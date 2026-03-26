@@ -1192,6 +1192,7 @@ const LoggedInMessenger = (
                   flexGrow: 1,
                   flexDirection: "column",
                   minWidth: 0,
+                  overflow: "hidden",
                 }}
               >
                 {selectedConversation.value

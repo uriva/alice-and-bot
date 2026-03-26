@@ -3,14 +3,6 @@
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
-  "opencode": {
-    "commands": [
-      {
-        "name": "aliceandbot",
-        "description": "Connect your phone via Alice&Bot"
-      }
-    ]
-  },
   "scripts": {
     "build": "bun build index.ts --target=node --outfile=dist/index.js"
   },

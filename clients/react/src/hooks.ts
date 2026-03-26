@@ -358,3 +358,34 @@ export const useTypingPresence = (
 
   return { isTyping, typingNames, onUserInput, onBlurOrSend } as const;
 };
+
+export type EphemeralStreamEvent = {
+  elementId: string;
+  text: string;
+  active: boolean;
+  authorId?: string;
+  updatedAt: number;
+};
+
+export const useEphemeralStreams = (
+  db: InstantReactWebDatabase<typeof schema>,
+  conversationId: string,
+) => {
+  const [streams, setStreams] = useState<Record<string, EphemeralStreamEvent>>(
+    {},
+  );
+
+  useEffect(() => {
+    setStreams({});
+  }, [conversationId]);
+
+  const room = db.room("conversations", conversationId);
+  // @ts-expect-error Instant typing is restrictive for topics when no explicit shape is provided
+  room.useTopicEffect("stream", (event: EphemeralStreamEvent) => {
+    setStreams((prev) => {
+      return { ...prev, [event.elementId]: event };
+    });
+  });
+
+  return Object.values(streams);
+};

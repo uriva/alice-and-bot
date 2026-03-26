@@ -22,8 +22,10 @@ import {
 import type { CustomColors } from "./design.tsx";
 import {
   compactPublicKey,
+  type EphemeralStreamEvent,
   useConversationKey,
   useDecryptedMessages,
+  useEphemeralStreams,
   useIdentityDetailsMap,
   useTypingPresence,
 } from "./hooks.ts";
@@ -203,6 +205,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
   detailsCache: Record<string, { name: string; avatar?: string }>,
   conversationId: string,
   ownId: string,
+  ephemeralStreams: EphemeralStreamEvent[],
 ) => {
   const progressMaxRef = useRef(new Map<string, number>());
   const { data: uiElementsData } = db.useQuery({
@@ -211,10 +214,9 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
     },
   });
   const uiElements = uiElementsData?.uiElements ?? [];
-  const streamAuthorIds = uiElements
-    // @ts-ignore: We know this exists on stream elements
-    .map((el) => el.authorId)
-    .filter(Boolean) as string[];
+  const streamAuthorIds = [
+    ...ephemeralStreams.map((el) => el.authorId).filter(Boolean) as string[],
+  ];
   const { data: identitiesData } = db.useQuery({
     identities: {
       $: {
@@ -306,11 +308,9 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       timestamp: el.updatedAt,
       active: el.active !== false,
     }));
-  const standaloneStreams: ActiveStream[] = uiElements
-    .filter((el: { elementId: string; type: string; active?: boolean }) =>
-      el.type === "stream" &&
-      !messageElementIds.has(el.elementId) &&
-      el.active !== false
+  const standaloneStreams: ActiveStream[] = ephemeralStreams
+    .filter((el: { elementId: string; active?: boolean }) =>
+      !messageElementIds.has(el.elementId)
     )
     .map((
       el: {
@@ -387,6 +387,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   }).data?.conversations[0];
   const conversationTitle = conversation?.title || "Chat";
   const isGroupChat = (conversation?.participants.length ?? 0) > 2;
+  const ephemeralStreams = useEphemeralStreams(database, conversationId);
 
   const voiceCall = useVoiceCall({
     db: database,
@@ -454,6 +455,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       identityDetails,
       conversationId,
       credentials.publicSignKey,
+      ephemeralStreams,
     );
 
   return (

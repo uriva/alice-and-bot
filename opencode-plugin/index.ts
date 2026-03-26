@@ -111,7 +111,7 @@ export default async function plugin(input: unknown) {
           message?.type === "text" &&
           message.publicSignKey !== (credentials as any).publicSignKey
         ) {
-          console.log(`\n[Phone]: ${message.text || "(attachment)"}`);
+          await logDebug(`[Phone]: ${message.text || "(attachment)"}`);
 
           let targetSessionId = convoToSessionId.get(convoId);
           if (!targetSessionId && currentSessionId) {
@@ -172,9 +172,10 @@ export default async function plugin(input: unknown) {
               parts.push({ type: "text", text: " " });
             }
 
-            await logDebug(`Injecting prompt into opencode`);
-            console.log(
-              `\n[You (via phone)]: ${message.text || "(attachment)"}`,
+            await logDebug(
+              `Injecting prompt into opencode: ${
+                message.text || "(attachment)"
+              }`,
             );
             try {
               await (input as any).client.session.prompt({
@@ -198,14 +199,10 @@ export default async function plugin(input: unknown) {
               }).catch(() => {});
             }
           } else {
-            console.log(
-              "\n[Alice&Bot] No active session ID found to forward to!",
-            );
-            await logDebug("No active session ID found.");
+            await logDebug("No active session ID found to forward to.");
           }
         }
       } catch (e: unknown) {
-        console.error("Error processing webhook:", e);
         await logDebug(
           `Webhook processing error: ${(e as Error)?.message}\n${
             (e as Error)?.stack
@@ -234,7 +231,6 @@ export default async function plugin(input: unknown) {
         tunnel.close();
       });
     } catch (e: unknown) {
-      console.error("Failed to start tunnel:", e);
       await logDebug(`Tunnel error: ${(e as any)?.message}`);
       setTimeout(startTunnel, 5000);
     }
@@ -266,99 +262,66 @@ export default async function plugin(input: unknown) {
     // We do not call startTunnel again because it might already be tunneling to port 3001
   }
 
+  const client = (input as any).client;
+
+  const showAliceLink = async (sessionId: string) => {
+    currentSessionId = sessionId;
+    await logDebug(`Set active session ${sessionId}`);
+
+    let sessionTitle: string | undefined;
+    try {
+      const session = await client.session.get({ path: { id: sessionId } });
+      sessionTitle = session?.data?.info?.title || session?.data?.title ||
+        session?.info?.title || session?.title;
+    } catch (e) {
+      await logDebug(`Could not fetch session title: ${e}`);
+    }
+
+    const link = getLink(sessionTitle);
+
+    try {
+      clipboardy.writeSync(link);
+    } catch (err) {
+      await logDebug(`Failed to copy to clipboard: ${err}`);
+    }
+
+    await client.tui.showToast({
+      body: { message: `Alice&Bot link copied! ${link}`, variant: "success" },
+    }).catch((e: any) => logDebug(`Toast failed: ${e?.message}`));
+
+    await logDebug(`Alice&Bot link: ${link}`);
+  };
+
+  const aliceCommands = [
+    "/alice",
+    "alice",
+    "/aliceandbot-qr",
+    "aliceandbot qr",
+    "/aliceandbot",
+    "aliceandbot",
+    "ALICE_AND_BOT_COMMAND_INTERNAL",
+  ];
+
   return {
-    "command.execute.before": async (hookInput: any, output: any) => {
-      await logDebug(`command.execute.before: ${JSON.stringify(hookInput)}`);
+    event: async ({ event }: any) => {
       if (
-        hookInput.command === "aliceandbot-qr" ||
-        hookInput.command === "alice" ||
-        hookInput.command === "aliceandbot"
+        event.type === "tui.command.execute" &&
+        aliceCommands.includes(event.properties?.command?.trim())
       ) {
-        currentSessionId = hookInput.sessionID;
-        await logDebug(
-          `Set active terminal session ${currentSessionId} for the next incoming new conversation`,
+        await showAliceLink(
+          event.properties?.sessionID || currentSessionId || "",
         );
-
-        let sessionTitle: string | undefined;
-        try {
-          // Attempt to get session title if available
-          const session = await (input as any).client.session.get({
-            path: { id: currentSessionId },
-          });
-          sessionTitle = session?.data?.info?.title || session?.data?.title ||
-            session?.info?.title || session?.title;
-        } catch (e) {
-          await logDebug(`Could not fetch session title: ${e}`);
-        }
-
-        const link = getLink(sessionTitle);
-
-        try {
-          clipboardy.writeSync(link);
-        } catch (err) {
-          await logDebug(`Failed to copy to clipboard: ${err}`);
-        }
-
-        qrcode.generate(link, { small: true }, (qr) => {
-          const text =
-            `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\n${qr}\n\nLink copied to clipboard!\nClick to connect: ${link}\n(QR too big? use ctrl+shift+-)\nReminder: Send the first message from your phone to initialize the session binding.\n=================================\n\n`;
-          console.log(text);
-        });
-
-        // Return null to prevent the LLM thinking pipeline and avoid context pollution
-        return null;
       }
-      return output;
     },
     "chat.message": async (hookInput: any, output: any) => {
-      await logDebug(`chat.message hook hit: ${JSON.stringify(hookInput)}`);
-      const textPart = output.parts.find((part: any) => part.type === "text");
-      const hasCommand = textPart &&
-        (textPart.text.trim() === "/alice" ||
-          textPart.text.trim() === "alice" ||
-          textPart.text.trim() === "/aliceandbot-qr" ||
-          textPart.text.trim() === "aliceandbot qr" ||
-          textPart.text.trim() === "/aliceandbot" ||
-          textPart.text.trim() === "aliceandbot");
-
-      if (hasCommand) {
-        currentSessionId = hookInput.sessionID;
-        await logDebug(
-          `Set active terminal session ${currentSessionId} for the next incoming new conversation`,
-        );
-
-        let sessionTitle: string | undefined;
-        try {
-          // Attempt to get session title if available
-          const session = await (input as any).client.session.get({
-            path: { id: currentSessionId },
-          });
-          sessionTitle = session?.data?.info?.title || session?.data?.title ||
-            session?.info?.title || session?.title;
-        } catch (e) {
-          await logDebug(`Could not fetch session title: ${e}`);
-        }
-
-        const link = getLink(sessionTitle);
-
-        try {
-          clipboardy.writeSync(link);
-        } catch (err) {
-          await logDebug(`Failed to copy to clipboard: ${err}`);
-        }
-
-        qrcode.generate(link, { small: true }, (qr) => {
-          const text =
-            `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\n${qr}\n\nLink copied to clipboard!\nClick to connect: ${link}\n(QR too big? use ctrl+shift+-)\nReminder: Send the first message from your phone to initialize the session binding.\n=================================\n\n`;
-          console.log(text);
-        });
-
-        // Clear output parts or return null so it doesn't enter LLM context
-        return null;
+      const textPart = output.parts?.find((part: any) => part.type === "text");
+      const trimmed = textPart?.text?.trim() || "";
+      if (aliceCommands.includes(trimmed)) {
+        await showAliceLink(hookInput.sessionID);
+        return { parts: [] };
       }
       return output;
     },
-    // chat.params hook removed to prevent session hijacking
     "experimental.text.complete": async (
       hookInput: unknown,
       currentOutput: unknown,
@@ -389,8 +352,7 @@ export default async function plugin(input: unknown) {
             });
             await logDebug(`Reply successfully sent.`);
           } catch (e: unknown) {
-            console.error("Failed to send message back to phone:", e);
-            await logDebug(`Error sending reply: ${e?.message}`);
+            await logDebug(`Error sending reply: ${(e as Error)?.message}`);
           }
         } else {
           await logDebug("No phone convo linked to this session.");
