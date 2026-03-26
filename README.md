@@ -344,7 +344,10 @@ Embed a chat UI in your React app:
 <script
   src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js"
   async
-  onload="aliceAndBot.loadChatWidget({ initialMessage: 'Hi!', dialingTo: '<public sign key here>' })"
+  onload='aliceAndBot.loadChatWidget({
+  initialMessage: "Hi!",
+  dialingTo: "<public sign key here>",
+})'
 ></script>
 ```
 

@@ -2437,10 +2437,15 @@ export const AbstractChatBox = (
   useEffect(() => {
     const prevCount = prevMessageCountRef.current;
     prevMessageCountRef.current = messages.length;
-    if (prevCount > 0 && messages.length > prevCount && document.hidden) {
+    if (
+      prevCount > 0 &&
+      messages.length > prevCount &&
+      document.hidden &&
+      messages.slice(prevCount).some((m) => m.authorId !== userId)
+    ) {
       playNotificationSound();
     }
-  }, [messages.length]);
+  }, [messages, userId]);
 
   useEffect(() => {
     if (!showAttachMenu) return;
