@@ -84,6 +84,7 @@ type TextMessage = {
   type: "text";
   text: string;
   attachments?: Attachment[];
+  elementId?: string;
 };
 
 type EditMessage = {
@@ -268,6 +269,7 @@ type DecipheredMessageBase = {
 type DecipheredTextMessage = DecipheredMessageBase & {
   type: "text";
   attachments?: Attachment[];
+  elementId?: string;
 };
 
 type DecipheredEditMessage = DecipheredMessageBase & {

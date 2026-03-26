@@ -7,7 +7,7 @@ import {
 } from "./node_modules/@alice-and-bot/core/protocol/src/clientApi.js";
 import { setWebhook } from "./node_modules/@alice-and-bot/core/backend/src/api.js";
 import fs from "fs/promises";
-import localtunnel from "localtunnel";
+import { startTunnel as localtunnel } from "./tunnel.ts";
 import path from "path";
 import os from "os";
 import { Buffer } from "node:buffer";
@@ -19,6 +19,7 @@ const sessionToConvoKey = new Map<
   string,
   { conversation: string; conversationKey: string }
 >();
+const convoToSessionId = new Map<string, string>();
 const debugLogPath = path.join(
   os.homedir(),
   ".config",
@@ -51,10 +52,13 @@ export default async function plugin(input: unknown) {
 
   const getLink = () => {
     const dirName = path.basename(process.cwd());
-    const topic = `OpenCode: ${dirName} (${
-      new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    })`;
-    return chatWithMeLink(credentials.publicSignKey, topic);
+    const topic = `OpenCode_${dirName}_${Date.now()}`;
+    const baseUrl = "https://aliceandbot.com";
+    return `${baseUrl}/chat?chatWith=${
+      encodeURIComponent(
+        (credentials as any).publicSignKey,
+      )
+    }&topic=${encodeURIComponent(topic)}`;
   };
 
   // Create a background server
@@ -103,15 +107,19 @@ export default async function plugin(input: unknown) {
         ) {
           console.log(`\n[Phone]: ${message.text || "(attachment)"}`);
 
-          if (currentSessionId) {
-            await logDebug(
-              `Mapping session ${currentSessionId} to convo ${convoId}`,
-            );
+          let targetSessionId = convoToSessionId.get(convoId);
+          if (!targetSessionId && currentSessionId) {
+            targetSessionId = currentSessionId;
+            convoToSessionId.set(convoId, currentSessionId);
             sessionToConvoKey.set(currentSessionId, {
               conversation: convoId,
               conversationKey,
             });
-
+            await logDebug(
+              `Bound new convo ${convoId} to session ${currentSessionId}`,
+            );
+          }
+          if (targetSessionId) {
             const parts: unknown[] = [];
             if (message.text) {
               parts.push({ type: "text", text: message.text });
@@ -122,7 +130,9 @@ export default async function plugin(input: unknown) {
                 try {
                   const ext = att.name
                     ? path.extname(att.name)
-                    : (att.mimeType?.includes("audio") ? ".m4a" : ".bin");
+                    : att.mimeType?.includes("audio")
+                    ? ".m4a"
+                    : ".bin";
                   const tmpPath = path.join(
                     os.tmpdir(),
                     `alice_att_${Date.now()}${ext}`,
@@ -160,10 +170,27 @@ export default async function plugin(input: unknown) {
             console.log(
               `\n[You (via phone)]: ${message.text || "(attachment)"}`,
             );
-            await input.client.session.prompt({
-              path: { id: currentSessionId },
-              body: { parts },
-            });
+            try {
+              await (input as any).client.session.prompt({
+                path: { id: targetSessionId },
+                body: { parts },
+              });
+            } catch (err: any) {
+              await logDebug(
+                `Failed to prompt session (it may have died): ${err?.message}`,
+              );
+              // Send a message back to the phone to let them know the session is dead
+              await sendMessageWithKey({
+                conversationKey,
+                conversation: convoId,
+                credentials: credentials as any,
+                message: {
+                  type: "text",
+                  text:
+                    "[System: The OpenCode session has ended or is unavailable. Please run 'alice' again in a new session to reconnect.]",
+                },
+              }).catch(() => {});
+            }
           } else {
             console.log(
               "\n[Alice&Bot] No active session ID found to forward to!",
@@ -181,68 +208,80 @@ export default async function plugin(input: unknown) {
   });
 
   server.listen(3001, async () => {
-    try {
-      const tunnel = await localtunnel({ port: 3001 });
-      await logDebug(`Localtunnel started at ${tunnel.url}`);
-      await setWebhook({ url: `${tunnel.url}/webhook`, credentials });
-      await logDebug("Webhook configured on backend.");
-    } catch (e: unknown) {
-      console.error("Failed to start tunnel:", e);
-      await logDebug(`Tunnel error: ${e?.message}`);
-    }
+    const startTunnel = async () => {
+      try {
+        const tunnel = await localtunnel(3001);
+        await logDebug(`Localtunnel started at ${tunnel.url}`);
+        await setWebhook({ url: `${tunnel.url}/webhook`, credentials });
+        await logDebug("Webhook configured on backend.");
+
+        tunnel.on("close", () => {
+          logDebug("Localtunnel closed, restarting in 2 seconds...");
+          setTimeout(startTunnel, 2000);
+        });
+
+        tunnel.on("error", (err) => {
+          logDebug(`Localtunnel error: ${err?.message}, restarting...`);
+          tunnel.close();
+        });
+      } catch (e: unknown) {
+        console.error("Failed to start tunnel:", e);
+        await logDebug(`Tunnel error: ${(e as any)?.message}`);
+        setTimeout(startTunnel, 5000);
+      }
+    };
+
+    await startTunnel();
   });
 
   return {
-    "command.execute.before": async (
-      hookInput: any,
-      output: any,
-    ) => {
+    "command.execute.before": async (hookInput: any, output: any) => {
       await logDebug(`command.execute.before: ${JSON.stringify(hookInput)}`);
       if (
-        hookInput.command === "aliceandbot-qr" || hookInput.command === "alice"
+        hookInput.command === "aliceandbot-qr" ||
+        hookInput.command === "alice"
       ) {
         currentSessionId = hookInput.sessionID;
         await logDebug(
-          `Locked webhook routing to session ${currentSessionId} based on QR request`,
+          `Set active terminal session ${currentSessionId} for the next incoming new conversation`,
         );
         const link = getLink();
         const text =
           `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\nClick to connect: ${link}\n=================================\n\n`;
         console.log(text);
-        output.parts = [{
-          type: "text",
-          text: "Displayed the connection link to the terminal.",
-        }];
+        output.parts = [
+          {
+            type: "text",
+            text:
+              "User explicitly requested to connect to Alice&Bot via the CLI. You MUST reply ONLY with this exact link so they can click it: " +
+              link,
+          },
+        ];
       }
       return output;
     },
     "chat.message": async (hookInput: any, output: any) => {
       await logDebug(`chat.message hook hit: ${JSON.stringify(hookInput)}`);
       const textPart = output.parts.find((part: any) => part.type === "text");
-      const hasCommand = textPart && (
-        textPart.text.trim() === "/alice" ||
-        textPart.text.trim() === "alice" ||
-        textPart.text.trim() === "/aliceandbot-qr" ||
-        textPart.text.trim() === "aliceandbot qr"
-      );
+      const hasCommand = textPart &&
+        (textPart.text.trim() === "/alice" ||
+          textPart.text.trim() === "alice" ||
+          textPart.text.trim() === "/aliceandbot-qr" ||
+          textPart.text.trim() === "aliceandbot qr");
       if (hasCommand) {
         currentSessionId = hookInput.sessionID;
         await logDebug(
-          `Locked webhook routing to session ${currentSessionId} based on QR request`,
+          `Set active terminal session ${currentSessionId} for the next incoming new conversation`,
         );
         const link = getLink();
-        const text = `
-
-=== ALICE&BOT OPENCODE PLUGIN ===
-Click to connect: ${link}
-=================================
-
-`;
-        console.log(text);
-        output.parts = [{
-          type: "text",
-          text: "Displayed the connection link to the terminal.",
-        }];
+        output.parts = [
+          {
+            type: "text",
+            text:
+              "User explicitly requested to connect to Alice&Bot via the CLI. You MUST reply ONLY with this exact link so they can click it: " +
+              link,
+          },
+        ];
       }
     },
     // chat.params hook removed to prevent session hijacking
@@ -253,11 +292,16 @@ Click to connect: ${link}
       await logDebug(
         `Hook experimental.text.complete: output text length: ${currentOutput?.text?.length}, sessionId: ${hookInput.sessionID}, currentSessionId: ${currentSessionId}`,
       );
-      if (
-        currentOutput && currentOutput.text && currentSessionId &&
-        hookInput.sessionID === currentSessionId
-      ) {
-        const convoInfo = sessionToConvoKey.get(currentSessionId);
+      if (currentOutput && currentOutput.text && hookInput.sessionID) {
+        if (
+          currentOutput.text.trim().toLowerCase() === "queued" ||
+          currentOutput.text.trim() === "[Queued]"
+        ) {
+          await logDebug("Ignoring opencode 'queued' system message");
+          return currentOutput;
+        }
+
+        const convoInfo = sessionToConvoKey.get(hookInput.sessionID);
         if (convoInfo) {
           try {
             await logDebug(

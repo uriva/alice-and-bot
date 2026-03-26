@@ -1573,6 +1573,8 @@ export type AbstracChatMessage = {
 };
 
 export type ActiveStream = {
+  authorAvatar?: string;
+  authorPublicKey?: string;
   authorName: string;
   text: string;
   elementId: string;
@@ -1625,7 +1627,7 @@ type TimelineEntry =
   | { kind: "message"; msg: AbstracChatMessage; prevMsg?: AbstracChatMessage }
   | { kind: "spinner"; spinner: ActiveSpinner }
   | { kind: "progress"; progress: ActiveProgress }
-  | { kind: "stream"; stream: ActiveStream };
+  | { kind: "stream"; stream: ActiveStream; prevMsg?: AbstracChatMessage };
 
 const buildTimeline = (
   messages: AbstracChatMessage[],
@@ -1650,6 +1652,7 @@ const buildTimeline = (
   const streamEntries: TimelineEntry[] = streams.map((s) => ({
     kind: "stream",
     stream: s,
+    prevMsg: sorted.filter((m) => m.timestamp <= s.timestamp).pop(),
   }));
   const tsOf = (e: TimelineEntry): number =>
     e.kind === "message"
@@ -2677,16 +2680,18 @@ export const AbstractChatBox = (
                       : entry.kind === "stream"
                       ? (
                         <Message
-                          key={`stream-${entry.stream.elementId}`}
+                          key={entry.stream.elementId}
                           isOwn={false}
                           msg={{
                             id: entry.stream.elementId,
-                            authorId: entry.stream.authorName, // using authorName as authorId
+                            authorId: entry.stream.authorPublicKey ||
+                              entry.stream.authorName,
                             authorName: entry.stream.authorName,
+                            authorAvatar: entry.stream.authorAvatar,
                             text: entry.stream.text,
                             timestamp: entry.stream.timestamp,
                           }}
-                          prev={undefined}
+                          prev={entry.prevMsg}
                           onDecryptAttachment={onDecryptAttachment}
                           sessionStart={sessionStartRef.current}
                           customColors={customColors}

@@ -205,21 +205,31 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
   ownId: string,
 ) => {
   const progressMaxRef = useRef(new Map<string, number>());
-  const { data: identitiesData } = db.useQuery({
-    identities: {
-      $: {
-        where: {
-          publicSignKey: { $in: messages.map((msg) => msg.publicSignKey) },
-        },
-      },
-    },
-  });
   const { data: uiElementsData } = db.useQuery({
     uiElements: {
       $: { where: { conversation: conversationId } },
     },
   });
   const uiElements = uiElementsData?.uiElements ?? [];
+  const streamAuthorIds = uiElements
+    // @ts-ignore: We know this exists on stream elements
+    .map((el) => el.authorId)
+    .filter(Boolean) as string[];
+  const { data: identitiesData } = db.useQuery({
+    identities: {
+      $: {
+        where: {
+          publicSignKey: {
+            $in: [
+              ...messages.map((msg) => msg.publicSignKey),
+              ...streamAuthorIds,
+            ],
+          },
+        },
+      },
+    },
+  });
+  console.log("uiElements", uiElements);
   const uiOverrides = new Map(
     uiElements.map((
       el: {
@@ -297,22 +307,29 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       active: el.active !== false,
     }));
   const standaloneStreams: ActiveStream[] = uiElements
-    .filter((el: { elementId: string; type: string }) =>
+    .filter((el: { elementId: string; type: string; active?: boolean }) =>
       el.type === "stream" &&
-      !messageElementIds.has(el.elementId)
+      !messageElementIds.has(el.elementId) &&
+      el.active !== false
     )
     .map((
       el: {
         elementId: string;
         text?: string;
         updatedAt: number;
+        authorId?: string;
       },
-    ): ActiveStream => ({
-      authorName: "Assistant", // We can use a better default or extract if available
-      text: el.text ?? "",
-      elementId: el.elementId,
-      timestamp: el.updatedAt,
-    }));
+    ): ActiveStream => {
+      const authorProfile = el.authorId ? details[el.authorId] : undefined;
+      return {
+        authorName: authorProfile?.name || "Assistant",
+        authorAvatar: authorProfile?.avatar,
+        authorPublicKey: el.authorId,
+        text: el.text ?? "",
+        elementId: el.elementId,
+        timestamp: el.updatedAt,
+      };
+    });
   return {
     chatMessages: foldEdits(uiMessages).map(
       msgToUIMessageWithHistory(details, ownId),

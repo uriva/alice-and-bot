@@ -18,6 +18,7 @@ import {
   type WebhookUpdate,
 } from "../protocol/src/clientApi.ts";
 import { setWebhook } from "../backend/src/api.ts";
+import process from "node:process";
 
 const configDir = `${Deno.env.get("HOME")}/.config/aliceandbot-mcp`;
 const credentialsPath = `${configDir}/credentials.json`;
@@ -151,7 +152,10 @@ const setup = async () => {
     credentials,
   });
   startPolling();
-  const link = chatWithMeLink(credentials.publicSignKey);
+  const baseLink = chatWithMeLink(credentials.publicSignKey);
+  const dirName = process.cwd().split("/").pop() || "dir";
+  const topic = `OpenCode_${dirName}_${Date.now()}`;
+  const link = `${baseLink}&topic=${encodeURIComponent(topic)}`;
   const qr = await QRCode.toString(link, { type: "utf8" });
   return textResult(
     [
