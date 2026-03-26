@@ -1,47 +1,62 @@
-# Alice&Bot opencode plugin
+# Alice&Bot OpenCode Plugin
 
-Chat seamlessly with your `opencode` terminal AI sessions from your phone via
-Alice&Bot.
+Connect your phone to OpenCode and chat with your AI assistant on the go.
 
-Unlike the standard MCP server which requires the agent to manually call
-read/reply tools, this is a **native `opencode` plugin** that deeply hooks into
-the input and output streams. Messages sent from your phone instantly inject as
-user prompts, and the AI's responses are automatically forwarded back in
-real-time.
+## Installation
 
-## Installation from source
+You can install the plugin automatically using the provided script, or manually.
 
-If you cloned this repository, you can build and install the plugin using `bun`:
+### Automatic Installation
+
+Just run the install script from this directory:
 
 ```bash
-cd opencode-plugin
-npm install
-npm run build
-mkdir -p ~/.config/opencode/plugins/alice
-cp dist/index.js ~/.config/opencode/plugins/alice/index.js
+./install.sh
 ```
 
-## Configuration
+### Manual Installation
 
-Register the plugin in your `~/.config/opencode/opencode.json` file:
+1. Install dependencies and build the plugin:
+
+```bash
+bun install
+bun run build
+```
+
+2. Copy the plugin files to your OpenCode config directory:
+
+```bash
+mkdir -p ~/.config/opencode/plugins/alice
+cp -r dist/index.js package.json node_modules ~/.config/opencode/plugins/alice/
+```
+
+3. Register the plugin in `~/.config/opencode/opencode.json`:
 
 ```json
 {
-  "plugins": {
-    "alice": "~/.config/opencode/plugins/alice/index.js"
-  }
+  "plugin": [
+    "/home/YOUR_USERNAME/.config/opencode/plugins/alice"
+  ]
 }
 ```
 
-Now, run `opencode`. The plugin will automatically start a secure background
-tunnel and print a QR code to your terminal. Scan the QR code with your phone to
-connect and start the conversation!
+4. Create the custom autocomplete command by adding a markdown file at
+   `~/.config/opencode/commands/aliceandbot.md` with the following content:
 
-## Features
+```markdown
+---
+description: Connect your phone via Alice&Bot
+---
 
-- **True real-time 2-way sync:** The AI's responses appear on your phone
-  automatically via `experimental.text.complete` hooks.
-- **Push-to-talk:** Audio attachments from your phone are transparently
-  downloaded and fed into the AI as files.
-- **Invisible webhook:** Automatically maps your opencode sessions to your phone
-  conversation keys without manual tool-use.
+ALICE_AND_BOT_COMMAND_INTERNAL
+```
+
+## Usage
+
+1. Open OpenCode CLI.
+2. Type `/aliceandbot` (it should appear in your autocomplete menu) and press
+   Enter.
+3. A connection link will be copied to your clipboard and displayed as a toast
+   notification.
+4. Send the first message from your phone using the link to initialize the
+   session.

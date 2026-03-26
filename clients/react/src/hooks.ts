@@ -382,6 +382,7 @@ export const useEphemeralStreams = (
   const room = db.room("conversations", conversationId);
   // @ts-expect-error Instant typing is restrictive for topics when no explicit shape is provided
   room.useTopicEffect("stream", (event: EphemeralStreamEvent) => {
+    console.log("Received stream event:", event);
     setStreams((prev) => {
       return { ...prev, [event.elementId]: event };
     });
