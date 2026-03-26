@@ -70,24 +70,11 @@ export const useConversations =
     const { data, error } = db().useQuery({
       conversations: {
         participants: {},
-        messages: {
-          $: {
-            limit: 1,
-            order: {
-              timestamp: "desc",
-            },
-          },
-        },
         $: { where: { "participants.publicSignKey": publicSignKey } },
       },
     });
     if (error) console.error("Error fetching conversations:", error);
-    if (!data?.conversations) return null;
-    return [...data.conversations].sort((a, b) => {
-      const tsA = a.messages?.[0]?.timestamp ?? 0;
-      const tsB = b.messages?.[0]?.timestamp ?? 0;
-      return tsB - tsA;
-    });
+    return data?.conversations ?? null;
   };
 
 export const useIsMobile = () => {
