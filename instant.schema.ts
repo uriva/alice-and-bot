@@ -53,6 +53,7 @@ const _schema = i.schema({
       text: i.string().optional(),
       active: i.boolean().optional(),
       percentage: i.number().optional(),
+      authorId: i.string().optional(),
       updatedAt: i.number().indexed(),
     }),
   },

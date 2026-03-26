@@ -551,10 +551,16 @@ const computeHash = async (data: ArrayBuffer): Promise<string> => {
 
 const getAudioDuration = (file: File): Promise<number | undefined> =>
   new Promise((resolve) => {
-    if (!file.type.startsWith("audio/")) {
+    if (
+      !file.type.startsWith("audio/") ||
+      typeof globalThis.window === "undefined" ||
+      // @ts-ignore: Audio is a DOM API not available in backend
+      typeof Audio === "undefined"
+    ) {
       resolve(undefined);
       return;
     }
+    // @ts-ignore: Audio is a DOM API not available in backend
     const audio = new Audio();
     audio.preload = "metadata";
     audio.onloadedmetadata = () => {

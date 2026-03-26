@@ -13,6 +13,9 @@ import os from "os";
 import { Buffer } from "node:buffer";
 import http from "http";
 
+import qrcode from "qrcode-terminal";
+import clipboardy from "clipboardy";
+
 let currentSessionId: string | undefined;
 // map opencode session id to phone conversation key for reply
 const sessionToConvoKey = new Map<
@@ -50,9 +53,10 @@ export default async function plugin(input: unknown) {
     await fs.writeFile(credsFile, JSON.stringify(credentials));
   }
 
-  const getLink = () => {
+  const getLink = (sessionTitle?: string) => {
     const dirName = path.basename(process.cwd());
-    const topic = `OpenCode_${dirName}_${Date.now()}`;
+    const fallbackTopic = `OpenCode_${dirName}_${Date.now()}`;
+    const topic = sessionTitle ? sessionTitle : fallbackTopic;
     const baseUrl = "https://aliceandbot.com";
     return `${baseUrl}/chat?chatWith=${
       encodeURIComponent(
@@ -61,8 +65,10 @@ export default async function plugin(input: unknown) {
     }&topic=${encodeURIComponent(topic)}`;
   };
 
-  // Create a background server
-  const server = http.createServer((req, res) => {
+  const requestHandler = (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ) => {
     if (req.url !== "/webhook" || req.method !== "POST") {
       res.writeHead(404);
       res.end("Not found");
@@ -103,7 +109,7 @@ export default async function plugin(input: unknown) {
 
         if (
           message?.type === "text" &&
-          message.publicSignKey !== credentials.publicSignKey
+          message.publicSignKey !== (credentials as any).publicSignKey
         ) {
           console.log(`\n[Phone]: ${message.text || "(attachment)"}`);
 
@@ -156,7 +162,7 @@ export default async function plugin(input: unknown) {
                   }
                 } catch (err: unknown) {
                   await logDebug(
-                    `Failed to download attachment: ${err.message}`,
+                    `Failed to download attachment: ${(err as Error).message}`,
                   );
                 }
               }
@@ -200,63 +206,107 @@ export default async function plugin(input: unknown) {
         }
       } catch (e: unknown) {
         console.error("Error processing webhook:", e);
-        await logDebug(`Webhook processing error: ${e?.message}\n${e?.stack}`);
+        await logDebug(
+          `Webhook processing error: ${(e as Error)?.message}\n${
+            (e as Error)?.stack
+          }`,
+        );
       }
       res.writeHead(200);
       res.end("ok");
     });
-  });
+  };
 
-  server.listen(3001, async () => {
-    const startTunnel = async () => {
-      try {
-        const tunnel = await localtunnel(3001);
-        await logDebug(`Localtunnel started at ${tunnel.url}`);
-        await setWebhook({ url: `${tunnel.url}/webhook`, credentials });
-        await logDebug("Webhook configured on backend.");
+  const startTunnel = async () => {
+    try {
+      const tunnel = await localtunnel(3001);
+      await logDebug(`Localtunnel started at ${tunnel.url}`);
+      await setWebhook({ url: `${tunnel.url}/webhook`, credentials });
+      await logDebug("Webhook configured on backend.");
 
-        tunnel.on("close", () => {
-          logDebug("Localtunnel closed, restarting in 2 seconds...");
-          setTimeout(startTunnel, 2000);
-        });
+      tunnel.on("close", () => {
+        logDebug("Localtunnel closed, restarting in 2 seconds...");
+        setTimeout(startTunnel, 2000);
+      });
 
-        tunnel.on("error", (err) => {
-          logDebug(`Localtunnel error: ${err?.message}, restarting...`);
-          tunnel.close();
-        });
-      } catch (e: unknown) {
-        console.error("Failed to start tunnel:", e);
-        await logDebug(`Tunnel error: ${(e as any)?.message}`);
-        setTimeout(startTunnel, 5000);
+      tunnel.on("error", (err) => {
+        logDebug(`Localtunnel error: ${err?.message}, restarting...`);
+        tunnel.close();
+      });
+    } catch (e: unknown) {
+      console.error("Failed to start tunnel:", e);
+      await logDebug(`Tunnel error: ${(e as any)?.message}`);
+      setTimeout(startTunnel, 5000);
+    }
+  };
+
+  if (!(globalThis as any).__aliceServer) {
+    const server = http.createServer(requestHandler);
+    server.on("error", (e: any) => {
+      if (e.code === "EADDRINUSE") {
+        logDebug(
+          "Port 3001 is already in use (possibly from a previous plugin load). Skipping new server creation.",
+        );
+      } else {
+        logDebug(`Server error: ${e.message}`);
       }
-    };
+    });
 
-    await startTunnel();
-  });
+    server.listen(3001, async () => {
+      (globalThis as any).__aliceServer = server;
+      await startTunnel();
+    });
+  } else {
+    // If the server was already running on the global object, we just reassign its request listeners
+    // to point to the newly evaluated requestHandler closure to ensure it has the latest references.
+    const server = (globalThis as any).__aliceServer as http.Server;
+    server.removeAllListeners("request");
+    server.on("request", requestHandler);
+    await logDebug("Reusing existing background server from globalThis");
+    // We do not call startTunnel again because it might already be tunneling to port 3001
+  }
 
   return {
     "command.execute.before": async (hookInput: any, output: any) => {
       await logDebug(`command.execute.before: ${JSON.stringify(hookInput)}`);
       if (
         hookInput.command === "aliceandbot-qr" ||
-        hookInput.command === "alice"
+        hookInput.command === "alice" ||
+        hookInput.command === "aliceandbot"
       ) {
         currentSessionId = hookInput.sessionID;
         await logDebug(
           `Set active terminal session ${currentSessionId} for the next incoming new conversation`,
         );
-        const link = getLink();
-        const text =
-          `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\nClick to connect: ${link}\n=================================\n\n`;
-        console.log(text);
-        output.parts = [
-          {
-            type: "text",
-            text:
-              "User explicitly requested to connect to Alice&Bot via the CLI. You MUST reply ONLY with this exact link so they can click it: " +
-              link,
-          },
-        ];
+
+        let sessionTitle: string | undefined;
+        try {
+          // Attempt to get session title if available
+          const session = await (input as any).client.session.get({
+            path: { id: currentSessionId },
+          });
+          sessionTitle = session?.data?.info?.title || session?.data?.title ||
+            session?.info?.title || session?.title;
+        } catch (e) {
+          await logDebug(`Could not fetch session title: ${e}`);
+        }
+
+        const link = getLink(sessionTitle);
+
+        try {
+          clipboardy.writeSync(link);
+        } catch (err) {
+          await logDebug(`Failed to copy to clipboard: ${err}`);
+        }
+
+        qrcode.generate(link, { small: true }, (qr) => {
+          const text =
+            `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\n${qr}\n\nLink copied to clipboard!\nClick to connect: ${link}\n(QR too big? use ctrl+shift+-)\nReminder: Send the first message from your phone to initialize the session binding.\n=================================\n\n`;
+          console.log(text);
+        });
+
+        // Return null to prevent the LLM thinking pipeline and avoid context pollution
+        return null;
       }
       return output;
     },
@@ -267,22 +317,46 @@ export default async function plugin(input: unknown) {
         (textPart.text.trim() === "/alice" ||
           textPart.text.trim() === "alice" ||
           textPart.text.trim() === "/aliceandbot-qr" ||
-          textPart.text.trim() === "aliceandbot qr");
+          textPart.text.trim() === "aliceandbot qr" ||
+          textPart.text.trim() === "/aliceandbot" ||
+          textPart.text.trim() === "aliceandbot");
+
       if (hasCommand) {
         currentSessionId = hookInput.sessionID;
         await logDebug(
           `Set active terminal session ${currentSessionId} for the next incoming new conversation`,
         );
-        const link = getLink();
-        output.parts = [
-          {
-            type: "text",
-            text:
-              "User explicitly requested to connect to Alice&Bot via the CLI. You MUST reply ONLY with this exact link so they can click it: " +
-              link,
-          },
-        ];
+
+        let sessionTitle: string | undefined;
+        try {
+          // Attempt to get session title if available
+          const session = await (input as any).client.session.get({
+            path: { id: currentSessionId },
+          });
+          sessionTitle = session?.data?.info?.title || session?.data?.title ||
+            session?.info?.title || session?.title;
+        } catch (e) {
+          await logDebug(`Could not fetch session title: ${e}`);
+        }
+
+        const link = getLink(sessionTitle);
+
+        try {
+          clipboardy.writeSync(link);
+        } catch (err) {
+          await logDebug(`Failed to copy to clipboard: ${err}`);
+        }
+
+        qrcode.generate(link, { small: true }, (qr) => {
+          const text =
+            `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\n${qr}\n\nLink copied to clipboard!\nClick to connect: ${link}\n(QR too big? use ctrl+shift+-)\nReminder: Send the first message from your phone to initialize the session binding.\n=================================\n\n`;
+          console.log(text);
+        });
+
+        // Clear output parts or return null so it doesn't enter LLM context
+        return null;
       }
+      return output;
     },
     // chat.params hook removed to prevent session hijacking
     "experimental.text.complete": async (

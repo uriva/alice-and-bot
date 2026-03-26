@@ -2,12 +2,12 @@
   "name": "opencode-alice-plugin",
   "version": "1.0.0",
   "type": "module",
-  "main": "index.ts",
+  "main": "index.js",
   "opencode": {
     "commands": [
       {
-        "name": "aliceandbot-qr",
-        "description": "Show the connection link to connect your phone via Alice&Bot"
+        "name": "aliceandbot",
+        "description": "Connect your phone via Alice&Bot"
       }
     ]
   },
@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@alice-and-bot/core": "npm:@jsr/alice-and-bot__core@^0.0.237",
-    "localtunnel": "^2.0.2"
+    "clipboardy": "^5.3.1",
+    "localtunnel": "^2.0.2",
+    "qrcode-terminal": "^0.12.0"
   }
 }
