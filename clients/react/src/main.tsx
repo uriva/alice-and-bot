@@ -216,7 +216,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
   });
   const { data: uiElementsData } = db.useQuery({
     uiElements: {
-      $: { where: { "conversation.id": conversationId } },
+      $: { where: { conversation: conversationId } },
     },
   });
   const uiElements = uiElementsData?.uiElements ?? [];
