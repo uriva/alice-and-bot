@@ -19,6 +19,7 @@ export const handleUiUpdate = async (
     uiElements: { $: { where: { elementId } } },
   });
   if (uiElements.length === 0) {
+    if (active === false) return { success: true };
     if (!conversationId || !type) {
       return {
         error:
@@ -38,14 +39,18 @@ export const handleUiUpdate = async (
       tx.uiElements[newId].link({ conversation: conversationId }),
     ]);
   } else {
-    await transact(
-      tx.uiElements[uiElements[0].id].update({
-        ...(text !== undefined ? { text } : {}),
-        ...(active !== undefined ? { active } : {}),
-        ...(percentage !== undefined ? { percentage } : {}),
-        updatedAt: Date.now(),
-      }),
-    );
+    if (active === false && uiElements[0].type === "stream") {
+      await transact(tx.uiElements[uiElements[0].id].delete());
+    } else {
+      await transact(
+        tx.uiElements[uiElements[0].id].update({
+          ...(text !== undefined ? { text } : {}),
+          ...(active !== undefined ? { active } : {}),
+          ...(percentage !== undefined ? { percentage } : {}),
+          updatedAt: Date.now(),
+        }),
+      );
+    }
   }
   if (Math.random() < 0.1) {
     const cutoff = Date.now() - 3600_000;

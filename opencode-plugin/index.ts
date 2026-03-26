@@ -1,3 +1,4 @@
+// deno-lint-ignore-file
 import {
   chatWithMeLink,
   createIdentity,
@@ -9,6 +10,7 @@ import fs from "fs/promises";
 import localtunnel from "localtunnel";
 import path from "path";
 import os from "os";
+import { Buffer } from "node:buffer";
 import http from "http";
 import QRCode from "qrcode";
 
@@ -30,7 +32,7 @@ async function logDebug(msg: string) {
   await fs.appendFile(debugLogPath, `[${timestamp}] ${msg}\n`).catch(() => {});
 }
 
-export default async function plugin(input: any) {
+export default async function plugin(input: unknown) {
   await logDebug("Plugin initialized.");
   const credsFile = path.join(
     os.homedir(),
@@ -38,21 +40,17 @@ export default async function plugin(input: any) {
     "opencode",
     "alice_creds.json",
   );
-  let credentials: any;
+  let credentials: unknown;
 
   try {
     const data = await fs.readFile(credsFile, "utf-8");
     credentials = JSON.parse(data);
-  } catch (e) {
+  } catch (_e) {
     credentials = await createIdentity("Opencode Session");
     await fs.writeFile(credsFile, JSON.stringify(credentials));
   }
 
   const link = chatWithMeLink(credentials.publicSignKey);
-  const qr = await QRCode.toString(link, { type: "utf8" });
-  console.log(
-    `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\n${qr}\nScan the QR code or click: ${link}\n=================================\n\n`,
-  );
 
   // Create a background server
   const server = http.createServer((req, res) => {
@@ -109,7 +107,7 @@ export default async function plugin(input: any) {
               conversationKey,
             });
 
-            let parts: any[] = [];
+            const parts: unknown[] = [];
             if (message.text) {
               parts.push({ type: "text", text: message.text });
             }
@@ -141,7 +139,7 @@ export default async function plugin(input: any) {
                       text: `[User sent an attachment: ${att.name || "file"}]`,
                     });
                   }
-                } catch (err: any) {
+                } catch (err: unknown) {
                   await logDebug(
                     `Failed to download attachment: ${err.message}`,
                   );
@@ -165,7 +163,7 @@ export default async function plugin(input: any) {
             await logDebug("No active session ID found.");
           }
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error("Error processing webhook:", e);
         await logDebug(`Webhook processing error: ${e?.message}\n${e?.stack}`);
       }
@@ -180,20 +178,64 @@ export default async function plugin(input: any) {
       await logDebug(`Localtunnel started at ${tunnel.url}`);
       await setWebhook({ url: `${tunnel.url}/webhook`, credentials });
       await logDebug("Webhook configured on backend.");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Failed to start tunnel:", e);
       await logDebug(`Tunnel error: ${e?.message}`);
     }
   });
 
   return {
-    "chat.params": async (hookInput: any) => {
+    "command.execute.before": async (
+      hookInput: any,
+      output: any,
+    ) => {
+      await logDebug(`command.execute.before: ${JSON.stringify(hookInput)}`);
+      if (hookInput.command === "aliceandbot-qr") {
+        const qr = await QRCode.toString(link, {
+          type: "terminal",
+          small: true,
+        });
+        const text =
+          `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\n${qr}\nScan the QR code or click: ${link}\n=================================\n\n`;
+        output.parts = [{ type: "text", text }];
+      }
+      return output;
+    },
+    "chat.message": async (hookInput: any, output: any) => {
+      await logDebug(`chat.message hook hit: ${JSON.stringify(hookInput)}`);
+      const hasQrCommand = output.parts.some((part: any) =>
+        part.type === "text" &&
+        (part.text.trim() === "/aliceandbot-qr" ||
+          part.text.trim() === "aliceandbot qr")
+      );
+      if (hasQrCommand) {
+        const qr = await QRCode.toString(link, {
+          type: "terminal",
+          small: true,
+        });
+        const text = `
+
+=== ALICE&BOT OPENCODE PLUGIN ===
+${qr}
+Scan the QR code or click: ${link}
+=================================
+
+`;
+        output.parts = [{
+          type: "text",
+          text:
+            "Please display this exact text to the user without any formatting changes: " +
+            text,
+        }];
+      }
+    },
+    "chat.params": async (hookInput: unknown) => {
       currentSessionId = hookInput.sessionID;
       await logDebug(`Hook chat.params caught session ${currentSessionId}`);
     },
     "experimental.text.complete": async (
-      hookInput: any,
-      currentOutput: any,
+      hookInput: unknown,
+      currentOutput: unknown,
     ) => {
       await logDebug(
         `Hook experimental.text.complete: output text length: ${currentOutput?.text?.length}, sessionId: ${hookInput.sessionID}, currentSessionId: ${currentSessionId}`,
@@ -215,7 +257,7 @@ export default async function plugin(input: any) {
               message: { type: "text", text: currentOutput.text },
             });
             await logDebug(`Reply successfully sent.`);
-          } catch (e: any) {
+          } catch (e: unknown) {
             console.error("Failed to send message back to phone:", e);
             await logDebug(`Error sending reply: ${e?.message}`);
           }

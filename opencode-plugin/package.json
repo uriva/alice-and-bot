@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "main": "index.ts",
+  "opencode": {
+    "commands": [
+      {
+        "name": "aliceandbot-qr",
+        "description": "Show the QR code to connect your phone via Alice&Bot"
+      }
+    ]
+  },
   "scripts": {
     "build": "bun build index.ts --target=node --outfile=dist/index.js"
   },

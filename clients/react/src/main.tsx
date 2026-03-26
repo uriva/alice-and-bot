@@ -97,18 +97,34 @@ const applyLatestEdit =
     return { ...original, text: latest.text, attachments: latest.attachments };
   };
 
-const foldEdits = (messages: DecipheredMessage[]) => {
+const foldEdits = (
+  messages: DecipheredMessage[],
+  uiOverrides: Map<
+    string,
+    { active?: boolean; percentage?: number; text?: string; type?: string }
+  >,
+) => {
   const edits = messages.filter((m): m is TextOrEditMessage =>
     m.type === "edit"
   );
   const originalsAndCalls = messages.filter((m) => m.type === "text");
-  return originalsAndCalls.map((original) => ({
-    msg: applyLatestEdit(edits)(original),
-    editHistory: original.type === "text" &&
-        edits.some((e) => e.type === "edit" && e.editOf === original.id)
-      ? buildEditHistory(edits)(original as TextOrEditMessage)
-      : undefined,
-  }));
+  return originalsAndCalls.map((original) => {
+    const msg = applyLatestEdit(edits)(original);
+    const override = uiOverrides.get(msg.id);
+    if (
+      override && override.type === "stream" && override.active !== false &&
+      override.text !== undefined
+    ) {
+      msg.text = override.text;
+    }
+    return {
+      msg,
+      editHistory: original.type === "text" &&
+          edits.some((e) => e.type === "edit" && e.editOf === original.id)
+        ? buildEditHistory(edits)(original as TextOrEditMessage)
+        : undefined,
+    };
+  });
 };
 
 const msgToUIMessageWithHistory =
@@ -221,11 +237,13 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
         active?: boolean;
         percentage?: number;
         text?: string;
+        type?: string;
       },
     ) => [el.elementId, {
       active: el.active,
       percentage: el.percentage,
       text: el.text,
+      type: el.type,
     }]),
   );
   const details = {
@@ -289,7 +307,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       active: el.active !== false,
     }));
   return {
-    chatMessages: foldEdits(uiMessages).map(
+    chatMessages: foldEdits(uiMessages, uiOverrides).map(
       msgToUIMessageWithHistory(details, ownId),
     ),
     activeSpinners: [
