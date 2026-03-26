@@ -12,7 +12,6 @@ import path from "path";
 import os from "os";
 import { Buffer } from "node:buffer";
 import http from "http";
-import QRCode from "qrcode";
 
 let currentSessionId: string | undefined;
 // map opencode session id to phone conversation key for reply
@@ -50,7 +49,13 @@ export default async function plugin(input: unknown) {
     await fs.writeFile(credsFile, JSON.stringify(credentials));
   }
 
-  const link = chatWithMeLink(credentials.publicSignKey);
+  const getLink = () => {
+    const dirName = path.basename(process.cwd());
+    const topic = `OpenCode: ${dirName} (${
+      new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    })`;
+    return chatWithMeLink(credentials.publicSignKey, topic);
+  };
 
   // Create a background server
   const server = http.createServer((req, res) => {
@@ -152,6 +157,9 @@ export default async function plugin(input: unknown) {
             }
 
             await logDebug(`Injecting prompt into opencode`);
+            console.log(
+              `\n[You (via phone)]: ${message.text || "(attachment)"}`,
+            );
             await input.client.session.prompt({
               path: { id: currentSessionId },
               body: { parts },
@@ -190,49 +198,54 @@ export default async function plugin(input: unknown) {
       output: any,
     ) => {
       await logDebug(`command.execute.before: ${JSON.stringify(hookInput)}`);
-      if (hookInput.command === "aliceandbot-qr") {
-        const qr = await QRCode.toString(link, {
-          type: "terminal",
-          small: true,
-        });
+      if (
+        hookInput.command === "aliceandbot-qr" || hookInput.command === "alice"
+      ) {
+        currentSessionId = hookInput.sessionID;
+        await logDebug(
+          `Locked webhook routing to session ${currentSessionId} based on QR request`,
+        );
+        const link = getLink();
         const text =
-          `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\n${qr}\nScan the QR code or click: ${link}\n=================================\n\n`;
-        output.parts = [{ type: "text", text }];
+          `\n\n=== ALICE&BOT OPENCODE PLUGIN ===\nClick to connect: ${link}\n=================================\n\n`;
+        console.log(text);
+        output.parts = [{
+          type: "text",
+          text: "Displayed the connection link to the terminal.",
+        }];
       }
       return output;
     },
     "chat.message": async (hookInput: any, output: any) => {
       await logDebug(`chat.message hook hit: ${JSON.stringify(hookInput)}`);
-      const hasQrCommand = output.parts.some((part: any) =>
-        part.type === "text" &&
-        (part.text.trim() === "/aliceandbot-qr" ||
-          part.text.trim() === "aliceandbot qr")
+      const textPart = output.parts.find((part: any) => part.type === "text");
+      const hasCommand = textPart && (
+        textPart.text.trim() === "/alice" ||
+        textPart.text.trim() === "alice" ||
+        textPart.text.trim() === "/aliceandbot-qr" ||
+        textPart.text.trim() === "aliceandbot qr"
       );
-      if (hasQrCommand) {
-        const qr = await QRCode.toString(link, {
-          type: "terminal",
-          small: true,
-        });
+      if (hasCommand) {
+        currentSessionId = hookInput.sessionID;
+        await logDebug(
+          `Locked webhook routing to session ${currentSessionId} based on QR request`,
+        );
+        const link = getLink();
         const text = `
 
 === ALICE&BOT OPENCODE PLUGIN ===
-${qr}
-Scan the QR code or click: ${link}
+Click to connect: ${link}
 =================================
 
 `;
+        console.log(text);
         output.parts = [{
           type: "text",
-          text:
-            "Please display this exact text to the user without any formatting changes: " +
-            text,
+          text: "Displayed the connection link to the terminal.",
         }];
       }
     },
-    "chat.params": async (hookInput: unknown) => {
-      currentSessionId = hookInput.sessionID;
-      await logDebug(`Hook chat.params caught session ${currentSessionId}`);
-    },
+    // chat.params hook removed to prevent session hijacking
     "experimental.text.complete": async (
       hookInput: unknown,
       currentOutput: unknown,

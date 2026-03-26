@@ -1572,6 +1572,13 @@ export type AbstracChatMessage = {
   callDetails?: { action: string; duration?: number };
 };
 
+export type ActiveStream = {
+  authorName: string;
+  text: string;
+  elementId: string;
+  timestamp: number;
+};
+
 export type ActiveSpinner = {
   authorName: string;
   text: string;
@@ -1617,12 +1624,14 @@ const playNotificationSound = () => {
 type TimelineEntry =
   | { kind: "message"; msg: AbstracChatMessage; prevMsg?: AbstracChatMessage }
   | { kind: "spinner"; spinner: ActiveSpinner }
-  | { kind: "progress"; progress: ActiveProgress };
+  | { kind: "progress"; progress: ActiveProgress }
+  | { kind: "stream"; stream: ActiveStream };
 
 const buildTimeline = (
   messages: AbstracChatMessage[],
   spinners: ActiveSpinner[],
   progress: ActiveProgress[],
+  streams: ActiveStream[],
 ): TimelineEntry[] => {
   const sorted = sortKey((x: AbstracChatMessage) => x.timestamp)(messages);
   const msgEntries: TimelineEntry[] = sorted.map((msg, i) => ({
@@ -1638,13 +1647,24 @@ const buildTimeline = (
     kind: "progress",
     progress: p,
   }));
+  const streamEntries: TimelineEntry[] = streams.map((s) => ({
+    kind: "stream",
+    stream: s,
+  }));
   const tsOf = (e: TimelineEntry): number =>
     e.kind === "message"
       ? e.msg.timestamp
+      : e.kind === "stream"
+      ? e.stream.timestamp
       : e.kind === "spinner"
       ? e.spinner.timestamp
       : e.progress.timestamp;
-  return sortKey(tsOf)([...msgEntries, ...spinnerEntries, ...progressEntries]);
+  return sortKey(tsOf)([
+    ...msgEntries,
+    ...spinnerEntries,
+    ...progressEntries,
+    ...streamEntries,
+  ]);
 };
 
 const editWindowMs = 5 * 60 * 1000;

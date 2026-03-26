@@ -140,6 +140,7 @@ const initViewportHeightListener = () => {
 const startConversation = async (
   credentials: Credentials,
   rawInput: string,
+  topic?: string,
 ): Promise<string | null> => {
   // Split by comma, trim, drop empties, strip @ prefix
   const tokens = rawInput.split(",").map((t) => t.trim().replace(/^@/, ""))
@@ -173,7 +174,7 @@ const startConversation = async (
   const names = await Promise.all(
     participantKeys.map((k) => nameFromPublicSignKey(k)),
   );
-  const title = names.join(", ");
+  const title = topic || names.join(", ");
   const response = await toast.promise(
     (async () => {
       const res = await createConversation(() => adminDb)(
@@ -899,10 +900,14 @@ const tagline = "Encrypted chat for the AI era";
 const storeCredentialsLabel = "This is my device, so store my credentials here";
 
 const isMatch =
-  (myKey: string, chatWithKey: string) => ({ participants }: Conversation) => {
+  (myKey: string, chatWithKey: string, topic?: string) =>
+  ({ participants, title }: Conversation) => {
     const keys = participants.map(({ publicSignKey }) => publicSignKey);
-    return (keys.length === 2 && keys.includes(myKey) &&
-      keys.includes(chatWithKey));
+    const keysMatch = keys.length === 2 && keys.includes(myKey) &&
+      keys.includes(chatWithKey);
+    if (!keysMatch) return false;
+    if (topic) return title === topic;
+    return true;
   };
 
 type View = "chats" | "new_chat" | "identity";
@@ -1497,6 +1502,7 @@ export const Messenger = () => {
     handleTransferImport();
   }, []);
   const chatWith = location.query["chatWith"];
+  const topic = location.query["topic"] as string | undefined;
   const route = useLocation().route;
   const [handledChatWith, setHandledChatWith] = useState<string | null>(null);
   const chatWithInFlight = useRef(false);
@@ -1504,7 +1510,9 @@ export const Messenger = () => {
     if (!credentials || !conversations) return;
     const cw = (chatWith as string | undefined) ?? undefined;
     if (!cw) return;
-    if (handledChatWith === cw) return; // already processed this value
+    // To allow handling the same chatWith but different topic, we incorporate topic into the state string
+    const handledKey = topic ? `${cw}-${topic}` : cw;
+    if (handledChatWith === handledKey) return; // already processed this value
     if (chatWithInFlight.current) return; // creation already in progress
     chatWithInFlight.current = true;
     (async () => {
@@ -1516,33 +1524,39 @@ export const Messenger = () => {
       } catch (_) {
         // assume it's already a public sign key
       }
-      // If a conversation already exists with this participant, use it.
-      const existing = conversations.find(
-        isMatch(credentials.publicSignKey, resolvedKey),
-      );
+
       let conversationId: string | null = null;
+
+      // If a topic is provided, first look for an existing conversation with that topic.
+      // If not found, create a new conversation with that topic.
+      const existing = conversations.find(
+        isMatch(credentials.publicSignKey, resolvedKey, topic),
+      );
       if (existing) {
         selectedConversation.value = existing.id;
         conversationId = existing.id;
       } else {
-        conversationId = await startConversation(credentials, cw);
-        if (!conversationId) {
-          chatWithInFlight.current = false;
-          return; // failed to create
-        }
+        conversationId = await startConversation(credentials, cw, topic);
       }
-      // Build a stable URL: remove chatWith, set c=<id>, ensure chats view
+
+      if (!conversationId) {
+        chatWithInFlight.current = false;
+        return; // failed to create
+      }
+
+      // Build a stable URL: remove chatWith and topic, set c=<id>, ensure chats view
       const params = new URLSearchParams(globalThis.location.search);
       params.delete("chatWith");
+      params.delete("topic");
       params.delete("login");
       params.delete("view");
       params.set("c", conversationId);
       const newUrl = `${chatPath}?${params.toString()}`;
       route(newUrl, true);
-      setHandledChatWith(cw);
+      setHandledChatWith(handledKey);
       chatWithInFlight.current = false;
     })();
-  }, [credentials, chatWith, conversations, handledChatWith]);
+  }, [credentials, chatWith, topic, conversations, handledChatWith]);
 
   // Keep URL in sync with current messenger state so browser Back works.
   useEffect(() => {
@@ -1551,6 +1565,7 @@ export const Messenger = () => {
     const params = new URLSearchParams(globalThis.location.search);
     // Never preserve invite param once inside messenger
     params.delete("chatWith");
+    params.delete("topic");
     // We only manage 'view' and 'c' (conversation id) here; preserve others.
     if (view === "identity") {
       params.set("view", "identity");

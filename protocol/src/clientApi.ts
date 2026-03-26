@@ -464,8 +464,13 @@ export const baseUrl = "https://aliceandbot.com";
 
 export const chatWithMeLink = (
   publicSignKey: string,
-): string =>
-  `${baseUrl}${chatPath}?chatWith=${encodeURIComponent(publicSignKey)}`;
+  topic?: string,
+): string => {
+  const url = `${baseUrl}${chatPath}?chatWith=${
+    encodeURIComponent(publicSignKey)
+  }`;
+  return topic ? `${url}&topic=${encodeURIComponent(topic)}` : url;
+};
 
 export const setAlias = async ({
   alias,

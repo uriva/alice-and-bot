@@ -7,7 +7,7 @@
     "commands": [
       {
         "name": "aliceandbot-qr",
-        "description": "Show the QR code to connect your phone via Alice&Bot"
+        "description": "Show the connection link to connect your phone via Alice&Bot"
       }
     ]
   },
@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@alice-and-bot/core": "npm:@jsr/alice-and-bot__core@^0.0.237",
-    "localtunnel": "^2.0.2",
-    "qrcode": "^1.5.4"
+    "localtunnel": "^2.0.2"
   }
 }
