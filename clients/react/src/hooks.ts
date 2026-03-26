@@ -61,6 +61,7 @@ export type Conversation = {
   id: string;
   title: string;
   participants: { publicSignKey: string }[];
+  messages?: { timestamp: number }[];
 };
 
 export const useConversations =
@@ -69,11 +70,24 @@ export const useConversations =
     const { data, error } = db().useQuery({
       conversations: {
         participants: {},
+        messages: {
+          $: {
+            limit: 1,
+            order: {
+              timestamp: "desc",
+            },
+          },
+        },
         $: { where: { "participants.publicSignKey": publicSignKey } },
       },
     });
     if (error) console.error("Error fetching conversations:", error);
-    return data?.conversations ?? null;
+    if (!data?.conversations) return null;
+    return [...data.conversations].sort((a, b) => {
+      const tsA = a.messages?.[0]?.timestamp ?? 0;
+      const tsB = b.messages?.[0]?.timestamp ?? 0;
+      return tsB - tsA;
+    });
   };
 
 export const useIsMobile = () => {

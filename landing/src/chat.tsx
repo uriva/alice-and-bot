@@ -970,6 +970,10 @@ const LoggedInMessenger = (
   },
 ) => {
   const isMobile = useIsMobile();
+  const isDark = useDarkMode();
+  const scrollbarStyle = {
+    scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const router = useLocation().route;
 
@@ -1040,7 +1044,7 @@ const LoggedInMessenger = (
             </div>
           )}
 
-          <div class="flex-1 overflow-y-auto min-h-0">
+          <div class="flex-1 overflow-y-auto min-h-0" style={scrollbarStyle}>
             {view === "chats" && (
               <OpenChats
                 credentials={credentials}
@@ -1171,6 +1175,7 @@ const LoggedInMessenger = (
                     flexGrow: 1,
                     flexDirection: "column",
                     overflowY: "auto",
+                    ...scrollbarStyle,
                   }}
                 >
                   <OpenChats
@@ -1240,6 +1245,7 @@ const LoggedInMessenger = (
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "flex-start",
+                  ...scrollbarStyle,
                 }}
                 class="p-8 overflow-y-auto"
               >
