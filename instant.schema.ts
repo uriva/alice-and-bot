@@ -41,7 +41,10 @@ const _schema = i.schema({
       subscription: i.json<PushSubscriptionJSON>(),
       createdAt: i.number(),
     }),
-    conversations: i.entity({ title: i.string() }),
+    conversations: i.entity({
+      title: i.string(),
+      updatedAt: i.number().indexed().optional(),
+    }),
     keys: i.entity({ key: i.json<EncryptedConversationKey>() }),
     typingStates: i.entity({ updatedAt: i.number() }),
     uiElements: i.entity({

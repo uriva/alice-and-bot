@@ -56,7 +56,7 @@ const endpoints: BackendApiImpl = {
     sendMessage: async ({ encryptedMessage, conversation }) => {
       const messageId = id();
       // Persist the message first; do not block on side effects (webhooks/push)
-      await transact(
+      await transact([
         tx.messages[messageId]
           .update({
             payload: encryptedMessage as EncryptedMessage,
@@ -64,7 +64,8 @@ const endpoints: BackendApiImpl = {
           }).link({
             conversation,
           }),
-      );
+        tx.conversations[conversation].update({ updatedAt: Date.now() }),
+      ]);
       // Fire-and-forget side effects
       callWebhooks({ messageId }).catch((e) =>
         console.error("webhook dispatch failed", e)

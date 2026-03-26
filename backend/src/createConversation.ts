@@ -28,7 +28,10 @@ export const createConversation:
     }
     const conversationId = id();
     await transact(
-      tx.conversations[conversationId].update({ title }).link({
+      tx.conversations[conversationId].update({
+        title,
+        updatedAt: Date.now(),
+      }).link({
         participants: identities.map((x) => x.id),
       }),
     );

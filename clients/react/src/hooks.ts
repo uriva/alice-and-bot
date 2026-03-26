@@ -61,7 +61,7 @@ export type Conversation = {
   id: string;
   title: string;
   participants: { publicSignKey: string }[];
-  messages?: { timestamp: number }[];
+  updatedAt?: number;
 };
 
 export const useConversations =
@@ -74,7 +74,10 @@ export const useConversations =
       },
     });
     if (error) console.error("Error fetching conversations:", error);
-    return data?.conversations ?? null;
+    if (!data?.conversations) return null;
+    return [...data.conversations].sort(
+      (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
+    );
   };
 
 export const useIsMobile = () => {
