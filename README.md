@@ -584,6 +584,13 @@ supports MCP.
 See [`mcp/README.md`](mcp/README.md) for full details, or the
 [setup guide](https://aliceandbot.com/mcp).
 
+### `opencode` Native Plugin
+
+If you use `opencode`, we offer a native plugin that provides true real-time
+syncing without requiring the AI to manually call tools. See
+[`opencode-plugin/README.md`](opencode-plugin/README.md) for installation
+instructions.
+
 ## Self-Hosting
 
 To run your own alice-and-bot server:

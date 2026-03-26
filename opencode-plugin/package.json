@@ -1,0 +1,14 @@
+{
+  "name": "opencode-alice-plugin",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "build": "bun build index.ts --target=node --outfile=dist/index.js"
+  },
+  "dependencies": {
+    "@alice-and-bot/core": "npm:@jsr/alice-and-bot__core@^0.0.237",
+    "localtunnel": "^2.0.2",
+    "qrcode": "^1.5.4"
+  }
+}
