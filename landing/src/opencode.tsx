@@ -75,7 +75,7 @@ export const OpenCodePage = () => {
           <ShellCode code={installCommand} />
           <p class="text-sm text-gray-400 mt-2">
             This will download the plugin and register it automatically in your
-            OpenCode configuration. You will need npm or bun installed.
+            OpenCode configuration. Zero dependencies required!
           </p>
         </Step>
 
