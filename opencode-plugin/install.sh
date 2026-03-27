@@ -9,27 +9,8 @@ mkdir -p ~/.config/opencode/commands
 
 cd "$PLUGIN_DIR"
 
-echo "Downloading plugin source..."
-curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/package.json -o package.json
-curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/index.ts -o index.ts
-curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/tunnel.ts -o tunnel.ts
-
-# Add npmrc for JSR resolution
-echo "@jsr:registry=https://npm.jsr.io" > .npmrc
-
-echo "Installing dependencies..."
-if command -v bun &> /dev/null; then
-    bun install
-    echo "Building plugin..."
-    bun build index.ts --target=node --outfile=index.js
-elif command -v npm &> /dev/null; then
-    npm install
-    echo "Building plugin..."
-    npx esbuild index.ts --bundle --platform=node --outfile=index.js
-else
-    echo "Error: Need 'bun' or 'npm' installed to build the plugin."
-    exit 1
-fi
+echo "Downloading plugin..."
+curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/plugin.js -o index.js
 
 echo "Setting up command macro..."
 cat << 'MD' > ~/.config/opencode/commands/aliceandbot.md
