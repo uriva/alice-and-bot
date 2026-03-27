@@ -31,6 +31,7 @@ export const useVoiceCall = ({
   const [callState, setCallState] = useState<CallState>("idle");
   const [callDuration, setCallDuration] = useState<number>(0);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const activeCallIdRef = useRef<string | null>(null);
@@ -230,6 +231,7 @@ export const useVoiceCall = ({
     }
     setRemoteStream(null);
     activeCallIdRef.current = null;
+    setIsMuted(false);
     stopTone();
   };
 
@@ -430,13 +432,27 @@ export const useVoiceCall = ({
     }
   };
 
+  const toggleMute = () => {
+    setIsMuted((prev) => {
+      const nextMuted = !prev;
+      if (localStreamRef.current) {
+        localStreamRef.current.getAudioTracks().forEach((t) => {
+          t.enabled = !nextMuted;
+        });
+      }
+      return nextMuted;
+    });
+  };
+
   return {
     callState,
     callDuration,
     remoteStream,
+    isMuted,
     startCall,
     acceptCall,
     rejectCall,
     endCall,
+    toggleMute,
   };
 };

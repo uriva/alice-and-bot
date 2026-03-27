@@ -17,6 +17,7 @@ import {
   FaImage,
   FaMapMarkerAlt,
   FaMicrophone,
+  FaMicrophoneSlash,
   FaPaperclip,
   FaPaperPlane,
   FaPause,
@@ -2159,11 +2160,13 @@ export const AbstractChatBox = (
     enableVoiceCall = true,
     voiceCallState = "idle",
     voiceCallDuration = 0,
+    voiceCallMuted = false,
     remoteStream = null,
     onStartCall,
     onAcceptCall,
     onRejectCall,
     onEndCall,
+    onToggleMute,
     onEdit,
     onSendLocation,
     activeSpinners = [],
@@ -2196,11 +2199,13 @@ export const AbstractChatBox = (
     enableVoiceCall?: boolean;
     voiceCallState?: string;
     voiceCallDuration?: number;
+    voiceCallMuted?: boolean;
     remoteStream?: MediaStream | null;
     onStartCall?: () => void;
     onAcceptCall?: () => void;
     onRejectCall?: () => void;
     onEndCall?: () => void;
+    onToggleMute?: () => void;
     onEdit?: (messageId: string, newText: string) => void;
     onSendLocation?: (
       latitude: number,
@@ -2579,6 +2584,30 @@ export const AbstractChatBox = (
               }`}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
+            {voiceCallState === "active" && onToggleMute && (
+              <button
+                type="button"
+                onClick={onToggleMute}
+                style={{
+                  background: voiceCallMuted
+                    ? "#ef4444"
+                    : isDark
+                    ? "#4b5563"
+                    : "#cbd5e1",
+                  color: voiceCallMuted ? "#fff" : isDark ? "#fff" : "#000",
+                  border: "none",
+                  padding: "6px 12px",
+                  borderRadius: 16,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                {voiceCallMuted ? <FaMicrophoneSlash /> : <FaMicrophone />}
+                {voiceCallMuted ? "Unmute" : "Mute"}
+              </button>
+            )}
             {voiceCallState === "ringing" && onAcceptCall && (
               <button
                 type="button"

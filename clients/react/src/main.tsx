@@ -361,6 +361,28 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   }: ChatProps,
 ): JSX.Element => {
   const database = db();
+  const { data: keyData, isLoading: isKeyLoading } = database.useQuery({
+    keys: {
+      $: {
+        where: {
+          "owner.publicSignKey": credentials.publicSignKey,
+          conversation: conversationId,
+        },
+      },
+    },
+  });
+  const hasAccess = isKeyLoading ? true : (keyData?.keys.length ?? 0) > 0;
+
+  const convQuery = database.useQuery({
+    conversations: {
+      participants: {},
+      $: { where: { id: conversationId } },
+    },
+  });
+  const isConvLoading = convQuery.isLoading;
+  const conversation = convQuery.data?.conversations[0];
+  const convNotFound = !isConvLoading && !conversation;
+
   const convoKey = useConversationKey(database)(conversationId, credentials);
   const [limit, setLimit] = useState(100);
   const decrypted = useDecryptedMessages(
@@ -379,12 +401,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   const identityDetails = useIdentityDetailsMap(db)(
     (decrypted ?? []).map(({ publicSignKey }) => publicSignKey),
   );
-  const conversation = database.useQuery({
-    conversations: {
-      participants: {},
-      $: { where: { id: conversationId } },
-    },
-  }).data?.conversations[0];
+
   const conversationTitle = conversation?.title || "Chat";
   const isGroupChat = (conversation?.participants.length ?? 0) > 2;
   const ephemeralStreams = useEphemeralStreams(database, conversationId);
@@ -447,6 +464,61 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
     });
   };
 
+  if (convNotFound || !hasAccess) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          width: "100%",
+          color: customColors?.text ?? "#6b7280",
+          background: customColors?.background ??
+            (darkModeOverride ? "#111" : "#f9fafb"),
+          fontFamily: "sans-serif",
+        }}
+      >
+        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>
+          {convNotFound ? "🤷" : "🔒"}
+        </div>
+        <div
+          style={{
+            fontSize: "1.25rem",
+            fontWeight: 600,
+            marginBottom: "0.5rem",
+          }}
+        >
+          {convNotFound ? "Chat Not Found" : "Access Denied"}
+        </div>
+        <div style={{ fontSize: "0.9rem" }}>
+          {convNotFound
+            ? "This conversation does not exist."
+            : "You do not have the encryption keys for this conversation."}
+        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              marginTop: "1.5rem",
+              padding: "0.5rem 1rem",
+              background: customColors?.primary ?? "#3b82f6",
+              color: "white",
+              borderRadius: "0.375rem",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 500,
+            }}
+          >
+            Go Back
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const { chatMessages, activeSpinners, activeProgress, activeStreams } =
     processMessages(
       database,
@@ -477,11 +549,13 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       enableVoiceCall={enableVoiceCall}
       voiceCallState={voiceCall.callState}
       voiceCallDuration={voiceCall.callDuration}
+      voiceCallMuted={voiceCall.isMuted}
       remoteStream={voiceCall.remoteStream}
       onStartCall={voiceCall.startCall}
       onAcceptCall={voiceCall.acceptCall}
       onRejectCall={voiceCall.rejectCall}
       onEndCall={voiceCall.endCall}
+      onToggleMute={voiceCall.toggleMute}
       onSendWithAttachments={handleSendWithAttachments}
       onDecryptAttachment={handleDecryptAttachment}
       onEdit={handleEdit}
