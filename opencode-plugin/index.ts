@@ -318,7 +318,13 @@ export default async function plugin(input: unknown) {
       const trimmed = textPart?.text?.trim() || "";
       if (aliceCommands.includes(trimmed)) {
         await showAliceLink(hookInput.sessionID);
-        return { parts: [] };
+        output.parts.length = 0;
+        try {
+          await client.session.abort({ path: { id: hookInput.sessionID } });
+        } catch (e: any) {
+          await logDebug(`Failed to abort session: ${e?.message}`);
+        }
+        throw { name: "MessageAbortedError", data: { message: "Command handled locally by Alice&Bot plugin" } };
       }
       return output;
     },
