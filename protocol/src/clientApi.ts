@@ -696,6 +696,30 @@ export const getBalanceAndTransactionsSigned = async (
     ),
   });
 
+export const prepareCryptoPaymentSigned = async (
+  params: { amount: number; credentials: Credentials },
+) =>
+  apiClient({
+    endpoint: "prepareCryptoPayment",
+    payload: await buildSignedRequest(
+      params.credentials,
+      "prepareCryptoPayment",
+      { amount: params.amount },
+    ),
+  });
+
+export const checkCryptoPaymentSigned = async (
+  params: { paymentAddress: string; credentials: Credentials },
+) =>
+  apiClient({
+    endpoint: "checkCryptoPayment",
+    payload: await buildSignedRequest(
+      params.credentials,
+      "checkCryptoPayment",
+      { paymentAddress: params.paymentAddress },
+    ),
+  });
+
 export const getProfile = (publicSignKey: string) =>
   apiClient({
     endpoint: "getProfile",

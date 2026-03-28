@@ -2674,7 +2674,8 @@ export const AbstractChatBox = (
                 <Spinner color={customColors?.text} />
               </div>
             )
-            : allMessages.length === 0
+            : allMessages.length === 0 && activeSpinners.length === 0 &&
+                activeProgress.length === 0 && activeStreams.length === 0
             ? (
               <div
                 style={centerFillStyle(isDark)}

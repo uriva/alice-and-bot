@@ -16,6 +16,13 @@ import {
 import { generateUploadUrl } from "./storage.ts";
 import { handleUiUpdate } from "./uiUpdate.ts";
 import { handleCryptoPayment } from "./cryptoPayment.ts";
+import { createHmac } from "node:crypto";
+import {
+  deriveBtcAddress,
+  getAddressTransactions,
+  getBtcPriceUsd,
+  receivedSatoshis,
+} from "@uri/crypto-utils";
 
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
@@ -57,24 +64,30 @@ const endpoints: BackendApiImpl = {
     createConversation,
     sendMessage: async ({ encryptedMessage, conversation }) => {
       const messageId = id();
+      const timestamp = Date.now();
       // Persist the message first; do not block on side effects (webhooks/push)
       await transact([
         tx.messages[messageId]
           .update({
             payload: encryptedMessage as EncryptedMessage,
-            timestamp: Date.now(),
+            timestamp,
           }).link({
             conversation,
           }),
-        tx.conversations[conversation].update({ updatedAt: Date.now() }),
+        tx.conversations[conversation].update({ updatedAt: timestamp }),
       ]);
       // Fire-and-forget side effects
-      callWebhooks({ messageId }).catch((e) =>
-        console.error("webhook dispatch failed", e)
-      );
-      sendPushToParticipants({ messageId }).catch((e) =>
-        console.error("push dispatch failed", e)
-      );
+      callWebhooks({
+        messageId,
+        conversationId: conversation,
+        payload: encryptedMessage as EncryptedMessage,
+        timestamp,
+      }).catch((e) => console.error("webhook dispatch failed", e));
+      sendPushToParticipants({
+        messageId,
+        conversationId: conversation,
+        timestamp,
+      }).catch((e) => console.error("push dispatch failed", e));
       return { messageId };
     },
     sendTyping: async ({ conversation, isTyping, publicSignKey }) => {
@@ -408,6 +421,131 @@ const endpoints: BackendApiImpl = {
       ]);
       return { success: true };
     },
+    prepareCryptoPayment: async (
+      { payload, publicSignKey, nonce, authToken },
+    ) => {
+      const authOk = await verifyAuthToken({
+        action: "prepareCryptoPayment",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) return { error: "invalid-auth" };
+
+      const xpub = Deno.env.get("BITCOIN_XPUB");
+      if (!xpub) return { error: "missing-secret" };
+
+      const { identities: identityMatches } = await query({
+        identities: { $: { where: { publicSignKey } } },
+      });
+      if (identityMatches.length === 0) return { error: "not-found" };
+
+      const identityId = identityMatches[0].id;
+      const amount = payload.amount;
+
+      // Get next index
+      const { value } = await kv.get<number>(["btc-index"]);
+      const index = value ?? 0;
+      await kv.set(["btc-index"], index + 1);
+
+      const address = deriveBtcAddress(xpub, index);
+      const btcPrice = await getBtcPriceUsd();
+      const btcAmount = Number((amount / btcPrice).toFixed(8));
+
+      await kv.set(
+        ["btc-addr", address],
+        { identityId, publicSignKey, usdAmount: amount, index, btcAmount },
+        { expireIn: 60 * 60 * 24 * 30 * 1000 },
+      );
+
+      const bitcoinUri = `bitcoin:${address}?amount=${btcAmount}`;
+      const qrUrl =
+        `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${
+          encodeURIComponent(bitcoinUri)
+        }`;
+
+      return { address, btcAmount, usdAmount: amount, qrUrl };
+    },
+    checkCryptoPayment: async (
+      { payload, publicSignKey, nonce, authToken },
+    ) => {
+      const authOk = await verifyAuthToken({
+        action: "checkCryptoPayment",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) return { success: false, error: "invalid-auth" };
+
+      const xpub = Deno.env.get("BITCOIN_XPUB");
+      if (!xpub) return { success: false, error: "missing-secret" };
+
+      const { paymentAddress } = payload;
+      const { value: addressData } = await kv.get<
+        {
+          identityId: string;
+          publicSignKey: string;
+          usdAmount: number;
+          index: number;
+          btcAmount: number;
+        }
+      >(["btc-addr", paymentAddress]);
+      if (!addressData) return { success: false, error: "not-found" };
+      if (addressData.publicSignKey !== publicSignKey) {
+        return { success: false, error: "invalid-auth" };
+      }
+
+      const { value: claimed } = await kv.get(["btc-claimed", paymentAddress]);
+      if (claimed) return { success: false, error: "already-claimed" };
+
+      const txs = await getAddressTransactions(paymentAddress);
+      for (const t of txs) {
+        const satoshis = receivedSatoshis(t, paymentAddress);
+        if (satoshis <= 0) continue;
+
+        const btcPrice = await getBtcPriceUsd();
+        const btcAmount = satoshis / 1e8;
+        const usdAmount = Math.round(btcAmount * btcPrice * 100) / 100;
+
+        await kv.set(["btc-claimed", paymentAddress], t.txid, {
+          expireIn: 60 * 60 * 24 * 365 * 1000,
+        });
+
+        // Credit the wallet
+        const { identities: identityMatches } = await query({
+          identities: {
+            wallet: {},
+            $: { where: { id: addressData.identityId } },
+          },
+        });
+
+        if (identityMatches.length > 0) {
+          const identity = identityMatches[0];
+          const currentBalance = identity.wallet?.balance || 0;
+          await transact([
+            tx.wallets[identity.wallet?.id || id()].update({
+              balance: currentBalance + usdAmount,
+            }).link({ identity: identity.id }),
+            tx.transactions[id()].update({
+              amount: usdAmount,
+              type: "deposit",
+              timestamp: Date.now(),
+              status: "completed",
+              walletAddress: t.txid,
+            }).link({ receiver: identity.id }),
+          ]);
+        }
+
+        return {
+          success: true,
+          message: `Successfully verified and credited $${usdAmount}`,
+        };
+      }
+
+      return { success: false, error: "not-paid" };
+    },
     renameConversation: async (
       { payload, publicSignKey, nonce, authToken },
     ) => {
@@ -675,11 +813,24 @@ Deno.serve(async (req: Request) => {
       );
     }
     if (url.pathname === "/webhook/crypto" && req.method === "POST") {
+      const rawBody = await req.text();
+      const secret = Deno.env.get("CRYPTO_WEBHOOK_SECRET");
+      if (secret) {
+        const signature = req.headers.get("x-signature") || "";
+        const expected = createHmac("sha512", secret).update(rawBody).digest(
+          "hex",
+        );
+        if (signature !== expected) {
+          console.error("Invalid crypto webhook signature");
+          return jsonCorsResponse({ error: "Invalid signature" }, 401);
+        }
+      }
+
       let body;
       try {
-        body = await req.json();
+        body = JSON.parse(rawBody);
       } catch (e) {
-        body = Object.fromEntries((await req.formData()).entries());
+        body = Object.fromEntries(new URLSearchParams(rawBody).entries());
       }
       await handleCryptoPayment(body as any);
       return jsonCorsResponse({ success: true });

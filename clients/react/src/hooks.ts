@@ -385,9 +385,16 @@ export const useEphemeralStreams = (
   room.useSyncPresence({});
   // @ts-expect-error Instant typing is restrictive for topics when no explicit shape is provided
   room.useTopicEffect("stream", (event: EphemeralStreamEvent) => {
-    console.log("Received stream event:", event);
+    const payload = ((event as Record<string, unknown>).elementId
+      ? event
+      : ((event as Record<string, unknown>).data ||
+        event)) as EphemeralStreamEvent;
+    console.log("Received stream event (payload):", payload);
+    if (!payload?.elementId) {
+      return;
+    }
     setStreams((prev) => {
-      return { ...prev, [event.elementId]: event };
+      return { ...prev, [payload.elementId]: payload };
     });
   });
 

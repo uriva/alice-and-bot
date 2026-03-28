@@ -21,12 +21,14 @@ import schema from "../../instant.schema.ts";
 import { normalizeAlias } from "../../protocol/src/alias.ts";
 import {
   chatWithMeLink,
+  checkCryptoPaymentSigned,
   createConversation,
   createIdentity,
   type Credentials,
   getBalanceAndTransactionsSigned,
   getProfile,
   instantAppId,
+  prepareCryptoPaymentSigned,
   setAlias,
   setName,
   setPriceTagSigned,
@@ -546,20 +548,52 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
   const [balanceData, setBalanceData] = useState<
     { balance: number; transactions: any[] } | null
   >(null);
+  const [depositData, setDepositData] = useState<
+    | { address: string; btcAmount: number; usdAmount: number; qrUrl: string }
+    | null
+  >(null);
+
+  const fetchBalance = () => {
+    getBalanceAndTransactionsSigned(credentials).then((res) => {
+      if (!("error" in res)) {
+        setBalanceData(res);
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (!depositData) return;
+
+    let isCancelled = false;
+    const interval = setInterval(async () => {
+      const res = await checkCryptoPaymentSigned({
+        paymentAddress: depositData.address,
+        credentials,
+      });
+      if (isCancelled) return;
+
+      if (!("error" in res)) {
+        toast.success(res.message);
+        setDepositData(null);
+        fetchBalance();
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [depositData, credentials]);
+
+  useEffect(() => {
+    fetchBalance();
+  }, [credentials]);
 
   useEffect(() => {
     setPriceTagInput(
       profile?.priceTag ? (profile.priceTag / 100).toString() : "0",
     );
   }, [profile?.priceTag]);
-
-  useEffect(() => {
-    getBalanceAndTransactionsSigned(credentials).then((res) => {
-      if (!("error" in res)) {
-        setBalanceData(res);
-      }
-    });
-  }, [credentials]);
 
   const onSavePrice = async () => {
     const val = parseFloat(priceTagInput);
@@ -737,14 +771,95 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
               ${(balanceData.balance / 100).toFixed(2)}
             </div>
           </div>
-          {balanceData.balance > 0 && (
+          <div class="flex gap-2">
             <button
-              class={buttonBlueStyle}
-              onClick={() => toast("Payouts are coming soon!")}
+              class={buttonGreenStyle}
+              onClick={async () => {
+                const amountStr = window.prompt(
+                  "Enter amount to deposit (USD)",
+                  "10",
+                );
+                if (!amountStr) return;
+                const amount = parseFloat(amountStr);
+                if (isNaN(amount) || amount <= 0) {
+                  toast("Invalid amount");
+                  return;
+                }
+                const toastId = toast.loading("Generating deposit address...");
+                const res = await prepareCryptoPaymentSigned({
+                  amount,
+                  credentials,
+                });
+                toast.dismiss(toastId);
+                if ("error" in res) {
+                  toast.error(`Failed: ${res.error}`);
+                } else {
+                  setDepositData(res);
+                }
+              }}
             >
-              Withdraw
+              Deposit
             </button>
-          )}
+            {balanceData.balance > 0 && (
+              <button
+                class={buttonBlueStyle}
+                onClick={() =>
+                  toast(
+                    "Please email support@aliceandbot.com to withdraw your funds.",
+                  )}
+              >
+                Withdraw
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {depositData && (
+        <div class="flex flex-col gap-2 mb-4 p-4 bg-black/5 dark:bg-white/5 rounded-lg">
+          <div class="font-semibold text-lg">Deposit Bitcoin</div>
+          <div class="text-sm">
+            Send exactly <b>{depositData.btcAmount} BTC</b>{" "}
+            (${depositData.usdAmount}) to the following address:
+          </div>
+          <div class="font-mono text-sm break-all bg-white dark:bg-black p-2 rounded">
+            {depositData.address}
+          </div>
+          <img
+            src={depositData.qrUrl}
+            alt="Bitcoin QR Code"
+            class="w-48 h-48 mx-auto"
+          />
+          <button
+            class={buttonBlueStyle}
+            onClick={async () => {
+              const toastId = toast.loading("Checking payment...");
+              const res = await checkCryptoPaymentSigned({
+                paymentAddress: depositData.address,
+                credentials,
+              });
+              toast.dismiss(toastId);
+              if ("error" in res) {
+                toast.error(
+                  res.error === "not-paid"
+                    ? "Payment not found yet. We are checking automatically."
+                    : `Failed: ${res.error}`,
+                );
+              } else {
+                toast.success(res.message);
+                setDepositData(null);
+                fetchBalance();
+              }
+            }}
+          >
+            I've Paid (we check automatically)
+          </button>
+          <button
+            class="text-sm underline opacity-70"
+            onClick={() => setDepositData(null)}
+          >
+            Cancel
+          </button>
         </div>
       )}
 

@@ -114,6 +114,36 @@ export const backendApiSchema = {
       }),
     ]),
   ),
+  prepareCryptoPayment: authenticatedEndpoint(
+    z.object({ amount: z.number() }),
+    z.union([
+      z.object({
+        address: z.string(),
+        btcAmount: z.number(),
+        usdAmount: z.number(),
+        qrUrl: z.string(),
+      }),
+      z.object({
+        error: z.enum(["not-found", "invalid-auth", "missing-secret"]),
+      }),
+    ]),
+  ),
+  checkCryptoPayment: authenticatedEndpoint(
+    z.object({ paymentAddress: z.string() }),
+    z.union([
+      z.object({ success: z.literal(true), message: z.string() }),
+      z.object({
+        success: z.literal(false),
+        error: z.enum([
+          "not-found",
+          "invalid-auth",
+          "not-paid",
+          "already-claimed",
+          "missing-secret",
+        ]),
+      }),
+    ]),
+  ),
   conversationKey: endpoint({
     authRequired: false,
     input: z.object({
@@ -482,6 +512,49 @@ export const requestPayoutSigned = async (
       params.credentials,
       "requestPayout",
       { amount: params.amount, walletAddress: params.walletAddress },
+    ),
+  });
+
+export const prepareCryptoPaymentSigned = async (
+  params: { amount: number; credentials: Credentials },
+): Promise<
+  | {
+    address: string;
+    btcAmount: number;
+    usdAmount: number;
+    qrUrl: string;
+  }
+  | { error: "not-found" | "invalid-auth" | "missing-secret" }
+> =>
+  apiClient({
+    endpoint: "prepareCryptoPayment",
+    payload: await buildSignedRequest(
+      params.credentials,
+      "prepareCryptoPayment",
+      { amount: params.amount },
+    ),
+  });
+
+export const checkCryptoPaymentSigned = async (
+  params: { paymentAddress: string; credentials: Credentials },
+): Promise<
+  | { success: true; message: string }
+  | {
+    success: false;
+    error:
+      | "not-found"
+      | "invalid-auth"
+      | "not-paid"
+      | "already-claimed"
+      | "missing-secret";
+  }
+> =>
+  apiClient({
+    endpoint: "checkCryptoPayment",
+    payload: await buildSignedRequest(
+      params.credentials,
+      "checkCryptoPayment",
+      { paymentAddress: params.paymentAddress },
     ),
   });
 

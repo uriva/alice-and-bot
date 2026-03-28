@@ -1,25 +1,35 @@
 import { coerce } from "@uri/gamla";
 import webpush from "web-push";
-import type { WebhookUpdate } from "../../protocol/src/clientApi.ts";
+import type {
+  EncryptedMessage,
+  WebhookUpdate,
+} from "../../protocol/src/clientApi.ts";
 import { query, transact, tx } from "./db.ts";
 
 export const callWebhooks = async (
-  { messageId }: { messageId: string },
+  { messageId, conversationId, payload, timestamp }: {
+    messageId: string;
+    conversationId: string;
+    payload: EncryptedMessage;
+    timestamp: number;
+  },
 ) => {
-  const { messages } = await query({
-    messages: {
-      conversation: { participants: {} },
-      $: { where: { id: messageId } },
+  const { conversations } = await query({
+    conversations: {
+      participants: {},
+      $: { where: { id: conversationId } },
     },
   });
-  if (!messages.length) return {};
-  const message = messages[0];
-  const conversation = coerce(message.conversation);
-  const webhooks = conversation.participants.map(({ webhook }) => webhook);
+  if (!conversations.length) return {};
+  const conversation = conversations[0];
+  const webhooks = conversation.participants.map((p: { webhook?: string }) =>
+    p.webhook
+  );
+  console.log("callWebhooks: webhooks", webhooks);
   const update: WebhookUpdate = {
-    conversationId: conversation.id,
-    payload: message.payload,
-    timestamp: message.timestamp,
+    conversationId,
+    payload,
+    timestamp,
     messageId,
   };
   for (const webhook of webhooks) {
@@ -28,8 +38,8 @@ export const callWebhooks = async (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(update),
-    }).catch(() => {
-      console.error("Failed to call webhook", webhook);
+    }).catch((e) => {
+      console.error("Failed to call webhook", webhook, e);
     });
   }
   return {};
@@ -48,17 +58,20 @@ webpush.setVapidDetails(
 );
 
 export const sendPushToParticipants = async (
-  { messageId }: { messageId: string },
+  { messageId: _messageId, conversationId, timestamp }: {
+    messageId?: string;
+    conversationId: string;
+    timestamp: number;
+  },
 ) => {
-  const { messages } = await query({
-    messages: {
-      conversation: { participants: {} },
-      $: { where: { id: messageId } },
+  const { conversations } = await query({
+    conversations: {
+      participants: {},
+      $: { where: { id: conversationId } },
     },
   });
-  if (!messages.length) return {};
-  const message = messages[0];
-  const conversation = coerce<Conversation>(message.conversation);
+  if (!conversations.length) return {};
+  const conversation = coerce<Conversation>(conversations[0]);
   const participantKeys = conversation.participants.map((p) => p.publicSignKey);
   const { identities } = await query({
     identities: { $: { where: { publicSignKey: { $in: participantKeys } } } },
@@ -82,7 +95,7 @@ export const sendPushToParticipants = async (
     type: "message",
     conversationId: conversation.id,
     conversationTitle: conversation.title,
-    timestamp: message.timestamp,
+    timestamp,
   };
   for (
     const sub of pushSubscriptions.filter((s) =>

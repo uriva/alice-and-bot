@@ -15,7 +15,7 @@ const rules = {
       view: "true",
       create: "true",
       update: "true",
-      delete: "true",
+      delete: "false",
     },
   },
   accounts: {
