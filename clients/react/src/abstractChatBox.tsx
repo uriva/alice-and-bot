@@ -2386,16 +2386,24 @@ export const AbstractChatBox = (
     : systemDarkMode;
 
   const allMessages = useMemo(() => {
-    if (optimisticMessages.length === 0) return messages;
+    if (empty(optimisticMessages)) return messages;
     const realTexts = new Set(
       messages.filter((m) => m.authorId === userId).map((m) => m.text),
     );
     const remaining = optimisticMessages.filter((o) => !realTexts.has(o.text));
-    if (remaining.length < optimisticMessages.length) {
-      setTimeout(() => setOptimisticMessages(remaining), 0);
-    }
-    return remaining.length === 0 ? messages : [...messages, ...remaining];
+    return empty(remaining) ? messages : [...messages, ...remaining];
   }, [messages, optimisticMessages, userId]);
+
+  useEffect(() => {
+    if (empty(optimisticMessages)) return;
+    const realTexts = new Set(
+      messages.filter((m) => m.authorId === userId).map((m) => m.text),
+    );
+    setOptimisticMessages((prev) => {
+      const remaining = prev.filter((o) => !realTexts.has(o.text));
+      return remaining.length === prev.length ? prev : remaining;
+    });
+  }, [messages, optimisticMessages.length, userId]);
 
   // Clear sending indicator when new message arrives
   useEffect(() => {

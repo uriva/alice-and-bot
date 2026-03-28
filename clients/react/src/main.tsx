@@ -264,7 +264,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
   };
   const uiMessages = messages.filter(isTextOrEdit);
   const messageElementIds = new Set(
-    messages
+    uiMessages
       .filter((m): m is DecipheredMessage & { elementId: string } =>
         "elementId" in m
       )
@@ -292,7 +292,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
   const standaloneSpinners: ActiveSpinner[] = uiElements
     .filter((el: { elementId: string; type: string; active?: boolean }) =>
       el.type === "spinner" &&
-      !messageElementIds.has(el.elementId)
+      !messageElementIds.has(el.elementId) && el.active !== false
     )
     .map((
       el: {
@@ -310,7 +310,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
     }));
   const standaloneStreams: ActiveStream[] = ephemeralStreams
     .filter((el: { elementId: string; active?: boolean }) =>
-      !messageElementIds.has(el.elementId)
+      !messageElementIds.has(el.elementId) && el.active !== false
     )
     .map((
       el: {
