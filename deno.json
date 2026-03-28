@@ -49,15 +49,20 @@
     "web-push": "npm:web-push@3.6.7",
     "zod": "npm:zod@3.25.57"
   },
-  "unstable": ["cron", "kv"],
+  "unstable": [
+    "cron",
+    "kv"
+  ],
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "types": ["./landing/src/vite-env.d.ts"]
+    "types": [
+      "./landing/src/vite-env.d.ts"
+    ]
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.237",
+  "version": "0.0.238",
   "exports": "./mod.ts",
   "deploy": {
     "org": "uriva",
