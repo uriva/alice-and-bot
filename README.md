@@ -81,6 +81,7 @@ if ("error" in other) throw new Error("not found");
 const result = await createConversation(
   [credentials.publicSignKey, other.publicSignKey],
   "conversation title",
+  credentials,
 );
 if ("error" in result) throw new Error(result.error);
 
@@ -91,6 +92,20 @@ const conversationId = result.conversationId;
 individually for each participant's RSA public key, and stores it. Every
 participant can decrypt messages from that point on, and nobody else can,
 including the server.
+
+### Cold Outreach Cost Model
+
+To prevent spam and allow bot developers to monetize, users can set a `priceTag`
+(in USD cents) on their profile. When you call `createConversation` to start a
+chat with someone who has a price tag:
+
+1. The cost is deducted from your balance.
+2. The cost is credited to the recipient's balance.
+3. Subsequent messages in this conversation are completely free.
+
+If your balance is insufficient, `createConversation` will return an error
+indicating the required cost. Balances are tracked safely via a secure backend
+ledger and can be funded using crypto webhooks.
 
 ### Sending messages
 
@@ -302,7 +317,22 @@ React hook that subscribes to profile updates:
 ```ts
 useIdentityProfile(
   publicSignKey: string
-): { name?: string; avatar?: string; alias?: string } | null
+): { name?: string; avatar?: string; alias?: string; priceTag?: number } | null
+```
+
+### Economy functions
+
+```ts
+setPriceTagSigned({
+  priceTag: number,
+  credentials: Credentials
+}): Promise<{ success: true } | { error: string }>
+```
+
+```ts
+getBalanceAndTransactionsSigned({
+  credentials: Credentials
+}): Promise<{ balance: number; transactions: any[] } | { error: string }>
 ```
 
 ### Conversation functions
@@ -455,9 +485,11 @@ const useConversation = (
         setId(convos[0].id);
         return;
       }
-      createConversation(participants, "my-chat").then((result) => {
-        if ("conversationId" in result) setId(result.conversationId);
-      });
+      createConversation(participants, "my-chat", credentials).then(
+        (result) => {
+          if ("conversationId" in result) setId(result.conversationId);
+        },
+      );
     });
   }, [credentials?.publicSignKey, botKey]);
   return id;

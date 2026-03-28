@@ -1,0 +1,8 @@
+7:17:01 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+
+  VITE v7.3.1  ready in 156 ms
+
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: http://192.168.0.234:5174/
+  ➜  Network: http://100.66.224.80:5174/
+  ➜  Network: http://10.0.3.1:5174/

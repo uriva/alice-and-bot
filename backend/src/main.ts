@@ -1,3 +1,4 @@
+// deno-lint-ignore-file
 import { id } from "@instantdb/admin";
 import { apiHandler } from "typed-api";
 import type { PushSubscriptionJSON } from "../../instant.schema.ts";
@@ -14,6 +15,7 @@ import {
 } from "./notificationService.ts";
 import { generateUploadUrl } from "./storage.ts";
 import { handleUiUpdate } from "./uiUpdate.ts";
+import { handleCryptoPayment } from "./cryptoPayment.ts";
 
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
@@ -273,7 +275,7 @@ const endpoints: BackendApiImpl = {
         return { success: false, error: "invalid-alias" };
       }
       const { identities: identityMatches } = await query({
-        identities: { $: { where: { publicSignKey } } },
+        identities: { wallet: {}, $: { where: { publicSignKey } } },
       });
       if (identityMatches.length === 0) {
         return { success: false, error: "not-found" };
@@ -304,7 +306,7 @@ const endpoints: BackendApiImpl = {
         return { success: false, error: "invalid-name" };
       }
       const { identities: identityMatches } = await query({
-        identities: { $: { where: { publicSignKey } } },
+        identities: { wallet: {}, $: { where: { publicSignKey } } },
       });
       if (identityMatches.length === 0) {
         return { success: false, error: "not-found" };
@@ -313,6 +315,97 @@ const endpoints: BackendApiImpl = {
       await transact(
         tx.identities[identityMatches[0].id].update({ name: trimmed }),
       );
+      return { success: true };
+    },
+    setPriceTag: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authOk = await verifyAuthToken({
+        action: "setPriceTag",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) return { success: false, error: "invalid-auth" };
+      const { priceTag } = payload;
+      const { identities: identityMatches } = await query({
+        identities: { wallet: {}, $: { where: { publicSignKey } } },
+      });
+      if (identityMatches.length === 0) {
+        return { success: false, error: "not-found" };
+      }
+      await transact(
+        tx.identities[identityMatches[0].id].update({ priceTag }),
+      );
+      return { success: true };
+    },
+    getBalanceAndTransactions: async (
+      { payload, publicSignKey, nonce, authToken },
+    ) => {
+      const authOk = await verifyAuthToken({
+        action: "getBalanceAndTransactions",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) return { error: "invalid-auth" };
+      const { identities: identityMatches } = await query({
+        identities: {
+          wallet: {},
+          $: { where: { publicSignKey } },
+          receivedTransactions: {},
+          sentTransactions: {},
+        },
+      });
+      if (identityMatches.length === 0) {
+        return { error: "not-found" };
+      }
+      const identity = identityMatches[0];
+      const transactions = [
+        ...(identity.receivedTransactions || []),
+        ...(identity.sentTransactions || []),
+      ].sort((a: any, b: any) => b.timestamp - a.timestamp);
+      return {
+        balance: identity.wallet?.balance || 0,
+        transactions,
+      };
+    },
+    requestPayout: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authOk = await verifyAuthToken({
+        action: "requestPayout",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) return { success: false, error: "invalid-auth" };
+      const { amount, walletAddress } = payload;
+      const { identities: identityMatches } = await query({
+        identities: { wallet: {}, $: { where: { publicSignKey } } },
+      });
+      if (identityMatches.length === 0) {
+        return { success: false, error: "not-found" };
+      }
+
+      const identity = identityMatches[0];
+      const currentBalance = identity.wallet?.balance || 0;
+
+      if (currentBalance < amount) {
+        return { success: false, error: "insufficient-balance" };
+      }
+
+      await transact([
+        tx.wallets[identity.wallet?.id || id()].update({
+          balance: currentBalance - amount,
+        }).link({ identity: identity.id }),
+        tx.transactions[id()].update({
+          amount,
+          type: "payout",
+          timestamp: Date.now(),
+          status: "pending",
+          walletAddress,
+        }).link({ sender: identity.id }),
+      ]);
       return { success: true };
     },
     renameConversation: async (
@@ -580,6 +673,16 @@ Deno.serve(async (req: Request) => {
       return jsonCorsResponse(
         await handleUiUpdate({ ...body, elementId }),
       );
+    }
+    if (url.pathname === "/webhook/crypto" && req.method === "POST") {
+      let body;
+      try {
+        body = await req.json();
+      } catch (e) {
+        body = Object.fromEntries((await req.formData()).entries());
+      }
+      await handleCryptoPayment(body as any);
+      return jsonCorsResponse({ success: true });
     }
     return jsonCorsResponse(
       await apiHandler(backendApiSchema, endpoints, await req.json()),

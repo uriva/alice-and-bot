@@ -1,10 +1,65 @@
+// deno-lint-ignore-file no-explicit-any
+import { instantAppId } from "../protocol/src/clientApi.ts";
+
+if (typeof globalThis.window === "undefined") {
+  (globalThis as any).window = {
+    location: { search: "" },
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    setTimeout,
+    clearTimeout,
+  };
+}
+if (typeof (globalThis as any).indexedDB === "undefined") {
+  (globalThis as any).indexedDB = {
+    open: () => {
+      const req: any = {};
+      setTimeout(() => {
+        if (req.onsuccess) {
+          req.onsuccess({
+            target: {
+              result: {
+                transaction: () => ({
+                  objectStore: () => ({
+                    get: () => {
+                      const r: any = {};
+                      setTimeout(() => r.onsuccess?.(), 0);
+                      return r;
+                    },
+                    put: () => {
+                      const r: any = {};
+                      setTimeout(() => r.onsuccess?.(), 0);
+                      return r;
+                    },
+                  }),
+                }),
+              },
+            },
+          });
+        }
+      }, 0);
+      return req;
+    },
+  };
+}
+
+if (typeof navigator === "undefined" || !navigator.onLine) {
+  Object.defineProperty(globalThis, "navigator", {
+    value: { onLine: true },
+    writable: true,
+  });
+}
+
 import { init as coreInit } from "@instantdb/core";
 import { query } from "./src/db.ts";
-import { instantAppId } from "../protocol/src/clientApi.ts";
 
 const coreDb = coreInit({ appId: instantAppId });
 
 async function main() {
+  coreDb.subscribeConnectionStatus((status) => {
+    console.log("Publisher connection status:", status);
+  });
+
   const { conversations } = await query({
     conversations: {
       $: { order: { updatedAt: "desc" }, limit: 1 },
@@ -34,7 +89,7 @@ async function main() {
   let currentText = "";
 
   // Need to wait briefly for coreDb connection?
-  await new Promise((r) => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 2000));
 
   for (let j = 0; j < 5; j++) {
     for (let i = 0; i < textChunks.length; i++) {

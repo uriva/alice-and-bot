@@ -114,6 +114,7 @@ export const Chat: (
 export const createConversation: (
   publicSignKeys: string[],
   conversationTitle: string,
+  credentials: Credentials,
 ) => Promise<{ conversationId: string } | { error: string }> =
   createConversationNoDb(accessAdminDb);
 

@@ -35,6 +35,17 @@ const _schema = i.schema({
       webhook: i.string().indexed().optional(),
       alias: i.string().unique().indexed().optional(),
       lastActiveAt: i.number().optional(),
+      priceTag: i.number().optional(),
+    }),
+    wallets: i.entity({
+      balance: i.number().optional(),
+    }),
+    transactions: i.entity({
+      amount: i.number(),
+      type: i.string(),
+      timestamp: i.number().indexed(),
+      status: i.string().optional(),
+      walletAddress: i.string().optional(),
     }),
     pushSubscriptions: i.entity({
       endpoint: i.string().unique().indexed(),
@@ -130,6 +141,18 @@ const _schema = i.schema({
         onDelete: "cascade",
       },
       reverse: { on: "conversations", label: "uiElements", has: "many" },
+    },
+    identityWallet: {
+      forward: { on: "identities", label: "wallet", has: "one" },
+      reverse: { on: "wallets", label: "identity", has: "one" },
+    },
+    transactionSender: {
+      forward: { on: "identities", label: "sentTransactions", has: "many" },
+      reverse: { on: "transactions", label: "sender", has: "one" },
+    },
+    transactionReceiver: {
+      forward: { on: "identities", label: "receivedTransactions", has: "many" },
+      reverse: { on: "transactions", label: "receiver", has: "one" },
     },
   },
   rooms: {

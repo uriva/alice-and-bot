@@ -1,6 +1,4 @@
 // deno-lint-ignore-file no-explicit-any
-import { instantAppId } from "./protocol/src/clientApi.ts";
-
 if (typeof globalThis.window === "undefined") {
   (globalThis as any).window = {
     location: { search: "" },
@@ -10,6 +8,7 @@ if (typeof globalThis.window === "undefined") {
     clearTimeout,
   };
 }
+
 if (typeof (globalThis as any).indexedDB === "undefined") {
   (globalThis as any).indexedDB = {
     open: () => {
@@ -43,38 +42,9 @@ if (typeof (globalThis as any).indexedDB === "undefined") {
   };
 }
 
-if (typeof navigator === "undefined" || !navigator.onLine) {
+if (typeof navigator === "undefined" || !(navigator as any).onLine) {
   Object.defineProperty(globalThis, "navigator", {
     value: { onLine: true },
     writable: true,
   });
 }
-
-import { init } from "@instantdb/core";
-import { query as adminQuery } from "./backend/src/db.ts";
-
-const db = init({ appId: instantAppId });
-
-async function main() {
-  const { conversations } = await adminQuery({
-    conversations: {
-      $: { order: { updatedAt: "desc" }, limit: 1 },
-    },
-  });
-
-  const conversationId = conversations[0].id;
-  console.log("Listening for streams on:", conversationId);
-
-  db.subscribeConnectionStatus((status) => {
-    console.log("Connection status:", status);
-  });
-
-  const room = db.joinRoom("conversations", conversationId);
-  room.subscribeTopic("stream", (event: unknown, _peer: unknown) => {
-    console.log("Received event via room.subscribeTopic:", event);
-  });
-
-  console.log("Subscribed. Waiting for events...");
-}
-
-main();

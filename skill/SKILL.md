@@ -172,7 +172,7 @@ Maximum text length: 10,000 characters.
 
 ### Conversations
 
-#### `createConversation(publicSignKeys, title)`
+#### `createConversation(publicSignKeys, title, credentials)`
 
 Create a conversation between participants.
 
@@ -181,6 +181,7 @@ import { createConversation } from "@alice-and-bot/core";
 const result = await createConversation(
   [botCredentials.publicSignKey, userPublicSignKey],
   "Support Chat",
+  botCredentials,
 );
 // { conversationId: "..." } or { error: "..." }
 ```

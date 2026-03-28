@@ -1,0 +1,9 @@
+7:17:10 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+Port 5174 is in use, trying another one...
+
+  VITE v7.3.1  ready in 150 ms
+
+  ➜  Local:   http://localhost:5175/
+  ➜  Network: http://192.168.0.234:5175/
+  ➜  Network: http://100.66.224.80:5175/
+  ➜  Network: http://10.0.3.1:5175/

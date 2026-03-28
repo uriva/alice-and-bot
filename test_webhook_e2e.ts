@@ -42,7 +42,6 @@ if (typeof (globalThis as any).indexedDB === "undefined") {
     },
   };
 }
-
 if (typeof navigator === "undefined" || !navigator.onLine) {
   Object.defineProperty(globalThis, "navigator", {
     value: { onLine: true },
@@ -57,24 +56,57 @@ const db = init({ appId: instantAppId });
 
 async function main() {
   const { conversations } = await adminQuery({
-    conversations: {
-      $: { order: { updatedAt: "desc" }, limit: 1 },
-    },
+    conversations: { $: { order: { updatedAt: "desc" }, limit: 1 } },
   });
+
+  if (!conversations.length) {
+    console.log("No conversations found");
+    return;
+  }
 
   const conversationId = conversations[0].id;
-  console.log("Listening for streams on:", conversationId);
+  const elementId = "webhook-test-" + Date.now();
 
-  db.subscribeConnectionStatus((status) => {
-    console.log("Connection status:", status);
-  });
+  console.log("Listening for streams on conversation:", conversationId);
 
   const room = db.joinRoom("conversations", conversationId);
-  room.subscribeTopic("stream", (event: unknown, _peer: unknown) => {
-    console.log("Received event via room.subscribeTopic:", event);
+
+  let receivedCount = 0;
+  room.subscribeTopic("stream", (event: any) => {
+    if (event.elementId === elementId) {
+      console.log("Received via webhook:", event.text);
+      receivedCount++;
+      if (receivedCount === 3) {
+        console.log("Success! All webhook chunks received via InstantDB.");
+        Deno.exit(0);
+      }
+    }
   });
 
-  console.log("Subscribed. Waiting for events...");
+  console.log("Subscribed. Waiting for connection...");
+  await new Promise((r) => setTimeout(r, 2000)); // give some time to connect
+
+  console.log("Triggering webhook to start streaming...");
+  const chunks = ["Hi", " from", " webhook!"];
+  let currentText = "";
+
+  for (const chunk of chunks) {
+    currentText += chunk;
+    const res = await fetch("http://localhost:8000/ui-update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        elementId,
+        conversationId,
+        type: "stream",
+        text: currentText,
+        active: true,
+        authorId: "test-bot",
+      }),
+    });
+    console.log("Webhook response:", await res.json());
+    await new Promise((r) => setTimeout(r, 500));
+  }
 }
 
 main();

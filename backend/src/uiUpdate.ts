@@ -1,9 +1,20 @@
+// deno-lint-ignore-file no-explicit-any
+import "./instantCorePolyfill.ts";
+
 import { id } from "@instantdb/admin";
 import { init as coreInit } from "@instantdb/core";
 import { query, transact, tx } from "./db.ts";
 import { instantAppId } from "../../protocol/src/clientApi.ts";
 
-const coreDb = coreInit({ appId: instantAppId });
+class DummyStorage {
+  constructor() {}
+  getItem(_k: string) {
+    return null;
+  }
+  setItem(_k: string, _v: any) {}
+}
+
+const coreDb = coreInit({ appId: instantAppId }, DummyStorage);
 
 type UiUpdateInput = {
   elementId: string;

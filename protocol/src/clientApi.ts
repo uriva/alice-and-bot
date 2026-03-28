@@ -395,6 +395,7 @@ export const createConversation = (
 async (
   publicSignKeys: string[],
   conversationTitle: string,
+  credentials: Credentials,
 ) => {
   const { identities } = await db().query({
     identities: {
@@ -423,13 +424,13 @@ async (
       ] as const
     ),
     Object.fromEntries<EncryptedConversationKey>,
-    (publicSignKeyToEncryptedSymmetricKey) =>
+    async (publicSignKeyToEncryptedSymmetricKey) =>
       apiClient({
         endpoint: "createConversation",
-        payload: {
+        payload: await buildSignedRequest(credentials, "createConversation", {
           publicSignKeyToEncryptedSymmetricKey,
           title: conversationTitle,
-        },
+        }),
       }),
   )(publicSignKeys);
 };
@@ -668,3 +669,35 @@ export const uiUpdateUrl: string = `${serverBaseUrl}/ui-update`;
 
 export const buildUiUpdateUrl = (elementId: string): string =>
   `${uiUpdateUrl}?elementId=${encodeURIComponent(elementId)}`;
+
+export const setPriceTagSigned = async ({
+  priceTag,
+  credentials,
+}: {
+  priceTag: number;
+  credentials: Credentials;
+}) =>
+  apiClient({
+    endpoint: "setPriceTag",
+    payload: await buildSignedRequest(credentials, "setPriceTag", {
+      priceTag,
+    }),
+  });
+
+export const getBalanceAndTransactionsSigned = async (
+  credentials: Credentials,
+) =>
+  apiClient({
+    endpoint: "getBalanceAndTransactions",
+    payload: await buildSignedRequest(
+      credentials,
+      "getBalanceAndTransactions",
+      {},
+    ),
+  });
+
+export const getProfile = (publicSignKey: string) =>
+  apiClient({
+    endpoint: "getProfile",
+    payload: { publicSignKey },
+  });

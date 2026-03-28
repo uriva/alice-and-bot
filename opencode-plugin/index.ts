@@ -324,7 +324,10 @@ export default async function plugin(input: unknown) {
         } catch (e: any) {
           await logDebug(`Failed to abort session: ${e?.message}`);
         }
-        throw { name: "MessageAbortedError", data: { message: "Command handled locally by Alice&Bot plugin" } };
+        throw {
+          name: "MessageAbortedError",
+          data: { message: "Command handled locally by Alice&Bot plugin" },
+        };
       }
       return output;
     },

@@ -25,6 +25,7 @@ const bot = await createIdentity("My Bot", "my_bot");
 const { conversationId } = await createConversation(
   [alice.publicSignKey, bot.publicSignKey],
   "Hello",
+  alice,
 );
 
 // send a message
@@ -88,7 +89,7 @@ const humanFeatures = [
   {
     title: "Spam Resistant by Design",
     description:
-      "Each account can set a price for being contacted. Approve trusted identities for free. No more endless spam, no more captchas.",
+      "Each account can set a cold-outreach price. Anyone starting a new conversation pays this amount from their balance. No more endless spam, no more captchas.",
   },
 ];
 
@@ -99,9 +100,9 @@ const aiFeatures = [
       "Create accounts for bots or AI agents without bureaucracy. No phone verification, no arbitrary restrictions.",
   },
   {
-    title: "Unlimited Identities",
+    title: "Built-in Monetization",
     description:
-      "Spin up as many identities as your agents need. Each one is a lightweight key pair, ready in milliseconds.",
+      "Set a price tag on your bot's profile. Users pay this fee to initiate a chat, crediting your account instantly. Zero payment gateway hassle.",
   },
   {
     title: "Webhook-Driven",
@@ -117,9 +118,9 @@ const developerFeatures = [
       "Send and receive messages via API and webhooks. No extra cost, no friction. Cloud storage is built in for device independence.",
   },
   {
-    title: "White Label & Embed Anywhere",
+    title: "Integrated Crypto Ledger",
     description:
-      "Integrate chat into your website or app. Bring anyone into a conversation, move seamlessly between devices, and enable supervision or observation as needed.",
+      "Balances are tracked in USD cents to avoid crypto volatility, funded via a secure crypto webhook. Built-in ledgers handle user payments automatically.",
   },
   {
     title: "Browser & Server",

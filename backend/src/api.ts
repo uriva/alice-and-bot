@@ -78,6 +78,42 @@ export const backendApiSchema = {
       }),
     ]),
   ),
+  setPriceTag: authenticatedEndpoint(
+    z.object({ priceTag: z.number().optional() }),
+    z.union([
+      z.object({ success: z.literal(true) }),
+      z.object({
+        success: z.literal(false),
+        error: z.enum(["not-found", "invalid-auth"]),
+      }),
+    ]),
+  ),
+  getBalanceAndTransactions: authenticatedEndpoint(
+    z.object({}),
+    z.union([
+      z.object({
+        balance: z.number(),
+        transactions: z.array(z.object({
+          amount: z.number(),
+          type: z.string(),
+          timestamp: z.number(),
+          status: z.string().optional(),
+          walletAddress: z.string().optional(),
+        })),
+      }),
+      z.object({ error: z.enum(["not-found", "invalid-auth"]) }),
+    ]),
+  ),
+  requestPayout: authenticatedEndpoint(
+    z.object({ amount: z.number(), walletAddress: z.string() }),
+    z.union([
+      z.object({ success: z.literal(true) }),
+      z.object({
+        success: z.literal(false),
+        error: z.enum(["not-found", "invalid-auth", "insufficient-balance"]),
+      }),
+    ]),
+  ),
   conversationKey: endpoint({
     authRequired: false,
     input: z.object({
@@ -89,19 +125,23 @@ export const backendApiSchema = {
       z.object({ error: z.literal("no-such-key") }),
     ]),
   }),
-  createConversation: endpoint({
-    authRequired: false,
-    input: z.object({
+  createConversation: authenticatedEndpoint(
+    z.object({
       publicSignKeyToEncryptedSymmetricKey: z.record(z.string(), z.string()),
       title: z.string(),
     }),
-    output: z.union([
+    z.union([
       z.object({ conversationId: z.string() }),
       z.object({
-        error: z.enum(["invalid-participants", "must-own-an-identity"]),
+        error: z.enum([
+          "invalid-participants",
+          "must-own-an-identity",
+          "insufficient-balance",
+          "invalid-auth",
+        ]),
       }),
     ]),
-  }),
+  ),
   createAccount: endpoint({
     authRequired: false,
     input: z.object({}),
@@ -173,6 +213,7 @@ export const backendApiSchema = {
             name: z.string().optional(),
             avatar: z.string().optional(),
             alias: z.string().optional(),
+            priceTag: z.number().optional(),
           }),
           z.null(),
         ]),
@@ -387,10 +428,74 @@ export const unregisterPushSubscriptionSigned = async (
     ),
   });
 
+export const setPriceTagSigned = async (
+  params: { priceTag?: number; credentials: Credentials },
+): Promise<
+  | { success: true }
+  | { success: false; error: "not-found" | "invalid-auth" }
+> =>
+  apiClient({
+    endpoint: "setPriceTag",
+    payload: await buildSignedRequest(
+      params.credentials,
+      "setPriceTag",
+      { priceTag: params.priceTag },
+    ),
+  });
+
+export const getBalanceAndTransactionsSigned = async (
+  credentials: Credentials,
+): Promise<
+  | {
+    balance: number;
+    transactions: {
+      amount: number;
+      type: string;
+      timestamp: number;
+      status?: string;
+      walletAddress?: string;
+    }[];
+  }
+  | { error: "not-found" | "invalid-auth" }
+> =>
+  apiClient({
+    endpoint: "getBalanceAndTransactions",
+    payload: await buildSignedRequest(
+      credentials,
+      "getBalanceAndTransactions",
+      {},
+    ),
+  });
+
+export const requestPayoutSigned = async (
+  params: { amount: number; walletAddress: string; credentials: Credentials },
+): Promise<
+  | { success: true }
+  | {
+    success: false;
+    error: "not-found" | "invalid-auth" | "insufficient-balance";
+  }
+> =>
+  apiClient({
+    endpoint: "requestPayout",
+    payload: await buildSignedRequest(
+      params.credentials,
+      "requestPayout",
+      { amount: params.amount, walletAddress: params.walletAddress },
+    ),
+  });
+
 export const getProfile = (
   publicSignKey: string,
 ): Promise<
-  { profile: { name?: string; avatar?: string; alias?: string } | null }
+  {
+    profile: {
+      name?: string;
+      avatar?: string;
+      alias?: string;
+      priceTag?: number;
+    } | null;
+  }
 > => apiClient({ endpoint: "getProfile", payload: { publicSignKey } });
 
 export const getConversations = (

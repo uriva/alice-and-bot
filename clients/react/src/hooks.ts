@@ -150,11 +150,13 @@ export const useGetOrCreateConversation = (
       setConversation(existingConversation.id);
       return;
     }
-    createConversation(adminDb)(fixedParticipants, "Chat").then((result) => {
-      if ("error" in result) {
-        console.error("Error creating conversation:", result.error);
-      }
-    });
+    createConversation(adminDb)(fixedParticipants, "Chat", credentials).then(
+      (result) => {
+        if ("error" in result) {
+          console.error("Error creating conversation:", result.error);
+        }
+      },
+    );
   }, [conversation, conversations, fixedParticipants]);
   initialMessageLogic(
     db(),
@@ -229,8 +231,8 @@ export const useIdentityProfile =
     if (error) console.error("Error fetching identity profile", error);
     const identity = data?.identities?.[0];
     if (!identity) return null;
-    const { name, avatar, alias } = identity;
-    return { name, avatar, alias };
+    const { name, avatar, alias, priceTag } = identity;
+    return { name, avatar, alias, priceTag };
   };
 
 export const useConversationKey =
@@ -380,6 +382,7 @@ export const useEphemeralStreams = (
   }, [conversationId]);
 
   const room = db.room("conversations", conversationId);
+  room.useSyncPresence({});
   // @ts-expect-error Instant typing is restrictive for topics when no explicit shape is provided
   room.useTopicEffect("stream", (event: EphemeralStreamEvent) => {
     console.log("Received stream event:", event);
