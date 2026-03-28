@@ -352,7 +352,14 @@ const decryptedPayloadToMessage = (
       attachments: decryptedPayload.attachments,
     };
   }
-  return { ...base, type: "text", attachments: decryptedPayload.attachments };
+  return {
+    ...base,
+    type: "text",
+    attachments: decryptedPayload.attachments,
+    elementId: "elementId" in decryptedPayload
+      ? decryptedPayload.elementId
+      : undefined,
+  };
 };
 
 const decryptMessagePayload = (conversationSymmetricKey: string) =>

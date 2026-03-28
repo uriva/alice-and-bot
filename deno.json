@@ -62,7 +62,7 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.239",
+  "version": "0.0.240",
   "exports": "./mod.ts",
   "deploy": {
     "org": "uriva",
