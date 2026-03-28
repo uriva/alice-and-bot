@@ -396,6 +396,19 @@ export const useEphemeralStreams = (
     setStreams((prev) => {
       return { ...prev, [payload.elementId]: payload };
     });
+
+    if (payload.active === false) {
+      setTimeout(() => {
+        setStreams((prev) => {
+          if (prev[payload.elementId]?.active === false) {
+            const next = { ...prev };
+            delete next[payload.elementId];
+            return next;
+          }
+          return prev;
+        });
+      }, 5000);
+    }
   });
 
   return Object.values(streams);

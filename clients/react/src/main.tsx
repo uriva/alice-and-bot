@@ -309,8 +309,9 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       active: el.active !== false,
     }));
   const standaloneStreams: ActiveStream[] = ephemeralStreams
-    .filter((el: { elementId: string; active?: boolean }) =>
-      !messageElementIds.has(el.elementId) && el.active !== false
+    .filter((el: { elementId: string; active?: boolean; text?: string }) =>
+      !messageElementIds.has(el.elementId) &&
+      (el.active !== false || (el.text && el.text.trim() !== ""))
     )
     .map((
       el: {
