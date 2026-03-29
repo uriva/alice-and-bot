@@ -214,10 +214,10 @@ export default async function plugin(input: unknown) {
     });
   };
 
-  const startTunnel = async () => {
+  const startTunnel = async (port: number) => {
     return new Promise<void>((resolve) => {
       const ssh = spawn("ssh", [
-        "-R", "80:localhost:3001",
+        "-R", `80:localhost:${port}`,
         "serveo.net",
         "-o", "StrictHostKeyChecking=no"
       ]);
@@ -242,7 +242,7 @@ export default async function plugin(input: unknown) {
 
       ssh.on("close", () => {
         logDebug("Serveo tunnel closed, restarting in 5 seconds...");
-        setTimeout(startTunnel, 5000);
+        setTimeout(() => startTunnel(port), 5000);
       });
     });
   };
@@ -252,16 +252,18 @@ export default async function plugin(input: unknown) {
     server.on("error", (e: any) => {
       if (e.code === "EADDRINUSE") {
         logDebug(
-          "Port 3001 is already in use (possibly from a previous plugin load). Skipping new server creation.",
+          "Port is already in use (possibly from a previous plugin load). Skipping new server creation.",
         );
       } else {
         logDebug(`Server error: ${e.message}`);
       }
     });
 
-    server.listen(3001, async () => {
+    server.listen(0, async () => {
+      const address = server.address();
+      const port = typeof address === "string" ? 0 : address?.port || 0;
       (globalThis as any).__aliceServer = server;
-      await startTunnel();
+      await startTunnel(port);
     });
   } else {
     // If the server was already running on the global object, we just reassign its request listeners
@@ -270,7 +272,7 @@ export default async function plugin(input: unknown) {
     server.removeAllListeners("request");
     server.on("request", requestHandler);
     await logDebug("Reusing existing background server from globalThis");
-    // We do not call startTunnel again because it might already be tunneling to port 3001
+    // We do not call startTunnel again because it might already be tunneling to the assigned port
   }
 
   const client = (input as any).client;

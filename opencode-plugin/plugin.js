@@ -24254,11 +24254,11 @@ ${e?.stack}`);
       res.end("ok");
     });
   };
-  const startTunnel = async () => {
+  const startTunnel = async (port) => {
     return new Promise((resolve) => {
       const ssh = spawn2("ssh", [
         "-R",
-        "80:localhost:3001",
+        `80:localhost:${port}`,
         "serveo.net",
         "-o",
         "StrictHostKeyChecking=no"
@@ -24279,7 +24279,7 @@ ${e?.stack}`);
       ssh.stderr.on("data", (data) => {});
       ssh.on("close", () => {
         logDebug("Serveo tunnel closed, restarting in 5 seconds...");
-        setTimeout(startTunnel, 5000);
+        setTimeout(() => startTunnel(port), 5000);
       });
     });
   };
@@ -24287,14 +24287,16 @@ ${e?.stack}`);
     const server = http2.createServer(requestHandler);
     server.on("error", (e) => {
       if (e.code === "EADDRINUSE") {
-        logDebug("Port 3001 is already in use (possibly from a previous plugin load). Skipping new server creation.");
+        logDebug("Port is already in use (possibly from a previous plugin load). Skipping new server creation.");
       } else {
         logDebug(`Server error: ${e.message}`);
       }
     });
-    server.listen(3001, async () => {
+    server.listen(0, async () => {
+      const address = server.address();
+      const port = typeof address === "string" ? 0 : address?.port || 0;
       globalThis.__aliceServer = server;
-      await startTunnel();
+      await startTunnel(port);
     });
   } else {
     const server = globalThis.__aliceServer;
