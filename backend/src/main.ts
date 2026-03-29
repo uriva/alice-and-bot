@@ -748,7 +748,20 @@ const endpoints: BackendApiImpl = {
 };
 
 
+
 const relaySockets = new Map<string, WebSocket[]>();
+
+const bc = new BroadcastChannel("relay_ws");
+bc.onmessage = (event) => {
+  const { token, body } = event.data;
+  const sockets = relaySockets.get(token) || [];
+  for (const socket of sockets) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(body));
+    }
+  }
+};
+
 
 const RELAY_MSG_TTL_MS = 3600_000;
 
