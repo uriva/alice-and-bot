@@ -750,38 +750,20 @@ const endpoints: BackendApiImpl = {
 
 const relaySockets = new Map<string, WebSocket[]>();
 
-const bc = new BroadcastChannel("relay_ws");
-bc.onmessage = (event) => {
-  const { token, body } = event.data;
-  const sockets = relaySockets.get(token) || [];
-  for (const socket of sockets) {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(body));
-    }
-  }
-};
-
 const RELAY_MSG_TTL_MS = 3600_000;
 
 const relayStore = async (token: string, req: Request) => {
   const body = await req.json();
 
-  // Broadcast to other Deno Deploy isolates
-  bc.postMessage({ token, body });
-
-  const sockets = relaySockets.get(token) || [];
-  if (sockets.length > 0) {
-    for (const socket of sockets) {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify(body));
-      }
-    }
-    return { ok: true };
-  }
-
   await kv.set(["relay", token, crypto.randomUUID()], body, {
     expireIn: RELAY_MSG_TTL_MS,
   });
+
+  // Trigger cross-region kv.watch
+  await kv.set(["relay_channel", token], Date.now(), {
+    expireIn: RELAY_MSG_TTL_MS,
+  });
+
   return { ok: true };
 };
 
@@ -834,16 +816,36 @@ Deno.serve(async (req: Request) => {
         const { socket, response } = Deno.upgradeWebSocket(req);
 
         socket.onopen = () => {
-          const sockets = relaySockets.get(relay.token) || [];
-          sockets.push(socket);
-          relaySockets.set(relay.token, sockets);
+          const triggerDrain = async () => {
+            if (socket.readyState !== WebSocket.OPEN) return;
+            const pending = await relayDrain(relay!.token);
+            for (const msg of pending.messages) {
+              if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify(msg));
+              }
+            }
+          };
+
+          // Drain initially
+          triggerDrain();
+
+          // Watch for cross-region triggers
+          const stream = kv.watch([["relay_channel", relay.token]]);
+          (async () => {
+            let first = true;
+            for await (const _ of stream) {
+              if (socket.readyState !== WebSocket.OPEN) break;
+              if (first) {
+                first = false;
+                continue;
+              }
+              await triggerDrain();
+            }
+          })();
         };
 
         socket.onclose = () => {
-          const sockets = relaySockets.get(relay.token) || [];
-          const index = sockets.indexOf(socket);
-          if (index !== -1) sockets.splice(index, 1);
-          if (sockets.length === 0) relaySockets.delete(relay.token);
+          // cleanup if needed
         };
 
         return response;
