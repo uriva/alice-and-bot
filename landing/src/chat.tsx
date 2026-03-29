@@ -1150,8 +1150,8 @@ const LoggedInMessenger = (
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  width: "380px",
-                  flexShrink: 0,
+                  flex: "0 0 380px",
+                  overflow: "hidden",
                 }}
                 class="border-r border-gray-200 dark:border-gray-700"
               >
@@ -1217,7 +1217,7 @@ const LoggedInMessenger = (
               <div
                 style={{
                   display: "flex",
-                  flexGrow: 1,
+                  flex: "1 1 0",
                   flexDirection: "column",
                   minWidth: 0,
                   overflow: "hidden",
