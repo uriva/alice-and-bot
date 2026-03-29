@@ -14,7 +14,7 @@ import {
 } from "../..//clients/react/src/hooks.ts";
 import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import { ChatAvatar } from "../../clients/react/src/abstractChatBox.tsx";
-import { Spinner, stringToColor } from "../../clients/react/src/design.tsx";
+import { Spinner, ShimmerText, ShimmerCircle, stringToColor } from "../../clients/react/src/design.tsx";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
 import { normalizeAlias } from "../../protocol/src/alias.ts";
@@ -729,16 +729,20 @@ const ConversationListItem = (
           selectedConversation.value = conv.id;
         }}
       >
-        <ChatAvatar
-          name={name}
-          baseColor={stringToColor(
-            otherParticipant?.publicSignKey ?? "",
-            isDarkMode,
+        {name === null
+          ? <ShimmerCircle />
+          : (
+            <ChatAvatar
+              name={name}
+              baseColor={stringToColor(
+                otherParticipant?.publicSignKey ?? "",
+                isDarkMode,
+              )}
+            />
           )}
-        />
         <div class="flex-grow overflow-hidden min-w-0">
           <div class={`font-medium ${textColorStyle} truncate`}>
-            {name ?? "..."}
+            {name === null ? <ShimmerText /> : name}
           </div>
         </div>
       </button>

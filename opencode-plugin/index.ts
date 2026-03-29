@@ -65,10 +65,10 @@ export default async function plugin(input: unknown) {
 
   
   const pubKey = encodeURIComponent((credentials as any).publicSignKey);
-  const webhookUrl = `https://aliceandbot.com/relay/webhook/${pubKey}`;
+  const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${pubKey}`;
   
   const setupWebSocket = () => {
-    const wsUrl = `wss://aliceandbot.com/relay/ws/${pubKey}`;
+    const wsUrl = `wss://api.aliceandbot.com/relay/ws/${pubKey}`;
     const ws = new WebSocket(wsUrl);
     
     ws.onopen = async () => {

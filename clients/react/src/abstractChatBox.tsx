@@ -591,7 +591,7 @@ const CodeBlock = (
 export const ChatAvatar = (
   { image, name, baseColor }: {
     image?: string;
-    name: string;
+    name: string | null;
     baseColor: string;
   },
 ) => {
@@ -616,7 +616,7 @@ export const ChatAvatar = (
         ? (
           <img
             src={image}
-            alt={name}
+            alt={name ?? ""}
             style={{
               objectFit: "cover",
               borderRadius: "50%",
@@ -634,7 +634,7 @@ export const ChatAvatar = (
               letterSpacing: 0.5,
             }}
           >
-            {name.slice(0, 2).toUpperCase()}
+            {(name ?? "").slice(0, 2).toUpperCase()}
           </span>
         )}
     </div>

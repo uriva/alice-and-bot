@@ -24149,9 +24149,9 @@ async function plugin(input) {
     return `${baseUrl}/chat?chatWith=${encodeURIComponent(credentials.publicSignKey)}&topic=${encodeURIComponent(topic)}`;
   };
   const pubKey = encodeURIComponent(credentials.publicSignKey);
-  const webhookUrl = `https://aliceandbot.com/relay/webhook/${pubKey}`;
+  const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${pubKey}`;
   const setupWebSocket = () => {
-    const wsUrl = `wss://aliceandbot.com/relay/ws/${pubKey}`;
+    const wsUrl = `wss://api.aliceandbot.com/relay/ws/${pubKey}`;
     const ws = new WebSocket(wsUrl);
     ws.onopen = async () => {
       await logDebug(`Connected to WebSocket relay at ${wsUrl}`);

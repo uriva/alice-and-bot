@@ -186,11 +186,12 @@ export const useCredentials = (name: string | null, key: string) => {
 
 export const useUserName =
   (db: () => InstantReactWebDatabase<typeof schema>) =>
-  (publicSignKey: string) => {
+  (publicSignKey: string): string | null => {
     const { data } = db().useQuery({
       identities: { $: { where: { publicSignKey } } },
     });
-    return data?.identities[0].name ?? "Anonymous";
+    if (!data) return null;
+    return data.identities[0]?.name ?? "Anonymous";
   };
 
 export const useIdentityDetailsMap =

@@ -107,3 +107,44 @@ export const Spinner = ({ color }: { color?: string } = {}) => {
     </>
   );
 };
+
+const shimmerKeyframes = `
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+`;
+
+const shimmerStyle = (isDark: boolean): JSX.CSSProperties => ({
+  display: "inline-block",
+  borderRadius: 4,
+  background: isDark
+    ? "linear-gradient(90deg, #333 25%, #444 50%, #333 75%)"
+    : "linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)",
+  backgroundSize: "200% 100%",
+  animation: "shimmer 1.5s ease-in-out infinite",
+});
+
+export const ShimmerText = (
+  { width = 80, height = 14 }: { width?: number; height?: number } = {},
+) => {
+  const isDark = useDarkMode();
+  return (
+    <>
+      <style>{shimmerKeyframes}</style>
+      <span style={{ ...shimmerStyle(isDark), width, height }} />
+    </>
+  );
+};
+
+export const ShimmerCircle = ({ size = 32 }: { size?: number } = {}) => {
+  const isDark = useDarkMode();
+  return (
+    <>
+      <style>{shimmerKeyframes}</style>
+      <span
+        style={{ ...shimmerStyle(isDark), width: size, height: size, borderRadius: "50%" }}
+      />
+    </>
+  );
+};
