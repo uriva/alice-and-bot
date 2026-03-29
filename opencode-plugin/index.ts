@@ -67,6 +67,7 @@ export default async function plugin(input: unknown) {
   const pubKey = encodeURIComponent((credentials as any).publicSignKey);
   const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${pubKey}`;
   
+  let reconnectTimer: any;
   const setupWebSocket = () => {
     const wsUrl = `wss://api.aliceandbot.com/relay/ws/${pubKey}`;
     const ws = new WebSocket(wsUrl);
@@ -193,7 +194,8 @@ export default async function plugin(input: unknown) {
     
     ws.onclose = () => {
       logDebug("WebSocket closed, reconnecting in 5 seconds...");
-      setTimeout(setupWebSocket, 5000);
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(setupWebSocket, 5000);
     };
     
     ws.onerror = (err) => {
