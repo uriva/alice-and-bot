@@ -436,31 +436,46 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
   );
 };
 
-const generateTransferQr = async (credentials: Credentials) => {
+const generateTransferUrl = async (credentials: Credentials) => {
   const aesKey = await generateSymmetricKey();
   const encrypted = await encryptSymmetric(aesKey, credentials);
   const { relayId } = await storeTransferPayload(encrypted);
   const fragment = `transfer=${relayId}:${base64ToBase64Url(aesKey)}`;
-  const url = `https://aliceandbot.com${chatPath}#${fragment}`;
+  return `https://aliceandbot.com${chatPath}#${fragment}`;
+};
+
+const generateTransferQr = async (url: string) => {
   const QRCode = (await import("qrcode")).default;
   return QRCode.toDataURL(url, { width: 256, margin: 2 });
 };
 
 const QrCodeTransfer = ({ credentials }: { credentials: Credentials }) => {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [transferUrl, setTransferUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const onGenerate = async () => {
     setLoading(true);
     setError(null);
     setQrDataUrl(null);
+    setTransferUrl(null);
+    setCopied(false);
     try {
-      setQrDataUrl(await generateTransferQr(credentials));
+      const url = await generateTransferUrl(credentials);
+      setTransferUrl(url);
+      setQrDataUrl(await generateTransferQr(url));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate QR code");
     }
     setLoading(false);
+  };
+
+  const onCopy = () => {
+    if (!transferUrl) return;
+    navigator.clipboard.writeText(transferUrl);
+    setCopied(true);
   };
 
   return (
@@ -492,6 +507,18 @@ const QrCodeTransfer = ({ credentials }: { credentials: Credentials }) => {
             width={256}
             height={256}
           />
+        </div>
+      )}
+      {transferUrl && (
+        <div class="flex flex-col gap-1 items-center">
+          <div class={hintStyle}>No camera? Copy the link instead:</div>
+          <button
+            type="button"
+            class="text-xs text-blue-600 dark:text-blue-300 hover:underline"
+            onClick={onCopy}
+          >
+            {copied ? "Copied!" : "Copy link"}
+          </button>
         </div>
       )}
     </div>

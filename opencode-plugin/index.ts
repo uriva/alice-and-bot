@@ -217,15 +217,19 @@ export default async function plugin(input: unknown) {
   const startTunnel = async (port: number) => {
     return new Promise<void>((resolve) => {
       const ssh = spawn("ssh", [
-        "-R", `80:localhost:${port}`,
+        "-R",
+        `80:localhost:${port}`,
         "serveo.net",
-        "-o", "StrictHostKeyChecking=no"
+        "-o",
+        "StrictHostKeyChecking=no",
       ]);
-      
+
       let connected = false;
       ssh.stdout.on("data", async (data) => {
         const output = data.toString();
-        const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.serveousercontent\.com/);
+        const match = output.match(
+          /https:\/\/[a-zA-Z0-9-]+\.serveousercontent\.com/,
+        );
         if (match && !connected) {
           connected = true;
           const url = match[0];
@@ -235,7 +239,7 @@ export default async function plugin(input: unknown) {
           resolve();
         }
       });
-      
+
       ssh.stderr.on("data", (data) => {
         // Ignored to prevent log spam
       });
