@@ -143,7 +143,12 @@ export const ShimmerCircle = ({ size = 32 }: { size?: number } = {}) => {
     <>
       <style>{shimmerKeyframes}</style>
       <span
-        style={{ ...shimmerStyle(isDark), width: size, height: size, borderRadius: "50%" }}
+        style={{
+          ...shimmerStyle(isDark),
+          width: size,
+          height: size,
+          borderRadius: "50%",
+        }}
       />
     </>
   );

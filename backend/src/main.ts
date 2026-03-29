@@ -747,8 +747,6 @@ const endpoints: BackendApiImpl = {
   },
 };
 
-
-
 const relaySockets = new Map<string, WebSocket[]>();
 
 const bc = new BroadcastChannel("relay_ws");
@@ -761,7 +759,6 @@ bc.onmessage = (event) => {
     }
   }
 };
-
 
 const RELAY_MSG_TTL_MS = 3600_000;
 
@@ -777,8 +774,6 @@ const relayStore = async (token: string, req: Request) => {
     return { ok: true };
   }
 
-
-  const body = await req.json();
   await kv.set(["relay", token, crypto.randomUUID()], body, {
     expireIn: RELAY_MSG_TTL_MS,
   });
@@ -832,20 +827,20 @@ Deno.serve(async (req: Request) => {
           return new Response(null, { status: 501 });
         }
         const { socket, response } = Deno.upgradeWebSocket(req);
-        
+
         socket.onopen = () => {
           const sockets = relaySockets.get(relay.token) || [];
           sockets.push(socket);
           relaySockets.set(relay.token, sockets);
         };
-        
+
         socket.onclose = () => {
           const sockets = relaySockets.get(relay.token) || [];
           const index = sockets.indexOf(socket);
           if (index !== -1) sockets.splice(index, 1);
           if (sockets.length === 0) relaySockets.delete(relay.token);
         };
-        
+
         return response;
       }
       return jsonCorsResponse(

@@ -63,26 +63,29 @@ export default async function plugin(input: unknown) {
     }&topic=${encodeURIComponent(topic)}`;
   };
 
-  
   const pubKey = encodeURIComponent((credentials as any).publicSignKey);
   const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${pubKey}`;
-  
+
   let reconnectTimer: any;
   const setupWebSocket = () => {
     const wsUrl = `wss://api.aliceandbot.com/relay/ws/${pubKey}`;
     const ws = new WebSocket(wsUrl);
-    
+
     ws.onopen = async () => {
       await logDebug(`Connected to WebSocket relay at ${wsUrl}`);
       await setWebhook({ url: webhookUrl, credentials });
       await logDebug("Webhook URL registered on backend for WS relay.");
     };
-    
+
     ws.onmessage = async (event) => {
       try {
         const jsonBody = JSON.parse(event.data.toString());
-        await logDebug(`Received message from WS relay: ${JSON.stringify(jsonBody).slice(0, 100)}...`);
-        
+        await logDebug(
+          `Received message from WS relay: ${
+            JSON.stringify(jsonBody).slice(0, 100)
+          }...`,
+        );
+
         if (Object.keys(jsonBody).length === 0) {
           return;
         }
@@ -191,13 +194,13 @@ export default async function plugin(input: unknown) {
         await logDebug(`WebSocket message error: ${err}`);
       }
     };
-    
+
     ws.onclose = () => {
       logDebug("WebSocket closed, reconnecting in 5 seconds...");
       clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(setupWebSocket, 5000);
     };
-    
+
     ws.onerror = (err) => {
       logDebug(`WebSocket error: ${err}`);
     };
@@ -208,7 +211,7 @@ export default async function plugin(input: unknown) {
     setupWebSocket();
   }
 
-const client = (input as any).client;
+  const client = (input as any).client;
 
   const showAliceLink = async (sessionId: string) => {
     currentSessionId = sessionId;

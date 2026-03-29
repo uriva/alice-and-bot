@@ -1,0 +1,5 @@
+[0m[1m[31merror[0m: Uncaught (in promise) Error: Got undefined where value was expected.
+    throw new Error(`Got ${x} where value was expected.`);
+[0m[31m          ^[0m
+    at [0m[1m[3mcoerce[0m ([0m[36mhttps://jsr.io/@uri/gamla/0.0.14/src/debug.ts[0m:[0m[33m124[0m:[0m[33m11[0m)
+    at [0m[2m[38;5;245mfile:///home/uri/uriva/alice-and-bot/backend/[0m[0m[36msrc/db.ts[0m:[0m[33m8[0m:[0m[33m15[0m
