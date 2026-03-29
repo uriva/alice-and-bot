@@ -12,6 +12,13 @@ cd "$PLUGIN_DIR"
 echo "Downloading plugin..."
 curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/plugin.js?t=$(date +%s) -o index.js
 
+echo "Creating package.json..."
+cat << 'PKG' > package.json
+{
+  "type": "module"
+}
+PKG
+
 echo "Setting up command macro..."
 cat << 'MD' > ~/.config/opencode/commands/aliceandbot.md
 ---
@@ -33,10 +40,12 @@ fi
 node -e "
   const fs = require('fs');
   const file = '$CONFIG_FILE';
-  const pluginPath = '$PLUGIN_DIR';
+  const pluginPath = '$PLUGIN_DIR/index.js';
   try {
     const data = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (!data.plugin) data.plugin = [];
+    // Remove old directory-based path if it exists
+    data.plugin = data.plugin.filter(p => p !== '$PLUGIN_DIR');
     if (!data.plugin.includes(pluginPath)) {
       data.plugin.push(pluginPath);
       fs.writeFileSync(file, JSON.stringify(data, null, 2));
