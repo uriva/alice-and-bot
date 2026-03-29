@@ -15,7 +15,6 @@ import {
 } from "./notificationService.ts";
 import { generateUploadUrl } from "./storage.ts";
 import { handleUiUpdate } from "./uiUpdate.ts";
-import { handleCryptoPayment } from "./cryptoPayment.ts";
 import { createHmac } from "node:crypto";
 import {
   deriveBtcAddress,
@@ -764,6 +763,10 @@ const RELAY_MSG_TTL_MS = 3600_000;
 
 const relayStore = async (token: string, req: Request) => {
   const body = await req.json();
+
+  // Broadcast to other Deno Deploy isolates
+  bc.postMessage({ token, body });
+
   const sockets = relaySockets.get(token) || [];
   if (sockets.length > 0) {
     for (const socket of sockets) {
@@ -856,29 +859,6 @@ Deno.serve(async (req: Request) => {
       return jsonCorsResponse(
         await handleUiUpdate({ ...body, elementId }),
       );
-    }
-    if (url.pathname === "/webhook/crypto" && req.method === "POST") {
-      const rawBody = await req.text();
-      const secret = Deno.env.get("CRYPTO_WEBHOOK_SECRET");
-      if (secret) {
-        const signature = req.headers.get("x-signature") || "";
-        const expected = createHmac("sha512", secret).update(rawBody).digest(
-          "hex",
-        );
-        if (signature !== expected) {
-          console.error("Invalid crypto webhook signature");
-          return jsonCorsResponse({ error: "Invalid signature" }, 401);
-        }
-      }
-
-      let body;
-      try {
-        body = JSON.parse(rawBody);
-      } catch (e) {
-        body = Object.fromEntries(new URLSearchParams(rawBody).entries());
-      }
-      await handleCryptoPayment(body as any);
-      return jsonCorsResponse({ success: true });
     }
     return jsonCorsResponse(
       await apiHandler(backendApiSchema, endpoints, await req.json()),
