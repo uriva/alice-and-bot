@@ -1,2 +1,0 @@
-[0m[33mWarning[0m The `--env-file` flag was used, but the environment file specified '.env' was not found.
-Listening on http://0.0.0.0:8080/ (http://localhost:8080/)

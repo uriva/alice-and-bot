@@ -1,4 +1,3 @@
-// deno-lint-ignore-file
 import { init as adminInit } from "@instantdb/admin";
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
@@ -21,17 +20,12 @@ import schema from "../../instant.schema.ts";
 import { normalizeAlias } from "../../protocol/src/alias.ts";
 import {
   chatWithMeLink,
-  checkCryptoPaymentSigned,
   createConversation,
   createIdentity,
   type Credentials,
-  getBalanceAndTransactionsSigned,
-  getProfile,
   instantAppId,
-  prepareCryptoPaymentSigned,
   setAlias,
   setName,
-  setPriceTagSigned,
 } from "../../protocol/src/clientApi.ts";
 import {
   base64ToBase64Url,
@@ -181,30 +175,11 @@ const startConversation = async (
     participantKeys.map((k) => nameFromPublicSignKey(k)),
   );
   const title = topic || names.join(", ");
-
-  // Check for costs
-  let totalCost = 0;
-  for (const key of participantKeys) {
-    if (key === credentials.publicSignKey) continue;
-    const { profile } = await getProfile(key);
-    if (profile?.priceTag) {
-      totalCost += profile.priceTag;
-    }
-  }
-
-  if (totalCost > 0) {
-    const costInDollars = (totalCost / 100).toFixed(2);
-    if (!window.confirm(`This outreach will cost ${costInDollars}. Proceed?`)) {
-      return null;
-    }
-  }
-
   const response = await toast.promise(
     (async () => {
       const res = await createConversation(() => adminDb)(
         participantKeys,
         title,
-        credentials,
       );
       if ("error" in res) throw new Error(res.error);
       return res;
@@ -537,86 +512,6 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
   const [aliasStatus, setAliasStatus] = useState<
     null | { type: "success" | "error"; message: string }
   >(null);
-
-  const [priceTagInput, setPriceTagInput] = useState(
-    profile?.priceTag ? (profile.priceTag / 100).toString() : "0",
-  );
-  const [savingPrice, setSavingPrice] = useState(false);
-  const [priceStatus, setPriceStatus] = useState<
-    null | { type: "success" | "error"; message: string }
-  >(null);
-  const [balanceData, setBalanceData] = useState<
-    { balance: number; transactions: any[] } | null
-  >(null);
-  const [depositData, setDepositData] = useState<
-    | { address: string; btcAmount: number; usdAmount: number; qrUrl: string }
-    | null
-  >(null);
-
-  const fetchBalance = () => {
-    getBalanceAndTransactionsSigned(credentials).then((res) => {
-      if (!("error" in res)) {
-        setBalanceData(res);
-      }
-    });
-  };
-
-  useEffect(() => {
-    if (!depositData) return;
-
-    let isCancelled = false;
-    const interval = setInterval(async () => {
-      const res = await checkCryptoPaymentSigned({
-        paymentAddress: depositData.address,
-        credentials,
-      });
-      if (isCancelled) return;
-
-      if (!("error" in res)) {
-        toast.success(res.message);
-        setDepositData(null);
-        fetchBalance();
-      }
-    }, 10000); // Check every 10 seconds
-
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
-    };
-  }, [depositData, credentials]);
-
-  useEffect(() => {
-    fetchBalance();
-  }, [credentials]);
-
-  useEffect(() => {
-    setPriceTagInput(
-      profile?.priceTag ? (profile.priceTag / 100).toString() : "0",
-    );
-  }, [profile?.priceTag]);
-
-  const onSavePrice = async () => {
-    const val = parseFloat(priceTagInput);
-    if (isNaN(val) || val < 0) {
-      setPriceStatus({ type: "error", message: "Invalid price" });
-      return;
-    }
-    setSavingPrice(true);
-    setPriceStatus(null);
-    // Convert USD to cents
-    const priceTagCents = Math.round(val * 100);
-    const res = await setPriceTagSigned({
-      priceTag: priceTagCents,
-      credentials,
-    });
-    setSavingPrice(false);
-    if (res.success) {
-      setPriceStatus({ type: "success", message: "Price saved" });
-      setTimeout(() => setPriceStatus(null), 2000);
-    } else {
-      setPriceStatus({ type: "error", message: "Failed to save price" });
-    }
-  };
   useEffect(() => {
     setNameInput(name ?? "");
   }, [name]);
@@ -758,149 +653,6 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           <div class={hintStyle}>
             Current alias:&nbsp;
             <span class="font-mono">@{profile.alias}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Balance Display */}
-      {balanceData && (
-        <div class="flex flex-row justify-between items-center p-4 bg-black/5 dark:bg-white/5 rounded-lg mb-2">
-          <div>
-            <div class="font-semibold text-sm opacity-70">Account Balance</div>
-            <div class="text-2xl font-bold">
-              ${(balanceData.balance / 100).toFixed(2)}
-            </div>
-          </div>
-          <div class="flex gap-2">
-            <button
-              class={buttonGreenStyle}
-              onClick={async () => {
-                const amountStr = window.prompt(
-                  "Enter amount to deposit (USD)",
-                  "10",
-                );
-                if (!amountStr) return;
-                const amount = parseFloat(amountStr);
-                if (isNaN(amount) || amount <= 0) {
-                  toast("Invalid amount");
-                  return;
-                }
-                const toastId = toast.loading("Generating deposit address...");
-                const res = await prepareCryptoPaymentSigned({
-                  amount,
-                  credentials,
-                });
-                toast.dismiss(toastId);
-                if ("error" in res) {
-                  toast.error(`Failed: ${res.error}`);
-                } else {
-                  setDepositData(res);
-                }
-              }}
-            >
-              Deposit
-            </button>
-            {balanceData.balance > 0 && (
-              <button
-                class={buttonBlueStyle}
-                onClick={() =>
-                  toast(
-                    "Please email support@aliceandbot.com to withdraw your funds.",
-                  )}
-              >
-                Withdraw
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {depositData && (
-        <div class="flex flex-col gap-2 mb-4 p-4 bg-black/5 dark:bg-white/5 rounded-lg">
-          <div class="font-semibold text-lg">Deposit Bitcoin</div>
-          <div class="text-sm">
-            Send exactly <b>{depositData.btcAmount} BTC</b>{" "}
-            (${depositData.usdAmount}) to the following address:
-          </div>
-          <div class="font-mono text-sm break-all bg-white dark:bg-black p-2 rounded">
-            {depositData.address}
-          </div>
-          <img
-            src={depositData.qrUrl}
-            alt="Bitcoin QR Code"
-            class="w-48 h-48 mx-auto"
-          />
-          <button
-            class={buttonBlueStyle}
-            onClick={async () => {
-              const toastId = toast.loading("Checking payment...");
-              const res = await checkCryptoPaymentSigned({
-                paymentAddress: depositData.address,
-                credentials,
-              });
-              toast.dismiss(toastId);
-              if ("error" in res) {
-                toast.error(
-                  res.error === "not-paid"
-                    ? "Payment not found yet. We are checking automatically."
-                    : `Failed: ${res.error}`,
-                );
-              } else {
-                toast.success(res.message);
-                setDepositData(null);
-                fetchBalance();
-              }
-            }}
-          >
-            I've Paid (we check automatically)
-          </button>
-          <button
-            class="text-sm underline opacity-70"
-            onClick={() => setDepositData(null)}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
-      {/* Price Tag Setting */}
-      <div class="flex flex-col gap-2 mb-4">
-        <label class="font-bold text-sm text-gray-700 dark:text-gray-300">
-          Message Price (USD)
-        </label>
-        <div class="flex gap-2">
-          <span class="self-center">$</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={priceTagInput}
-            onInput={(e) => setPriceTagInput(e.currentTarget.value)}
-            class={inputStyle}
-            style={{ flex: 1 }}
-            placeholder="0.00"
-          />
-          <button
-            type="button"
-            class={buttonGreenStyle}
-            onClick={onSavePrice}
-            disabled={savingPrice}
-          >
-            {savingPrice ? "Saving..." : "Save"}
-          </button>
-        </div>
-        <div class={hintStyle}>
-          Cost for new users to start a conversation with you.
-        </div>
-        {priceStatus && (
-          <div
-            class={`text-xs ${
-              priceStatus.type === "success"
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400"
-            }`}
-          >
-            {priceStatus.message}
           </div>
         )}
       </div>
