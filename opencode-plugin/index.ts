@@ -7,7 +7,7 @@ import {
 } from "./node_modules/@alice-and-bot/core/protocol/src/clientApi.js";
 import { setWebhook } from "./node_modules/@alice-and-bot/core/backend/src/api.js";
 import fs from "fs/promises";
-import { startTunnel as localtunnel } from "./tunnel.ts";
+import { spawn } from "child_process";
 import path from "path";
 import os from "os";
 import { Buffer } from "node:buffer";
@@ -215,25 +215,36 @@ export default async function plugin(input: unknown) {
   };
 
   const startTunnel = async () => {
-    try {
-      const tunnel = await localtunnel(3001);
-      await logDebug(`Localtunnel started at ${tunnel.url}`);
-      await setWebhook({ url: `${tunnel.url}/webhook`, credentials });
-      await logDebug("Webhook configured on backend.");
-
-      tunnel.on("close", () => {
-        logDebug("Localtunnel closed, restarting in 2 seconds...");
-        setTimeout(startTunnel, 2000);
+    return new Promise<void>((resolve) => {
+      const ssh = spawn("ssh", [
+        "-R", "80:localhost:3001",
+        "serveo.net",
+        "-o", "StrictHostKeyChecking=no"
+      ]);
+      
+      let connected = false;
+      ssh.stdout.on("data", async (data) => {
+        const output = data.toString();
+        const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.serveousercontent\.com/);
+        if (match && !connected) {
+          connected = true;
+          const url = match[0];
+          await logDebug(`Serveo tunnel started at ${url}`);
+          await setWebhook({ url: `${url}/webhook`, credentials });
+          await logDebug("Webhook configured on backend.");
+          resolve();
+        }
+      });
+      
+      ssh.stderr.on("data", (data) => {
+        // Ignored to prevent log spam
       });
 
-      tunnel.on("error", (err) => {
-        logDebug(`Localtunnel error: ${err?.message}, restarting...`);
-        tunnel.close();
+      ssh.on("close", () => {
+        logDebug("Serveo tunnel closed, restarting in 5 seconds...");
+        setTimeout(startTunnel, 5000);
       });
-    } catch (e: unknown) {
-      await logDebug(`Tunnel error: ${(e as any)?.message}`);
-      setTimeout(startTunnel, 5000);
-    }
+    });
   };
 
   if (!(globalThis as any).__aliceServer) {

@@ -29,6 +29,7 @@ export default defineConfig({
           "/manifesto",
           "/mcp",
           "/claude-code",
+          "/opencode",
         ],
         prerenderScript: resolve(__dirname, "landing/src/prerender.tsx"),
       },

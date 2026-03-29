@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Installing Alice&Bot OpenCode plugin..."
+echo "Installing Alice&Bot OpenCode plugin v1.1.0 (Serveo Tunnel Update)..."
 
 PLUGIN_DIR="$HOME/.config/opencode/plugins/alice"
 mkdir -p "$PLUGIN_DIR"
