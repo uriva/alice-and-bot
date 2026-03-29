@@ -828,7 +828,7 @@ Deno.serve(async (req: Request) => {
     const relay = relayRoute(url, req.method);
     if (relay) {
       if (relay.action === "ws") {
-        if (req.headers.get("upgrade") !== "websocket") {
+        if (req.headers.get("upgrade")?.toLowerCase() !== "websocket") {
           return new Response(null, { status: 501 });
         }
         const { socket, response } = Deno.upgradeWebSocket(req);
