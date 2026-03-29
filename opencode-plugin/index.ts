@@ -71,10 +71,17 @@ export default async function plugin(input: unknown) {
     const wsUrl = `wss://api.aliceandbot.com/relay/ws/${pubKey}`;
     const ws = new WebSocket(wsUrl);
 
+    let pingInterval: any;
     ws.onopen = async () => {
       await logDebug(`Connected to WebSocket relay at ${wsUrl}`);
-      await setWebhook({ url: webhookUrl, credentials });
+      const res = await setWebhook({ url: webhookUrl, credentials });
+      await logDebug(`setWebhook response: ${JSON.stringify(res)}`);
       await logDebug("Webhook URL registered on backend for WS relay.");
+      pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ping" }));
+        }
+      }, 30000);
     };
 
     ws.onmessage = async (event) => {
@@ -196,6 +203,7 @@ export default async function plugin(input: unknown) {
     };
 
     ws.onclose = () => {
+      clearInterval(pingInterval);
       logDebug("WebSocket closed, reconnecting in 5 seconds...");
       clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(setupWebSocket, 5000);
