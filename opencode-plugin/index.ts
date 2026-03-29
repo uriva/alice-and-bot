@@ -7,11 +7,9 @@ import {
 } from "./node_modules/@alice-and-bot/core/protocol/src/clientApi.js";
 import { setWebhook } from "./node_modules/@alice-and-bot/core/backend/src/api.js";
 import fs from "fs/promises";
-import { spawn } from "child_process";
 import path from "path";
 import os from "os";
 import { Buffer } from "node:buffer";
-import http from "http";
 
 import qrcode from "qrcode-terminal";
 import clipboardy from "clipboardy";
@@ -65,44 +63,31 @@ export default async function plugin(input: unknown) {
     }&topic=${encodeURIComponent(topic)}`;
   };
 
-  const requestHandler = (
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-  ) => {
-    if (req.url !== "/webhook" || req.method !== "POST") {
-      res.writeHead(404);
-      res.end("Not found");
-      return;
-    }
-
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-
-    req.on("end", async () => {
+  
+  const pubKey = encodeURIComponent((credentials as any).publicSignKey);
+  const webhookUrl = `https://aliceandbot.com/relay/webhook/${pubKey}`;
+  
+  const setupWebSocket = () => {
+    const wsUrl = `wss://aliceandbot.com/relay/ws/${pubKey}`;
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = async () => {
+      await logDebug(`Connected to WebSocket relay at ${wsUrl}`);
+      await setWebhook({ url: webhookUrl, credentials });
+      await logDebug("Webhook URL registered on backend for WS relay.");
+    };
+    
+    ws.onmessage = async (event) => {
       try {
-        const jsonBody = JSON.parse(body);
-        await logDebug(`Received webhook: ${JSON.stringify(jsonBody)}`);
-
+        const jsonBody = JSON.parse(event.data.toString());
+        await logDebug(`Received message from WS relay: ${JSON.stringify(jsonBody).slice(0, 100)}...`);
+        
         if (Object.keys(jsonBody).length === 0) {
-          await logDebug(
-            "Received empty payload {} (likely a ping). Ignoring.",
-          );
-          res.writeHead(200);
-          res.end("ok");
           return;
         }
 
         const update = await handleWebhookUpdate(jsonBody, credentials);
-        if (!update) {
-          await logDebug(
-            "Webhook parsed but returned undefined update (maybe our own message).",
-          );
-          res.writeHead(200);
-          res.end("ok");
-          return;
-        }
+        if (!update) return;
 
         const { message, conversationId: convoId, conversationKey } = update;
         await logDebug(`Decrypted message: type=${message?.type}`);
@@ -186,7 +171,6 @@ export default async function plugin(input: unknown) {
               await logDebug(
                 `Failed to prompt session (it may have died): ${err?.message}`,
               );
-              // Send a message back to the phone to let them know the session is dead
               await sendMessageWithKey({
                 conversationKey,
                 conversation: convoId,
@@ -202,84 +186,27 @@ export default async function plugin(input: unknown) {
             await logDebug("No active session ID found to forward to.");
           }
         }
-      } catch (e: unknown) {
-        await logDebug(
-          `Webhook processing error: ${(e as Error)?.message}\n${
-            (e as Error)?.stack
-          }`,
-        );
+      } catch (err) {
+        await logDebug(`WebSocket message error: ${err}`);
       }
-      res.writeHead(200);
-      res.end("ok");
-    });
+    };
+    
+    ws.onclose = () => {
+      logDebug("WebSocket closed, reconnecting in 5 seconds...");
+      setTimeout(setupWebSocket, 5000);
+    };
+    
+    ws.onerror = (err) => {
+      logDebug(`WebSocket error: ${err}`);
+    };
   };
 
-  const startTunnel = async (port: number) => {
-    return new Promise<void>((resolve) => {
-      const ssh = spawn("ssh", [
-        "-R",
-        `80:localhost:${port}`,
-        "serveo.net",
-        "-o",
-        "StrictHostKeyChecking=no",
-      ]);
-
-      let connected = false;
-      ssh.stdout.on("data", async (data) => {
-        const output = data.toString();
-        const match = output.match(
-          /https:\/\/[a-zA-Z0-9-]+\.serveousercontent\.com/,
-        );
-        if (match && !connected) {
-          connected = true;
-          const url = match[0];
-          await logDebug(`Serveo tunnel started at ${url}`);
-          await setWebhook({ url: `${url}/webhook`, credentials });
-          await logDebug("Webhook configured on backend.");
-          resolve();
-        }
-      });
-
-      ssh.stderr.on("data", (data) => {
-        // Ignored to prevent log spam
-      });
-
-      ssh.on("close", () => {
-        logDebug("Serveo tunnel closed, restarting in 5 seconds...");
-        setTimeout(() => startTunnel(port), 5000);
-      });
-    });
-  };
-
-  if (!(globalThis as any).__aliceServer) {
-    const server = http.createServer(requestHandler);
-    server.on("error", (e: any) => {
-      if (e.code === "EADDRINUSE") {
-        logDebug(
-          "Port is already in use (possibly from a previous plugin load). Skipping new server creation.",
-        );
-      } else {
-        logDebug(`Server error: ${e.message}`);
-      }
-    });
-
-    server.listen(0, async () => {
-      const address = server.address();
-      const port = typeof address === "string" ? 0 : address?.port || 0;
-      (globalThis as any).__aliceServer = server;
-      await startTunnel(port);
-    });
-  } else {
-    // If the server was already running on the global object, we just reassign its request listeners
-    // to point to the newly evaluated requestHandler closure to ensure it has the latest references.
-    const server = (globalThis as any).__aliceServer as http.Server;
-    server.removeAllListeners("request");
-    server.on("request", requestHandler);
-    await logDebug("Reusing existing background server from globalThis");
-    // We do not call startTunnel again because it might already be tunneling to the assigned port
+  if (!(globalThis as any).__aliceWebSocket) {
+    (globalThis as any).__aliceWebSocket = true;
+    setupWebSocket();
   }
 
-  const client = (input as any).client;
+const client = (input as any).client;
 
   const showAliceLink = async (sessionId: string) => {
     currentSessionId = sessionId;

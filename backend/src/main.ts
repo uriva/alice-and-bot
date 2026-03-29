@@ -747,9 +747,24 @@ const endpoints: BackendApiImpl = {
   },
 };
 
+
+const relaySockets = new Map<string, WebSocket[]>();
+
 const RELAY_MSG_TTL_MS = 3600_000;
 
 const relayStore = async (token: string, req: Request) => {
+  const body = await req.json();
+  const sockets = relaySockets.get(token) || [];
+  if (sockets.length > 0) {
+    for (const socket of sockets) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(body));
+      }
+    }
+    return { ok: true };
+  }
+
+
   const body = await req.json();
   await kv.set(["relay", token, crypto.randomUUID()], body, {
     expireIn: RELAY_MSG_TTL_MS,
@@ -789,6 +804,7 @@ const relayRoute = (url: URL, method: string) => {
   const [, action, token] = match;
   if (method === "POST" && action === "webhook") return { action, token };
   if (method === "GET" && action === "poll") return { action, token };
+  if (method === "GET" && action === "ws") return { action, token };
   return null;
 };
 
@@ -798,6 +814,27 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const relay = relayRoute(url, req.method);
     if (relay) {
+      if (relay.action === "ws") {
+        if (req.headers.get("upgrade") !== "websocket") {
+          return new Response(null, { status: 501 });
+        }
+        const { socket, response } = Deno.upgradeWebSocket(req);
+        
+        socket.onopen = () => {
+          const sockets = relaySockets.get(relay.token) || [];
+          sockets.push(socket);
+          relaySockets.set(relay.token, sockets);
+        };
+        
+        socket.onclose = () => {
+          const sockets = relaySockets.get(relay.token) || [];
+          const index = sockets.indexOf(socket);
+          if (index !== -1) sockets.splice(index, 1);
+          if (sockets.length === 0) relaySockets.delete(relay.token);
+        };
+        
+        return response;
+      }
       return jsonCorsResponse(
         relay.action === "webhook"
           ? await relayStore(relay.token, req)
