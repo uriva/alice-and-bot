@@ -23,30 +23,31 @@ MD
 echo "Updating opencode.json..."
 CONFIG_FILE=~/.config/opencode/opencode.json
 
-if [ -f "$CONFIG_FILE" ]; then
-  # Use node to safely update the JSON file without needing jq
-  node -e "
-    const fs = require('fs');
-    const file = '$CONFIG_FILE';
-    const pluginPath = '$PLUGIN_DIR';
-    try {
-      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (!data.plugin) data.plugin = [];
-      if (!data.plugin.includes(pluginPath)) {
-        data.plugin.push(pluginPath);
-        fs.writeFileSync(file, JSON.stringify(data, null, 2));
-        console.log('Successfully registered plugin in opencode.json');
-      } else {
-        console.log('Plugin already registered in opencode.json');
-      }
-    } catch (err) {
-      console.error('Error updating opencode.json:', err.message);
-    }
-  "
-else
-  echo "Warning: ~/.config/opencode/opencode.json not found."
-  echo "Please manually add '$PLUGIN_DIR' to your 'plugin' array."
+# If the config file doesn't exist (fresh install), create a basic one
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Creating opencode.json..."
+  echo '{}' > "$CONFIG_FILE"
 fi
+
+# Use node to safely update the JSON file without needing jq
+node -e "
+  const fs = require('fs');
+  const file = '$CONFIG_FILE';
+  const pluginPath = '$PLUGIN_DIR';
+  try {
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!data.plugin) data.plugin = [];
+    if (!data.plugin.includes(pluginPath)) {
+      data.plugin.push(pluginPath);
+      fs.writeFileSync(file, JSON.stringify(data, null, 2));
+      console.log('Successfully registered plugin in opencode.json');
+    } else {
+      console.log('Plugin already registered in opencode.json');
+    }
+  } catch (err) {
+    console.error('Error updating opencode.json:', err.message);
+  }
+"
 
 echo ""
 echo "Installation complete! Please restart OpenCode to use the /aliceandbot command."
