@@ -812,7 +812,7 @@ const jsonCorsResponse = (body: unknown, status = 200) =>
   });
 
 const relayRoute = (url: URL, method: string) => {
-  const match = url.pathname.match(/^\/relay\/(webhook|poll)\/([^/]+)$/);
+  const match = url.pathname.match(/^\/relay\/(webhook|poll|ws)\/([^/]+)$/);
   if (!match) return null;
   const [, action, token] = match;
   if (method === "POST" && action === "webhook") return { action, token };
