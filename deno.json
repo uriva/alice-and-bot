@@ -60,6 +60,9 @@
       "./landing/src/vite-env.d.ts"
     ]
   },
+  "lint": {
+    "exclude": ["opencode-plugin/plugin.js"]
+  },
   "license": "MIT",
   "name": "@alice-and-bot/core",
   "version": "0.0.240",
