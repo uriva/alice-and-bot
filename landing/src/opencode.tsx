@@ -20,7 +20,7 @@ const codeBlockStyle = {
 };
 
 const installCommand =
-  "curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/install.sh | bash";
+  "curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/2543bdf1cf60958e28ccf5a234c4106b9584e890/opencode-plugin/install.sh | bash";
 
 const ShellCode = ({ code }: { code: string }) => (
   <pre style={{ ...codeBlockStyle, color: "#93c5fd", cursor: "pointer" }}>
