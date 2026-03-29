@@ -32,16 +32,18 @@ export const callWebhooks = async (
     timestamp,
     messageId,
   };
-  for (const webhook of webhooks) {
-    if (!webhook) continue;
-    fetch(webhook, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(update),
-    }).catch((e) => {
-      console.error("Failed to call webhook", webhook, e);
-    });
-  }
+  await Promise.all(
+    webhooks.map((webhook) => {
+      if (!webhook) return Promise.resolve();
+      return fetch(webhook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(update),
+      }).catch((e) => {
+        console.error("Failed to call webhook", webhook, e);
+      });
+    }),
+  );
   return {};
 };
 
