@@ -10,7 +10,7 @@ mkdir -p ~/.config/opencode/commands
 cd "$PLUGIN_DIR"
 
 echo "Downloading plugin..."
-curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/plugin.js -o index.js
+curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/plugin.js?t=$(date +%s) -o index.js
 
 echo "Setting up command macro..."
 cat << 'MD' > ~/.config/opencode/commands/aliceandbot.md
