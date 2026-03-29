@@ -180,6 +180,7 @@ const startConversation = async (
       const res = await createConversation(() => adminDb)(
         participantKeys,
         title,
+        credentials,
       );
       if ("error" in res) throw new Error(res.error);
       return res;
