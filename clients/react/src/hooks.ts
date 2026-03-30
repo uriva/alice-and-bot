@@ -110,7 +110,11 @@ const initialMessageLogic = (
   initialMessage: string,
 ) => {
   const conversationKey = useConversationKey(db)(conversationId, credentials);
-  const messages = useDecryptedMessages(db, 1, conversationKey, conversationId);
+  const { messages } = useDecryptedMessages(
+    db,
+    conversationKey,
+    conversationId,
+  );
   useEffect(() => {
     if (
       !conversationId || !messages || messages.length || !conversationKey ||
@@ -264,21 +268,21 @@ export const useConversationKey =
 
 export const useDecryptedMessages = (
   db: InstantReactWebDatabase<typeof schema>,
-  limit: number,
   conversationKey: string | null,
   conversationId: string,
 ) => {
   const [messages, setMessages] = useState<null | DecipheredMessage[]>(null);
-  const { data, error } = db.useQuery({
-    messages: {
-      conversation: {},
-      $: {
-        where: { conversation: conversationId },
-        order: { timestamp: "desc" },
-        limit,
+  const { data, error, canLoadNextPage, loadNextPage } = db
+    .useInfiniteQuery({
+      messages: {
+        conversation: {},
+        $: {
+          where: { conversation: conversationId },
+          order: { timestamp: "desc" },
+          limit: 100,
+        },
       },
-    },
-  });
+    });
   if (error) console.error("error fetching alice and bot messages", error);
   const encryptedMessages = data?.messages;
   useEffect(() => {
@@ -291,7 +295,7 @@ export const useDecryptedMessages = (
       );
     }
   }, [conversationKey, encryptedMessages]);
-  return messages;
+  return { messages, canLoadMore: canLoadNextPage, loadMore: loadNextPage };
 };
 
 // Typing presence (basic): emits typing start/stop to backend; reads peers via Instant presence (TBD)

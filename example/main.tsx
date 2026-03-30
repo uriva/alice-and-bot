@@ -130,7 +130,7 @@ const Example = () => {
         userId={userId}
         onSend={onSend}
         messages={messages}
-        limit={100}
+        canLoadMore={false}
         loadMore={noop}
         title="ChatGPT Example"
         darkModeOverride

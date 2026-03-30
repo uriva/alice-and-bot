@@ -2140,7 +2140,7 @@ const charCountStyle = (
 
 export const AbstractChatBox = (
   {
-    limit,
+    canLoadMore,
     loadMore,
     userId,
     onSend,
@@ -2183,7 +2183,7 @@ export const AbstractChatBox = (
       audioDuration?: number,
     ) => Promise<void>;
     messages: AbstracChatMessage[];
-    limit: number;
+    canLoadMore: boolean;
     loadMore: () => void;
     onClose?: () => void;
     title: string;
@@ -2347,7 +2347,7 @@ export const AbstractChatBox = (
     if (
       !fetchingMore &&
       el.scrollTop === 0 &&
-      messages.length === limit
+      canLoadMore
     ) {
       setFetchingMore(true);
       loadMore();
@@ -2378,7 +2378,7 @@ export const AbstractChatBox = (
           handleScroll,
         );
     }
-  }, [limit, messages, fetchingMore]);
+  }, [canLoadMore, messages, fetchingMore]);
 
   const systemDarkMode = useDarkMode();
   const isDark = darkModeOverride !== undefined

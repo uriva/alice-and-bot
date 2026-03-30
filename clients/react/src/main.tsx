@@ -1,7 +1,7 @@
 import type { InstantReactWebDatabase } from "@instantdb/react";
 import { sortKey } from "@uri/gamla";
 import type { ComponentChildren, JSX } from "preact";
-import { useRef, useState } from "preact/hooks";
+import { useRef } from "preact/hooks";
 import type schema from "../../../instant.schema.ts";
 import {
   type Attachment,
@@ -385,10 +385,8 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   const convNotFound = !isConvLoading && !conversation;
 
   const convoKey = useConversationKey(database)(conversationId, credentials);
-  const [limit, setLimit] = useState(100);
-  const decrypted = useDecryptedMessages(
+  const { messages: decrypted, canLoadMore, loadMore } = useDecryptedMessages(
     database,
-    limit,
     convoKey,
     conversationId,
   );
@@ -536,10 +534,8 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
       title={conversationTitle}
       emptyMessage={emptyMessage}
       onClose={onClose}
-      limit={limit}
-      loadMore={() => {
-        setLimit(limit + 100);
-      }}
+      canLoadMore={canLoadMore}
+      loadMore={loadMore}
       userId={credentials.publicSignKey}
       typingUsers={typing.typingNames}
       isLoading={!decrypted}
