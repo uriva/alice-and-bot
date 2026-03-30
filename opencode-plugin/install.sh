@@ -1,7 +1,11 @@
 #!/bin/bash
 set -e
 
-echo "Installing Alice&Bot OpenCode plugin v3.0.0 (Native WebSocket Update)..."
+version="v3.1.0"
+cacheBuster="$(date +%s)"
+
+echo "Installing Alice&Bot OpenCode plugin ${version} (Phone Command Routing)..."
+echo "Cache buster: ${cacheBuster}"
 
 PLUGIN_DIR="$HOME/.config/opencode/plugins/alice"
 mkdir -p "$PLUGIN_DIR"
@@ -10,7 +14,7 @@ mkdir -p ~/.config/opencode/commands
 cd "$PLUGIN_DIR"
 
 echo "Downloading plugin..."
-curl -fsSL https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/plugin.js?t=$(date +%s) -o index.js
+curl -fsSL "https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/plugin.js?t=${cacheBuster}" -o index.js
 
 echo "Creating package.json..."
 cat << 'PKG' > package.json
