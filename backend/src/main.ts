@@ -82,6 +82,7 @@ const endpoints: BackendApiImpl = {
           conversationId: conversation,
           payload: encryptedMessage as EncryptedMessage,
           timestamp,
+          storeLocalRelay: relayStoreMessage,
         }).catch((e) => console.error("webhook dispatch failed", e)),
         sendPushToParticipants({
           messageId,
@@ -752,9 +753,7 @@ const relaySockets = new Map<string, WebSocket[]>();
 
 const RELAY_MSG_TTL_MS = 3600_000;
 
-const relayStore = async (token: string, req: Request) => {
-  const body = await req.json();
-
+const relayStoreMessage = async (token: string, body: unknown) => {
   await kv.set(["relay", token, crypto.randomUUID()], body, {
     expireIn: RELAY_MSG_TTL_MS,
   });
@@ -763,7 +762,10 @@ const relayStore = async (token: string, req: Request) => {
   await kv.set(["relay_channel", token], Date.now(), {
     expireIn: RELAY_MSG_TTL_MS,
   });
+};
 
+const relayStore = async (token: string, req: Request) => {
+  await relayStoreMessage(token, await req.json());
   return { ok: true };
 };
 

@@ -6,12 +6,17 @@ import type {
 } from "../../protocol/src/clientApi.ts";
 import { query, transact, tx } from "./db.ts";
 
+const relayWebhookPattern = /\/relay\/webhook\/([^/]+)$/;
+
+const extractRelayToken = (url: string) => url.match(relayWebhookPattern)?.[1];
+
 export const callWebhooks = async (
-  { messageId, conversationId, payload, timestamp }: {
+  { messageId, conversationId, payload, timestamp, storeLocalRelay }: {
     messageId: string;
     conversationId: string;
     payload: EncryptedMessage;
     timestamp: number;
+    storeLocalRelay: (token: string, body: unknown) => Promise<void>;
   },
 ) => {
   const { conversations } = await query({
@@ -35,6 +40,8 @@ export const callWebhooks = async (
   await Promise.all(
     webhooks.map((webhook) => {
       if (!webhook) return Promise.resolve();
+      const relayToken = extractRelayToken(webhook);
+      if (relayToken) return storeLocalRelay(relayToken, update);
       return fetch(webhook, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
