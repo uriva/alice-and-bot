@@ -7,11 +7,22 @@ import { query, transact, tx } from "./db.ts";
 import { instantAppId } from "../../protocol/src/clientApi.ts";
 
 class DummyStorage {
-  constructor() {}
+  constructor(_appId: string, _storeName: string) {}
   getItem(_k: string) {
-    return null;
+    return Promise.resolve(null);
   }
-  setItem(_k: string, _v: any) {}
+  setItem(_k: string, _v: any) {
+    return Promise.resolve();
+  }
+  multiSet(_entries: [string, any][]) {
+    return Promise.resolve();
+  }
+  removeItem(_k: string) {
+    return Promise.resolve();
+  }
+  getAllKeys(): Promise<string[]> {
+    return Promise.resolve([]);
+  }
 }
 
 const coreDb = coreInit({ appId: instantAppId }, DummyStorage);

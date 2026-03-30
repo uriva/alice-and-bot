@@ -18,6 +18,7 @@ if (typeof (globalThis as any).indexedDB === "undefined") {
           req.onsuccess({
             target: {
               result: {
+                objectStoreNames: { contains: () => true },
                 transaction: () => ({
                   objectStore: () => ({
                     get: () => {
@@ -30,8 +31,20 @@ if (typeof (globalThis as any).indexedDB === "undefined") {
                       setTimeout(() => r.onsuccess?.(), 0);
                       return r;
                     },
+                    delete: () => {
+                      const r: any = {};
+                      setTimeout(() => r.onsuccess?.(), 0);
+                      return r;
+                    },
+                    getAllKeys: () => {
+                      const r: any = { result: [] };
+                      setTimeout(() => r.onsuccess?.(), 0);
+                      return r;
+                    },
                   }),
+                  abort: () => {},
                 }),
+                createObjectStore: () => {},
               },
             },
           });
