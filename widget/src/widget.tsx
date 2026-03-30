@@ -366,6 +366,7 @@ const WithCredentials = (
             background: colors.background,
             text: colors.text,
             primary: colors.primary,
+            otherBubble: colors.surface,
           }}
         />
       </div>

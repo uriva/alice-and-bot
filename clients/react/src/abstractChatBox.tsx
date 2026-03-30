@@ -1420,7 +1420,7 @@ const Message = (
   const isDark = useDarkMode();
   const baseColor = isOwn
     ? (customColors?.primary ?? (isDark ? "#2563eb" : "#3182ce"))
-    : stringToColor(authorId, isDark);
+    : (customColors?.otherBubble ?? stringToColor(authorId, isDark));
   const noBubble = !isOwn && customColors?.hideOtherBubble;
   const showAvatar = isStartOfSequence &&
     !(isOwn && customColors?.hideOwnAvatar);
