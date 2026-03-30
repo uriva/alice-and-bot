@@ -527,6 +527,7 @@ The `Chat` component handles all of it.
 | `background`      | Chat container background color               |
 | `text`            | Message text color                            |
 | `primary`         | Accent color for send button, links, controls |
+| `otherBubble`     | Background color for non-user message bubbles |
 | `inputBackground` | Text input field background                   |
 | `hideTitle`       | Remove the header bar                         |
 | `hideOwnAvatar`   | Hide avatar circle next to your messages      |

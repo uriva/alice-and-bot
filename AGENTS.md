@@ -55,3 +55,5 @@ define the single case and use `map` or similar functions in the call site.
 
 If a type is inferrable from the function, prefer not to annotate it. This is
 the common case.
+
+Never make a breaking change without consulting with the user first.

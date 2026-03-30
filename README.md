@@ -434,6 +434,7 @@ Key `CustomColors` options for this look:
 | `hideTitle`       | Removes the header/title bar                    |
 | `hideOwnAvatar`   | Hides avatar circle next to your messages       |
 | `hideOtherBubble` | Removes the bubble background from bot messages |
+| `otherBubble`     | Background color for non-user message bubbles   |
 | `hideNames`       | Hides author name labels above messages         |
 | `chatMaxWidth`    | Centers message content in a narrow column      |
 | `inputMaxWidth`   | Centers the input bar in a narrow column        |
