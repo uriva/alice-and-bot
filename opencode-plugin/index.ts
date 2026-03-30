@@ -15,6 +15,22 @@ import qrcode from "qrcode-terminal";
 import clipboardy from "clipboardy";
 
 let currentSessionId: string | undefined;
+const aliceCommands = new Set([
+  "/alice",
+  "alice",
+  "/aliceandbot-qr",
+  "aliceandbot qr",
+  "/aliceandbot",
+  "aliceandbot",
+  "ALICE_AND_BOT_COMMAND_INTERNAL",
+]);
+const tuiCommandAliases: Record<string, string> = {
+  "/new": "session_new",
+  "/share": "session_share",
+  "/interrupt": "session_interrupt",
+  "/compact": "session_compact",
+  "/clear": "input_clear",
+};
 // map opencode session id to phone conversation key for reply
 const sessionToConvoKey = new Map<
   string,
@@ -32,6 +48,234 @@ async function logDebug(msg: string) {
   const timestamp = new Date().toISOString();
   await fs.appendFile(debugLogPath, `[${timestamp}] ${msg}\n`).catch(() => {});
 }
+
+const getMessageText = (message: any) => message?.text?.trim() || "";
+
+const parsePhoneCommand = (text: string) => {
+  if (!text.startsWith("/")) return;
+  const [rawCommand, ...rest] = text.split(/\s+/);
+  const command = rawCommand.slice(1).trim();
+  if (!command) return;
+  return {
+    raw: rawCommand,
+    command,
+    arguments: rest.join(" ").trim(),
+  };
+};
+
+const notifyPhone = async ({
+  conversation,
+  conversationKey,
+  credentials,
+  text,
+}: {
+  conversation: string;
+  conversationKey: string;
+  credentials: unknown;
+  text: string;
+}) => {
+  await sendMessageWithKey({
+    conversation,
+    conversationKey,
+    credentials: credentials as any,
+    message: { type: "text", text },
+  });
+};
+
+const callFirstAvailable = async (
+  calls: Array<() => Promise<unknown>>,
+) => {
+  let lastError: unknown;
+  for (const call of calls) {
+    try {
+      return await call();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+};
+
+const executeTuiAction = async ({
+  client,
+  action,
+}: {
+  client: any;
+  action: "openHelp" | "openSessions" | "openThemes" | "openModels";
+}) => {
+  const method = client?.tui?.[action];
+  if (typeof method !== "function") return false;
+  await callFirstAvailable([
+    () => method(),
+    () => method({}),
+  ]);
+  return true;
+};
+
+const executeTuiCommand = async ({
+  client,
+  command,
+}: {
+  client: any;
+  command: string;
+}) => {
+  const method = client?.tui?.executeCommand;
+  if (typeof method !== "function") return false;
+  await callFirstAvailable([
+    () => method({ command }),
+    () => method({ body: { command } }),
+  ]);
+  return true;
+};
+
+const executeSessionCommand = async ({
+  client,
+  sessionId,
+  command,
+  argumentsText,
+}: {
+  client: any;
+  sessionId: string;
+  command: string;
+  argumentsText: string;
+}) => {
+  const method = client?.session?.command;
+  if (typeof method !== "function") return false;
+  await callFirstAvailable([
+    () =>
+      method({
+        sessionID: sessionId,
+        command,
+        arguments: argumentsText,
+      }),
+    () =>
+      method({
+        path: { id: sessionId },
+        body: { command, arguments: argumentsText },
+      }),
+  ]);
+  return true;
+};
+
+const runPhoneCommand = async ({
+  client,
+  sessionId,
+  text,
+}: {
+  client: any;
+  sessionId: string;
+  text: string;
+}) => {
+  const parsed = parsePhoneCommand(text);
+  if (!parsed) return false;
+
+  if (parsed.raw === "/models") {
+    if (await executeTuiAction({ client, action: "openModels" })) {
+      return { handled: true, reply: "Opened the model picker in OpenCode." };
+    }
+  }
+
+  if (parsed.raw === "/sessions") {
+    if (await executeTuiAction({ client, action: "openSessions" })) {
+      return { handled: true, reply: "Opened the session picker in OpenCode." };
+    }
+  }
+
+  if (parsed.raw === "/themes") {
+    if (await executeTuiAction({ client, action: "openThemes" })) {
+      return { handled: true, reply: "Opened the theme picker in OpenCode." };
+    }
+  }
+
+  if (parsed.raw === "/help") {
+    if (await executeTuiAction({ client, action: "openHelp" })) {
+      return { handled: true, reply: "Opened the help dialog in OpenCode." };
+    }
+  }
+
+  if (parsed.raw === "/abort") {
+    const abort = client?.session?.abort;
+    if (typeof abort === "function") {
+      await callFirstAvailable([
+        () => abort({ sessionID: sessionId }),
+        () => abort({ path: { id: sessionId } }),
+      ]);
+      return { handled: true, reply: "Aborted the active OpenCode run." };
+    }
+  }
+
+  const tuiAlias = tuiCommandAliases[parsed.raw];
+  if (tuiAlias && await executeTuiCommand({ client, command: tuiAlias })) {
+    return { handled: true, reply: `Executed ${parsed.raw} in OpenCode.` };
+  }
+
+  if (
+    await executeSessionCommand({
+      client,
+      sessionId,
+      command: parsed.command,
+      argumentsText: parsed.arguments,
+    })
+  ) {
+    return { handled: true };
+  }
+
+  return {
+    handled: true,
+    reply:
+      `Couldn't run ${parsed.raw} from the plugin runtime. Try the command in OpenCode directly.`,
+  };
+};
+
+const buildPromptParts = async (message: any) => {
+  const parts: unknown[] = [];
+  if (message.text) {
+    parts.push({ type: "text", text: message.text });
+  }
+
+  if (message.attachments && message.attachments.length > 0) {
+    for (const att of message.attachments) {
+      try {
+        const ext = att.name
+          ? path.extname(att.name)
+          : att.mimeType?.includes("audio")
+          ? ".m4a"
+          : ".bin";
+        const tmpPath = path.join(
+          os.tmpdir(),
+          `alice_att_${Date.now()}${ext}`,
+        );
+        const res = await fetch(att.url);
+        const buf = await res.arrayBuffer();
+        await fs.writeFile(tmpPath, Buffer.from(buf));
+        await logDebug(`Downloaded attachment to ${tmpPath}`);
+
+        parts.push({
+          type: "file",
+          mime: att.mimeType,
+          url: `file://${tmpPath}`,
+        });
+
+        if (!message.text) {
+          parts.push({
+            type: "text",
+            text: `[User sent an attachment: ${att.name || "file"}]`,
+          });
+        }
+      } catch (err: unknown) {
+        await logDebug(
+          `Failed to download attachment: ${(err as Error).message}`,
+        );
+      }
+    }
+  }
+
+  if (parts.length === 0) {
+    parts.push({ type: "text", text: " " });
+  }
+
+  return parts;
+};
 
 export default async function plugin(input: unknown) {
   await logDebug("Plugin initialized.");
@@ -128,51 +372,56 @@ export default async function plugin(input: unknown) {
             );
           }
           if (targetSessionId) {
-            const parts: unknown[] = [];
-            if (message.text) {
-              parts.push({ type: "text", text: message.text });
+            const commandText = getMessageText(message);
+            if (aliceCommands.has(commandText)) {
+              await showAliceLink(targetSessionId);
+              await notifyPhone({
+                conversation: convoId,
+                conversationKey,
+                credentials,
+                text: "Copied a fresh Alice&Bot link from OpenCode.",
+              }).catch(() => {});
+              return;
             }
 
-            if (message.attachments && message.attachments.length > 0) {
-              for (const att of message.attachments) {
-                try {
-                  const ext = att.name
-                    ? path.extname(att.name)
-                    : att.mimeType?.includes("audio")
-                    ? ".m4a"
-                    : ".bin";
-                  const tmpPath = path.join(
-                    os.tmpdir(),
-                    `alice_att_${Date.now()}${ext}`,
-                  );
-                  const res = await fetch(att.url);
-                  const buf = await res.arrayBuffer();
-                  await fs.writeFile(tmpPath, Buffer.from(buf));
-                  await logDebug(`Downloaded attachment to ${tmpPath}`);
-
-                  parts.push({
-                    type: "file",
-                    mime: att.mimeType,
-                    url: `file://${tmpPath}`,
-                  });
-
-                  if (!message.text) {
-                    parts.push({
-                      type: "text",
-                      text: `[User sent an attachment: ${att.name || "file"}]`,
-                    });
+            if (!message.attachments?.length) {
+              try {
+                const commandResult = await runPhoneCommand({
+                  client: (input as any).client,
+                  sessionId: targetSessionId,
+                  text: commandText,
+                });
+                if (commandResult?.handled) {
+                  await logDebug(`Handled phone command: ${commandText}`);
+                  if (commandResult.reply) {
+                    await notifyPhone({
+                      conversation: convoId,
+                      conversationKey,
+                      credentials,
+                      text: commandResult.reply,
+                    }).catch(() => {});
                   }
-                } catch (err: unknown) {
-                  await logDebug(
-                    `Failed to download attachment: ${(err as Error).message}`,
-                  );
+                  return;
                 }
+              } catch (err: unknown) {
+                await logDebug(
+                  `Phone command failed for '${commandText}': ${
+                    (err as Error).message
+                  }`,
+                );
+                await notifyPhone({
+                  conversation: convoId,
+                  conversationKey,
+                  credentials,
+                  text: `[System: Failed to run ${commandText}. ${
+                    (err as Error).message
+                  }]`,
+                }).catch(() => {});
+                return;
               }
             }
 
-            if (parts.length === 0) {
-              parts.push({ type: "text", text: " " });
-            }
+            const parts = await buildPromptParts(message);
 
             await logDebug(
               `Injecting prompt into opencode: ${
@@ -255,21 +504,11 @@ export default async function plugin(input: unknown) {
     await logDebug(`Alice&Bot link: ${link}`);
   };
 
-  const aliceCommands = [
-    "/alice",
-    "alice",
-    "/aliceandbot-qr",
-    "aliceandbot qr",
-    "/aliceandbot",
-    "aliceandbot",
-    "ALICE_AND_BOT_COMMAND_INTERNAL",
-  ];
-
   return {
     event: async ({ event }: any) => {
       if (
         event.type === "tui.command.execute" &&
-        aliceCommands.includes(event.properties?.command?.trim())
+        aliceCommands.has(event.properties?.command?.trim())
       ) {
         await showAliceLink(
           event.properties?.sessionID || currentSessionId || "",
@@ -279,7 +518,7 @@ export default async function plugin(input: unknown) {
     "chat.message": async (hookInput: any, output: any) => {
       const textPart = output.parts?.find((part: any) => part.type === "text");
       const trimmed = textPart?.text?.trim() || "";
-      if (aliceCommands.includes(trimmed)) {
+      if (aliceCommands.has(trimmed)) {
         await showAliceLink(hookInput.sessionID);
         output.parts.length = 0;
         try {
