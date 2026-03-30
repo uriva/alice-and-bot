@@ -1,13 +1,14 @@
 #!/bin/bash
 set -e
 
-version="v3.1.1"
+version="v3.1.2"
 cacheBuster="$(date +%s)"
 
 echo "Installing Alice&Bot OpenCode plugin ${version} (Phone Command Routing)..."
 echo "Cache buster: ${cacheBuster}"
 
-PLUGIN_DIR="$HOME/.config/opencode/plugins/alice"
+PLUGIN_DIR="$HOME/.config/opencode/plugins/alice-and-bot"
+LEGACY_PLUGIN_DIR="$HOME/.config/opencode/plugins/alice"
 mkdir -p "$PLUGIN_DIR"
 mkdir -p ~/.config/opencode/commands
 
@@ -47,11 +48,18 @@ node -e "
   const fs = require('fs');
   const file = '$CONFIG_FILE';
   const pluginPath = '$PLUGIN_DIR/index.js';
+  const legacyPluginDir = '$LEGACY_PLUGIN_DIR';
+  const legacyPluginPath = '$LEGACY_PLUGIN_DIR/index.js';
   try {
     const data = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (!data.plugin) data.plugin = [];
-    // Remove old directory-based path if it exists
-    data.plugin = data.plugin.filter(p => p !== '$PLUGIN_DIR');
+    data.plugin = data.plugin.filter(
+      p =>
+        p !== '$PLUGIN_DIR' &&
+        p !== '$PLUGIN_DIR/index.js' &&
+        p !== legacyPluginDir &&
+        p !== legacyPluginPath,
+    );
     if (!data.plugin.includes(pluginPath)) {
       data.plugin.push(pluginPath);
       fs.writeFileSync(file, JSON.stringify(data, null, 2));
