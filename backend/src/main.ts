@@ -866,6 +866,9 @@ Deno.serve(async (req: Request) => {
         await handleUiUpdate({ ...body, elementId }),
       );
     }
+    if (req.method !== "POST") {
+      return jsonCorsResponse({ error: "not found" }, 404);
+    }
     return jsonCorsResponse(
       await apiHandler(backendApiSchema, endpoints, await req.json()),
     );
