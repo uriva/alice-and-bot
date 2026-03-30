@@ -191,7 +191,7 @@ export const useUserName =
       identities: { $: { where: { publicSignKey } } },
     });
     if (!data) return null;
-    return data.identities[0]?.name ?? "Anonymous";
+    return data.identities[0]?.name?.split("@")[0] ?? null;
   };
 
 export const useIdentityDetailsMap =

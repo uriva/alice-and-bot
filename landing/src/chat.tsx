@@ -971,7 +971,10 @@ const ConversationListItem = (
   const otherParticipant = conv.participants.find((p) =>
     p.publicSignKey !== credentials.publicSignKey
   );
-  const name = useUserName(() => db)(otherParticipant?.publicSignKey ?? "");
+  const participantName = useUserName(() => db)(
+    otherParticipant?.publicSignKey ?? "",
+  );
+  const displayName = conv.title || participantName;
   const isDarkMode = useDarkMode();
   return (
     <li key={conv.id}>
@@ -986,9 +989,9 @@ const ConversationListItem = (
           selectedConversation.value = conv.id;
         }}
       >
-        {name === null ? <ShimmerCircle /> : (
+        {displayName === null ? <ShimmerCircle /> : (
           <ChatAvatar
-            name={name}
+            name={displayName}
             baseColor={stringToColor(
               otherParticipant?.publicSignKey ?? "",
               isDarkMode,
@@ -997,7 +1000,7 @@ const ConversationListItem = (
         )}
         <div class="flex-grow overflow-hidden min-w-0">
           <div class={`font-medium ${textColorStyle} truncate`}>
-            {name === null ? <ShimmerText /> : name}
+            {displayName === null ? <ShimmerText /> : displayName}
           </div>
         </div>
       </button>
