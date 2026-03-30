@@ -35,12 +35,9 @@ async function logDebug(msg: string) {
 
 export default async function plugin(input: unknown) {
   await logDebug("Plugin initialized.");
-  const credsFile = path.join(
-    os.homedir(),
-    ".config",
-    "opencode",
-    "alice_creds.json",
-  );
+  const configDir = path.join(os.homedir(), ".config", "opencode");
+  const credsFile = path.join(configDir, "alice_creds.json");
+  const stateFile = path.join(configDir, "alice_state.json");
   let credentials: unknown;
 
   try {
@@ -50,6 +47,16 @@ export default async function plugin(input: unknown) {
     credentials = await createIdentity("Opencode Session");
     await fs.writeFile(credsFile, JSON.stringify(credentials));
   }
+
+  let relayToken: string;
+  try {
+    const stateData = JSON.parse(await fs.readFile(stateFile, "utf-8"));
+    relayToken = stateData.relayToken;
+  } catch (_e) {
+    relayToken = crypto.randomUUID();
+    await fs.writeFile(stateFile, JSON.stringify({ relayToken }));
+  }
+  await logDebug(`Using relay token: ${relayToken}`);
 
   const getLink = (sessionTitle?: string) => {
     const dirName = path.basename(process.cwd());
@@ -63,12 +70,11 @@ export default async function plugin(input: unknown) {
     }&topic=${encodeURIComponent(topic)}`;
   };
 
-  const pubKey = encodeURIComponent((credentials as any).publicSignKey);
-  const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${pubKey}`;
+  const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${relayToken}`;
 
   let reconnectTimer: any;
   const setupWebSocket = () => {
-    const wsUrl = `wss://api.aliceandbot.com/relay/ws/${pubKey}`;
+    const wsUrl = `wss://api.aliceandbot.com/relay/ws/${relayToken}`;
     const ws = new WebSocket(wsUrl);
 
     let pingInterval: any;

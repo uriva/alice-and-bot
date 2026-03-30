@@ -1268,7 +1268,7 @@ var require_cross_spawn = __commonJS((exports, module) => {
   module.exports._enoent = enoent;
 });
 
-// node_modules/run-jxa/node_modules/strip-final-newline/index.js
+// node_modules/run-jxa/node_modules/execa/node_modules/strip-final-newline/index.js
 var require_strip_final_newline = __commonJS((exports, module) => {
   module.exports = (input) => {
     const LF = typeof input === "string"
@@ -1287,7 +1287,7 @@ var require_strip_final_newline = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/npm-run-path/index.js
+// node_modules/run-jxa/node_modules/execa/node_modules/npm-run-path/index.js
 var require_npm_run_path = __commonJS((exports, module) => {
   var path = __require("path");
   var pathKey = require_path_key();
@@ -1379,7 +1379,7 @@ var require_onetime = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/human-signals/build/src/core.js
+// node_modules/run-jxa/node_modules/execa/node_modules/human-signals/build/src/core.js
 var require_core = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.SIGNALS = undefined;
@@ -1658,7 +1658,7 @@ var require_core = __commonJS((exports) => {
   exports.SIGNALS = SIGNALS;
 });
 
-// node_modules/run-jxa/node_modules/human-signals/build/src/realtime.js
+// node_modules/run-jxa/node_modules/execa/node_modules/human-signals/build/src/realtime.js
 var require_realtime = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.SIGRTMAX = exports.getRealtimeSignals = undefined;
@@ -1681,7 +1681,7 @@ var require_realtime = __commonJS((exports) => {
   exports.SIGRTMAX = SIGRTMAX;
 });
 
-// node_modules/run-jxa/node_modules/human-signals/build/src/signals.js
+// node_modules/run-jxa/node_modules/execa/node_modules/human-signals/build/src/signals.js
 var require_signals = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.getSignals = undefined;
@@ -1719,7 +1719,7 @@ var require_signals = __commonJS((exports) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/human-signals/build/src/main.js
+// node_modules/run-jxa/node_modules/execa/node_modules/human-signals/build/src/main.js
 var require_main = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.signalsByNumber = exports.signalsByName = undefined;
@@ -1934,7 +1934,7 @@ var require_stdio = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/signal-exit/signals.js
+// node_modules/run-jxa/node_modules/execa/node_modules/signal-exit/signals.js
 var require_signals2 = __commonJS((exports, module) => {
   module.exports = [
     "SIGABRT",
@@ -1960,7 +1960,7 @@ var require_signals2 = __commonJS((exports, module) => {
   }
 });
 
-// node_modules/run-jxa/node_modules/signal-exit/index.js
+// node_modules/run-jxa/node_modules/execa/node_modules/signal-exit/index.js
 var require_signal_exit = __commonJS((exports, module) => {
   var process4 = global.process;
   var processOk = function (process5) {
@@ -2224,7 +2224,7 @@ var require_kill = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/is-stream/index.js
+// node_modules/run-jxa/node_modules/execa/node_modules/is-stream/index.js
 var require_is_stream = __commonJS((exports, module) => {
   var isStream = (stream) =>
     stream !== null && typeof stream === "object" &&
@@ -2244,7 +2244,7 @@ var require_is_stream = __commonJS((exports, module) => {
   module.exports = isStream;
 });
 
-// node_modules/run-jxa/node_modules/get-stream/buffer-stream.js
+// node_modules/run-jxa/node_modules/execa/node_modules/get-stream/buffer-stream.js
 var require_buffer_stream = __commonJS((exports, module) => {
   var { PassThrough: PassThroughStream } = __require("stream");
   module.exports = (options) => {
@@ -2286,7 +2286,7 @@ var require_buffer_stream = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/get-stream/index.js
+// node_modules/run-jxa/node_modules/execa/node_modules/get-stream/index.js
 var require_get_stream = __commonJS((exports, module) => {
   var { constants: BufferConstants } = __require("buffer");
   var stream = __require("stream");
@@ -28123,12 +28123,9 @@ async function logDebug(msg) {
 }
 async function plugin(input) {
   await logDebug("Plugin initialized.");
-  const credsFile = path8.join(
-    os2.homedir(),
-    ".config",
-    "opencode",
-    "alice_creds.json",
-  );
+  const configDir = path8.join(os2.homedir(), ".config", "opencode");
+  const credsFile = path8.join(configDir, "alice_creds.json");
+  const stateFile = path8.join(configDir, "alice_state.json");
   let credentials;
   try {
     const data = await fs7.readFile(credsFile, "utf-8");
@@ -28137,6 +28134,15 @@ async function plugin(input) {
     credentials = await createIdentity("Opencode Session");
     await fs7.writeFile(credsFile, JSON.stringify(credentials));
   }
+  let relayToken;
+  try {
+    const stateData = JSON.parse(await fs7.readFile(stateFile, "utf-8"));
+    relayToken = stateData.relayToken;
+  } catch (_e) {
+    relayToken = crypto.randomUUID();
+    await fs7.writeFile(stateFile, JSON.stringify({ relayToken }));
+  }
+  await logDebug(`Using relay token: ${relayToken}`);
   const getLink = (sessionTitle) => {
     const dirName = path8.basename(process.cwd());
     const fallbackTopic = `OpenCode_${dirName}_${Date.now()}`;
@@ -28146,11 +28152,10 @@ async function plugin(input) {
       encodeURIComponent(credentials.publicSignKey)
     }&topic=${encodeURIComponent(topic)}`;
   };
-  const pubKey = encodeURIComponent(credentials.publicSignKey);
-  const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${pubKey}`;
+  const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${relayToken}`;
   let reconnectTimer;
   const setupWebSocket = () => {
-    const wsUrl = `wss://api.aliceandbot.com/relay/ws/${pubKey}`;
+    const wsUrl = `wss://api.aliceandbot.com/relay/ws/${relayToken}`;
     const ws = new WebSocket(wsUrl);
     let pingInterval;
     ws.onopen = async () => {
