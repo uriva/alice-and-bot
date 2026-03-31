@@ -1074,7 +1074,7 @@ const EmptyChatsView = ({ searchQuery, onNewChat }: {
           </div>
           <button
             type="button"
-            class="px-6 py-2 bg-gray-800 hover:bg-gray-900 dark:bg-gray-300 dark:hover:bg-gray-400 text-white dark:text-gray-900 rounded-lg font-medium transition-colors"
+            class="px-6 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors"
             onClick={onNewChat}
           >
             + New Chat
@@ -1517,7 +1517,7 @@ const LoggedInMessenger = (
                     </div>
                     <button
                       type="button"
-                      class="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-900 dark:bg-gray-300 dark:hover:bg-gray-400 text-white dark:text-gray-900 rounded-lg transition-colors flex-shrink-0"
+                      class="w-10 h-10 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors flex-shrink-0"
                       onClick={() => setView("new_chat")}
                       title="New Chat"
                     >
