@@ -17,14 +17,14 @@ export type CustomColors = {
 
 const chatBackgroundPattern = (isDarkMode: boolean) =>
   `url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='p' x='0' y='0' width='40' height='40' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='20' cy='20' r='1' fill='${
-    isDarkMode ? "%23222" : "%23e8e8e8"
+    isDarkMode ? "%23222" : "%23e8e8e0"
   }'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='200' height='200' fill='${
-    isDarkMode ? "%230a0a0a" : "%23fafafa"
+    isDarkMode ? "%230a0a0a" : "%23f8f7f4"
   }'/%3E%3Crect width='200' height='200' fill='url(%23p)'/%3E%3C/svg%3E")`;
 
 export const widgetColors = (isDarkMode: boolean, custom?: CustomColors) => ({
   background: custom?.background ?? chatBackgroundPattern(isDarkMode),
-  backgroundColor: isDarkMode ? "#0a0a0a" : "#fafafa",
+  backgroundColor: isDarkMode ? "#0a0a0a" : "#f8f7f4",
   color: custom?.text ?? (isDarkMode ? "#f4f4f4" : "#222"),
 });
 
