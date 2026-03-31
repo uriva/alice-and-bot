@@ -63,7 +63,7 @@ export const avatarColor = (str: string, isDark: boolean) => {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   const h = avatarHues[Math.abs(hash) % avatarHues.length];
-  return `hsl(${h}, 55%, ${isDark ? 40 : 55}%)`;
+  return `hsl(${h}, 65%, ${isDark ? 65 : 35}%)`;
 };
 
 const hexLightness = (hex: string) => {
