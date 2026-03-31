@@ -2040,7 +2040,7 @@ const messageContainerStyle = (isDark: boolean) => ({
   WebkitOverflowScrolling: "touch",
   transition: "background 0.2s",
   flexDirection: "column",
-  scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
+  scrollbarColor: isDark ? "#374151 #111" : "#cbd5e1 #f8fafc",
 });
 
 const messageContainerDataAttr = { "data-scrollable": true };
@@ -3120,7 +3120,7 @@ export const AbstractChatBox = (
                   border: "none",
                   borderRadius: 22,
                   background: customColors?.inputBackground ??
-                    (isDark ? "#1f2937" : "#e2e8f0"),
+                    (isDark ? "#111" : "#e2e8f0"),
                   color: isDark ? "#f3f4f6" : "#1e293b",
                   fontSize: 16,
                   outline: "none",
@@ -3136,9 +3136,7 @@ export const AbstractChatBox = (
                   transition: "background 0.2s, color 0.2s",
                   fontFamily: "inherit",
                   letterSpacing: 0.1,
-                  scrollbarColor: isDark
-                    ? "#374151 #1f2937"
-                    : "#cbd5e1 #e2e8f0",
+                  scrollbarColor: isDark ? "#374151 #111" : "#cbd5e1 #e2e8f0",
                   scrollbarWidth: "thin",
                 }}
                 onKeyDown={(e) => {

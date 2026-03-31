@@ -1255,7 +1255,7 @@ const LoggedInMessenger = (
   const isDark = useDarkMode();
   const [darkModeState, setDarkModeState] = useState(isDark);
   const scrollbarStyle = {
-    scrollbarColor: isDark ? "#374151 #111827" : "#d1d5db #f3f4f6",
+    scrollbarColor: isDark ? "#374151 #0a0a0a" : "#d1d5db #f3f4f6",
   };
   const [searchQuery, setSearchQuery] = useState("");
   const router = useLocation().route;
@@ -1548,6 +1548,7 @@ const LoggedInMessenger = (
                 <h2 class="text-lg font-semibold">Start a new chat</h2>
               </div>
               <div
+                class="p-4 bg-white dark:bg-black"
                 style={{
                   display: "flex",
                   flexGrow: 1,
@@ -1555,7 +1556,6 @@ const LoggedInMessenger = (
                   alignItems: "center",
                   justifyContent: "center",
                 }}
-                class="p-4"
               >
                 <div style={{ maxWidth: "500px", width: "100%" }}>
                   <NewChatScreen
@@ -1574,6 +1574,7 @@ const LoggedInMessenger = (
                 <h2 class="text-lg font-semibold">Account Settings</h2>
               </div>
               <div
+                class="p-8 overflow-y-auto bg-white dark:bg-black"
                 style={{
                   display: "flex",
                   flexGrow: 1,
@@ -1582,7 +1583,6 @@ const LoggedInMessenger = (
                   justifyContent: "flex-start",
                   ...scrollbarStyle,
                 }}
-                class="p-8 overflow-y-auto"
               >
                 <div style={{ maxWidth: "600px", width: "100%" }}>
                   <YourKey credentials={credentials} />
