@@ -284,9 +284,6 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
             <h3 class="text-2xl font-bold mb-4 text-center">
               MCP Integration
             </h3>
-            <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-4">
-              Connect Alice&Bot to your favorite code editor via MCP.
-            </p>
             <div class="flex flex-wrap justify-center gap-4">
               <Button asChild size="lg">
                 <a href={mcpGuidePath}>Setup Guide</a>
