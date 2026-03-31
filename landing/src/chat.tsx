@@ -741,6 +741,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             type="button"
             disabled={savingName || nameInput.trim() === (name ?? "")}
             onClick={onSaveName}
+            className="w-24"
           >
             {savingName ? "Saving..." : "Save"}
           </Button>
@@ -781,9 +782,9 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             type="button"
             disabled={savingAlias}
             onClick={onSaveAlias}
+            className="w-24"
           >
-            {savingAlias ? "Saving..." : profile?.alias ? "Update" : "Set"}{" "}
-            alias
+            {savingAlias ? "Saving..." : profile?.alias ? "Update" : "Set"}
           </Button>
         </div>
         <div class={hintStyle}>
@@ -849,7 +850,6 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             </Button>
             {balanceData.balance > 0 && (
               <Button
-                variant="secondary"
                 type="button"
                 onClick={() =>
                   toast(
