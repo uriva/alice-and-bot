@@ -1529,6 +1529,7 @@ const LoggedInMessenger = (
                     <Chat
                       credentials={credentials}
                       conversationId={selectedConversation.value}
+                      darkModeOverride={darkModeState}
                     />
                   )
                   : <EmptyChatsView onNewChat={() => setView("new_chat")} />}
@@ -1603,6 +1604,7 @@ const LoggedInMessenger = (
           <Chat
             credentials={credentials}
             conversationId={selectedConversation.value}
+            darkModeOverride={darkModeState}
             onClose={() => {
               selectedConversation.value = null;
             }}
