@@ -3174,8 +3174,6 @@ export const AbstractChatBox = (
                 !isRecording;
               const showStop = isRecording && !isRecordingLocked;
               const showSend = hasContent || (isRecording && isRecordingLocked);
-              const primaryColor = customColors?.primary ??
-                defaultPrimary(isDark);
               const inputBgColor = customColors?.inputBackground ??
                 (isDark ? "#111" : "#ffffff");
 
@@ -3254,11 +3252,7 @@ export const AbstractChatBox = (
                   onTouchCancel={handleTouchCancel}
                   style={{
                     ...sendButtonStyle(isDark, customColors),
-                    background: showStop
-                      ? "#dc2626"
-                      : showMic
-                      ? inputBgColor
-                      : primaryColor,
+                    background: showStop ? "#dc2626" : inputBgColor,
                     touchAction: "none",
                     position: "relative",
                     overflow: "hidden",
