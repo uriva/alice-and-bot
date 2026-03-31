@@ -53,7 +53,7 @@ const typingIndicatorStyle = (isDark: boolean) => ({
   fontSize: 12,
 });
 
-const defaultPrimary = (isDark: boolean) => isDark ? "#2563eb" : "#3182ce";
+const defaultPrimary = (isDark: boolean) => isDark ? "#e8e8ea" : "#1a1a1a";
 
 const recordingMimeType = typeof MediaRecorder !== "undefined" &&
     MediaRecorder.isTypeSupported("audio/webm")
@@ -79,7 +79,14 @@ const SendingAudioIndicator = (
         }}
       >
         <Spinner />
-        <span style={{ color: "#fff", fontSize: 13 }}>Sending audio...</span>
+        <span
+          style={{
+            color: isLightColor(primaryColor) ? "#222" : "#fff",
+            fontSize: 13,
+          }}
+        >
+          Sending audio...
+        </span>
       </div>
     </div>
   );
@@ -741,7 +748,7 @@ const AudioPlayer = (
           borderRadius: "50%",
           border: "none",
           background: primaryColor,
-          color: "#fff",
+          color: isLightColor(primaryColor) ? "#222" : "#fff",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
@@ -1013,7 +1020,7 @@ const AttachmentRenderer = (
               borderRadius: "50%",
               border: "none",
               background: primaryColor,
-              color: "#fff",
+              color: isLightColor(primaryColor) ? "#222" : "#fff",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -1420,7 +1427,7 @@ const Message = (
   const isStartOfSequence = !prev || prev.authorId !== authorId;
   const isDark = useDarkMode();
   const baseColor = isOwn
-    ? (customColors?.primary ?? (isDark ? "#2563eb" : "#3182ce"))
+    ? (customColors?.primary ?? defaultPrimary(isDark))
     : (customColors?.otherBubble ?? defaultOtherBubble(isDark));
   const participantColor = avatarColor(authorId, isDark);
   const noBubble = !isOwn && customColors?.hideOtherBubble;
@@ -1428,8 +1435,8 @@ const Message = (
   const textColor = noBubble
     ? (customColors?.text ?? (isDark ? "#f4f4f4" : "#222"))
     : isLightColor(baseColor)
-    ? (isDark ? "#fff" : "#222")
-    : (isDark ? "#fff" : "#fff");
+    ? "#222"
+    : "#fff";
   const avatarSpace = isOwn ? 0 : 36;
   const canEdit = !!(isOwn && onEdit && Date.now() - timestamp < editWindowMs);
   const hasEdits = !empty(editHistory ?? []);
@@ -2006,15 +2013,18 @@ const headerButtonStyle: JSX.CSSProperties = {
   flexShrink: 0,
 };
 
-const titleStyle = (isDark: boolean, customColors?: CustomColors) => ({
-  textAlign: "center",
-  fontWeight: "bold",
-  fontSize: "1.2em",
-  padding: "0.7em 0 0.5em 0",
-  background: customColors?.primary ?? (isDark ? "#2563eb" : "#3182ce"),
-  color: "#ffffff",
-  borderBottom: `1px solid ${isDark ? "#ffffff10" : "#00000008"}`,
-});
+const titleStyle = (isDark: boolean, customColors?: CustomColors) => {
+  const bg = customColors?.primary ?? defaultPrimary(isDark);
+  return {
+    textAlign: "center",
+    fontWeight: "bold",
+    fontSize: "1.2em",
+    padding: "0.7em 0 0.5em 0",
+    background: bg,
+    color: isLightColor(bg) ? "#222" : "#fff",
+    borderBottom: `1px solid ${isDark ? "#ffffff10" : "#00000008"}`,
+  };
+};
 
 const messageContainerStyle = (isDark: boolean) => ({
   display: "flex",
@@ -2037,7 +2047,7 @@ const sendButtonStyle = (
   customColors?: CustomColors,
 ) => {
   const primaryColor = customColors?.primary ??
-    (isDark ? "#2563eb" : "#3182ce");
+    defaultPrimary(isDark);
   return {
     display: "flex",
     alignItems: "center",
@@ -2047,7 +2057,7 @@ const sendButtonStyle = (
     borderRadius: "50%",
     border: "none",
     background: primaryColor,
-    color: "#fff",
+    color: isLightColor(primaryColor) ? "#222" : "#fff",
     cursor: "pointer",
     boxShadow: isDark
       ? "0 2px 8px rgba(0,0,0,0.25)"
@@ -3155,7 +3165,7 @@ export const AbstractChatBox = (
               const showStop = isRecording && !isRecordingLocked;
               const showSend = hasContent || (isRecording && isRecordingLocked);
               const primaryColor = customColors?.primary ??
-                (isDark ? "#2563eb" : "#3182ce");
+                defaultPrimary(isDark);
 
               const handleButtonClick = () => {
                 if (showMic) {

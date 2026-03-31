@@ -503,7 +503,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
             style={{
               marginTop: "1.5rem",
               padding: "0.5rem 1rem",
-              background: customColors?.primary ?? "#3b82f6",
+              background: customColors?.primary ?? "#1a1a1a",
               color: "white",
               borderRadius: "0.375rem",
               border: "none",
