@@ -367,7 +367,7 @@ const _NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
         <div>
           <button
             type="button"
-            class={buttonBlueStyle}
+            class={buttonSecondaryStyle}
             onClick={onClickCreateIdentity}
             disabled={creating}
           >
@@ -445,7 +445,7 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
         />
         <button
           type="button"
-          class={buttonBlueStyle}
+          class={buttonSecondaryStyle}
           onClick={identify}
         >
           Sign in
@@ -513,7 +513,7 @@ const QrCodeTransfer = ({ credentials }: { credentials: Credentials }) => {
     <div class="flex flex-col gap-2">
       <button
         type="button"
-        class={buttonBlueStyle}
+        class={buttonSecondaryStyle}
         disabled={loading}
         onClick={onGenerate}
       >
@@ -723,7 +723,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           />
           <button
             type="button"
-            class={buttonGreenStyle}
+            class={buttonPrimaryStyle}
             disabled={savingName || nameInput.trim() === (name ?? "")}
             onClick={onSaveName}
           >
@@ -764,7 +764,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           />
           <button
             type="button"
-            class={buttonGreenStyle}
+            class={buttonPrimaryStyle}
             disabled={savingAlias}
             onClick={onSaveAlias}
           >
@@ -807,7 +807,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           <div class="flex gap-2">
             <button
               type="button"
-              class={buttonGreenStyle}
+              class={buttonPrimaryStyle}
               onClick={async () => {
                 const amountStr = globalThis.prompt(
                   "Enter amount to deposit (USD)",
@@ -837,7 +837,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             {balanceData.balance > 0 && (
               <button
                 type="button"
-                class={buttonBlueStyle}
+                class={buttonSecondaryStyle}
                 onClick={() =>
                   toast(
                     "Please email support@aliceandbot.com to withdraw your funds.",
@@ -867,7 +867,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           />
           <button
             type="button"
-            class={buttonBlueStyle}
+            class={buttonSecondaryStyle}
             onClick={async () => {
               const toastId = toast.loading("Checking payment...");
               const res = await checkCryptoPaymentSigned({
@@ -919,7 +919,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           />
           <button
             type="button"
-            class={buttonGreenStyle}
+            class={buttonPrimaryStyle}
             onClick={onSavePrice}
             disabled={savingPrice}
           >
@@ -944,7 +944,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
       <div>
         <button
           type="button"
-          class={buttonBlueStyle}
+          class={buttonSecondaryStyle}
           onClick={() => {
             toast.promise(
               registerPush(credentials),
@@ -1031,7 +1031,7 @@ const EmptyChatsView = ({ searchQuery, onNewChat }: {
           </div>
           <button
             type="button"
-            class="px-6 py-2 bg-gray-800 hover:bg-gray-900 dark:bg-gray-200 dark:hover:bg-gray-300 text-white dark:text-gray-900 rounded-lg font-medium transition-colors"
+            class="px-6 py-2 bg-gray-800 hover:bg-gray-900 dark:bg-gray-300 dark:hover:bg-gray-400 text-white dark:text-gray-900 rounded-lg font-medium transition-colors"
             onClick={onNewChat}
           >
             + New Chat
@@ -1172,7 +1172,7 @@ const NewChatScreen = (
           <div>
             <button
               type="button"
-              class={buttonGreenStyle}
+              class={buttonPrimaryStyle}
               onClick={() =>
                 startConversation(credentials, otherParticipantPubKey).then(
                   () => onChatCreated?.(),
@@ -1280,7 +1280,7 @@ const LoggedInMessenger = (
             type="button"
             class={`w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
               view === "chats"
-                ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
+                ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
                 : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             }`}
             onClick={() => setView("chats")}
@@ -1303,7 +1303,7 @@ const LoggedInMessenger = (
             type="button"
             class={`w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
               view === "identity"
-                ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
+                ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
                 : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             }`}
             onClick={() => setView("identity")}
@@ -1384,7 +1384,7 @@ const LoggedInMessenger = (
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "chats"
-                  ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
+                  ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("chats")}
@@ -1395,7 +1395,7 @@ const LoggedInMessenger = (
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "new_chat"
-                  ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
+                  ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("new_chat")}
@@ -1406,7 +1406,7 @@ const LoggedInMessenger = (
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "identity"
-                  ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
+                  ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("identity")}
@@ -1452,7 +1452,7 @@ const LoggedInMessenger = (
                     <LogoHeader onClick={() => router(homePath)} />
                     <button
                       type="button"
-                      class="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-900 dark:bg-gray-200 dark:hover:bg-gray-300 text-white dark:text-gray-900 rounded-lg transition-colors flex-shrink-0"
+                      class="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-900 dark:bg-gray-300 dark:hover:bg-gray-400 text-white dark:text-gray-900 rounded-lg transition-colors flex-shrink-0"
                       onClick={() => setView("new_chat")}
                       title="New Chat"
                     >
@@ -1681,7 +1681,7 @@ const MessengerLogin = ({ setCredentials }: {
             <div class="flex justify-center">
               <button
                 type="button"
-                class={buttonGreenStyle + " px-8"}
+                class={buttonPrimaryStyle + " px-8"}
                 disabled={creatingIdentity}
                 onClick={() => createIdentityWithName(displayName)}
               >
@@ -1990,7 +1990,7 @@ const CopyCredentialsButton = () => {
     <div class="mb-4">
       <button
         type="button"
-        class={buttonBlueStyle}
+        class={buttonSecondaryStyle}
         onClick={() => {
           const creds = localStorage.getItem("alicebot_credentials");
           if (creds) {
@@ -2018,7 +2018,7 @@ const CopyInviteLinkButton = ({ publicSignKey }: { publicSignKey: string }) => {
     <div class="mb-4">
       <button
         type="button"
-        class={buttonBlueStyle}
+        class={buttonSecondaryStyle}
         onClick={() => {
           navigator.clipboard.writeText(link);
           setCopied(true);
@@ -2085,7 +2085,7 @@ const DangerZone = () => {
   );
 };
 
-const textColorStyle = "text-gray-900 dark:text-gray-100";
+const textColorStyle = "text-gray-900 dark:text-gray-200";
 const sectionSpacing = "mb-6";
 const labelStyle =
   "block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300";
@@ -2095,10 +2095,10 @@ const inputStyle =
   "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-gray-500 focus:border-gray-500 dark:focus:ring-gray-500 dark:focus:border-gray-500 max-w-md";
 const buttonBaseStyle =
   "px-4 py-2 text-white rounded-lg focus:ring-4 focus:outline-none whitespace-nowrap";
-const buttonBlueStyle =
-  `${buttonBaseStyle} bg-gray-800 hover:bg-gray-900 focus:ring-gray-300 dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-gray-900 dark:focus:ring-gray-600`;
-const buttonGreenStyle =
-  `${buttonBaseStyle} bg-green-600 hover:bg-green-700 focus:ring-green-300 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800`;
+const buttonPrimaryStyle =
+  `${buttonBaseStyle} bg-gray-800 hover:bg-gray-900 focus:ring-gray-300 dark:bg-gray-300 dark:hover:bg-gray-400 dark:text-gray-900 dark:focus:ring-gray-600`;
+const buttonSecondaryStyle =
+  `${buttonBaseStyle} bg-gray-600 hover:bg-gray-700 focus:ring-gray-300 dark:bg-gray-400 dark:hover:bg-gray-500 dark:text-gray-900 dark:focus:ring-gray-600`;
 const textareaStyle =
   "w-full border rounded-lg p-2.5 text-sm bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white";
 const hintStyle = "text-xs text-gray-600 dark:text-gray-400 mt-1";

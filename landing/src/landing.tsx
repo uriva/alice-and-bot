@@ -275,7 +275,7 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
         <div class="flex flex-wrap justify-center gap-4">
           <a
             href={mcpGuidePath}
-            class="px-8 py-4 bg-gradient-to-r from-gray-700 to-gray-900 dark:from-gray-200 dark:to-gray-400 text-white dark:text-gray-900 text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
+            class="px-8 py-4 bg-gradient-to-r from-gray-700 to-gray-900 dark:from-gray-300 dark:to-gray-500 text-white dark:text-gray-900 text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
           >
             Setup Guide
           </a>

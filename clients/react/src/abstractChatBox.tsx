@@ -53,7 +53,7 @@ const typingIndicatorStyle = (isDark: boolean) => ({
   fontSize: 12,
 });
 
-const defaultPrimary = (isDark: boolean) => isDark ? "#e8e8ea" : "#1a1a1a";
+const defaultPrimary = (isDark: boolean) => isDark ? "#d4d4d8" : "#1a1a1a";
 
 const recordingMimeType = typeof MediaRecorder !== "undefined" &&
     MediaRecorder.isTypeSupported("audio/webm")

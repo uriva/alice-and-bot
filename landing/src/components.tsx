@@ -8,7 +8,7 @@ export const Button = (props: ButtonProps) => {
   const base = "px-4 py-2 font-medium rounded transition " +
     (disabled
       ? "bg-gray-300 dark:bg-gray-700 text-gray-400 cursor-not-allowed opacity-60 "
-      : "bg-gray-800 hover:bg-gray-900 dark:bg-gray-200 dark:hover:bg-gray-300 text-white dark:text-gray-900 cursor-pointer ");
+      : "bg-gray-800 hover:bg-gray-900 dark:bg-gray-300 dark:hover:bg-gray-400 text-white dark:text-gray-900 cursor-pointer ");
   return (
     <button
       {...rest}
