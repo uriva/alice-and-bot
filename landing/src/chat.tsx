@@ -724,236 +724,262 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
 
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", gap: 16 }}
-      class={`${textColorStyle} mb-2`}
+      style={{ display: "flex", flexDirection: "column" }}
+      class={`${textColorStyle} mb-2 gap-24`}
     >
-      <div class="flex flex-col gap-1 max-w-md">
-        <label class={labelSmallStyle}>Display name</label>
-        <div class="flex gap-2 items-center">
-          <input
-            class={inputStyle + " flex-grow"}
-            placeholder="Your name"
-            value={nameInput}
-            onInput={(e) => setNameInput(e.currentTarget.value.slice(0, 50))}
-            disabled={savingName}
-          />
-          <Button
-            type="button"
-            disabled={savingName || nameInput.trim() === (name ?? "")}
-            onClick={onSaveName}
-            className="w-24"
-          >
-            {savingName ? "Saving..." : "Save"}
-          </Button>
+      {/* Profile Section */}
+      <div class="space-y-4">
+        <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          Profile
         </div>
-        {nameStatus && (
-          <div
-            class={`text-xs ${
-              nameStatus.type === "success"
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400"
-            }`}
-          >
-            {nameStatus.message}
-          </div>
-        )}
-      </div>
-      <div>
-        Your public key is <CopyableString str={publicSignKey} />
-      </div>
-      <div>
-        <CopyInviteLinkButton publicSignKey={publicSignKey} />
-      </div>
-      <div class="flex flex-col gap-1 max-w-md">
-        <label class={labelSmallStyle}>Public alias (optional)</label>
-        <div class="flex gap-2 items-center">
-          <input
-            class={inputStyle + " flex-grow"}
-            placeholder="choose-alias"
-            value={aliasInput}
-            onInput={(e) =>
-              setAliasInput(
-                e.currentTarget.value.toLowerCase().replace(/[^a-z0-9_]/g, "")
-                  .slice(0, 15),
-              )}
-            disabled={savingAlias}
-          />
-          <Button
-            type="button"
-            disabled={savingAlias}
-            onClick={onSaveAlias}
-            className="w-24"
-          >
-            {savingAlias ? "Saving..." : profile?.alias ? "Update" : "Set"}
-          </Button>
-        </div>
-        <div class={hintStyle}>
-          Lowercase letters, numbers, underscore. Max 15 chars. Public &
-          shareable.
-        </div>
-        {aliasStatus && (
-          <div
-            class={`text-xs ${
-              aliasStatus.type === "success"
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400"
-            }`}
-          >
-            {aliasStatus.message}
-          </div>
-        )}
-        {profile?.alias && (
-          <div class={hintStyle}>
-            Current alias:&nbsp;
-            <span class="font-mono">@{profile.alias}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Balance Display */}
-      {balanceData && (
-        <div class="flex flex-row justify-between items-center p-4 bg-black/5 dark:bg-white/5 rounded-lg mb-2">
-          <div>
-            <div class="font-semibold text-sm opacity-70">Account Balance</div>
-            <div class="text-2xl font-bold">
-              ${(balanceData.balance / 100).toFixed(2)}
-            </div>
-          </div>
-          <div class="flex gap-2">
+        <div class="flex flex-col gap-1 max-w-md">
+          <label class={labelSmallStyle}>Display name</label>
+          <div class="flex gap-2 items-center">
+            <input
+              class={inputStyle + " flex-grow"}
+              placeholder="Your name"
+              value={nameInput}
+              onInput={(e) => setNameInput(e.currentTarget.value.slice(0, 50))}
+              disabled={savingName}
+            />
             <Button
               type="button"
-              onClick={async () => {
-                const amountStr = globalThis.prompt(
-                  "Enter amount to deposit (USD)",
-                  "10",
-                );
-                if (!amountStr) return;
-                const amount = parseFloat(amountStr);
-                if (isNaN(amount) || amount <= 0) {
-                  toast("Invalid amount");
-                  return;
-                }
-                const toastId = toast.loading("Generating deposit address...");
-                const res = await prepareCryptoPaymentSigned({
-                  amount,
-                  credentials,
-                });
-                toast.dismiss(toastId);
-                if ("error" in res) {
-                  toast.error(`Failed: ${res.error}`);
-                } else {
-                  setDepositData(res);
-                }
-              }}
+              disabled={savingName || nameInput.trim() === (name ?? "")}
+              onClick={onSaveName}
+              className="w-24"
             >
-              Deposit
+              {savingName ? "Saving..." : "Save"}
             </Button>
-            {balanceData.balance > 0 && (
+          </div>
+          {nameStatus && (
+            <div
+              class={`text-xs ${
+                nameStatus.type === "success"
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-red-600 dark:text-red-400"
+              }`}
+            >
+              {nameStatus.message}
+            </div>
+          )}
+        </div>
+        <div class="flex flex-col gap-1 max-w-md">
+          <label class={labelSmallStyle}>Public alias (optional)</label>
+          <div class="flex gap-2 items-center">
+            <input
+              class={inputStyle + " flex-grow"}
+              placeholder="choose-alias"
+              value={aliasInput}
+              onInput={(e) =>
+                setAliasInput(
+                  e.currentTarget.value.toLowerCase().replace(/[^a-z0-9_]/g, "")
+                    .slice(0, 15),
+                )}
+              disabled={savingAlias}
+            />
+            <Button
+              type="button"
+              disabled={savingAlias}
+              onClick={onSaveAlias}
+              className="w-24"
+            >
+              {savingAlias ? "Saving..." : profile?.alias ? "Update" : "Set"}
+            </Button>
+          </div>
+          <div class={hintStyle}>
+            Lowercase letters, numbers, underscore. Max 15 chars. Public &
+            shareable.
+          </div>
+          {aliasStatus && (
+            <div
+              class={`text-xs ${
+                aliasStatus.type === "success"
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-red-600 dark:text-red-400"
+              }`}
+            >
+              {aliasStatus.message}
+            </div>
+          )}
+          {profile?.alias && (
+            <div class={hintStyle}>
+              Current alias:&nbsp;
+              <span class="font-mono">@{profile.alias}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Identity Section */}
+      <div class="space-y-4">
+        <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          Identity
+        </div>
+        <div>
+          Your public key is <CopyableString str={publicSignKey} />
+        </div>
+        <div>
+          <CopyInviteLinkButton publicSignKey={publicSignKey} />
+        </div>
+      </div>
+
+      {/* Wallet Section */}
+      {balanceData && (
+        <div class="space-y-4">
+          <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Wallet
+          </div>
+          <div class="flex flex-row justify-between items-center p-4 bg-black/5 dark:bg-white/5 rounded-lg">
+            <div>
+              <div class="font-semibold text-sm opacity-70">
+                Account Balance
+              </div>
+              <div class="text-2xl font-bold">
+                ${(balanceData.balance / 100).toFixed(2)}
+              </div>
+            </div>
+            <div class="flex gap-2">
               <Button
                 type="button"
-                onClick={() =>
-                  toast(
-                    "Please email support@aliceandbot.com to withdraw your funds.",
-                  )}
+                onClick={async () => {
+                  const amountStr = globalThis.prompt(
+                    "Enter amount to deposit (USD)",
+                    "10",
+                  );
+                  if (!amountStr) return;
+                  const amount = parseFloat(amountStr);
+                  if (isNaN(amount) || amount <= 0) {
+                    toast("Invalid amount");
+                    return;
+                  }
+                  const toastId = toast.loading(
+                    "Generating deposit address...",
+                  );
+                  const res = await prepareCryptoPaymentSigned({
+                    amount,
+                    credentials,
+                  });
+                  toast.dismiss(toastId);
+                  if ("error" in res) {
+                    toast.error(`Failed: ${res.error}`);
+                  } else {
+                    setDepositData(res);
+                  }
+                }}
               >
-                Withdraw
+                Deposit
               </Button>
-            )}
+              {balanceData.balance > 0 && (
+                <Button
+                  type="button"
+                  onClick={() =>
+                    toast(
+                      "Please email support@aliceandbot.com to withdraw your funds.",
+                    )}
+                >
+                  Withdraw
+                </Button>
+              )}
+            </div>
           </div>
+          {depositData && (
+            <div class="flex flex-col gap-2 p-4 bg-black/5 dark:bg-white/5 rounded-lg">
+              <div class="font-semibold text-lg">Deposit Bitcoin</div>
+              <div class="text-sm">
+                Send exactly <b>{depositData.btcAmount} BTC</b>{" "}
+                (${depositData.usdAmount}) to the following address:
+              </div>
+              <div class="font-mono text-sm break-all bg-white dark:bg-black p-2 rounded">
+                {depositData.address}
+              </div>
+              <img
+                src={depositData.qrUrl}
+                alt="Bitcoin QR Code"
+                class="w-48 h-48 mx-auto"
+              />
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={async () => {
+                  const toastId = toast.loading("Checking payment...");
+                  const res = await checkCryptoPaymentSigned({
+                    paymentAddress: depositData.address,
+                    credentials,
+                  });
+                  toast.dismiss(toastId);
+                  if ("error" in res) {
+                    toast.error(
+                      res.error === "not-paid"
+                        ? "Payment not found yet. We are checking automatically."
+                        : `Failed: ${res.error}`,
+                    );
+                  } else {
+                    toast.success(res.message);
+                    setDepositData(null);
+                    fetchBalance();
+                  }
+                }}
+              >
+                I've Paid (we check automatically)
+              </Button>
+              <Button
+                variant="link"
+                size="sm"
+                type="button"
+                className="px-0 h-auto text-sm opacity-70"
+                onClick={() => setDepositData(null)}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
-      {depositData && (
-        <div class="flex flex-col gap-2 mb-4 p-4 bg-black/5 dark:bg-white/5 rounded-lg">
-          <div class="font-semibold text-lg">Deposit Bitcoin</div>
-          <div class="text-sm">
-            Send exactly <b>{depositData.btcAmount} BTC</b>{" "}
-            (${depositData.usdAmount}) to the following address:
-          </div>
-          <div class="font-mono text-sm break-all bg-white dark:bg-black p-2 rounded">
-            {depositData.address}
-          </div>
-          <img
-            src={depositData.qrUrl}
-            alt="Bitcoin QR Code"
-            class="w-48 h-48 mx-auto"
-          />
-          <Button
-            variant="secondary"
-            type="button"
-            onClick={async () => {
-              const toastId = toast.loading("Checking payment...");
-              const res = await checkCryptoPaymentSigned({
-                paymentAddress: depositData.address,
-                credentials,
-              });
-              toast.dismiss(toastId);
-              if ("error" in res) {
-                toast.error(
-                  res.error === "not-paid"
-                    ? "Payment not found yet. We are checking automatically."
-                    : `Failed: ${res.error}`,
-                );
-              } else {
-                toast.success(res.message);
-                setDepositData(null);
-                fetchBalance();
-              }
-            }}
-          >
-            I've Paid (we check automatically)
-          </Button>
-          <Button
-            variant="link"
-            size="sm"
-            type="button"
-            className="px-0 h-auto text-sm opacity-70"
-            onClick={() => setDepositData(null)}
-          >
-            Cancel
-          </Button>
+      {/* Monetization Section */}
+      <div class="space-y-4">
+        <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          Monetization
         </div>
-      )}
-
-      {/* Price Tag Setting */}
-      <div class="flex flex-col gap-2 mb-4">
-        <label class="font-bold text-sm text-gray-700 dark:text-gray-300">
-          Message Price (USD)
-        </label>
-        <div class="flex gap-2">
-          <span class="self-center">$</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={priceTagInput}
-            onInput={(e) => setPriceTagInput(e.currentTarget.value)}
-            class={inputStyle}
-            style={{ flex: 1 }}
-            placeholder="0.00"
-          />
-          <Button
-            type="button"
-            onClick={onSavePrice}
-            disabled={savingPrice}
-          >
-            {savingPrice ? "Saving..." : "Save"}
-          </Button>
-        </div>
-        <div class={hintStyle}>
-          Cost for new users to start a conversation with you.
-        </div>
-        {priceStatus && (
-          <div
-            class={`text-xs ${
-              priceStatus.type === "success"
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400"
-            }`}
-          >
-            {priceStatus.message}
+        <div class="flex flex-col gap-2">
+          <label class="font-bold text-sm text-gray-700 dark:text-gray-300">
+            Message Price (USD)
+          </label>
+          <div class="flex gap-2">
+            <span class="self-center">$</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={priceTagInput}
+              onInput={(e) => setPriceTagInput(e.currentTarget.value)}
+              class={inputStyle}
+              style={{ flex: 1 }}
+              placeholder="0.00"
+            />
+            <Button
+              type="button"
+              onClick={onSavePrice}
+              disabled={savingPrice}
+            >
+              {savingPrice ? "Saving..." : "Save"}
+            </Button>
           </div>
-        )}
+          <div class={hintStyle}>
+            Cost for new users to start a conversation with you.
+          </div>
+          {priceStatus && (
+            <div
+              class={`text-xs ${
+                priceStatus.type === "success"
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-red-600 dark:text-red-400"
+              }`}
+            >
+              {priceStatus.message}
+            </div>
+          )}
+        </div>
       </div>
       <div>
         <Button
