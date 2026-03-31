@@ -53,7 +53,7 @@ export const centerFillStyle = (isDarkMode: boolean) => ({
 });
 
 export const defaultOtherBubble = (isDark: boolean) =>
-  isDark ? "hsl(220, 15%, 28%)" : "hsl(220, 15%, 88%)";
+  isDark ? "hsl(220, 20%, 22%)" : "hsl(220, 15%, 88%)";
 
 const avatarHues = [195, 105, 30, 300, 270, 0, 210, 150];
 

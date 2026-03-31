@@ -17,12 +17,12 @@ import { decryptAsymmetric } from "../../../protocol/src/crypto.ts";
 export const compactPublicKey = (k: string): string =>
   k.length <= 14 ? k : `${k.slice(0, 6)}…${k.slice(-4)}`;
 
-type DarkModeOverride = "light" | "dark" | null;
+export type DarkModeOverride = "light" | "dark" | null;
 
 let darkModeOverride: DarkModeOverride = null;
 const darkModeOverrideListeners = new Set<(isDark: boolean) => void>();
 
-export const setDarkModeOverride = (mode: DarkModeOverride) => {
+export const setDarkModeOverride = (mode: DarkModeOverride): void => {
   darkModeOverride = mode;
   darkModeOverrideListeners.forEach((listener) => listener(mode === "dark"));
 };
