@@ -3,10 +3,12 @@ import { FaDiscord, FaGithub, FaMoon, FaSun } from "react-icons/fa";
 import { Button } from "./components.tsx";
 import {
   chatPath,
+  claudeCodePath,
   docsPath,
   homePath,
   manifestoPath,
   mcpGuidePath,
+  opencodePath,
 } from "./paths.ts";
 
 const isDark = () =>
@@ -25,10 +27,12 @@ const useDarkMode = () => {
 };
 
 const navLinks = [
-  { href: docsPath, label: "Docs" },
-  { href: mcpGuidePath, label: "MCP" },
-  { href: chatPath, label: "Chat" },
+  { href: chatPath, label: "Messenger" },
   { href: manifestoPath, label: "Manifesto" },
+  { href: docsPath, label: "Docs" },
+  { href: claudeCodePath, label: "Claude Code" },
+  { href: opencodePath, label: "OpenCode" },
+  { href: mcpGuidePath, label: "MCP" },
 ];
 
 const navLinkClass =
