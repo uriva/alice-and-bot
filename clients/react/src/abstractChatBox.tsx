@@ -885,7 +885,6 @@ const locationPinStyle: JSX.CSSProperties = {
   left: "50%",
   top: "50%",
   transform: "translate(-50%, -100%)",
-  fontSize: 24,
   filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))",
   pointerEvents: "none",
 };
@@ -937,7 +936,9 @@ const LocationCard = (
           />
         ))}
       </div>
-      <div style={locationPinStyle}>📍</div>
+      <div style={locationPinStyle}>
+        <FaMapMarkerAlt size={24} color="#e53e3e" />
+      </div>
       {label && <div style={locationLabelStyle}>{label}</div>}
     </a>
   );
@@ -1133,7 +1134,9 @@ const AttachmentRenderer = (
       download={attachment.name}
       style={fileAttachmentStyle(isDark)}
     >
-      <span>📎</span>
+      <span>
+        <FaPaperclip size={16} />
+      </span>
       <div style={{ flex: 1 }}>
         <div style={{ color: textColor, fontSize: 13 }}>{attachment.name}</div>
         <div style={{ color: textColor, fontSize: 11, opacity: 0.7 }}>
@@ -2847,7 +2850,16 @@ export const AbstractChatBox = (
         {isRecording && (
           <div style={recordingIndicatorStyle(isDark)}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ animation: "pulse 1s infinite" }}>🔴</span>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: "#ef4444",
+                  animation: "pulse 1s infinite",
+                }}
+              />
               <span>Recording... {formatDuration(recordingDuration)}</span>
             </div>
             {isMobile && !isRecordingLocked && (

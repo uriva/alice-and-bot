@@ -231,7 +231,7 @@ server.setRequestHandler(ListToolsRequestSchema, () => {
   if (inbox.length) {
     tools.push({
       name: "aliceandbot_read",
-      description: `📬 ${inbox.length} new message${
+      description: `[${inbox.length}] new message${
         inbox.length > 1 ? "s" : ""
       } waiting. Call this tool to read them.`,
       inputSchema: { type: "object" as const, properties: {} },

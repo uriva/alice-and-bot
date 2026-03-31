@@ -53,6 +53,22 @@ import { registerPush, reportActive } from "../../protocol/src/pushClient.ts";
 import { CopyableString } from "./components.tsx";
 import { chatPath, homePath } from "./paths.ts";
 
+const Chevron = ({ up }: { up: boolean }) => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 12 12"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    style={{ transform: up ? "rotate(180deg)" : undefined }}
+  >
+    <path d="M2 4l4 4 4-4" />
+  </svg>
+);
+
 const db = init({ appId: instantAppId, schema, devtool: false });
 const adminDb = adminInit({ appId: instantAppId, schema }).asUser({
   guest: true,
@@ -1226,8 +1242,15 @@ const BrandingLogo = (
         gap: isHorizontal ? 8 : undefined,
       }}
     >
-      <div class={`text-2xl font-bold ${!isHorizontal ? "mb-2" : ""}`}>
-        👧🤖
+      <div class={`${!isHorizontal ? "mb-2" : ""}`}>
+        <img
+          src="/icon.png"
+          alt="Alice&Bot"
+          style={{
+            width: isHorizontal ? 32 : 48,
+            height: isHorizontal ? 32 : 48,
+          }}
+        />
       </div>
       <LogoText />
     </div>
@@ -1710,7 +1733,9 @@ const MessengerLogin = ({ setCredentials }: {
             onClick={() => setShowWhat((v) => !v)}
           >
             <span class="text-lg font-semibold">What is Alice&Bot?</span>
-            <span class="ml-2 text-gray-500">{showWhat ? "▲" : "▼"}</span>
+            <span class="ml-2 text-gray-500">
+              {showWhat ? <Chevron up /> : <Chevron up={false} />}
+            </span>
           </button>
           {showWhat && (
             <div class="px-3 mt-2 text-base">
@@ -1728,7 +1753,9 @@ const MessengerLogin = ({ setCredentials }: {
             <span class="text-lg font-semibold">
               Do I need to give out my email or phone?
             </span>
-            <span class="ml-2 text-gray-500">{showNoEmail ? "▲" : "▼"}</span>
+            <span class="ml-2 text-gray-500">
+              {showNoEmail ? <Chevron up /> : <Chevron up={false} />}
+            </span>
           </button>
           {showNoEmail && (
             <div class="px-3 mt-2 text-base">
@@ -2072,7 +2099,7 @@ const DangerZone = () => {
           Danger zone
         </span>
         <span class="ml-2 text-red-600/80 dark:text-red-300/80">
-          {open ? "▲" : "▼"}
+          {open ? <Chevron up /> : <Chevron up={false} />}
         </span>
       </button>
       {open && (

@@ -9,7 +9,7 @@ export const Manifesto = () => {
   const manifestoUrl = baseUrl + "/";
 
   const shareText = encodeURIComponent(
-    "Check out the Alice&Bot Manifesto! 👧🤖 It's time to unbreak chat for the AI era.",
+    "Check out the Alice&Bot Manifesto! It's time to unbreak chat for the AI era.",
   );
   const shareUrl = encodeURIComponent(manifestoUrl);
 

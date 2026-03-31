@@ -2,6 +2,7 @@ import type { InstantReactWebDatabase } from "@instantdb/react";
 import { sortKey } from "@uri/gamla";
 import type { ComponentChildren, JSX } from "preact";
 import { useRef } from "preact/hooks";
+import { FaLock, FaQuestionCircle } from "react-icons/fa";
 import type schema from "../../../instant.schema.ts";
 import {
   type Attachment,
@@ -480,7 +481,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
         }}
       >
         <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>
-          {convNotFound ? "🤷" : "🔒"}
+          {convNotFound ? <FaQuestionCircle size={48} /> : <FaLock size={48} />}
         </div>
         <div
           style={{
