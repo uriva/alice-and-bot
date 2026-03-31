@@ -1020,7 +1020,7 @@ const ConversationListItem = (
     <li key={conv.id}>
       <button
         type="button"
-        class={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 transition-colors ${
+        class={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-300 dark:border-gray-700 transition-colors ${
           selectedConversation.value === conv.id
             ? "bg-gray-100 dark:bg-black/50 border-l-4 border-l-gray-500"
             : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -1303,7 +1303,7 @@ const LoggedInMessenger = (
       style={{ minHeight: 0, minWidth: 0 }}
     >
       {!isMobile && (
-        <div class="w-20 border-r border-gray-200 dark:border-gray-700 bg-[#fafafa] dark:bg-[#111] flex flex-col items-center py-6 gap-4 shrink-0 overflow-hidden">
+        <div class="w-20 border-r border-gray-300 dark:border-gray-700 bg-[#fafafa] dark:bg-[#111] flex flex-col items-center py-6 gap-4 shrink-0 overflow-hidden">
           <button
             type="button"
             class={`w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
@@ -1375,12 +1375,12 @@ const LoggedInMessenger = (
             </div>
           )}
           {view === "new_chat" && (
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black flex-shrink-0">
+            <div class="p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-black flex-shrink-0">
               <h2 class="text-lg font-semibold">Start a new chat</h2>
             </div>
           )}
           {view === "identity" && (
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black flex-shrink-0">
+            <div class="p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-black flex-shrink-0">
               <h2 class="text-lg font-semibold">Account Settings</h2>
             </div>
           )}
@@ -1422,7 +1422,7 @@ const LoggedInMessenger = (
           </div>
 
           {/* Mobile bottom buttons */}
-          <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-black flex gap-2 flex-shrink-0">
+          <div class="border-t border-gray-300 dark:border-gray-700 p-4 bg-white dark:bg-black flex gap-2 flex-shrink-0">
             <button
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
@@ -1481,7 +1481,7 @@ const LoggedInMessenger = (
                   flex: "0 0 380px",
                   overflow: "hidden",
                 }}
-                class="border-r border-gray-200 dark:border-gray-700"
+                class="border-r border-gray-300 dark:border-gray-700"
               >
                 <div class="p-4 bg-white dark:bg-black">
                   <div
@@ -1570,7 +1570,7 @@ const LoggedInMessenger = (
             <div
               style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
             >
-              <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
+              <div class="p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-black">
                 <h2 class="text-lg font-semibold">Start a new chat</h2>
               </div>
               <div
@@ -1596,7 +1596,7 @@ const LoggedInMessenger = (
             <div
               style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
             >
-              <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
+              <div class="p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-black">
                 <h2 class="text-lg font-semibold">Account Settings</h2>
               </div>
               <div
