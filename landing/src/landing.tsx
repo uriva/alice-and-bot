@@ -2,6 +2,7 @@ import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/github-dark.css";
 import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
+import { useState } from "preact/hooks";
 import { Button } from "./components.tsx";
 import { Header } from "./header.tsx";
 import {
@@ -75,7 +76,7 @@ const FeatureGrid = ({
 
 const sectionClass = "w-full max-w-6xl px-4 flex flex-col items-center mb-16";
 
-const sectionHeadingClass = "text-3xl font-bold mb-3 text-center";
+const _sectionHeadingClass = "text-3xl font-bold mb-3 text-center";
 
 const humanFeatures = [
   {
@@ -131,42 +132,46 @@ const developerFeatures = [
   },
 ];
 
-export const LandingPage = () => {
-  useClearViewportStyles();
+const AudienceTabs = () => {
+  const [activeTab, setActiveTab] = useState<"humans" | "agents" | "editors">(
+    "humans",
+  );
+
+  const tabButtonClass = (isActive: boolean) =>
+    `px-6 py-3 font-medium transition-colors border-b-2 ${
+      isActive
+        ? "border-gray-800 dark:border-gray-400 text-gray-900 dark:text-white"
+        : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+    }`;
 
   return (
-    <>
-      <Header />
-      <main class="text-gray-800 dark:text-gray-200 min-h-screen w-full flex flex-col items-center justify-center bg-[#f8f7f4] dark:bg-[#0a0a0a] px-0 py-0">
-        <section class="w-full py-16 flex flex-col items-center justify-center bg-gray-800 dark:bg-gray-900 shadow-lg mb-12">
-          <img src="icon.png" alt="Alice&Bot logo" style={{ width: 384 }} />
-          <h1 class="text-6xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg mb-4">
-            Alice&Bot
-          </h1>
-          <p class="text-xl md:text-2xl text-gray-200 font-medium max-w-2xl text-center mb-2">
-            Let's unbreak chat.
-          </p>
-          <p class="text-lg text-gray-300 max-w-2xl text-center">
-            The developer-first, privacy-first chat platform for bots and
-            humans. No phone numbers. No bureaucracy. Just open, programmable,
-            secure communication.
-          </p>
-        </section>
-        <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
-          <h3 class="text-2xl font-bold mb-4 text-center">
-            Philosophy
-          </h3>
-          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-6">
-            We believe chat should be open, programmable, and
-            privacy-respecting. End-to-end encryption and seamless device
-            transition are non-negotiable. Spam is solved by user-set pricing,
-            not by captchas or bureaucracy. Alice&Bot is for developers,
-            businesses, and anyone who wants to build the future of
-            communication.
-          </p>
-        </section>
-        <section class={sectionClass}>
-          <h2 class={sectionHeadingClass}>For Humans</h2>
+    <section class={sectionClass}>
+      <div class="flex justify-center mb-8 border-b border-gray-200 dark:border-gray-700">
+        <button
+          type="button"
+          class={tabButtonClass(activeTab === "humans")}
+          onClick={() => setActiveTab("humans")}
+        >
+          For Humans
+        </button>
+        <button
+          type="button"
+          class={tabButtonClass(activeTab === "agents")}
+          onClick={() => setActiveTab("agents")}
+        >
+          For AI Agents
+        </button>
+        <button
+          type="button"
+          class={tabButtonClass(activeTab === "editors")}
+          onClick={() => setActiveTab("editors")}
+        >
+          For Code Editors
+        </button>
+      </div>
+
+      {activeTab === "humans" && (
+        <div>
           <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
             Private, spam-free messaging you control.
           </p>
@@ -219,9 +224,11 @@ export const LandingPage = () => {
               </ol>
             </div>
           </div>
-        </section>
-        <section class={sectionClass}>
-          <h2 class={sectionHeadingClass}>For AIs</h2>
+        </div>
+      )}
+
+      {activeTab === "agents" && (
+        <div>
           <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
             First-class support for bots and AI agents.
           </p>
@@ -252,9 +259,11 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               </a>-style skills.
             </p>
           </div>
-        </section>
-        <section class={sectionClass}>
-          <h2 class={sectionHeadingClass}>For AI Code Editors</h2>
+        </div>
+      )}
+
+      {activeTab === "editors" && (
+        <div>
           <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
             Chat with your coding sessions from your phone.
           </p>
@@ -288,7 +297,47 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               <a href={opencodePath}>OpenCode Guide</a>
             </Button>
           </div>
+        </div>
+      )}
+    </section>
+  );
+};
+
+export const LandingPage = () => {
+  useClearViewportStyles();
+
+  return (
+    <>
+      <Header />
+      <main class="text-gray-800 dark:text-gray-200 min-h-screen w-full flex flex-col items-center justify-center bg-[#f8f7f4] dark:bg-[#0a0a0a] px-0 py-0">
+        <section class="w-full py-16 flex flex-col items-center justify-center bg-gray-800 dark:bg-gray-900 shadow-lg mb-12">
+          <img src="icon.png" alt="Alice&Bot logo" style={{ width: 384 }} />
+          <h1 class="text-6xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg mb-4">
+            Alice&Bot
+          </h1>
+          <p class="text-xl md:text-2xl text-gray-200 font-medium max-w-2xl text-center mb-2">
+            Let's unbreak chat.
+          </p>
+          <p class="text-lg text-gray-300 max-w-2xl text-center">
+            The developer-first, privacy-first chat platform for bots and
+            humans. No phone numbers. No bureaucracy. Just open, programmable,
+            secure communication.
+          </p>
         </section>
+        <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
+          <h3 class="text-2xl font-bold mb-4 text-center">
+            Philosophy
+          </h3>
+          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-6">
+            We believe chat should be open, programmable, and
+            privacy-respecting. End-to-end encryption and seamless device
+            transition are non-negotiable. Spam is solved by user-set pricing,
+            not by captchas or bureaucracy. Alice&Bot is for developers,
+            businesses, and anyone who wants to build the future of
+            communication.
+          </p>
+        </section>
+        <AudienceTabs />
         <section class={sectionClass}>
           <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
             Programmable chat with full API access.
