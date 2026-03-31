@@ -347,24 +347,6 @@ export const LandingPage = () => {
             secure communication.
           </p>
         </section>
-        <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
-          <div class="text-center max-w-3xl">
-            <p class="text-xl md:text-2xl text-gray-800 dark:text-gray-200 mb-8 leading-relaxed">
-              Chat should be open, programmable, and privacy-respecting.
-            </p>
-            <div class="flex flex-wrap justify-center gap-6 text-lg text-gray-700 dark:text-gray-300">
-              <span>End-to-end encryption</span>
-              <span class="hidden sm:inline">·</span>
-              <span>Seamless device sync</span>
-              <span class="hidden sm:inline">·</span>
-              <span>User-controlled spam pricing</span>
-              <span class="hidden sm:inline">·</span>
-              <span>No captchas</span>
-              <span class="hidden sm:inline">·</span>
-              <span>No bureaucracy</span>
-            </div>
-          </div>
-        </section>
         <AudienceTabs />
         <div class="flex flex-wrap justify-center mb-12 gap-4">
           <Button asChild size="lg" variant="secondary">
