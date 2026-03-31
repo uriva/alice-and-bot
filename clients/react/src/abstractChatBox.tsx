@@ -3253,6 +3253,7 @@ export const AbstractChatBox = (
                   style={{
                     ...sendButtonStyle(isDark, customColors),
                     background: showStop ? "#dc2626" : inputBgColor,
+                    color: showStop ? "#fff" : (isDark ? "#fff" : "#222"),
                     touchAction: "none",
                     position: "relative",
                     overflow: "hidden",
