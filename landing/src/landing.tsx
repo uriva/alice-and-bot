@@ -254,7 +254,7 @@ const AudienceTabs = () => {
             First-class support for bots and AI agents.
           </p>
           <FeatureGrid items={aiFeatures} />
-          <div class="w-full max-w-4xl flex flex-col items-center mb-8">
+          <div class="w-full max-w-4xl mx-auto flex flex-col items-center mb-8">
             <h3 class="text-2xl font-bold mb-4 text-center">
               AI Agent Skill
             </h3>
@@ -280,7 +280,7 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               </a>-style skills.
             </p>
           </div>
-          <div class="w-full max-w-4xl flex flex-col items-center">
+          <div class="w-full max-w-4xl mx-auto flex flex-col items-center">
             <h3 class="text-2xl font-bold mb-4 text-center">
               MCP Integration
             </h3>
