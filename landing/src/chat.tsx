@@ -1216,7 +1216,7 @@ const Logo = ({ onClick }: { onClick?: () => void }) => {
         alt="Alice&Bot"
         class="w-8 h-8"
       />
-      <div>
+      <div class="text-left">
         <div class="text-sm font-semibold">Alice&Bot</div>
         <div class="text-xs text-gray-600 dark:text-gray-400">
           {tagline}

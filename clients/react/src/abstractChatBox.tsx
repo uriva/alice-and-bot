@@ -1708,7 +1708,7 @@ const overlayStyle: JSX.CSSProperties = {
 };
 
 const historyPopupStyle = (isDark: boolean): JSX.CSSProperties => ({
-  background: isDark ? "#23272f" : "#fff",
+  background: isDark ? "#1f2937" : "#fff",
   borderRadius: 12,
   padding: 16,
   maxWidth: 400,
