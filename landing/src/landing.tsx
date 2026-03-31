@@ -1,7 +1,7 @@
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/github-dark.css";
-import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
+import { FaAndroid, FaApple } from "react-icons/fa";
 import { useState } from "preact/hooks";
 import { Button } from "./components.tsx";
 import { Header } from "./header.tsx";
@@ -348,26 +348,6 @@ export const LandingPage = () => {
           </p>
         </section>
         <AudienceTabs />
-        <div class="flex flex-wrap justify-center mb-12 gap-4">
-          <Button asChild size="lg" variant="secondary">
-            <a
-              href="https://github.com/uriva/alice-and-bot"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <FaGithub size={24} className="mr-2" /> GitHub
-            </a>
-          </Button>
-          <Button asChild size="lg" variant="secondary">
-            <a href={chatPath}>Messenger app</a>
-          </Button>
-          <Button asChild size="lg" variant="secondary">
-            <a href={docsPath}>Docs</a>
-          </Button>
-          <Button asChild size="lg" variant="secondary">
-            <a href={manifestoPath}>Our Manifesto</a>
-          </Button>
-        </div>
         <footer class="w-full bg-gray-900 dark:bg-[#0a0a0a] border-t border-gray-700 dark:border-gray-700 mt-16">
           <div class="max-w-6xl mx-auto px-4 py-12 flex flex-col items-center gap-8">
             <div class="text-center">
