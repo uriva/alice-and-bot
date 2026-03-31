@@ -257,7 +257,7 @@ const AudienceTabs = () => {
           <FeatureGrid items={aiFeatures} />
           <div class="w-full max-w-4xl mx-auto flex flex-col items-center mb-8">
             <h3 class="text-2xl font-bold mb-4 text-center">
-              AI Agent Skill
+              Skill
             </h3>
             <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-4">
               Give your AI coding agent the ability to build bots on Alice&Bot.
@@ -283,7 +283,7 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
           </div>
           <div class="w-full max-w-4xl mx-auto flex flex-col items-center">
             <h3 class="text-2xl font-bold mb-4 text-center">
-              MCP Integration
+              MCP
             </h3>
             <div class="flex flex-wrap justify-center gap-4">
               <Button asChild size="lg">
