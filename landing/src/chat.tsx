@@ -1148,28 +1148,40 @@ const _Nav = (
   { view, setView }: { view: View; setView: (view: View) => void },
 ) => {
   return (
-    <nav class="flex space-x-4 mb-4">
-      <Button
-        variant={view === "chats" ? "secondary" : "ghost"}
-        size="sm"
+    <nav class="flex space-x-2 mb-4">
+      <button
+        type="button"
+        class={`px-3 py-2 rounded-lg font-medium transition-colors ${
+          view === "chats"
+            ? "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+            : "bg-gray-100 dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+        }`}
         onClick={() => setView("chats")}
       >
         Open Chats
-      </Button>
-      <Button
-        variant={view === "new_chat" ? "secondary" : "ghost"}
-        size="sm"
+      </button>
+      <button
+        type="button"
+        class={`px-3 py-2 rounded-lg font-medium transition-colors ${
+          view === "new_chat"
+            ? "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+            : "bg-gray-100 dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+        }`}
         onClick={() => setView("new_chat")}
       >
         New chat
-      </Button>
-      <Button
-        variant={view === "identity" ? "secondary" : "ghost"}
-        size="sm"
+      </button>
+      <button
+        type="button"
+        class={`px-3 py-2 rounded-lg font-medium transition-colors ${
+          view === "identity"
+            ? "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+            : "bg-gray-100 dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+        }`}
         onClick={() => setView("identity")}
       >
         Account
-      </Button>
+      </button>
     </nav>
   );
 };
