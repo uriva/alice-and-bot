@@ -1255,7 +1255,7 @@ const LoggedInMessenger = (
   const isDark = useDarkMode();
   const [darkModeState, setDarkModeState] = useState(isDark);
   const scrollbarStyle = {
-    scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
+    scrollbarColor: isDark ? "#374151 #111827" : "#d1d5db #f3f4f6",
   };
   const [searchQuery, setSearchQuery] = useState("");
   const router = useLocation().route;
