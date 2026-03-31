@@ -1538,7 +1538,8 @@ const Message = (
           />
           <span
             style={{
-              color: isDark ? "#bbb" : (textColor === "#222" ? "#555" : "#eee"),
+              color: textColor,
+              opacity: 0.7,
               fontSize: 10,
             }}
           >
