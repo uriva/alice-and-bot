@@ -1150,21 +1150,21 @@ const _Nav = (
   return (
     <nav class="flex space-x-4 mb-4">
       <Button
-        variant={view === "chats" ? "default" : "ghost"}
+        variant={view === "chats" ? "secondary" : "ghost"}
         size="sm"
         onClick={() => setView("chats")}
       >
         Open Chats
       </Button>
       <Button
-        variant={view === "new_chat" ? "default" : "ghost"}
+        variant={view === "new_chat" ? "secondary" : "ghost"}
         size="sm"
         onClick={() => setView("new_chat")}
       >
         New chat
       </Button>
       <Button
-        variant={view === "identity" ? "default" : "ghost"}
+        variant={view === "identity" ? "secondary" : "ghost"}
         size="sm"
         onClick={() => setView("identity")}
       >
@@ -1435,7 +1435,7 @@ const LoggedInMessenger = (
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "chats"
-                  ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
+                  ? "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
                   : "bg-gray-100 dark:bg-[#141414] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("chats")}
@@ -1446,7 +1446,7 @@ const LoggedInMessenger = (
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "new_chat"
-                  ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
+                  ? "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
                   : "bg-gray-100 dark:bg-[#141414] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("new_chat")}
@@ -1457,7 +1457,7 @@ const LoggedInMessenger = (
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "identity"
-                  ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
+                  ? "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
                   : "bg-gray-100 dark:bg-[#141414] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("identity")}
