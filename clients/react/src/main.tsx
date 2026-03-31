@@ -232,7 +232,6 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       },
     },
   });
-  console.log("uiElements", uiElements);
   const uiOverrides = new Map(
     uiElements.map((
       el: {
