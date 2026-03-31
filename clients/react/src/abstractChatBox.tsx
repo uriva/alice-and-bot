@@ -35,6 +35,7 @@ import type { ComponentChildren, JSX } from "preact";
 import type { Attachment } from "../../../protocol/src/clientApi.ts";
 import { maxTextLength } from "../../../protocol/src/attachmentLimits.ts";
 import {
+  avatarColor,
   centerFillStyle,
   chatContainerStyle,
   contentMaxWidthStyle,
@@ -1421,6 +1422,7 @@ const Message = (
   const baseColor = isOwn
     ? (customColors?.primary ?? (isDark ? "#2563eb" : "#3182ce"))
     : (customColors?.otherBubble ?? defaultOtherBubble(isDark));
+  const participantColor = avatarColor(authorId, isDark);
   const noBubble = !isOwn && customColors?.hideOtherBubble;
   const showAvatar = isStartOfSequence &&
     !(isOwn && customColors?.hideOwnAvatar);
@@ -1449,7 +1451,7 @@ const Message = (
         <ChatAvatar
           image={authorAvatar}
           name={authorName}
-          baseColor={baseColor}
+          baseColor={participantColor}
         />
       )}
       <div
@@ -1470,7 +1472,7 @@ const Message = (
         }}
       >
         {isStartOfSequence && !customColors?.hideNames &&
-          <b style={{ fontSize: 11 }}>{authorName}</b>}
+          <b style={{ fontSize: 11, color: participantColor }}>{authorName}</b>}
         {isEditing
           ? (
             <EditForm

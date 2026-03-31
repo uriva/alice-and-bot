@@ -15,7 +15,7 @@ import {
 import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import { ChatAvatar } from "../../clients/react/src/abstractChatBox.tsx";
 import {
-  defaultOtherBubble,
+  avatarColor,
   ShimmerCircle,
   ShimmerText,
   Spinner,
@@ -992,7 +992,10 @@ const ConversationListItem = (
         {displayName === null ? <ShimmerCircle /> : (
           <ChatAvatar
             name={displayName}
-            baseColor={defaultOtherBubble(isDarkMode)}
+            baseColor={avatarColor(
+              otherParticipant?.publicSignKey ?? "",
+              isDarkMode,
+            )}
           />
         )}
         <div class="flex-grow overflow-hidden min-w-0">

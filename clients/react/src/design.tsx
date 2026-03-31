@@ -55,6 +55,17 @@ export const centerFillStyle = (isDarkMode: boolean) => ({
 export const defaultOtherBubble = (isDark: boolean) =>
   isDark ? "hsl(220, 15%, 28%)" : "hsl(220, 15%, 88%)";
 
+const avatarHues = [195, 105, 30, 300, 270, 0, 210, 150];
+
+export const avatarColor = (str: string, isDark: boolean) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = avatarHues[Math.abs(hash) % avatarHues.length];
+  return `hsl(${h}, 55%, ${isDark ? 40 : 55}%)`;
+};
+
 const hexLightness = (hex: string) => {
   const n = parseInt(hex.replace("#", ""), 16);
   const r = (n >> 16) & 255;
