@@ -348,17 +348,22 @@ export const LandingPage = () => {
           </p>
         </section>
         <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
-          <h3 class="text-2xl font-bold mb-4 text-center">
-            Philosophy
-          </h3>
-          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-6">
-            We believe chat should be open, programmable, and
-            privacy-respecting. End-to-end encryption and seamless device
-            transition are non-negotiable. Spam is solved by user-set pricing,
-            not by captchas or bureaucracy. Alice&Bot is for developers,
-            businesses, and anyone who wants to build the future of
-            communication.
-          </p>
+          <div class="text-center max-w-3xl">
+            <p class="text-xl md:text-2xl text-gray-800 dark:text-gray-200 mb-8 leading-relaxed">
+              Chat should be open, programmable, and privacy-respecting.
+            </p>
+            <div class="flex flex-wrap justify-center gap-6 text-lg text-gray-700 dark:text-gray-300">
+              <span>End-to-end encryption</span>
+              <span class="hidden sm:inline">·</span>
+              <span>Seamless device sync</span>
+              <span class="hidden sm:inline">·</span>
+              <span>User-controlled spam pricing</span>
+              <span class="hidden sm:inline">·</span>
+              <span>No captchas</span>
+              <span class="hidden sm:inline">·</span>
+              <span>No bureaucracy</span>
+            </div>
+          </div>
         </section>
         <AudienceTabs />
         <div class="flex flex-wrap justify-center mb-12 gap-4">
