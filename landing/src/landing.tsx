@@ -146,6 +146,13 @@ const AudienceTabs = () => {
 
   return (
     <section class={sectionClass}>
+      <div class="mb-12">
+        <h2 class="text-2xl font-bold mb-4 text-center text-gray-900 dark:text-white">
+          Private, spam-free messaging you control.
+        </h2>
+        <FeatureGrid items={humanFeatures} />
+      </div>
+
       <div class="flex justify-center mb-8 border-b border-gray-200 dark:border-gray-700">
         <button
           type="button"
@@ -198,10 +205,6 @@ const AudienceTabs = () => {
 
       {activeTab === "humans" && (
         <div>
-          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
-            Private, spam-free messaging you control.
-          </p>
-          <FeatureGrid items={humanFeatures} />
           <h3 class="text-2xl font-bold mb-6 text-center">
             Install on your phone
           </h3>
