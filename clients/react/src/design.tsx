@@ -15,8 +15,18 @@ export type CustomColors = {
   inputBackground?: string;
 };
 
+const chatBackgroundPattern = (isDarkMode: boolean) =>
+  `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h100v100H0z' fill='${
+    isDarkMode ? "%230a0a0a" : "%23ffffff"
+  }'/%3E%3Cpath d='M0 0h50v50H0z' fill='${
+    isDarkMode ? "%23141414" : "%23f5f5f5"
+  }'/%3E%3Cpath d='M50 50h50v50H50z' fill='${
+    isDarkMode ? "%23141414" : "%23f5f5f5"
+  }'/%3E%3C/svg%3E")`;
+
 export const widgetColors = (isDarkMode: boolean, custom?: CustomColors) => ({
-  background: custom?.background ?? (isDarkMode ? "#0a0a0a" : "#fff"),
+  background: custom?.background ?? chatBackgroundPattern(isDarkMode),
+  backgroundColor: isDarkMode ? "#0a0a0a" : "#fff",
   color: custom?.text ?? (isDarkMode ? "#f4f4f4" : "#222"),
 });
 
