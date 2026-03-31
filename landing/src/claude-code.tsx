@@ -1,9 +1,6 @@
-import hljs from "highlight.js/lib/core";
-import typescript from "highlight.js/lib/languages/typescript";
+import { CodeBlock, InlineCode, ShellCode } from "./components.tsx";
 import { Header } from "./header.tsx";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
-
-hljs.registerLanguage("json", typescript);
 
 const stepCardClass =
   "w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg p-8 mb-6";
@@ -24,26 +21,6 @@ const mcpConfig = JSON.stringify(
   },
   null,
   2,
-);
-
-const highlight = (code: string, lang: string) =>
-  hljs.highlight(code, { language: lang }).value;
-
-const HighlightedCode = (
-  { code, lang }: { code: string; lang: string },
-) => (
-  <pre class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 my-4 overflow-x-auto text-sm border border-gray-200 dark:border-gray-700 font-mono">
-    <code
-      class="language-typescript"
-      dangerouslySetInnerHTML={{ __html: highlight(code, lang) }}
-    />
-  </pre>
-);
-
-const ShellCode = ({ code }: { code: string }) => (
-  <pre class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-cyan-400 rounded-lg p-4 my-4 overflow-x-auto text-sm border border-gray-200 dark:border-gray-700 font-mono cursor-pointer">
-    <code>{code}</code>
-  </pre>
 );
 
 const Step = ({
@@ -93,21 +70,22 @@ export const ClaudeCode = () => {
                 <ShellCode code={installCommand} />
                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Downloads a single binary to{" "}
-                  <code class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-sm">
-                    ~/.local/bin/alice-and-bot-mcp
-                  </code>. The binary is ~100MB because Deno embeds its entire
-                  runtime — even a hello world is ~90MB.
+                  <InlineCode>~/.local/bin/alice-and-bot-mcp</InlineCode>. The
+                  binary is ~100MB because Deno embeds its entire runtime — even
+                  a hello world is ~90MB.
                 </p>
               </Step>
 
               <Step number={2} title="Add to Claude Code">
                 <p class="text-gray-700 dark:text-gray-300 mb-3">
                   Add this to your{" "}
-                  <code class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-sm">
-                    .claude/settings.json
-                  </code>:
+                  <InlineCode>.claude/settings.json</InlineCode>:
                 </p>
-                <HighlightedCode code={mcpConfig} lang="json" />
+                <CodeBlock
+                  code={mcpConfig}
+                  lang="json"
+                  filename=".claude/settings.json"
+                />
                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-3">
                   Or just ask Claude to add it for you.
                 </p>

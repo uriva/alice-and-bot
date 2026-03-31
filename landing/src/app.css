@@ -30,4 +30,155 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+
+  /* Base code text color */
+  pre, code {
+    color: #383a42;
+  }
+  .dark pre, .dark code {
+    color: #abb2bf;
+  }
+
+  /* Syntax Highlighting - Light Mode */
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-literal {
+    color: #a626a4;
+  }
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-addition {
+    color: #50a14f;
+  }
+  .hljs-number,
+  .hljs-doctag {
+    color: #986801;
+  }
+  .hljs-function,
+  .hljs-title.function_,
+  .hljs-class {
+    color: #4078f2;
+  }
+  .hljs-variable,
+  .hljs-template-variable,
+  .hljs-selector-id,
+  .hljs-selector-class {
+    color: #e45649;
+  }
+  .hljs-comment,
+  .hljs-deletion {
+    color: #a0a1a7;
+  }
+  .hljs-operator,
+  .hljs-tag {
+    color: #0184bc;
+  }
+  .hljs-punctuation,
+  .hljs-params,
+  .hljs-attr {
+    color: #383a42;
+  }
+  .hljs-property {
+    color: #e45649;
+  }
+  .hljs-built_in,
+  .hljs-builtin-name {
+    color: #c18401;
+  }
+  .hljs-title {
+    color: #4078f2;
+  }
+  .hljs-meta {
+    color: #a626a4;
+  }
+  .hljs-tag .hljs-name {
+    color: #e45649;
+  }
+  .hljs-tag .hljs-attr {
+    color: #986801;
+  }
+
+  /* Syntax Highlighting - Dark Mode */
+  .dark .hljs-keyword,
+  .dark .hljs-selector-tag,
+  .dark .hljs-literal {
+    color: #c678dd;
+  }
+  .dark .hljs-string,
+  .dark .hljs-regexp,
+  .dark .hljs-addition {
+    color: #98c379;
+  }
+  .dark .hljs-number,
+  .dark .hljs-doctag {
+    color: #d19a66;
+  }
+  .dark .hljs-function,
+  .dark .hljs-title.function_,
+  .dark .hljs-class {
+    color: #61afef;
+  }
+  .dark .hljs-variable,
+  .dark .hljs-template-variable,
+  .dark .hljs-selector-id,
+  .dark .hljs-selector-class {
+    color: #e06c75;
+  }
+  .dark .hljs-comment,
+  .dark .hljs-deletion {
+    color: #7f848e;
+  }
+  .dark .hljs-operator,
+  .dark .hljs-tag {
+    color: #56b6c2;
+  }
+  .dark .hljs-punctuation,
+  .dark .hljs-params,
+  .dark .hljs-attr {
+    color: #abb2bf;
+  }
+  .dark .hljs-property {
+    color: #e06c75;
+  }
+  .dark .hljs-built_in,
+  .dark .hljs-builtin-name {
+    color: #e5c07b;
+  }
+  .dark .hljs-title {
+    color: #61afef;
+  }
+  .dark .hljs-meta {
+    color: #c678dd;
+  }
+  .dark .hljs-tag .hljs-name {
+    color: #e06c75;
+  }
+  .dark .hljs-tag .hljs-attr {
+    color: #d19a66;
+  }
+
+  /* Scrollbar styling for code blocks */
+  pre::-webkit-scrollbar {
+    height: 8px;
+  }
+  pre::-webkit-scrollbar-track {
+    background: #e5e7eb;
+    border-radius: 4px;
+  }
+  pre::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 4px;
+  }
+  pre::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+  .dark pre::-webkit-scrollbar-track {
+    background: #374151;
+  }
+  .dark pre::-webkit-scrollbar-thumb {
+    background: #6b7280;
+  }
+  .dark pre::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
 }

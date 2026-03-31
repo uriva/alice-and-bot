@@ -1,8 +1,6 @@
-import hljs from "highlight.js/lib/core";
-import typescript from "highlight.js/lib/languages/typescript";
 import { FaAndroid, FaApple } from "react-icons/fa";
-import { useEffect, useState } from "preact/hooks";
-import { Button } from "./components.tsx";
+import { useState } from "preact/hooks";
+import { Button, CodeBlock, ShellCode } from "./components.tsx";
 import { Header } from "./header.tsx";
 import {
   chatPath,
@@ -13,11 +11,9 @@ import {
 } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
-const isDarkMode = () =>
-  typeof document !== "undefined" &&
-  document.documentElement.classList.contains("dark");
-
-hljs.registerLanguage("typescript", typescript);
+const skillInstallCommand = `mkdir -p ~/.agents/skills/alice-and-bot
+curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
+  https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md`;
 
 const codeExample =
   `import { createIdentity, createConversation, sendMessage, setWebhook } from "@alice-and-bot/core";
@@ -42,92 +38,6 @@ await sendMessage({
 
 // receive messages via webhook
 await setWebhook({ url: "https://my-server.com/hook", credentials: bot });`;
-
-const highlightedCode = hljs.highlight(codeExample, { language: "typescript" })
-  .value;
-
-// Tailwind-based syntax highlighting colors that adapt to dark mode
-const lightModeColors: Record<string, string> = {
-  keyword: "text-purple-600",
-  string: "text-green-600",
-  number: "text-orange-600",
-  comment: "text-gray-400",
-  function: "text-blue-600",
-  class: "text-yellow-600",
-  operator: "text-gray-600",
-  punctuation: "text-gray-600",
-  default: "text-gray-800",
-};
-
-const darkModeColors: Record<string, string> = {
-  keyword: "text-purple-400",
-  string: "text-cyan-400",
-  number: "text-orange-400",
-  comment: "text-gray-500",
-  function: "text-blue-400",
-  class: "text-yellow-400",
-  operator: "text-gray-400",
-  punctuation: "text-gray-400",
-  default: "text-gray-200",
-};
-
-const applySyntaxColors = (html: string, dark: boolean) => {
-  const colors = dark ? darkModeColors : lightModeColors;
-  let colored = html
-    .replace(/<span class="hljs-keyword">/g, `<span class="${colors.keyword}">`)
-    .replace(/<span class="hljs-string">/g, `<span class="${colors.string}">`)
-    .replace(/<span class="hljs-number">/g, `<span class="${colors.number}">`)
-    .replace(/<span class="hljs-comment">/g, `<span class="${colors.comment}">`)
-    .replace(
-      /<span class="hljs-function">/g,
-      `<span class="${colors.function}">`,
-    )
-    .replace(/<span class="hljs-class">/g, `<span class="${colors.class}">`)
-    .replace(
-      /<span class="hljs-operator">/g,
-      `<span class="${colors.operator}">`,
-    )
-    .replace(
-      /<span class="hljs-punctuation">/g,
-      `<span class="${colors.punctuation}">`,
-    );
-
-  // Remove hljs class from remaining spans and apply default color
-  colored = colored.replace(
-    /<span class="hljs-[^"]*">/g,
-    `<span class="${colors.default}">`,
-  );
-
-  return colored;
-};
-
-const CodeExample = () => {
-  const [dark, setDark] = useState(isDarkMode());
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setDark(isDarkMode());
-    });
-    observer.observe(document.documentElement, { attributes: true });
-    return () => observer.disconnect();
-  }, []);
-
-  const coloredCode = applySyntaxColors(highlightedCode, dark);
-
-  return (
-    <div class="w-full max-w-4xl mx-auto">
-      <pre
-        class={`rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2 font-mono ${
-          dark ? "bg-gray-900" : "bg-white"
-        }`}
-      >
-        <code
-          dangerouslySetInnerHTML={{ __html: coloredCode }}
-        />
-      </pre>
-    </div>
-  );
-};
 
 const featureCardClass =
   "flex flex-col p-8 bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl hover:scale-105 hover:shadow-2xl transition-transform duration-200 ease-out";
@@ -223,10 +133,10 @@ const AudienceTabs = () => {
   >("coders");
 
   const tabButtonClass = (isActive: boolean) =>
-    `px-6 py-3 font-medium transition-colors border-b-2 ${
+    `px-6 py-3 text-sm transition-all duration-200 border-b-2 rounded-t-lg ${
       isActive
-        ? "border-gray-800 dark:border-gray-400 text-gray-900 dark:text-white"
-        : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+        ? "border-gray-800 dark:border-gray-200 text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 font-semibold"
+        : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/20 font-medium"
     }`;
 
   return (
@@ -269,7 +179,11 @@ const AudienceTabs = () => {
       {activeTab === "coders" && (
         <div>
           <FeatureGrid items={developerFeatures} />
-          <CodeExample />
+          <CodeBlock
+            code={codeExample}
+            lang="typescript"
+            filename="example.ts"
+          />
           <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
             TypeScript SDK with end-to-end encryption, webhooks, and device
             sync.
@@ -345,13 +259,7 @@ const AudienceTabs = () => {
               Install the skill and your agent will know how to create
               identities, send messages, set up webhooks, and more.
             </p>
-            <pre class="w-full max-w-4xl mx-auto bg-gray-900 text-blue-300 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
-            <code>
-              {`mkdir -p ~/.agents/skills/alice-and-bot
-curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
-  https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md`}
-            </code>
-            </pre>
+            <ShellCode code={skillInstallCommand} />
             <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
               Works with any agent that supports{" "}
               <a
@@ -420,19 +328,25 @@ export const LandingPage = () => {
     <>
       <Header />
       <main class="text-gray-800 dark:text-gray-200 min-h-screen w-full flex flex-col items-center justify-center bg-[#f8f7f4] dark:bg-[#0a0a0a] px-0 py-0">
-        <section class="w-full py-16 flex flex-col items-center justify-center bg-gray-800 dark:bg-gray-900 shadow-lg mb-12">
-          <img src="icon.png" alt="Alice&Bot logo" style={{ width: 384 }} />
-          <h1 class="text-6xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg mb-4">
-            Alice&Bot
-          </h1>
-          <p class="text-xl md:text-2xl text-gray-200 font-medium max-w-2xl text-center mb-2">
-            Let's unbreak chat.
-          </p>
-          <p class="text-lg text-gray-300 max-w-2xl text-center">
-            The developer-first, privacy-first chat platform for bots and
-            humans. No phone numbers. No bureaucracy. Just open, programmable,
-            secure communication.
-          </p>
+        <section class="w-full py-20 flex flex-col items-center justify-center bg-white dark:bg-[#0a0a0a] border-b border-gray-200 dark:border-gray-800 mb-12">
+          <div class="flex flex-col items-center">
+            <img
+              src="icon.png"
+              alt="Alice&Bot logo"
+              style={{ width: 180 }}
+              class="mb-6"
+            />
+            <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-4">
+              Alice&Bot
+            </h1>
+            <p class="text-2xl md:text-3xl text-gray-700 dark:text-gray-200 font-semibold max-w-2xl text-center mb-4">
+              Let's unbreak chat.
+            </p>
+            <p class="text-lg text-gray-600 dark:text-gray-400 max-w-xl text-center">
+              The developer-first, privacy-first chat platform. No phone
+              numbers. No bureaucracy.
+            </p>
+          </div>
         </section>
         <AudienceTabs />
         <footer class="w-full border-t border-gray-200 dark:border-gray-700 mt-16 py-8">

@@ -27,7 +27,6 @@ const useDarkMode = () => {
 };
 
 const navLinks = [
-  { href: chatPath, label: "Messenger" },
   { href: manifestoPath, label: "Manifesto" },
   { href: docsPath, label: "Docs" },
   { href: claudeCodePath, label: "Claude Code" },
@@ -35,32 +34,48 @@ const navLinks = [
   { href: mcpGuidePath, label: "MCP" },
 ];
 
-const navLinkClass =
-  "text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors";
+const navLinkClass = (isActive: boolean) =>
+  `text-sm font-medium px-2 py-1 rounded-md transition-colors ${
+    isActive
+      ? "text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800"
+      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
+  }`;
+
+const messengerLinkClass =
+  "text-sm font-semibold px-3 py-1.5 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-md hover:bg-gray-900 dark:hover:bg-gray-300 transition-colors";
 
 const iconButtonClass =
   "p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors";
 
-const NavLinks = () => (
-  <>
-    {navLinks.map(({ href, label }) => (
-      <a key={href} href={href} class={navLinkClass}>{label}</a>
-    ))}
-  </>
-);
+const NavLinks = () => {
+  const currentPath = typeof globalThis.location !== "undefined"
+    ? globalThis.location.pathname
+    : "";
+  return (
+    <>
+      {navLinks.map(({ href, label }) => {
+        const isActive = currentPath === href;
+        return (
+          <a key={href} href={href} class={navLinkClass(isActive)}>{label}</a>
+        );
+      })}
+    </>
+  );
+};
 
 const MobileMenu = ({ open }: { open: boolean }) =>
   !open
     ? null
     : (
-      <div class="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md">
+      <div class="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md overflow-y-auto max-h-[calc(100vh-3.5rem)]">
         <nav class="flex flex-col px-4 py-3 gap-2">
+          <a href={chatPath} class={messengerLinkClass}>Messenger</a>
           <NavLinks />
           <a
             href="https://github.com/uriva/alice-and-bot"
             target="_blank"
             rel="noopener noreferrer"
-            class={navLinkClass}
+            class={navLinkClass(false)}
           >
             GitHub
           </a>
@@ -108,6 +123,12 @@ export const Header = () => {
           <NavLinks />
         </nav>
         <div class="flex items-center gap-1">
+          <a
+            href={chatPath}
+            class={`hidden md:flex mr-2 ${messengerLinkClass}`}
+          >
+            Messenger
+          </a>
           <a
             href="https://github.com/uriva/alice-and-bot"
             target="_blank"

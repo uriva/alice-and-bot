@@ -2,6 +2,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import mcpGuideText from "./mcp-guide.md?raw";
+import { InlineCode } from "./components.tsx";
 import { Header } from "./header.tsx";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
@@ -70,14 +71,10 @@ export const McpGuide = () => {
                     code: ({ children, className }) => {
                       const isBlock = className?.includes("language-") ||
                         className?.includes("hljs");
-                      if (isBlock) {return (
-                          <code class={className}>{children}</code>
-                        );}
-                      return (
-                        <code class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-sm">
-                          {children}
-                        </code>
-                      );
+                      if (isBlock) {
+                        return <code class={className}>{children}</code>;
+                      }
+                      return <InlineCode>{children}</InlineCode>;
                     },
                     // @ts-expect-error Markdown types are not fully compatible with Preact
                     table: ({ children }) => (

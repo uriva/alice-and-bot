@@ -1,6 +1,14 @@
 import { Slot } from "@radix-ui/react-slot";
+import hljs from "highlight.js/lib/core";
+import typescript from "highlight.js/lib/languages/typescript";
 import { useState } from "preact/hooks";
 import type { JSX } from "preact/jsx-runtime";
+
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("javascript", typescript);
+hljs.registerLanguage("json", typescript);
+hljs.registerLanguage("bash", typescript);
+hljs.registerLanguage("shell", typescript);
 
 type ButtonVariant =
   | "default"
@@ -78,5 +86,111 @@ export const CopyableString = ({ str }: { str: string }) => {
         {copied ? "Copied!" : "Copy"}
       </button>
     </span>
+  );
+};
+
+const highlight = (code: string, lang: string) =>
+  hljs.highlight(code, { language: lang }).value;
+
+const codeBlockBaseClass =
+  "bg-gray-100 dark:bg-gray-800 rounded-lg p-4 my-4 overflow-x-auto text-sm border border-gray-200 dark:border-gray-700 font-mono text-gray-800 dark:text-gray-200";
+
+const codeBlockHeaderClass =
+  "flex items-center justify-between px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg border-b border-gray-300 dark:border-gray-600";
+
+const codeBlockContainerClass =
+  "rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden my-4";
+
+export const InlineCode = (
+  { children }: { children: preact.ComponentChildren },
+) => (
+  <code class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-sm font-mono">
+    {children}
+  </code>
+);
+
+export const CodeBlock = ({
+  code,
+  lang = "typescript",
+  filename,
+  showLineNumbers = false,
+}: {
+  code: string;
+  lang?: string;
+  filename?: string;
+  showLineNumbers?: boolean;
+}) => {
+  const [copied, setCopied] = useState(false);
+  const _lines = code.split("\n");
+  const _lineNumbers = showLineNumbers
+    ? _lines.map((_, i) => (
+      <span class="inline-block w-8 text-right text-gray-400 dark:text-gray-500 select-none mr-3">
+        {i + 1}
+      </span>
+    ))
+    : null;
+
+  return (
+    <div class={codeBlockContainerClass}>
+      <div class={codeBlockHeaderClass}>
+        <span class="text-xs text-gray-600 dark:text-gray-400 font-mono">
+          {filename || lang}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(code).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            });
+          }}
+          class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      <pre
+        class={`${codeBlockBaseClass} my-0 rounded-t-none`}
+        style={{ margin: 0 }}
+      >
+        <code
+          class={`language-${lang}`}
+          dangerouslySetInnerHTML={{
+            __html: highlight(code, lang),
+          }}
+        />
+      </pre>
+    </div>
+  );
+};
+
+export const ShellCode = ({ code }: { code: string }) => {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div class={codeBlockContainerClass}>
+      <div class={codeBlockHeaderClass}>
+        <span class="text-xs text-gray-600 dark:text-gray-400 font-mono">
+          shell
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(code).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            });
+          }}
+          class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      <pre
+        class={`${codeBlockBaseClass} my-0 rounded-t-none text-gray-700 dark:text-cyan-400`}
+        style={{ margin: 0 }}
+      >
+        <code>{code}</code>
+      </pre>
+    </div>
   );
 };

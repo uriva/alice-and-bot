@@ -1,4 +1,4 @@
-# Alice&Bot docs
+# Docs
 
 Alice&Bot is an encrypted chat service where identities are just keypairs. No
 phone numbers, no approval queues. Bots and humans use the same protocol.

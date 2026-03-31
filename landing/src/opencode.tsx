@@ -1,3 +1,4 @@
+import { ShellCode } from "./components.tsx";
 import { Header } from "./header.tsx";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
@@ -9,12 +10,6 @@ const stepNumberClass =
 
 const installCommand =
   `curl -fsSL "https://raw.githubusercontent.com/uriva/alice-and-bot/main/opencode-plugin/install.sh?\$(date +%s)" | bash`;
-
-const ShellCode = ({ code }: { code: string }) => (
-  <pre class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-cyan-400 rounded-lg p-4 my-4 overflow-x-auto text-sm border border-gray-200 dark:border-gray-700 font-mono cursor-pointer">
-    <code>{code}</code>
-  </pre>
-);
 
 const Step = ({
   number,
