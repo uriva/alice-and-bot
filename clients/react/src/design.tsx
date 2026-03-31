@@ -24,7 +24,7 @@ const chatBackgroundPattern = (isDarkMode: boolean) =>
 
 export const widgetColors = (isDarkMode: boolean, custom?: CustomColors) => ({
   background: custom?.background ?? chatBackgroundPattern(isDarkMode),
-  backgroundColor: isDarkMode ? "#0a0a0a" : "#f8f7f4",
+  backgroundColor: custom?.background ?? (isDarkMode ? "#0a0a0a" : "#f8f7f4"),
   color: custom?.text ?? (isDarkMode ? "#f4f4f4" : "#222"),
 });
 
