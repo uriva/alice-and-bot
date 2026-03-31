@@ -996,7 +996,7 @@ const ConversationListItem = (
         type="button"
         class={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 transition-colors ${
           selectedConversation.value === conv.id
-            ? "bg-gray-100 dark:bg-gray-800/50 border-l-4 border-l-gray-500"
+            ? "bg-gray-100 dark:bg-black/50 border-l-4 border-l-gray-500"
             : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
         }`}
         onClick={() => {
@@ -1277,7 +1277,7 @@ const LoggedInMessenger = (
       style={{ minHeight: 0, minWidth: 0 }}
     >
       {!isMobile && (
-        <div class="w-20 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col items-center py-6 gap-4 shrink-0 overflow-hidden">
+        <div class="w-20 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-black flex flex-col items-center py-6 gap-4 shrink-0 overflow-hidden">
           <button
             type="button"
             class={`w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
@@ -1344,34 +1344,37 @@ const LoggedInMessenger = (
       {isMobile && showChatsList && (
         <div class="flex flex-col w-full h-full overflow-hidden">
           {view === "chats" && (
-            <div class="p-4 bg-white dark:bg-gray-900 flex-shrink-0">
+            <div class="p-4 bg-white dark:bg-black flex-shrink-0">
               <LogoHeader onClick={() => router(homePath)} />
             </div>
           )}
           {view === "new_chat" && (
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black flex-shrink-0">
               <h2 class="text-lg font-semibold">Start a new chat</h2>
             </div>
           )}
           {view === "identity" && (
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black flex-shrink-0">
               <h2 class="text-lg font-semibold">Account Settings</h2>
             </div>
           )}
 
           {view === "chats" && (
-            <div class="p-3 bg-white dark:bg-gray-900 flex-shrink-0">
+            <div class="p-3 bg-white dark:bg-black flex-shrink-0">
               <input
                 type="text"
                 placeholder="Search chats..."
                 value={searchQuery}
                 onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 text-sm"
+                class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-[#141414] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 text-sm"
               />
             </div>
           )}
 
-          <div class="flex-1 overflow-y-auto min-h-0" style={scrollbarStyle}>
+          <div
+            class="flex-1 overflow-y-auto min-h-0 bg-white dark:bg-black"
+            style={scrollbarStyle}
+          >
             {view === "chats" && (
               <OpenChats
                 credentials={credentials}
@@ -1393,13 +1396,13 @@ const LoggedInMessenger = (
           </div>
 
           {/* Mobile bottom buttons */}
-          <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 flex gap-2 flex-shrink-0">
+          <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-black flex gap-2 flex-shrink-0">
             <button
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "chats"
                   ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  : "bg-gray-100 dark:bg-[#141414] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("chats")}
             >
@@ -1410,7 +1413,7 @@ const LoggedInMessenger = (
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "new_chat"
                   ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  : "bg-gray-100 dark:bg-[#141414] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("new_chat")}
             >
@@ -1421,7 +1424,7 @@ const LoggedInMessenger = (
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "identity"
                   ? "bg-gray-800 text-white dark:bg-gray-300 dark:text-gray-900"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  : "bg-gray-100 dark:bg-[#141414] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("identity")}
             >
@@ -1454,7 +1457,7 @@ const LoggedInMessenger = (
                 }}
                 class="border-r border-gray-200 dark:border-gray-700"
               >
-                <div class="p-4 bg-white dark:bg-gray-900">
+                <div class="p-4 bg-white dark:bg-black">
                   <div
                     style={{
                       display: "flex",
@@ -1489,16 +1492,17 @@ const LoggedInMessenger = (
                     </button>
                   </div>
                 </div>
-                <div class="p-3 bg-white dark:bg-gray-900">
+                <div class="p-3 bg-white dark:bg-black">
                   <input
                     type="text"
                     placeholder="Search chats..."
                     value={searchQuery}
                     onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                    class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 text-sm"
+                    class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-[#141414] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 text-sm"
                   />
                 </div>
                 <div
+                  class="bg-white dark:bg-black"
                   style={{
                     display: "flex",
                     flexGrow: 1,
@@ -1540,7 +1544,7 @@ const LoggedInMessenger = (
             <div
               style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
             >
-              <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
                 <h2 class="text-lg font-semibold">Start a new chat</h2>
               </div>
               <div
@@ -1566,7 +1570,7 @@ const LoggedInMessenger = (
             <div
               style={{ display: "flex", flexGrow: 1, flexDirection: "column" }}
             >
-              <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
                 <h2 class="text-lg font-semibold">Account Settings</h2>
               </div>
               <div
@@ -2116,7 +2120,7 @@ const labelStyle =
 const labelSmallStyle = "block text-xs text-gray-700 dark:text-gray-400";
 const inputRowStyle = "flex gap-2 mb-2";
 const inputStyle =
-  "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-gray-500 focus:border-gray-500 dark:focus:ring-gray-500 dark:focus:border-gray-500 max-w-md";
+  "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-[#1a1a1a] border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-gray-500 focus:border-gray-500 dark:focus:ring-gray-500 dark:focus:border-gray-500 max-w-md";
 const textareaStyle =
-  "w-full border rounded-lg p-2.5 text-sm bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white";
+  "w-full border rounded-lg p-2.5 text-sm bg-gray-50 dark:bg-[#1a1a1a] border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white";
 const hintStyle = "text-xs text-gray-600 dark:text-gray-400 mt-1";

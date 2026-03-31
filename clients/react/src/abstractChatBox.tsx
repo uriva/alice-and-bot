@@ -53,7 +53,7 @@ const typingIndicatorStyle = (isDark: boolean) => ({
   fontSize: 12,
 });
 
-const defaultPrimary = (isDark: boolean) => isDark ? "#333333" : "#1a1a1a";
+const defaultPrimary = (isDark: boolean) => isDark ? "#333333" : "#374151";
 
 const recordingMimeType = typeof MediaRecorder !== "undefined" &&
     MediaRecorder.isTypeSupported("audio/webm")
@@ -563,7 +563,7 @@ const FencedCodeBlock = (
           overflow: "auto",
           maxWidth: "100%",
           boxSizing: "border-box",
-          background: isDark ? "#111827" : "#f3f4f6",
+          background: isDark ? "#0a0a0a" : "#f3f4f6",
           color: isDark ? "#e5e7eb" : "#111827",
           borderRadius: 8,
           fontFamily:
@@ -1232,7 +1232,7 @@ const dropdownMenuStyle = (
   position: "fixed",
   top: rect.bottom + 2,
   right: globalThis.innerWidth - rect.right,
-  background: isDark ? "#1f2937" : "#fff",
+  background: isDark ? "#141414" : "#fff",
   borderRadius: 8,
   boxShadow: isDark ? "0 4px 12px #0008" : "0 4px 12px #0003",
   zIndex: 10000,

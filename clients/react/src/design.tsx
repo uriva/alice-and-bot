@@ -16,7 +16,7 @@ export type CustomColors = {
 };
 
 export const widgetColors = (isDarkMode: boolean, custom?: CustomColors) => ({
-  background: custom?.background ?? (isDarkMode ? "#111827" : "#fff"),
+  background: custom?.background ?? (isDarkMode ? "#0a0a0a" : "#fff"),
   color: custom?.text ?? (isDarkMode ? "#f4f4f4" : "#222"),
 });
 
