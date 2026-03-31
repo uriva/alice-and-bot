@@ -2,6 +2,8 @@ import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/github-dark.css";
 import { FaAndroid, FaApple, FaGithub } from "react-icons/fa";
+import { Button } from "./components.tsx";
+import { Header } from "./header.tsx";
 import {
   chatPath,
   claudeCodePath,
@@ -133,274 +135,259 @@ export const LandingPage = () => {
   useClearViewportStyles();
 
   return (
-    <main class="text-gray-800 dark:text-gray-200 min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-950 px-0 py-0">
-      <header class="w-full py-16 flex flex-col items-center justify-center bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 shadow-lg mb-12">
-        <img src="icon.png" alt="Alice&Bot logo" style={{ width: 384 }} />
-        <h1 class="text-6xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg mb-4">
-          Alice&Bot
-        </h1>
-        <p class="text-xl md:text-2xl text-gray-200 font-medium max-w-2xl text-center mb-2">
-          Let's unbreak chat.
-        </p>
-        <p class="text-lg text-gray-300 max-w-2xl text-center">
-          The developer-first, privacy-first chat platform for bots and humans.
-          No phone numbers. No bureaucracy. Just open, programmable, secure
-          communication.
-        </p>
-      </header>
-      <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
-        <h3 class="text-2xl font-bold mb-4 text-center">
-          Philosophy
-        </h3>
-        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-6">
-          We believe chat should be open, programmable, and privacy-respecting.
-          End-to-end encryption and seamless device transition are
-          non-negotiable. Spam is solved by user-set pricing, not by captchas or
-          bureaucracy. Alice&Bot is for developers, businesses, and anyone who
-          wants to build the future of communication.
-        </p>
-      </section>
-      <section class={sectionClass}>
-        <h2 class={sectionHeadingClass}>For Humans</h2>
-        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
-          Private, spam-free messaging you control.
-        </p>
-        <FeatureGrid items={humanFeatures} />
-        <h3 class="text-2xl font-bold mb-6 text-center">
-          Install on your phone
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
-          <div class="flex flex-col items-center p-6 bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl">
-            <FaAndroid size={40} className="text-green-500 mb-3" />
-            <strong class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-              Android
-            </strong>
-            <ol class="text-gray-700 dark:text-gray-200 text-sm space-y-1 list-decimal list-inside">
-              <li>
-                Open{" "}
-                <a
-                  href={chatPath}
-                  class="underline text-gray-700 dark:text-gray-400"
-                >
-                  aliceandbot.com/chat
-                </a>{" "}
-                in Chrome
-              </li>
-              <li>Tap the menu (three dots)</li>
-              <li>Tap "Add to Home screen"</li>
-            </ol>
-          </div>
-          <div class="flex flex-col items-center p-6 bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl">
-            <FaApple
-              size={40}
-              className="text-gray-700 dark:text-gray-300 mb-3"
-            />
-            <strong class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-              iPhone / iPad
-            </strong>
-            <ol class="text-gray-700 dark:text-gray-200 text-sm space-y-1 list-decimal list-inside">
-              <li>
-                Open{" "}
-                <a
-                  href={chatPath}
-                  class="underline text-gray-700 dark:text-gray-400"
-                >
-                  aliceandbot.com/chat
-                </a>{" "}
-                in Safari
-              </li>
-              <li>Tap the share button</li>
-              <li>Tap "Add to Home Screen"</li>
-            </ol>
-          </div>
-        </div>
-      </section>
-      <section class={sectionClass}>
-        <h2 class={sectionHeadingClass}>For AIs</h2>
-        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
-          First-class support for bots and AI agents.
-        </p>
-        <FeatureGrid items={aiFeatures} />
-        <div class="w-full max-w-4xl flex flex-col items-center">
-          <h3 class="text-2xl font-bold mb-4 text-center">
-            AI Agent Skill
-          </h3>
-          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-4">
-            Give your AI coding agent the ability to build bots on Alice&Bot.
-            Install the skill and your agent will know how to create identities,
-            send messages, set up webhooks, and more.
+    <>
+      <Header />
+      <main class="text-gray-800 dark:text-gray-200 min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-950 px-0 py-0">
+        <section class="w-full py-16 flex flex-col items-center justify-center bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 shadow-lg mb-12">
+          <img src="icon.png" alt="Alice&Bot logo" style={{ width: 384 }} />
+          <h1 class="text-6xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg mb-4">
+            Alice&Bot
+          </h1>
+          <p class="text-xl md:text-2xl text-gray-200 font-medium max-w-2xl text-center mb-2">
+            Let's unbreak chat.
           </p>
-          <pre class="w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
+          <p class="text-lg text-gray-300 max-w-2xl text-center">
+            The developer-first, privacy-first chat platform for bots and
+            humans. No phone numbers. No bureaucracy. Just open, programmable,
+            secure communication.
+          </p>
+        </section>
+        <section class="w-full max-w-4xl px-4 flex flex-col items-center mb-12">
+          <h3 class="text-2xl font-bold mb-4 text-center">
+            Philosophy
+          </h3>
+          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-6">
+            We believe chat should be open, programmable, and
+            privacy-respecting. End-to-end encryption and seamless device
+            transition are non-negotiable. Spam is solved by user-set pricing,
+            not by captchas or bureaucracy. Alice&Bot is for developers,
+            businesses, and anyone who wants to build the future of
+            communication.
+          </p>
+        </section>
+        <section class={sectionClass}>
+          <h2 class={sectionHeadingClass}>For Humans</h2>
+          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
+            Private, spam-free messaging you control.
+          </p>
+          <FeatureGrid items={humanFeatures} />
+          <h3 class="text-2xl font-bold mb-6 text-center">
+            Install on your phone
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+            <div class="flex flex-col items-center p-6 bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl">
+              <FaAndroid size={40} className="text-green-500 mb-3" />
+              <strong class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                Android
+              </strong>
+              <ol class="text-gray-700 dark:text-gray-200 text-sm space-y-1 list-decimal list-inside">
+                <li>
+                  Open{" "}
+                  <a
+                    href={chatPath}
+                    class="underline text-gray-700 dark:text-gray-400"
+                  >
+                    aliceandbot.com/chat
+                  </a>{" "}
+                  in Chrome
+                </li>
+                <li>Tap the menu (three dots)</li>
+                <li>Tap "Add to Home screen"</li>
+              </ol>
+            </div>
+            <div class="flex flex-col items-center p-6 bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl">
+              <FaApple
+                size={40}
+                className="text-gray-700 dark:text-gray-300 mb-3"
+              />
+              <strong class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                iPhone / iPad
+              </strong>
+              <ol class="text-gray-700 dark:text-gray-200 text-sm space-y-1 list-decimal list-inside">
+                <li>
+                  Open{" "}
+                  <a
+                    href={chatPath}
+                    class="underline text-gray-700 dark:text-gray-400"
+                  >
+                    aliceandbot.com/chat
+                  </a>{" "}
+                  in Safari
+                </li>
+                <li>Tap the share button</li>
+                <li>Tap "Add to Home Screen"</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+        <section class={sectionClass}>
+          <h2 class={sectionHeadingClass}>For AIs</h2>
+          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
+            First-class support for bots and AI agents.
+          </p>
+          <FeatureGrid items={aiFeatures} />
+          <div class="w-full max-w-4xl flex flex-col items-center">
+            <h3 class="text-2xl font-bold mb-4 text-center">
+              AI Agent Skill
+            </h3>
+            <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-4">
+              Give your AI coding agent the ability to build bots on Alice&Bot.
+              Install the skill and your agent will know how to create
+              identities, send messages, set up webhooks, and more.
+            </p>
+            <pre class="w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
             <code>
               {`mkdir -p ~/.agents/skills/alice-and-bot
 curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
   https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md`}
             </code>
-          </pre>
-          <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
-            Works with any agent that supports{" "}
-            <a
-              href="https://github.com/anomalyco/opencode"
-              class="underline text-gray-700 dark:text-gray-400"
-            >
-              OpenCode
-            </a>-style skills.
+            </pre>
+            <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
+              Works with any agent that supports{" "}
+              <a
+                href="https://github.com/anomalyco/opencode"
+                class="underline text-gray-700 dark:text-gray-400"
+              >
+                OpenCode
+              </a>-style skills.
+            </p>
+          </div>
+        </section>
+        <section class={sectionClass}>
+          <h2 class={sectionHeadingClass}>For AI Code Editors</h2>
+          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
+            Chat with your coding sessions from your phone.
           </p>
-        </div>
-      </section>
-      <section class={sectionClass}>
-        <h2 class={sectionHeadingClass}>For AI Code Editors</h2>
-        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
-          Chat with your coding sessions from your phone.
-        </p>
-        <FeatureGrid
-          items={[
-            {
-              title: "Works Everywhere",
-              description:
-                "Claude Code, Cursor, Windsurf, VS Code — any editor that supports MCP.",
-            },
-            {
-              title: "QR Code Setup",
-              description:
-                "Ask your agent to set up Alice&Bot. Scan the QR code, and you're chatting with your session.",
-            },
-            {
-              title: "End-to-End Encrypted",
-              description:
-                "Messages are encrypted on your device. The relay never sees plaintext.",
-            },
-          ]}
-        />
-        <div class="flex flex-wrap justify-center gap-4">
-          <a
-            href={mcpGuidePath}
-            class="px-8 py-4 bg-gradient-to-r from-gray-700 to-gray-900 dark:from-gray-300 dark:to-gray-500 text-white dark:text-gray-900 text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
-          >
-            Setup Guide
-          </a>
-          <a
-            href={claudeCodePath}
-            class="px-8 py-4 bg-gradient-to-r from-gray-600 to-gray-800 dark:from-gray-300 dark:to-gray-500 text-white dark:text-gray-900 text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
-          >
-            Claude Code Guide
-          </a>
-          <a
-            href={opencodePath}
-            class="px-8 py-4 bg-gradient-to-r from-gray-600 to-gray-800 dark:from-gray-300 dark:to-gray-500 text-white dark:text-gray-900 text-lg font-bold rounded-full shadow-lg hover:opacity-90 transition"
-          >
-            OpenCode Guide
-          </a>
-        </div>
-      </section>
-      <section class={sectionClass}>
-        <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
-          Programmable chat with full API access.
-        </p>
-        <FeatureGrid items={developerFeatures} />
-        <pre class="w-full max-w-4xl bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
+          <FeatureGrid
+            items={[
+              {
+                title: "Works Everywhere",
+                description:
+                  "Claude Code, Cursor, Windsurf, VS Code — any editor that supports MCP.",
+              },
+              {
+                title: "QR Code Setup",
+                description:
+                  "Ask your agent to set up Alice&Bot. Scan the QR code, and you're chatting with your session.",
+              },
+              {
+                title: "End-to-End Encrypted",
+                description:
+                  "Messages are encrypted on your device. The relay never sees plaintext.",
+              },
+            ]}
+          />
+          <div class="flex flex-wrap justify-center gap-4">
+            <Button asChild size="lg">
+              <a href={mcpGuidePath}>Setup Guide</a>
+            </Button>
+            <Button asChild size="lg" variant="secondary">
+              <a href={claudeCodePath}>Claude Code Guide</a>
+            </Button>
+            <Button asChild size="lg" variant="secondary">
+              <a href={opencodePath}>OpenCode Guide</a>
+            </Button>
+          </div>
+        </section>
+        <section class={sectionClass}>
+          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
+            Programmable chat with full API access.
+          </p>
+          <FeatureGrid items={developerFeatures} />
+          <pre class="w-full max-w-4xl bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
           <code
             class="hljs language-typescript"
             dangerouslySetInnerHTML={{ __html: highlightedCode }}
           />
-        </pre>
-        <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
-          All functions work in both browser and server environments.
-        </p>
-      </section>
-      <div class="flex flex-wrap justify-center mb-12 gap-4">
-        <a
-          type="button"
-          href="https://github.com/uriva/alice-and-bot"
-          class="px-8 py-4 bg-gradient-to-r from-gray-600 to-gray-800 dark:from-gray-300 dark:to-gray-500 text-white dark:text-gray-900 text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
-        >
-          <FaGithub size={28} />
-        </a>
-        <a
-          type="button"
-          href={chatPath}
-          class="px-8 py-4 bg-gradient-to-r from-gray-600 to-gray-800 dark:from-gray-300 dark:to-gray-500 text-white dark:text-gray-900 text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
-        >
-          Messenger app
-        </a>
-        <a
-          type="button"
-          href={docsPath}
-          class="px-8 py-4 bg-gradient-to-r from-gray-600 to-gray-800 dark:from-gray-300 dark:to-gray-500 text-white dark:text-gray-900 text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
-        >
-          Docs
-        </a>
-        <a
-          type="button"
-          href={manifestoPath}
-          class="px-8 py-4 bg-gradient-to-r from-gray-600 to-gray-800 dark:from-gray-300 dark:to-gray-500 text-white dark:text-gray-900 text-xl font-bold rounded-full shadow-lg opacity-70 hover:opacity-80 transition"
-        >
-          Our Manifesto
-        </a>
-      </div>
-      <footer class="w-full bg-gradient-to-r from-gray-900 dark:from-gray-950 to-gray-800 dark:to-gray-900 border-t border-gray-700 dark:border-gray-700 mt-16">
-        <div class="max-w-6xl mx-auto px-4 py-12 flex flex-col items-center gap-8">
-          <div class="text-center">
-            <p class="text-lg font-semibold text-white mb-2">
-              Alice&Bot. Chat for the AI era.
-            </p>
-            <p class="text-sm text-gray-300 dark:text-gray-300">
-              The developer-first, privacy-first chat platform
-            </p>
-          </div>
-          <nav class="flex flex-wrap justify-center gap-6">
-            <a
-              href={docsPath}
-              class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-            >
-              Docs
-            </a>
-            <a
-              href={manifestoPath}
-              class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-            >
-              Manifesto
-            </a>
+          </pre>
+          <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
+            All functions work in both browser and server environments.
+          </p>
+        </section>
+        <div class="flex flex-wrap justify-center mb-12 gap-4">
+          <Button asChild size="lg" variant="secondary">
             <a
               href="https://github.com/uriva/alice-and-bot"
               target="_blank"
               rel="noopener noreferrer"
-              class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
             >
-              GitHub
+              <FaGithub size={24} className="mr-2" /> GitHub
             </a>
-            <a
-              href="https://discord.gg/xkGMFH9RAz"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-            >
-              Discord
-            </a>
-            <a
-              href={mcpGuidePath}
-              class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-            >
-              MCP Guide
-            </a>
-            <a
-              href={claudeCodePath}
-              class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-            >
-              Claude Code
-            </a>
-            <a
-              href={opencodePath}
-              class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-            >
-              OpenCode
-            </a>
-          </nav>
-          <div class="border-t border-gray-700 dark:border-gray-700 w-full pt-6 text-center text-sm text-gray-300 dark:text-gray-400">
-            &copy; {new Date().getFullYear()} Alice&Bot. All rights reserved.
-          </div>
+          </Button>
+          <Button asChild size="lg" variant="secondary">
+            <a href={chatPath}>Messenger app</a>
+          </Button>
+          <Button asChild size="lg" variant="secondary">
+            <a href={docsPath}>Docs</a>
+          </Button>
+          <Button asChild size="lg" variant="secondary">
+            <a href={manifestoPath}>Our Manifesto</a>
+          </Button>
         </div>
-      </footer>
-    </main>
+        <footer class="w-full bg-gradient-to-r from-gray-900 dark:from-gray-950 to-gray-800 dark:to-gray-900 border-t border-gray-700 dark:border-gray-700 mt-16">
+          <div class="max-w-6xl mx-auto px-4 py-12 flex flex-col items-center gap-8">
+            <div class="text-center">
+              <p class="text-lg font-semibold text-white mb-2">
+                Alice&Bot. Chat for the AI era.
+              </p>
+              <p class="text-sm text-gray-300 dark:text-gray-300">
+                The developer-first, privacy-first chat platform
+              </p>
+            </div>
+            <nav class="flex flex-wrap justify-center gap-6">
+              <a
+                href={docsPath}
+                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
+              >
+                Docs
+              </a>
+              <a
+                href={manifestoPath}
+                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
+              >
+                Manifesto
+              </a>
+              <a
+                href="https://github.com/uriva/alice-and-bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
+              >
+                GitHub
+              </a>
+              <a
+                href="https://discord.gg/xkGMFH9RAz"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
+              >
+                Discord
+              </a>
+              <a
+                href={mcpGuidePath}
+                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
+              >
+                MCP Guide
+              </a>
+              <a
+                href={claudeCodePath}
+                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
+              >
+                Claude Code
+              </a>
+              <a
+                href={opencodePath}
+                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
+              >
+                OpenCode
+              </a>
+            </nav>
+            <div class="border-t border-gray-700 dark:border-gray-700 w-full pt-6 text-center text-sm text-gray-300 dark:text-gray-400">
+              &copy; {new Date().getFullYear()} Alice&Bot. All rights reserved.
+            </div>
+          </div>
+        </footer>
+      </main>
+    </>
   );
 };

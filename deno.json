@@ -20,6 +20,7 @@
     "@instantdb/core": "npm:@instantdb/core@0.22.174",
     "@instantdb/react": "npm:@instantdb/react@0.22.174",
     "@preact/preset-vite": "npm:@preact/preset-vite@2.10.2",
+    "@radix-ui/react-slot": "npm:@radix-ui/react-slot@1.1.2",
     "@preact/signals": "npm:@preact/signals@2.1.1",
     "@std/assert": "jsr:@std/assert@1",
     "@uri/gamla": "jsr:@uri/gamla@0.0.14",
