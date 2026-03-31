@@ -183,7 +183,7 @@ const AudienceTabs = () => {
       {activeTab === "coders" && (
         <div>
           <FeatureGrid items={developerFeatures} />
-          <pre class="w-full max-w-4xl mx-auto bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
+          <pre class="w-full max-w-4xl mx-auto bg-gray-100 dark:bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
           <code
             class="hljs language-typescript"
             dangerouslySetInnerHTML={{ __html: highlightedCode }}
