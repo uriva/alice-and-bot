@@ -53,7 +53,7 @@ const typingIndicatorStyle = (isDark: boolean) => ({
   fontSize: 12,
 });
 
-const defaultPrimary = (isDark: boolean) => isDark ? "#2d2d2d" : "#404040";
+const defaultPrimary = (isDark: boolean) => isDark ? "#2d2d2d" : "#ffffff";
 
 const recordingMimeType = typeof MediaRecorder !== "undefined" &&
     MediaRecorder.isTypeSupported("audio/webm")
@@ -2802,7 +2802,7 @@ export const AbstractChatBox = (
           <div
             style={{
               background: customColors?.inputBackground ??
-                (isDark ? "#1f2937" : "#e2e8f0"),
+                (isDark ? "#1f2937" : "#ffffff"),
             }}
           >
             <div
@@ -3120,7 +3120,7 @@ export const AbstractChatBox = (
                   border: "none",
                   borderRadius: 22,
                   background: customColors?.inputBackground ??
-                    (isDark ? "#111" : "#e2e8f0"),
+                    (isDark ? "#111" : "#ffffff"),
                   color: isDark ? "#f3f4f6" : "#1e293b",
                   fontSize: 16,
                   outline: "none",
