@@ -137,8 +137,8 @@ export const LandingPage = () => {
   return (
     <>
       <Header />
-      <main class="text-gray-800 dark:text-gray-200 min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-950 px-0 py-0">
-        <section class="w-full py-16 flex flex-col items-center justify-center bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 shadow-lg mb-12">
+      <main class="text-gray-800 dark:text-gray-200 min-h-screen w-full flex flex-col items-center justify-center bg-[#f8f7f4] dark:bg-[#0a0a0a] px-0 py-0">
+        <section class="w-full py-16 flex flex-col items-center justify-center bg-gray-800 dark:bg-gray-900 shadow-lg mb-12">
           <img src="icon.png" alt="Alice&Bot logo" style={{ width: 384 }} />
           <h1 class="text-6xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg mb-4">
             Alice&Bot
@@ -324,7 +324,7 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
             <a href={manifestoPath}>Our Manifesto</a>
           </Button>
         </div>
-        <footer class="w-full bg-gradient-to-r from-gray-900 dark:from-gray-950 to-gray-800 dark:to-gray-900 border-t border-gray-700 dark:border-gray-700 mt-16">
+        <footer class="w-full bg-gray-900 dark:bg-[#0a0a0a] border-t border-gray-700 dark:border-gray-700 mt-16">
           <div class="max-w-6xl mx-auto px-4 py-12 flex flex-col items-center gap-8">
             <div class="text-center">
               <p class="text-lg font-semibold text-white mb-2">
