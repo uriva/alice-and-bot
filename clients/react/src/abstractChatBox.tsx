@@ -1424,14 +1424,13 @@ const Message = (
     : (customColors?.otherBubble ?? defaultOtherBubble(isDark));
   const participantColor = avatarColor(authorId, isDark);
   const noBubble = !isOwn && customColors?.hideOtherBubble;
-  const showAvatar = isStartOfSequence &&
-    !(isOwn && customColors?.hideOwnAvatar);
+  const showAvatar = isStartOfSequence && !isOwn;
   const textColor = noBubble
     ? (customColors?.text ?? (isDark ? "#f4f4f4" : "#222"))
     : isLightColor(baseColor)
     ? (isDark ? "#fff" : "#222")
     : (isDark ? "#fff" : "#fff");
-  const avatarSpace = isOwn ? (customColors?.hideOwnAvatar ? 0 : 36) : 36;
+  const avatarSpace = isOwn ? 0 : 36;
   const canEdit = !!(isOwn && onEdit && Date.now() - timestamp < editWindowMs);
   const hasEdits = !empty(editHistory ?? []);
   const mdComponents = useMemo(() => markdownComponents(textColor), [
@@ -1455,96 +1454,104 @@ const Message = (
         />
       )}
       <div
-        className="msg-bubble"
         style={{
-          background: noBubble ? "transparent" : baseColor,
-          color: textColor,
-          alignSelf: isOwn ? "flex-end" : "flex-start",
-          borderRadius: noBubble ? 0 : 16,
-          padding: noBubble ? "2px 0" : "6px 12px",
-          marginLeft: isOwn ? 0 : showAvatar ? 0 : avatarSpace,
-          marginRight: isOwn ? (showAvatar ? 0 : avatarSpace) : 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: isOwn ? "flex-end" : "flex-start",
+          minWidth: 0,
           maxWidth: "80%",
-          overflowX: "hidden",
-          overflowY: "hidden",
-          wordBreak: "break-word",
-          overflowWrap: "anywhere",
         }}
       >
-        {isStartOfSequence && !customColors?.hideNames &&
+        {isStartOfSequence && !isOwn && !customColors?.hideNames &&
           <b style={{ fontSize: 11, color: participantColor }}>{authorName}</b>}
-        {isEditing
-          ? (
-            <EditForm
-              editText={editText}
-              setEditText={setEditText}
-              canSave={!!editText.trim() && editText !== text}
-              onSubmit={() =>
-                onEdit && submitEdit(onEdit, editText, text)(setIsEditing)}
-              onCancel={() => {
-                setIsEditing(false);
-                setEditText(text);
-              }}
-              isDark={isDark}
-            />
-          )
-          : text && (
-            <div
-              dir="auto"
-              style={{
-                overflowWrap: "anywhere",
-                wordBreak: "break-word",
-                minWidth: 0,
-                display: callDetails ? "flex" : "block",
-                alignItems: callDetails ? "center" : undefined,
-                gap: callDetails ? 8 : undefined,
-              }}
-            >
-              {callDetails && <FaPhoneAlt />}
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkBreaks, remarkHtmlToText]}
-                // @ts-ignore react-markdown types are not fully compatible with Preact here
-                components={mdComponents}
+        <div
+          className="msg-bubble"
+          style={{
+            background: noBubble ? "transparent" : baseColor,
+            color: textColor,
+            borderRadius: noBubble ? 0 : 16,
+            padding: noBubble ? "2px 0" : "6px 12px",
+            marginLeft: isOwn ? 0 : showAvatar ? 0 : avatarSpace,
+            marginRight: isOwn ? (showAvatar ? 0 : avatarSpace) : 0,
+            overflowX: "hidden",
+            overflowY: "hidden",
+            wordBreak: "break-word",
+            overflowWrap: "anywhere",
+          }}
+        >
+          {isEditing
+            ? (
+              <EditForm
+                editText={editText}
+                setEditText={setEditText}
+                canSave={!!editText.trim() && editText !== text}
+                onSubmit={() =>
+                  onEdit && submitEdit(onEdit, editText, text)(setIsEditing)}
+                onCancel={() => {
+                  setIsEditing(false);
+                  setEditText(text);
+                }}
+                isDark={isDark}
+              />
+            )
+            : text && (
+              <div
+                dir="auto"
+                style={{
+                  overflowWrap: "anywhere",
+                  wordBreak: "break-word",
+                  minWidth: 0,
+                  display: callDetails ? "flex" : "block",
+                  alignItems: callDetails ? "center" : undefined,
+                  gap: callDetails ? 8 : undefined,
+                }}
               >
-                {preprocessText(text)}
-              </ReactMarkdown>
+                {callDetails && <FaPhoneAlt />}
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkBreaks, remarkHtmlToText]}
+                  // @ts-ignore react-markdown types are not fully compatible with Preact here
+                  components={mdComponents}
+                >
+                  {preprocessText(text)}
+                </ReactMarkdown>
+              </div>
+            )}
+          {attachments && attachments.length > 0 && (
+            <div style={attachmentContainerStyle}>
+              {attachments.map((att, i) => (
+                <AttachmentRenderer
+                  key={i}
+                  attachment={att}
+                  textColor={textColor}
+                  isDark={isDark}
+                  onDecrypt={onDecryptAttachment}
+                  isOwn={isOwn}
+                  messageTimestamp={timestamp}
+                  sessionStart={sessionStart}
+                  primaryColor={baseColor}
+                />
+              ))}
             </div>
           )}
-        {attachments && attachments.length > 0 && (
-          <div style={attachmentContainerStyle}>
-            {attachments.map((att, i) => (
-              <AttachmentRenderer
-                key={i}
-                attachment={att}
-                textColor={textColor}
-                isDark={isDark}
-                onDecrypt={onDecryptAttachment}
-                isOwn={isOwn}
-                messageTimestamp={timestamp}
-                sessionStart={sessionStart}
-                primaryColor={baseColor}
-              />
-            ))}
+          <div style={messageFooterStyle}>
+            <MessageEditControls
+              hasEdits={hasEdits}
+              canEdit={canEdit}
+              isEditing={isEditing}
+              textColor={textColor}
+              onShowHistory={() => setShowHistory(true)}
+              onStartEdit={() => setIsEditing(true)}
+            />
+            <span
+              style={{
+                color: textColor,
+                opacity: 0.7,
+                fontSize: 10,
+              }}
+            >
+              {useTimeAgo(timestamp)}
+            </span>
           </div>
-        )}
-        <div style={messageFooterStyle}>
-          <MessageEditControls
-            hasEdits={hasEdits}
-            canEdit={canEdit}
-            isEditing={isEditing}
-            textColor={textColor}
-            onShowHistory={() => setShowHistory(true)}
-            onStartEdit={() => setIsEditing(true)}
-          />
-          <span
-            style={{
-              color: textColor,
-              opacity: 0.7,
-              fontSize: 10,
-            }}
-          >
-            {useTimeAgo(timestamp)}
-          </span>
         </div>
       </div>
       {showHistory && editHistory && (
