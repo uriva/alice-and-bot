@@ -186,9 +186,6 @@ const AudienceTabs = () => {
 
       {activeTab === "coders" && (
         <div>
-          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
-            Programmable chat with full API access.
-          </p>
           <FeatureGrid items={developerFeatures} />
           <pre class="w-full max-w-4xl bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
           <code
