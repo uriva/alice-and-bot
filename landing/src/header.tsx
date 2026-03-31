@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { FaGithub, FaMoon, FaSun } from "react-icons/fa";
+import { Button } from "./components.tsx";
 import {
   chatPath,
   docsPath,
@@ -112,22 +113,24 @@ export const Header = () => {
           >
             <FaGithub size={18} />
           </a>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={toggleDark}
-            class={iconButtonClass}
+            className={iconButtonClass}
             aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
           >
             {dark ? <FaSun size={18} /> : <FaMoon size={18} />}
-          </button>
-          <button
-            type="button"
-            class={`md:hidden ${iconButtonClass}`}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`md:hidden ${iconButtonClass}`}
             onClick={() => setMenuOpen((o) => !o)}
             aria-label="Toggle menu"
           >
             {menuOpen ? <CloseIcon /> : <HamburgerIcon />}
-          </button>
+          </Button>
         </div>
       </div>
       <MobileMenu open={menuOpen} />

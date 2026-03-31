@@ -1,6 +1,7 @@
 import { toast } from "react-hot-toast";
 import Markdown from "react-markdown";
 import { baseUrl } from "../../protocol/src/clientApi.ts";
+import { Button } from "./components.tsx";
 import manifestoText from "./manifesto.md?raw";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
@@ -64,14 +65,14 @@ export const Manifesto = () => {
           >
             LinkedIn
           </a>
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleCopy}
-            className="px-3 py-1 rounded bg-gray-600 hover:bg-gray-700 text-white font-medium"
-            title="Copy link to clipboard"
-            type="button"
+            className="px-3"
           >
             Copy Link
-          </button>
+          </Button>
         </div>
       </div>
       <div style={{ color: "white" }}>

@@ -1,6 +1,7 @@
 import { init as adminInit } from "@instantdb/admin";
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
+import { Button } from "./components.tsx";
 import { useLocation } from "preact-iso";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { toast } from "react-hot-toast";
@@ -381,14 +382,14 @@ const _NewUserForm = ({ onCreated, storeInBrowser, setStoreInBrowser }: {
           </div>
         </div>
         <div>
-          <button
+          <Button
+            variant="secondary"
             type="button"
-            class={buttonSecondaryStyle}
             onClick={onClickCreateIdentity}
             disabled={creating}
           >
             {creating ? "Creating..." : "Sign up"}
-          </button>
+          </Button>
           <div class={`${hintStyle} mt-1`}>No email or phone required.</div>
         </div>
       </div>
@@ -459,13 +460,9 @@ const ExistingUserForm = ({ onIdentified, storeInBrowser, setStoreInBrowser }: {
           value={inputCredentials}
           onInput={(e) => setInputCredentials(e.currentTarget.value)}
         />
-        <button
-          type="button"
-          class={buttonSecondaryStyle}
-          onClick={identify}
-        >
+        <Button variant="secondary" type="button" onClick={identify}>
           Sign in
-        </button>
+        </Button>
       </div>
       <div class="flex items-center mt-1">
         <input
@@ -527,9 +524,9 @@ const QrCodeTransfer = ({ credentials }: { credentials: Credentials }) => {
 
   return (
     <div class="flex flex-col gap-2">
-      <button
+      <Button
+        variant="secondary"
         type="button"
-        class={buttonSecondaryStyle}
         disabled={loading}
         onClick={onGenerate}
       >
@@ -538,7 +535,7 @@ const QrCodeTransfer = ({ credentials }: { credentials: Credentials }) => {
           : qrDataUrl
           ? "Regenerate QR code"
           : "Connect another device"}
-      </button>
+      </Button>
       <div class={hintStyle}>
         Scan the QR code with your phone camera to sign in with the same
         identity. The code expires in 5 minutes and can only be used once.
@@ -559,13 +556,15 @@ const QrCodeTransfer = ({ credentials }: { credentials: Credentials }) => {
       {transferUrl && (
         <div class="flex flex-col gap-1 items-center">
           <div class={hintStyle}>No camera? Copy the link instead:</div>
-          <button
+          <Button
+            variant="link"
+            size="sm"
             type="button"
-            class="text-xs text-gray-700 dark:text-gray-300 hover:underline"
+            className="px-0 h-auto text-xs"
             onClick={onCopy}
           >
             {copied ? "Copied!" : "Copy link"}
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -737,14 +736,13 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             onInput={(e) => setNameInput(e.currentTarget.value.slice(0, 50))}
             disabled={savingName}
           />
-          <button
+          <Button
             type="button"
-            class={buttonPrimaryStyle}
             disabled={savingName || nameInput.trim() === (name ?? "")}
             onClick={onSaveName}
           >
             {savingName ? "Saving..." : "Save"}
-          </button>
+          </Button>
         </div>
         {nameStatus && (
           <div
@@ -778,15 +776,14 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
               )}
             disabled={savingAlias}
           />
-          <button
+          <Button
             type="button"
-            class={buttonPrimaryStyle}
             disabled={savingAlias}
             onClick={onSaveAlias}
           >
             {savingAlias ? "Saving..." : profile?.alias ? "Update" : "Set"}{" "}
             alias
-          </button>
+          </Button>
         </div>
         <div class={hintStyle}>
           Lowercase letters, numbers, underscore. Max 15 chars. Public &
@@ -821,9 +818,8 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             </div>
           </div>
           <div class="flex gap-2">
-            <button
+            <Button
               type="button"
-              class={buttonPrimaryStyle}
               onClick={async () => {
                 const amountStr = globalThis.prompt(
                   "Enter amount to deposit (USD)",
@@ -849,18 +845,18 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
               }}
             >
               Deposit
-            </button>
+            </Button>
             {balanceData.balance > 0 && (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
-                class={buttonSecondaryStyle}
                 onClick={() =>
                   toast(
                     "Please email support@aliceandbot.com to withdraw your funds.",
                   )}
               >
                 Withdraw
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -881,9 +877,9 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             alt="Bitcoin QR Code"
             class="w-48 h-48 mx-auto"
           />
-          <button
+          <Button
+            variant="secondary"
             type="button"
-            class={buttonSecondaryStyle}
             onClick={async () => {
               const toastId = toast.loading("Checking payment...");
               const res = await checkCryptoPaymentSigned({
@@ -905,14 +901,16 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             }}
           >
             I've Paid (we check automatically)
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="link"
+            size="sm"
             type="button"
-            class="text-sm underline opacity-70"
+            className="px-0 h-auto text-sm opacity-70"
             onClick={() => setDepositData(null)}
           >
             Cancel
-          </button>
+          </Button>
         </div>
       )}
 
@@ -933,14 +931,13 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
             style={{ flex: 1 }}
             placeholder="0.00"
           />
-          <button
+          <Button
             type="button"
-            class={buttonPrimaryStyle}
             onClick={onSavePrice}
             disabled={savingPrice}
           >
             {savingPrice ? "Saving..." : "Save"}
-          </button>
+          </Button>
         </div>
         <div class={hintStyle}>
           Cost for new users to start a conversation with you.
@@ -958,9 +955,9 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
         )}
       </div>
       <div>
-        <button
+        <Button
+          variant="secondary"
           type="button"
-          class={buttonSecondaryStyle}
           onClick={() => {
             toast.promise(
               registerPush(credentials),
@@ -973,7 +970,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
           }}
         >
           Enable push notifications
-        </button>
+        </Button>
       </div>
       <QrCodeTransfer credentials={credentials} />
       <DangerZone />
@@ -1120,36 +1117,29 @@ const OpenChats = (
 const _Nav = (
   { view, setView }: { view: View; setView: (view: View) => void },
 ) => {
-  const buttonClass = (buttonView: View) =>
-    `px-3 py-2 rounded-md text-sm font-medium ${
-      view === buttonView
-        ? "bg-gray-900 text-white"
-        : "text-gray-700 hover:bg-gray-200"
-    }`;
-
   return (
     <nav class="flex space-x-4 mb-4">
-      <button
-        type="button"
-        class={buttonClass("chats")}
+      <Button
+        variant={view === "chats" ? "default" : "ghost"}
+        size="sm"
         onClick={() => setView("chats")}
       >
         Open Chats
-      </button>
-      <button
-        type="button"
-        class={buttonClass("new_chat")}
+      </Button>
+      <Button
+        variant={view === "new_chat" ? "default" : "ghost"}
+        size="sm"
         onClick={() => setView("new_chat")}
       >
         New chat
-      </button>
-      <button
-        type="button"
-        class={buttonClass("identity")}
+      </Button>
+      <Button
+        variant={view === "identity" ? "default" : "ghost"}
+        size="sm"
         onClick={() => setView("identity")}
       >
         Account
-      </button>
+      </Button>
     </nav>
   );
 };
@@ -1186,16 +1176,15 @@ const NewChatScreen = (
           />
           <div class={hintStyle}>Use comma to add multiple recipients.</div>
           <div>
-            <button
+            <Button
               type="button"
-              class={buttonPrimaryStyle}
               onClick={() =>
                 startConversation(credentials, otherParticipantPubKey).then(
                   () => onChatCreated?.(),
                 )}
             >
               Start New Conversation
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -1702,18 +1691,19 @@ const MessengerLogin = ({ setCredentials }: {
               </label>
             </div>
             <div class="flex justify-center">
-              <button
+              <Button
                 type="button"
-                class={buttonPrimaryStyle + " px-8"}
+                className="px-8"
                 disabled={creatingIdentity}
                 onClick={() => createIdentityWithName(displayName)}
               >
                 {creatingIdentity ? "Creating..." : "Continue"}
-              </button>
+              </Button>
             </div>
-            <button
+            <Button
+              variant="link"
+              size="sm"
               type="button"
-              class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:underline text-sm"
               onClick={() => {
                 const params = new URLSearchParams(globalThis.location.search);
                 params.set("login", "existing");
@@ -1721,7 +1711,7 @@ const MessengerLogin = ({ setCredentials }: {
               }}
             >
               I already have an account
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -2015,9 +2005,9 @@ const CopyCredentialsButton = () => {
   const [copied, setCopied] = useState(false);
   return (
     <div class="mb-4">
-      <button
+      <Button
+        variant="secondary"
         type="button"
-        class={buttonSecondaryStyle}
         onClick={() => {
           const creds = localStorage.getItem("alicebot_credentials");
           if (creds) {
@@ -2029,7 +2019,7 @@ const CopyCredentialsButton = () => {
       >
         Copy secret credentials{" "}
         {copied && <span class="text-sm ml-1">Copied!</span>}
-      </button>
+      </Button>
       <div class={hintStyle}>
         Warning: Never share your credentials. Anyone with them has access to
         all your chats forever.
@@ -2043,9 +2033,9 @@ const CopyInviteLinkButton = ({ publicSignKey }: { publicSignKey: string }) => {
   const link = chatWithMeLink(publicSignKey);
   return (
     <div class="mb-4">
-      <button
+      <Button
+        variant="secondary"
         type="button"
-        class={buttonSecondaryStyle}
         onClick={() => {
           navigator.clipboard.writeText(link);
           setCopied(true);
@@ -2053,7 +2043,7 @@ const CopyInviteLinkButton = ({ publicSignKey }: { publicSignKey: string }) => {
         }}
       >
         Copy invite link {copied && <span class="text-sm ml-1">Copied!</span>}
-      </button>
+      </Button>
       <div class={hintStyle}>
         Share this link so others can start a chat with you.
       </div>
@@ -2063,9 +2053,9 @@ const CopyInviteLinkButton = ({ publicSignKey }: { publicSignKey: string }) => {
 
 const DeleteCredentialsButton = () => (
   <div class="mb-4">
-    <button
+    <Button
+      variant="destructive"
       type="button"
-      class={buttonRedStyle}
       onClick={() => {
         if (
           confirm(
@@ -2078,7 +2068,7 @@ const DeleteCredentialsButton = () => (
       }}
     >
       Delete credentials and sign out
-    </button>
+    </Button>
     <div class={hintStyle}>
       Warning: Your key is not stored anywhere else. If you delete it and
       haven't saved it, you will lose access to your identity.
@@ -2090,9 +2080,10 @@ const DangerZone = () => {
   const [open, setOpen] = useState(false);
   return (
     <div class="mt-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 overflow-hidden">
-      <button
+      <Button
+        variant="ghost"
         type="button"
-        class="w-full flex justify-between items-center py-2 px-3 text-left hover:bg-red-100/70 dark:hover:bg-red-900/50"
+        className="w-full flex justify-between items-center py-2 px-3 text-left hover:bg-red-100/70 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300"
         onClick={() => setOpen((v) => !v)}
       >
         <span class="text-lg font-semibold text-red-700 dark:text-red-300">
@@ -2101,7 +2092,7 @@ const DangerZone = () => {
         <span class="ml-2 text-red-600/80 dark:text-red-300/80">
           {open ? <Chevron up /> : <Chevron up={false} />}
         </span>
-      </button>
+      </Button>
       {open && (
         <div class="px-3 py-2 border-t border-red-200 dark:border-red-800">
           <CopyCredentialsButton />
@@ -2120,14 +2111,6 @@ const labelSmallStyle = "block text-xs text-gray-700 dark:text-gray-400";
 const inputRowStyle = "flex gap-2 mb-2";
 const inputStyle =
   "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-gray-500 focus:border-gray-500 dark:focus:ring-gray-500 dark:focus:border-gray-500 max-w-md";
-const buttonBaseStyle =
-  "px-4 py-2 text-white rounded-lg focus:ring-4 focus:outline-none whitespace-nowrap";
-const buttonPrimaryStyle =
-  `${buttonBaseStyle} bg-gray-800 hover:bg-gray-900 focus:ring-gray-300 dark:bg-gray-300 dark:hover:bg-gray-400 dark:text-gray-900 dark:focus:ring-gray-600`;
-const buttonSecondaryStyle =
-  `${buttonBaseStyle} bg-gray-600 hover:bg-gray-700 focus:ring-gray-300 dark:bg-gray-400 dark:hover:bg-gray-500 dark:text-gray-900 dark:focus:ring-gray-600`;
 const textareaStyle =
   "w-full border rounded-lg p-2.5 text-sm bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white";
 const hintStyle = "text-xs text-gray-600 dark:text-gray-400 mt-1";
-const buttonRedStyle =
-  `${buttonBaseStyle} bg-red-600 hover:bg-red-700 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800`;
