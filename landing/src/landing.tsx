@@ -8,8 +8,6 @@ import { Header } from "./header.tsx";
 import {
   chatPath,
   claudeCodePath,
-  docsPath,
-  manifestoPath,
   mcpGuidePath,
   opencodePath,
 } from "./paths.ts";
@@ -256,7 +254,7 @@ const AudienceTabs = () => {
             First-class support for bots and AI agents.
           </p>
           <FeatureGrid items={aiFeatures} />
-          <div class="w-full max-w-4xl flex flex-col items-center">
+          <div class="w-full max-w-4xl flex flex-col items-center mb-8">
             <h3 class="text-2xl font-bold mb-4 text-center">
               AI Agent Skill
             </h3>
@@ -281,6 +279,25 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
                 OpenCode
               </a>-style skills.
             </p>
+          </div>
+          <div class="w-full max-w-4xl flex flex-col items-center">
+            <h3 class="text-2xl font-bold mb-4 text-center">
+              MCP Integration
+            </h3>
+            <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-4">
+              Connect Alice&Bot to your favorite code editor via MCP.
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+              <Button asChild size="lg">
+                <a href={mcpGuidePath}>Setup Guide</a>
+              </Button>
+              <Button asChild size="lg" variant="secondary">
+                <a href={claudeCodePath}>Claude Code</a>
+              </Button>
+              <Button asChild size="lg" variant="secondary">
+                <a href={opencodePath}>OpenCode</a>
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -309,17 +326,6 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               },
             ]}
           />
-          <div class="flex flex-wrap justify-center gap-4">
-            <Button asChild size="lg">
-              <a href={mcpGuidePath}>Setup Guide</a>
-            </Button>
-            <Button asChild size="lg" variant="secondary">
-              <a href={claudeCodePath}>Claude Code Guide</a>
-            </Button>
-            <Button asChild size="lg" variant="secondary">
-              <a href={opencodePath}>OpenCode Guide</a>
-            </Button>
-          </div>
         </div>
       )}
     </section>
@@ -348,69 +354,6 @@ export const LandingPage = () => {
           </p>
         </section>
         <AudienceTabs />
-        <footer class="w-full bg-gray-900 dark:bg-[#0a0a0a] border-t border-gray-700 dark:border-gray-700 mt-16">
-          <div class="max-w-6xl mx-auto px-4 py-12 flex flex-col items-center gap-8">
-            <div class="text-center">
-              <p class="text-lg font-semibold text-white mb-2">
-                Alice&Bot. Chat for the AI era.
-              </p>
-              <p class="text-sm text-gray-300 dark:text-gray-300">
-                The developer-first, privacy-first chat platform
-              </p>
-            </div>
-            <nav class="flex flex-wrap justify-center gap-6">
-              <a
-                href={docsPath}
-                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-              >
-                Docs
-              </a>
-              <a
-                href={manifestoPath}
-                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-              >
-                Manifesto
-              </a>
-              <a
-                href="https://github.com/uriva/alice-and-bot"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-              >
-                GitHub
-              </a>
-              <a
-                href="https://discord.gg/xkGMFH9RAz"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-              >
-                Discord
-              </a>
-              <a
-                href={mcpGuidePath}
-                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-              >
-                MCP Guide
-              </a>
-              <a
-                href={claudeCodePath}
-                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-              >
-                Claude Code
-              </a>
-              <a
-                href={opencodePath}
-                class="text-gray-300 dark:text-gray-300 hover:text-white transition font-medium"
-              >
-                OpenCode
-              </a>
-            </nav>
-            <div class="border-t border-gray-700 dark:border-gray-700 w-full pt-6 text-center text-sm text-gray-300 dark:text-gray-400">
-              &copy; {new Date().getFullYear()} Alice&Bot. All rights reserved.
-            </div>
-          </div>
-        </footer>
       </main>
     </>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { FaGithub, FaMoon, FaSun } from "react-icons/fa";
+import { FaDiscord, FaGithub, FaMoon, FaSun } from "react-icons/fa";
 import { Button } from "./components.tsx";
 import {
   chatPath,
@@ -112,6 +112,15 @@ export const Header = () => {
             aria-label="GitHub"
           >
             <FaGithub size={18} />
+          </a>
+          <a
+            href="https://discord.gg/xkGMFH9RAz"
+            target="_blank"
+            rel="noopener noreferrer"
+            class={`hidden md:flex ${iconButtonClass}`}
+            aria-label="Discord"
+          >
+            <FaDiscord size={18} />
           </a>
           <Button
             variant="ghost"
