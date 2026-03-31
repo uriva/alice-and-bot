@@ -39,10 +39,10 @@ import {
   chatContainerStyle,
   contentMaxWidthStyle,
   type CustomColors,
+  defaultOtherBubble,
   isLightColor,
   loadingStyle,
   Spinner,
-  stringToColor,
 } from "./design.tsx";
 import { useDarkMode, useIsMobile } from "./hooks.ts";
 
@@ -1420,7 +1420,7 @@ const Message = (
   const isDark = useDarkMode();
   const baseColor = isOwn
     ? (customColors?.primary ?? (isDark ? "#2563eb" : "#3182ce"))
-    : (customColors?.otherBubble ?? stringToColor(authorId, isDark));
+    : (customColors?.otherBubble ?? defaultOtherBubble(isDark));
   const noBubble = !isOwn && customColors?.hideOtherBubble;
   const showAvatar = isStartOfSequence &&
     !(isOwn && customColors?.hideOwnAvatar);

@@ -52,32 +52,22 @@ export const centerFillStyle = (isDarkMode: boolean) => ({
   color: isDarkMode ? "#9ca3af" : "#888",
 });
 
-const participantColors = [
-  { h: 195, s: 65 }, // blue
-  { h: 105, s: 65 }, // green
-  { h: 30, s: 65 }, // orange
-  { h: 300, s: 65 }, // magenta
-  { h: 270, s: 65 }, // purple
-  { h: 0, s: 65 }, // red
-  { h: 210, s: 65 }, // another blue
-  { h: 150, s: 65 }, // teal-green
-];
+export const defaultOtherBubble = (isDark: boolean) =>
+  isDark ? "hsl(220, 15%, 28%)" : "hsl(220, 15%, 88%)";
 
-export const stringToColor = (str: string, isDarkMode: boolean) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const color = participantColors[Math.abs(hash) % participantColors.length];
-  const lightness = isDarkMode ? 32 : 70;
-  return `hsl(${color.h}, ${color.s}%, ${lightness}%)`;
+const hexLightness = (hex: string) => {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return (Math.max(r, g, b) + Math.min(r, g, b)) / 510;
 };
 
-export const isLightColor = (hsl: string) => {
-  const match = hsl.match(/hsl\(\d+, *\d+%, *(\d+)%\)/);
-  if (!match) return false;
-  const lightness = parseInt(match[1], 10);
-  return lightness > 60;
+export const isLightColor = (color: string) => {
+  const hslMatch = color.match(/hsl\(\d+, *\d+%, *(\d+)%\)/);
+  if (hslMatch) return parseInt(hslMatch[1], 10) > 60;
+  if (color.startsWith("#")) return hexLightness(color) > 0.6;
+  return false;
 };
 
 const spinnerStyle = (

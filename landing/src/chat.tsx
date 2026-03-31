@@ -15,10 +15,10 @@ import {
 import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import { ChatAvatar } from "../../clients/react/src/abstractChatBox.tsx";
 import {
+  defaultOtherBubble,
   ShimmerCircle,
   ShimmerText,
   Spinner,
-  stringToColor,
 } from "../../clients/react/src/design.tsx";
 import { Chat as ChatNoDb } from "../../clients/react/src/main.tsx";
 import schema from "../../instant.schema.ts";
@@ -992,10 +992,7 @@ const ConversationListItem = (
         {displayName === null ? <ShimmerCircle /> : (
           <ChatAvatar
             name={displayName}
-            baseColor={stringToColor(
-              otherParticipant?.publicSignKey ?? "",
-              isDarkMode,
-            )}
+            baseColor={defaultOtherBubble(isDarkMode)}
           />
         )}
         <div class="flex-grow overflow-hidden min-w-0">
