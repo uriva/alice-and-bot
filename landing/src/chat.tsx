@@ -1303,7 +1303,7 @@ const LoggedInMessenger = (
       style={{ minHeight: 0, minWidth: 0 }}
     >
       {!isMobile && (
-        <div class="w-20 border-r border-gray-200 dark:border-gray-700 bg-[#f5f5dc] dark:bg-[#111] flex flex-col items-center py-6 gap-4 shrink-0 overflow-hidden">
+        <div class="w-20 border-r border-gray-200 dark:border-gray-700 bg-[#fafafa] dark:bg-[#111] flex flex-col items-center py-6 gap-4 shrink-0 overflow-hidden">
           <button
             type="button"
             class={`w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
