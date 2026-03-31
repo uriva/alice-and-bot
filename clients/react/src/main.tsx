@@ -264,7 +264,7 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
   };
   const uiMessages = messages.filter(isTextOrEdit);
   const messageElementIds = new Set(
-    uiMessages
+    messages
       .filter((m): m is DecipheredMessage & { elementId: string } =>
         "elementId" in m
       )
