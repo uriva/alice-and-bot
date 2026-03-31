@@ -147,9 +147,6 @@ const AudienceTabs = () => {
   return (
     <section class={sectionClass}>
       <div class="mb-12">
-        <h2 class="text-2xl font-bold mb-4 text-center text-gray-900 dark:text-white">
-          Private, spam-free messaging you control.
-        </h2>
         <FeatureGrid items={humanFeatures} />
       </div>
 
