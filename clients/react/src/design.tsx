@@ -16,13 +16,11 @@ export type CustomColors = {
 };
 
 const chatBackgroundPattern = (isDarkMode: boolean) =>
-  `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h100v100H0z' fill='${
+  `url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='p' x='0' y='0' width='40' height='40' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='20' cy='20' r='1' fill='${
+    isDarkMode ? "%23222" : "%23e5e5e5"
+  }'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='200' height='200' fill='${
     isDarkMode ? "%230a0a0a" : "%23ffffff"
-  }'/%3E%3Cpath d='M0 0h50v50H0z' fill='${
-    isDarkMode ? "%23141414" : "%23f5f5f5"
-  }'/%3E%3Cpath d='M50 50h50v50H50z' fill='${
-    isDarkMode ? "%23141414" : "%23f5f5f5"
-  }'/%3E%3C/svg%3E")`;
+  }'/%3E%3Crect width='200' height='200' fill='url(%23p)'/%3E%3C/svg%3E")`;
 
 export const widgetColors = (isDarkMode: boolean, custom?: CustomColors) => ({
   background: custom?.background ?? chatBackgroundPattern(isDarkMode),
