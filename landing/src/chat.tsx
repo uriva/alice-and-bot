@@ -1,6 +1,7 @@
 import { init as adminInit } from "@instantdb/admin";
 import { init } from "@instantdb/react";
 import { signal } from "@preact/signals";
+import { FaMoon, FaSun } from "react-icons/fa";
 import { Button } from "./components.tsx";
 import { useLocation } from "preact-iso";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
@@ -1273,6 +1274,7 @@ const LoggedInMessenger = (
 ) => {
   const isMobile = useIsMobile();
   const isDark = useDarkMode();
+  const [darkModeState, setDarkModeState] = useState(isDark);
   const scrollbarStyle = {
     scrollbarColor: isDark ? "#374151 #181c23" : "#cbd5e1 #f8fafc",
   };
@@ -1280,6 +1282,15 @@ const LoggedInMessenger = (
   const router = useLocation().route;
 
   const showChatsList = isMobile ? !selectedConversation.value : true;
+
+  const toggleDark = () => {
+    const root = document.documentElement;
+    const newDark = !darkModeState;
+    if (newDark) root.classList.add("dark");
+    else root.classList.remove("dark");
+    localStorage.setItem("theme", newDark ? "dark" : "light");
+    setDarkModeState(newDark);
+  };
 
   return (
     <div
@@ -1335,6 +1346,18 @@ const LoggedInMessenger = (
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
+          <div class="flex-grow" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleDark}
+            className="w-12 h-12"
+            title={darkModeState
+              ? "Switch to light mode"
+              : "Switch to dark mode"}
+          >
+            {darkModeState ? <FaSun size={20} /> : <FaMoon size={20} />}
+          </Button>
         </div>
       )}
 
@@ -1456,12 +1479,14 @@ const LoggedInMessenger = (
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      alignItems: "flex-start",
                       gap: 8,
                       justifyContent: "space-between",
                     }}
                   >
-                    <LogoHeader onClick={() => router(homePath)} />
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <LogoHeader onClick={() => router(homePath)} />
+                    </div>
                     <button
                       type="button"
                       class="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-900 dark:bg-gray-300 dark:hover:bg-gray-400 text-white dark:text-gray-900 rounded-lg transition-colors flex-shrink-0"

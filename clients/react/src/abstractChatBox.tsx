@@ -169,7 +169,7 @@ const videoPlaceholderStyle = (isDark: boolean): JSX.CSSProperties => ({
   aspectRatio: "16/9",
   borderRadius: 8,
   marginTop: 6,
-  background: isDark ? "#1a1a2e" : "#e5e7eb",
+  background: isDark ? "#1f2937" : "#e5e7eb",
 });
 
 const pulseKeyframes = `
@@ -189,7 +189,7 @@ const brokenVideoStyle = (isDark: boolean): JSX.CSSProperties => ({
   aspectRatio: "16/9",
   borderRadius: 8,
   marginTop: 6,
-  background: isDark ? "#1a1a2e" : "#e5e7eb",
+  background: isDark ? "#1f2937" : "#e5e7eb",
   color: isDark ? "#6b7280" : "#9ca3af",
   fontSize: 13,
 });
@@ -563,7 +563,7 @@ const FencedCodeBlock = (
           overflow: "auto",
           maxWidth: "100%",
           boxSizing: "border-box",
-          background: isDark ? "#0b1220" : "#f3f4f6",
+          background: isDark ? "#111827" : "#f3f4f6",
           color: isDark ? "#e5e7eb" : "#111827",
           borderRadius: 8,
           fontFamily:
