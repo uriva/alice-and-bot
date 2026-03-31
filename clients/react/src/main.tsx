@@ -270,6 +270,11 @@ const processMessages = (db: InstantReactWebDatabase<typeof schema>) =>
       )
       .map((m) => m.elementId),
   );
+  console.log("[debug] messageElementIds:", [...messageElementIds]);
+  console.log(
+    "[debug] uiElements:",
+    uiElements.map((e) => ({ id: e.elementId, type: e.type })),
+  );
   const standaloneProgress: ActiveProgress[] = uiElements
     .filter((el: { elementId: string; type: string; percentage?: number }) =>
       el.type === "progress" &&
