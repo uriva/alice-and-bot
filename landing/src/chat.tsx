@@ -8,6 +8,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { toast } from "react-hot-toast";
 import {
   type Conversation,
+  setDarkModeOverride,
   useConversations,
   useDarkMode,
   useIdentityProfile,
@@ -1295,7 +1296,12 @@ const LoggedInMessenger = (
     else root.classList.remove("dark");
     localStorage.setItem("theme", newDark ? "dark" : "light");
     setDarkModeState(newDark);
+    setDarkModeOverride(newDark ? "dark" : "light");
   };
+
+  useEffect(() => {
+    setDarkModeOverride(darkModeState ? "dark" : "light");
+  }, [darkModeState]);
 
   return (
     <div
