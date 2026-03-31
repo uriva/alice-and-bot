@@ -2029,7 +2029,7 @@ const titleStyle = (isDark: boolean, customColors?: CustomColors) => {
   };
 };
 
-const messageContainerStyle = (isDark: boolean) => ({
+const messageContainerStyle = (isDark: boolean, custom?: CustomColors) => ({
   display: "flex",
   flex: "1 1 0",
   minHeight: 0,
@@ -2040,7 +2040,8 @@ const messageContainerStyle = (isDark: boolean) => ({
   WebkitOverflowScrolling: "touch",
   transition: "background 0.2s",
   flexDirection: "column",
-  scrollbarColor: isDark ? "#374151 #111" : "#cbd5e1 #f8fafc",
+  scrollbarColor: custom?.scrollbarColor ??
+    (isDark ? "#374151 #111" : "#cbd5e1 #f8fafc"),
 });
 
 const messageContainerDataAttr = { "data-scrollable": true };
@@ -2679,7 +2680,7 @@ export const AbstractChatBox = (
 
       <div
         ref={messagesContainerRef}
-        style={messageContainerStyle(isDark)}
+        style={messageContainerStyle(isDark, customColors)}
         {...messageContainerDataAttr}
       >
         <div
@@ -3136,7 +3137,8 @@ export const AbstractChatBox = (
                   transition: "background 0.2s, color 0.2s",
                   fontFamily: "inherit",
                   letterSpacing: 0.1,
-                  scrollbarColor: isDark ? "#374151 #111" : "#cbd5e1 #e2e8f0",
+                  scrollbarColor: customColors?.scrollbarColor ??
+                    (isDark ? "#374151 #111" : "#cbd5e1 #e2e8f0"),
                   scrollbarWidth: "thin",
                 }}
                 onKeyDown={(e) => {

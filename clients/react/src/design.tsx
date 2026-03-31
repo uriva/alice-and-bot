@@ -13,6 +13,7 @@ export type CustomColors = {
   inputMaxWidth?: string;
   chatMaxWidth?: string;
   inputBackground?: string;
+  scrollbarColor?: string;
 };
 
 const chatBackgroundPattern = (isDarkMode: boolean) =>
