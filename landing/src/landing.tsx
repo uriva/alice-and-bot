@@ -133,9 +133,9 @@ const developerFeatures = [
 ];
 
 const AudienceTabs = () => {
-  const [activeTab, setActiveTab] = useState<"humans" | "agents" | "editors">(
-    "humans",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "coders" | "humans" | "agents" | "editors"
+  >("coders");
 
   const tabButtonClass = (isActive: boolean) =>
     `px-6 py-3 font-medium transition-colors border-b-2 ${
@@ -147,6 +147,13 @@ const AudienceTabs = () => {
   return (
     <section class={sectionClass}>
       <div class="flex justify-center mb-8 border-b border-gray-200 dark:border-gray-700">
+        <button
+          type="button"
+          class={tabButtonClass(activeTab === "coders")}
+          onClick={() => setActiveTab("coders")}
+        >
+          For Coders
+        </button>
         <button
           type="button"
           class={tabButtonClass(activeTab === "humans")}
@@ -169,6 +176,25 @@ const AudienceTabs = () => {
           For Code Editors
         </button>
       </div>
+
+      {activeTab === "coders" && (
+        <div>
+          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
+            Programmable chat with full API access.
+          </p>
+          <FeatureGrid items={developerFeatures} />
+          <pre class="w-full max-w-4xl bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
+          <code
+            class="hljs language-typescript"
+            dangerouslySetInnerHTML={{ __html: highlightedCode }}
+          />
+          </pre>
+          <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
+            TypeScript SDK with end-to-end encryption, webhooks, and device
+            sync.
+          </p>
+        </div>
+      )}
 
       {activeTab === "humans" && (
         <div>
@@ -338,21 +364,6 @@ export const LandingPage = () => {
           </p>
         </section>
         <AudienceTabs />
-        <section class={sectionClass}>
-          <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
-            Programmable chat with full API access.
-          </p>
-          <FeatureGrid items={developerFeatures} />
-          <pre class="w-full max-w-4xl bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
-          <code
-            class="hljs language-typescript"
-            dangerouslySetInnerHTML={{ __html: highlightedCode }}
-          />
-          </pre>
-          <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
-            All functions work in both browser and server environments.
-          </p>
-        </section>
         <div class="flex flex-wrap justify-center mb-12 gap-4">
           <Button asChild size="lg" variant="secondary">
             <a
