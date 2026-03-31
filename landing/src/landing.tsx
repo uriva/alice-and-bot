@@ -61,7 +61,7 @@ const lightModeColors: Record<string, string> = {
 
 const darkModeColors: Record<string, string> = {
   keyword: "text-purple-400",
-  string: "text-green-400",
+  string: "text-cyan-400",
   number: "text-orange-400",
   comment: "text-gray-500",
   function: "text-blue-400",
