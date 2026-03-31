@@ -2268,6 +2268,8 @@ export const AbstractChatBox = (
   const prevActiveSpinnerIdsRef = useRef<Set<string>>(new Set());
   const prevMessageCountRef = useRef(0);
   const stuckToBottomRef = useRef(true);
+  const loadingMoreRef = useRef(false);
+  const prevScrollHeightRef = useRef(0);
   const [optimisticMessages, setOptimisticMessages] = useState<
     AbstracChatMessage[]
   >([]);
@@ -2365,13 +2367,14 @@ export const AbstractChatBox = (
     stuckToBottomRef.current =
       el.scrollHeight - el.scrollTop - el.clientHeight < 150;
     if (
-      !fetchingMore &&
+      !loadingMoreRef.current &&
       el.scrollTop === 0 &&
       canLoadMore
     ) {
+      loadingMoreRef.current = true;
+      prevScrollHeightRef.current = el.scrollHeight;
       setFetchingMore(true);
       loadMore();
-      setFetchingMore(false);
     }
   };
   useEffect(() => {
@@ -2398,7 +2401,7 @@ export const AbstractChatBox = (
           handleScroll,
         );
     }
-  }, [canLoadMore, messages, fetchingMore]);
+  }, [canLoadMore, messages]);
 
   const systemDarkMode = useDarkMode();
   const isDark = darkModeOverride !== undefined
@@ -2445,6 +2448,14 @@ export const AbstractChatBox = (
   };
 
   useLayoutEffect(() => {
+    const container = messagesContainerRef.current;
+    if (loadingMoreRef.current && container) {
+      container.scrollTop = container.scrollHeight -
+        prevScrollHeightRef.current;
+      loadingMoreRef.current = false;
+      setFetchingMore(false);
+      return;
+    }
     stuckToBottomRef.current = true;
     scrollToBottom();
     requestAnimationFrame(scrollToBottom);
