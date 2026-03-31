@@ -2017,14 +2017,14 @@ const headerButtonStyle: JSX.CSSProperties = {
 };
 
 const titleStyle = (isDark: boolean, customColors?: CustomColors) => {
-  const bg = customColors?.primary ?? defaultPrimary(isDark);
+  const bg = customColors?.background ?? (isDark ? "#0a0a0a" : "#fafafa");
   return {
     textAlign: "center",
     fontWeight: "bold",
     fontSize: "1.2em",
     padding: "0.7em 0 0.5em 0",
     background: bg,
-    color: isLightColor(bg) ? "#222" : "#fff",
+    color: customColors?.text ?? (isDark ? "#f4f4f4" : "#222"),
     borderBottom: `1px solid ${isDark ? "#ffffff10" : "#00000008"}`,
   };
 };
