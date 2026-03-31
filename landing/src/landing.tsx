@@ -8,6 +8,7 @@ import { Header } from "./header.tsx";
 import {
   chatPath,
   claudeCodePath,
+  legalPath,
   mcpGuidePath,
   opencodePath,
 } from "./paths.ts";
@@ -353,6 +354,29 @@ export const LandingPage = () => {
           </p>
         </section>
         <AudienceTabs />
+        <footer class="w-full border-t border-gray-200 dark:border-gray-700 mt-16 py-8">
+          <div class="max-w-6xl mx-auto px-4 flex flex-col items-center gap-4">
+            <nav class="flex flex-wrap justify-center gap-6 text-sm">
+              <a
+                href={legalPath}
+                class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+              >
+                Legal & Privacy
+              </a>
+              <a
+                href="https://github.com/uriva/alice-and-bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+              >
+                GitHub
+              </a>
+            </nav>
+            <p class="text-xs text-gray-400 dark:text-gray-500">
+              Open source. Self-hostable. Your data belongs to you.
+            </p>
+          </div>
+        </footer>
       </main>
     </>
   );
