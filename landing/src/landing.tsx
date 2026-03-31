@@ -291,12 +291,6 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               <Button asChild size="lg">
                 <a href={mcpGuidePath}>Setup Guide</a>
               </Button>
-              <Button asChild size="lg" variant="secondary">
-                <a href={claudeCodePath}>Claude Code</a>
-              </Button>
-              <Button asChild size="lg" variant="secondary">
-                <a href={opencodePath}>OpenCode</a>
-              </Button>
             </div>
           </div>
         </div>
@@ -326,6 +320,14 @@ curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
               },
             ]}
           />
+          <div class="flex flex-wrap justify-center gap-4 mt-8">
+            <Button asChild size="lg" variant="secondary">
+              <a href={claudeCodePath}>Claude Code</a>
+            </Button>
+            <Button asChild size="lg" variant="secondary">
+              <a href={opencodePath}>OpenCode</a>
+            </Button>
+          </div>
         </div>
       )}
     </section>
