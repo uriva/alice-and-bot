@@ -531,6 +531,7 @@ const QrCodeTransfer = ({ credentials }: { credentials: Credentials }) => {
         type="button"
         disabled={loading}
         onClick={onGenerate}
+        className="w-full"
       >
         {loading
           ? "Generating..."
@@ -996,6 +997,7 @@ const YourKey = ({ credentials }: { credentials: Credentials }) => {
               },
             );
           }}
+          className="w-full"
         >
           Enable push notifications
         </Button>
