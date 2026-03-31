@@ -44,7 +44,7 @@ const NotFound = () => (
     </p>
     <a
       href={homePath}
-      class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+      class="mt-4 px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-900 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"
     >
       Go to Home
     </a>

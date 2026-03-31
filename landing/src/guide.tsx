@@ -9,7 +9,7 @@ import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 export const Docs = () => {
   useClearViewportStyles();
   return (
-    <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-blue-950">
+    <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-gray-950">
       <div
         style={{
           maxWidth: 800,
@@ -19,7 +19,7 @@ export const Docs = () => {
       >
         <a
           href={homePath}
-          class="inline-block mb-6 text-blue-400 hover:text-blue-300 transition font-medium"
+          class="inline-block mb-6 text-gray-400 hover:text-gray-300 transition font-medium"
         >
           &larr; Back to Alice&Bot
         </a>
@@ -30,25 +30,25 @@ export const Docs = () => {
             components={{
               // @ts-expect-error Markdown types are not fully compatible with Preact
               h1: ({ children }) => (
-                <h1 class="text-4xl font-extrabold mt-8 mb-4 text-blue-300 text-center">
+                <h1 class="text-4xl font-extrabold mt-8 mb-4 text-gray-100 text-center">
                   {children}
                 </h1>
               ),
               // @ts-expect-error Markdown types are not fully compatible with Preact
               h2: ({ children }) => (
-                <h2 class="text-2xl font-bold mt-10 mb-3 text-blue-200">
+                <h2 class="text-2xl font-bold mt-10 mb-3 text-gray-200">
                   {children}
                 </h2>
               ),
               // @ts-expect-error Markdown types are not fully compatible with Preact
               h3: ({ children }) => (
-                <h3 class="text-xl font-semibold mt-6 mb-2 text-blue-100">
+                <h3 class="text-xl font-semibold mt-6 mb-2 text-gray-300">
                   {children}
                 </h3>
               ),
               // @ts-expect-error Markdown types are not fully compatible with Preact
               h4: ({ children }) => (
-                <h4 class="text-lg font-semibold mt-4 mb-2 text-blue-100">
+                <h4 class="text-lg font-semibold mt-4 mb-2 text-gray-300">
                   {children}
                 </h4>
               ),
@@ -61,7 +61,7 @@ export const Docs = () => {
               // @ts-expect-error Markdown types are not fully compatible with Preact
               a: ({ children, href }) => (
                 <a
-                  class="text-blue-400 underline hover:text-blue-300"
+                  class="text-gray-400 underline hover:text-gray-300"
                   target="_blank"
                   rel="noopener noreferrer"
                   href={href}
@@ -89,7 +89,7 @@ export const Docs = () => {
                   className?.includes("hljs");
                 if (isBlock) return <code class={className}>{children}</code>;
                 return (
-                  <code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded text-sm">
+                  <code class="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-sm">
                     {children}
                   </code>
                 );
@@ -108,7 +108,7 @@ export const Docs = () => {
               ),
               // @ts-expect-error Markdown types are not fully compatible with Preact
               th: ({ children }) => (
-                <th class="py-2 px-3 text-blue-200 font-semibold text-sm">
+                <th class="py-2 px-3 text-gray-200 font-semibold text-sm">
                   {children}
                 </th>
               ),

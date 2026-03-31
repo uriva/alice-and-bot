@@ -2,10 +2,10 @@ import { homePath } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
 
 const stepCardClass =
-  "w-full bg-white/90 dark:bg-blue-950/80 rounded-2xl border border-blue-100 dark:border-blue-900 shadow-xl p-8 mb-6";
+  "w-full bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl p-8 mb-6";
 
 const stepNumberClass =
-  "inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-lg mr-3 shrink-0";
+  "inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-700 text-white font-bold text-lg mr-3 shrink-0";
 
 const codeBlockStyle = {
   borderRadius: "0.75rem",
@@ -40,7 +40,7 @@ const Step = ({
   <div class={stepCardClass}>
     <div class="flex items-center mb-4">
       <span class={stepNumberClass}>{number}</span>
-      <h2 class="text-xl font-bold text-blue-700 dark:text-blue-300">
+      <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">
         {title}
       </h2>
     </div>
@@ -51,16 +51,16 @@ const Step = ({
 export const OpenCodePage = () => {
   useClearViewportStyles();
   return (
-    <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-blue-950">
+    <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-gray-950">
       <div style={{ maxWidth: 700, margin: "0 auto", padding: "24px" }}>
         <a
           href={homePath}
-          class="inline-block mb-6 text-blue-400 hover:text-blue-300 transition font-medium"
+          class="inline-block mb-6 text-gray-400 hover:text-gray-300 transition font-medium"
         >
           &larr; Back to Alice&Bot
         </a>
 
-        <h1 class="text-4xl font-extrabold text-blue-300 text-center mb-2">
+        <h1 class="text-4xl font-extrabold text-gray-100 text-center mb-2">
           OpenCode + Alice&Bot
         </h1>
         <p class="text-lg text-gray-300 text-center mb-10">

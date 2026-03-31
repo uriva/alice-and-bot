@@ -41,7 +41,7 @@ export const Manifesto = () => {
             href={`https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareText}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-1 rounded bg-blue-500 hover:bg-blue-600 text-white font-medium"
+            className="px-3 py-1 rounded bg-gray-600 hover:bg-gray-700 text-white font-medium"
             title="Share on Twitter/X"
           >
             Twitter/X
@@ -50,7 +50,7 @@ export const Manifesto = () => {
             href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-1 rounded bg-blue-700 hover:bg-blue-800 text-white font-medium"
+            className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-800 text-white font-medium"
             title="Share on Facebook"
           >
             Facebook
@@ -59,7 +59,7 @@ export const Manifesto = () => {
             href={`https://www.linkedin.com/shareArticle?mini=true&url=${shareUrl}&title=${shareText}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-1 rounded bg-blue-800 hover:bg-blue-900 text-white font-medium"
+            className="px-3 py-1 rounded bg-gray-800 hover:bg-gray-900 text-white font-medium"
             title="Share on LinkedIn"
           >
             LinkedIn
@@ -79,26 +79,26 @@ export const Manifesto = () => {
           components={{
             // @ts-expect-error Markdown types are not fully compatible with Preact
             h1: ({ children }) => (
-              <h1 className="text-4xl font-extrabold mt-8 mb-4 text-blue-700 dark:text-blue-300 text-center">
+              <h1 className="text-4xl font-extrabold mt-8 mb-4 text-gray-100 text-center">
                 {children}
               </h1>
             ),
             // @ts-expect-error Markdown types are not fully compatible with Preact
             h2: ({ children }) => (
-              <h2 className="text-2xl font-bold mt-6 mb-3 text-blue-600 dark:text-blue-200">
+              <h2 className="text-2xl font-bold mt-6 mb-3 text-gray-200">
                 {children}
               </h2>
             ),
             // @ts-expect-error Markdown types are not fully compatible with Preact
             h3: ({ children }) => (
-              <h3 className="text-xl font-semibold mt-4 mb-2 text-blue-500 dark:text-blue-100">
+              <h3 className="text-xl font-semibold mt-4 mb-2 text-gray-300">
                 {children}
               </h3>
             ),
             // @ts-expect-error Markdown types are not fully compatible with Preact
             a: ({ children, href }) => (
               <a
-                className="text-blue-400 underline hover:text-blue-600"
+                className="text-gray-400 underline hover:text-gray-200"
                 target="_blank"
                 rel="noopener noreferrer"
                 href={href}

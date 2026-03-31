@@ -545,7 +545,7 @@ const QrCodeTransfer = ({ credentials }: { credentials: Credentials }) => {
           <div class={hintStyle}>No camera? Copy the link instead:</div>
           <button
             type="button"
-            class="text-xs text-blue-600 dark:text-blue-300 hover:underline"
+            class="text-xs text-gray-700 dark:text-gray-300 hover:underline"
             onClick={onCopy}
           >
             {copied ? "Copied!" : "Copy link"}
@@ -982,7 +982,7 @@ const ConversationListItem = (
         type="button"
         class={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 transition-colors ${
           selectedConversation.value === conv.id
-            ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500"
+            ? "bg-gray-100 dark:bg-gray-800/50 border-l-4 border-l-gray-500"
             : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
         }`}
         onClick={() => {
@@ -1031,7 +1031,7 @@ const EmptyChatsView = ({ searchQuery, onNewChat }: {
           </div>
           <button
             type="button"
-            class="px-6 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            class="px-6 py-2 bg-gray-800 hover:bg-gray-900 dark:bg-gray-200 dark:hover:bg-gray-300 text-white dark:text-gray-900 rounded-lg font-medium transition-colors"
             onClick={onNewChat}
           >
             + New Chat
@@ -1280,7 +1280,7 @@ const LoggedInMessenger = (
             type="button"
             class={`w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
               view === "chats"
-                ? "bg-blue-600 text-white"
+                ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
                 : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             }`}
             onClick={() => setView("chats")}
@@ -1303,7 +1303,7 @@ const LoggedInMessenger = (
             type="button"
             class={`w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
               view === "identity"
-                ? "bg-blue-600 text-white"
+                ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
                 : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             }`}
             onClick={() => setView("identity")}
@@ -1352,7 +1352,7 @@ const LoggedInMessenger = (
                 placeholder="Search chats..."
                 value={searchQuery}
                 onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 text-sm"
+                class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 text-sm"
               />
             </div>
           )}
@@ -1384,7 +1384,7 @@ const LoggedInMessenger = (
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "chats"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("chats")}
@@ -1395,7 +1395,7 @@ const LoggedInMessenger = (
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "new_chat"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("new_chat")}
@@ -1406,7 +1406,7 @@ const LoggedInMessenger = (
               type="button"
               class={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                 view === "identity"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => setView("identity")}
@@ -1452,7 +1452,7 @@ const LoggedInMessenger = (
                     <LogoHeader onClick={() => router(homePath)} />
                     <button
                       type="button"
-                      class="w-10 h-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg transition-colors flex-shrink-0"
+                      class="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-900 dark:bg-gray-200 dark:hover:bg-gray-300 text-white dark:text-gray-900 rounded-lg transition-colors flex-shrink-0"
                       onClick={() => setView("new_chat")}
                       title="New Chat"
                     >
@@ -1479,7 +1479,7 @@ const LoggedInMessenger = (
                     placeholder="Search chats..."
                     value={searchQuery}
                     onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                    class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 text-sm"
+                    class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 text-sm"
                   />
                 </div>
                 <div
@@ -1690,7 +1690,7 @@ const MessengerLogin = ({ setCredentials }: {
             </div>
             <button
               type="button"
-              class="px-4 py-2 text-blue-600 dark:text-blue-300 hover:underline text-sm"
+              class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:underline text-sm"
               onClick={() => {
                 const params = new URLSearchParams(globalThis.location.search);
                 params.set("login", "existing");
@@ -2092,11 +2092,11 @@ const labelStyle =
 const labelSmallStyle = "block text-xs text-gray-700 dark:text-gray-400";
 const inputRowStyle = "flex gap-2 mb-2";
 const inputStyle =
-  "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 max-w-md";
+  "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-gray-500 focus:border-gray-500 dark:focus:ring-gray-500 dark:focus:border-gray-500 max-w-md";
 const buttonBaseStyle =
   "px-4 py-2 text-white rounded-lg focus:ring-4 focus:outline-none whitespace-nowrap";
 const buttonBlueStyle =
-  `${buttonBaseStyle} bg-blue-600 hover:bg-blue-700 focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800`;
+  `${buttonBaseStyle} bg-gray-800 hover:bg-gray-900 focus:ring-gray-300 dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-gray-900 dark:focus:ring-gray-600`;
 const buttonGreenStyle =
   `${buttonBaseStyle} bg-green-600 hover:bg-green-700 focus:ring-green-300 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800`;
 const textareaStyle =
