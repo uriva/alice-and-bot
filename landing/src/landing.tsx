@@ -235,7 +235,7 @@ export const LandingPage = () => {
               Install the skill and your agent will know how to create
               identities, send messages, set up webhooks, and more.
             </p>
-            <pre class="w-full bg-gray-900 text-green-400 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
+            <pre class="w-full bg-gray-900 text-blue-300 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
             <code>
               {`mkdir -p ~/.agents/skills/alice-and-bot
 curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
