@@ -1041,7 +1041,7 @@ const EmptyChatsView = ({ searchQuery, onNewChat }: {
       {isEmpty && (
         <>
           <div class="mb-6 text-center">
-            <BrandingLogo />
+            <Logo />
           </div>
           <button
             type="button"
@@ -1208,41 +1208,20 @@ const isMatch =
 
 type View = "chats" | "new_chat" | "identity";
 
-const LogoText = () => (
-  <div>
-    <div class="text-sm font-semibold">Alice&Bot</div>
-    <div class="text-xs text-gray-600 dark:text-gray-400">
-      {tagline}
-    </div>
-  </div>
-);
-
-const BrandingLogo = (
-  { layout = "vertical", onClick }: {
-    layout?: "vertical" | "horizontal";
-    onClick?: () => void;
-  },
-) => {
-  const isHorizontal = layout === "horizontal";
+const Logo = ({ onClick }: { onClick?: () => void }) => {
   const content = (
-    <div
-      style={{
-        display: isHorizontal ? "flex" : "block",
-        alignItems: isHorizontal ? "center" : undefined,
-        gap: isHorizontal ? 8 : undefined,
-      }}
-    >
-      <div class={`${!isHorizontal ? "mb-2" : ""}`}>
-        <img
-          src="/icon.png"
-          alt="Alice&Bot"
-          style={{
-            width: isHorizontal ? 32 : 48,
-            height: isHorizontal ? 32 : 48,
-          }}
-        />
+    <div class="flex items-center gap-2">
+      <img
+        src="/icon.png"
+        alt="Alice&Bot"
+        class="w-8 h-8"
+      />
+      <div>
+        <div class="text-sm font-semibold">Alice&Bot</div>
+        <div class="text-xs text-gray-600 dark:text-gray-400">
+          {tagline}
+        </div>
       </div>
-      <LogoText />
     </div>
   );
 
@@ -1262,7 +1241,7 @@ const BrandingLogo = (
 };
 
 const LogoHeader = ({ onClick }: { onClick?: () => void }) => (
-  <BrandingLogo layout="horizontal" onClick={onClick} />
+  <Logo onClick={onClick} />
 );
 
 const LoggedInMessenger = (
