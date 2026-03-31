@@ -1,8 +1,7 @@
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
-import "highlight.js/styles/github-dark.css";
 import { FaAndroid, FaApple } from "react-icons/fa";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { Button } from "./components.tsx";
 import { Header } from "./header.tsx";
 import {
@@ -13,6 +12,10 @@ import {
   opencodePath,
 } from "./paths.ts";
 import { useClearViewportStyles } from "./useClearViewportStyles.ts";
+
+const isDarkMode = () =>
+  typeof document !== "undefined" &&
+  document.documentElement.classList.contains("dark");
 
 hljs.registerLanguage("typescript", typescript);
 
@@ -42,6 +45,89 @@ await setWebhook({ url: "https://my-server.com/hook", credentials: bot });`;
 
 const highlightedCode = hljs.highlight(codeExample, { language: "typescript" })
   .value;
+
+// Tailwind-based syntax highlighting colors that adapt to dark mode
+const lightModeColors: Record<string, string> = {
+  keyword: "text-purple-600",
+  string: "text-green-600",
+  number: "text-orange-600",
+  comment: "text-gray-400",
+  function: "text-blue-600",
+  class: "text-yellow-600",
+  operator: "text-gray-600",
+  punctuation: "text-gray-600",
+  default: "text-gray-800",
+};
+
+const darkModeColors: Record<string, string> = {
+  keyword: "text-purple-400",
+  string: "text-green-400",
+  number: "text-orange-400",
+  comment: "text-gray-500",
+  function: "text-blue-400",
+  class: "text-yellow-400",
+  operator: "text-gray-400",
+  punctuation: "text-gray-400",
+  default: "text-gray-200",
+};
+
+const applySyntaxColors = (html: string, dark: boolean) => {
+  const colors = dark ? darkModeColors : lightModeColors;
+  let colored = html
+    .replace(/<span class="hljs-keyword">/g, `<span class="${colors.keyword}">`)
+    .replace(/<span class="hljs-string">/g, `<span class="${colors.string}">`)
+    .replace(/<span class="hljs-number">/g, `<span class="${colors.number}">`)
+    .replace(/<span class="hljs-comment">/g, `<span class="${colors.comment}">`)
+    .replace(
+      /<span class="hljs-function">/g,
+      `<span class="${colors.function}">`,
+    )
+    .replace(/<span class="hljs-class">/g, `<span class="${colors.class}">`)
+    .replace(
+      /<span class="hljs-operator">/g,
+      `<span class="${colors.operator}">`,
+    )
+    .replace(
+      /<span class="hljs-punctuation">/g,
+      `<span class="${colors.punctuation}">`,
+    );
+
+  // Remove hljs class from remaining spans and apply default color
+  colored = colored.replace(
+    /<span class="hljs-[^"]*">/g,
+    `<span class="${colors.default}">`,
+  );
+
+  return colored;
+};
+
+const CodeExample = () => {
+  const [dark, setDark] = useState(isDarkMode());
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDark(isDarkMode());
+    });
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
+  const coloredCode = applySyntaxColors(highlightedCode, dark);
+
+  return (
+    <div class="w-full max-w-4xl mx-auto">
+      <pre
+        class={`rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2 font-mono ${
+          dark ? "bg-gray-900" : "bg-white"
+        }`}
+      >
+        <code
+          dangerouslySetInnerHTML={{ __html: coloredCode }}
+        />
+      </pre>
+    </div>
+  );
+};
 
 const featureCardClass =
   "flex flex-col p-8 bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl hover:scale-105 hover:shadow-2xl transition-transform duration-200 ease-out";
@@ -183,12 +269,7 @@ const AudienceTabs = () => {
       {activeTab === "coders" && (
         <div>
           <FeatureGrid items={developerFeatures} />
-          <pre class="w-full max-w-4xl mx-auto bg-gray-100 dark:bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto shadow-lg mb-2">
-          <code
-            class="hljs language-typescript"
-            dangerouslySetInnerHTML={{ __html: highlightedCode }}
-          />
-          </pre>
+          <CodeExample />
           <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2 mb-4">
             TypeScript SDK with end-to-end encryption, webhooks, and device
             sync.
