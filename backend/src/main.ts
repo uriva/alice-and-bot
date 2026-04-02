@@ -805,6 +805,10 @@ const relayRoute = (url: URL, method: string) => {
   return null;
 };
 
+const readme = Deno.readTextFileSync(
+  new URL("../../README.md", import.meta.url),
+);
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return respondCors(null, { status: 204 });
   try {
@@ -857,6 +861,12 @@ Deno.serve(async (req: Request) => {
           ? await relayStore(relay.token, req)
           : await relayDrain(relay.token),
       );
+    }
+    if (url.pathname === "/llms.txt") {
+      return respondCors(readme, {
+        status: 200,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
     }
     if (url.pathname === "/ui-update") {
       const body = await req.json();
