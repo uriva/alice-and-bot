@@ -1383,6 +1383,7 @@ const EditForm = ({
     <textarea
       value={editText}
       onInput={(e) => setEditText(e.currentTarget.value)}
+      onKeyDown={(e) => e.stopPropagation()}
       style={editTextareaStyle}
     />
     <div style={editActionsStyle}>
@@ -2528,21 +2529,22 @@ export const AbstractChatBox = (
     return () => document.removeEventListener("mousedown", handler);
   }, [showAttachMenu]);
 
-  // Helper to resize textarea
+  const [textareaHeight, setTextareaHeight] = useState(44);
+  const [textareaOverflow, setTextareaOverflow] = useState<"hidden" | "auto">(
+    "hidden",
+  );
+
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = "auto";
+    const scrollHeight = textarea.scrollHeight;
     const singleLine = textarea.value.indexOf("\n") === -1;
     if (singleLine) {
-      textarea.style.height = textarea.scrollHeight + "px";
-      if (textarea.scrollHeight > textarea.clientHeight) {
-        textarea.style.height = textarea.scrollHeight + "px";
-      } else {
-        textarea.style.height = "1.5em";
-      }
-      textarea.style.overflowY = "hidden"; // Hide vertical scrollbar for single line
+      const h = scrollHeight > 44 ? scrollHeight : 44;
+      setTextareaHeight(h);
+      setTextareaOverflow("hidden");
     } else {
-      textarea.style.height = textarea.scrollHeight + "px";
-      textarea.style.overflowY = "auto"; // Allow vertical scroll for multiline
+      setTextareaHeight(scrollHeight);
+      setTextareaOverflow("auto");
     }
   };
 
@@ -3138,10 +3140,10 @@ export const AbstractChatBox = (
                   outline: "none",
                   resize: "none",
                   boxSizing: "border-box",
-                  height: 44,
+                  height: textareaHeight,
                   minHeight: 44,
                   margin: 0,
-                  overflowY: "auto",
+                  overflowY: textareaOverflow,
                   overflowX: "hidden",
                   maxHeight: 200,
                   lineHeight: 1.5,
@@ -3153,6 +3155,7 @@ export const AbstractChatBox = (
                   scrollbarWidth: "thin",
                 }}
                 onKeyDown={(e) => {
+                  e.stopPropagation();
                   if (
                     (e.key === "PageUp" || e.key === "PageDown") &&
                     e.currentTarget
@@ -3357,6 +3360,8 @@ export const AbstractChatBox = (
     }
 
     setInput("");
+    setTextareaHeight(44);
+    setTextareaOverflow("hidden");
     setPendingFiles([]);
     onInputActivity?.();
 
