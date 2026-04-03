@@ -6,7 +6,8 @@
     "dev": "cd clients/react; deno run -A --node-modules-dir=auto npm:vite",
     "example": "cd example; deno run -A --node-modules-dir=auto npm:vite",
     "build": "deno run -A --node-modules-dir=auto npm:vite build",
-    "check": "deno fmt --check && deno lint && deno check *.ts backend/**/*.ts clients/**/*.ts clients/**/*.tsx example/**/*.tsx landing/**/*.ts landing/**/*.tsx protocol/**/*.ts widget/**/*.ts widget/**/*.tsx"
+    "check": "deno fmt --check && deno lint && deno check *.ts backend/**/*.ts clients/**/*.ts clients/**/*.tsx example/**/*.tsx landing/**/*.ts landing/**/*.tsx protocol/**/*.ts widget/**/*.ts widget/**/*.tsx",
+    "test:e2e": "cd e2e && deno run -A --node-modules-dir=auto npm:playwright test"
   },
   "githooks": {
     "$schema": "https://deno.land/x/githooks/schema.json",

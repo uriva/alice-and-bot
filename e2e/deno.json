@@ -1,0 +1,38 @@
+{
+  "imports": {
+    "@playwright/test": "npm:@playwright/test@^1.49.0",
+    "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
+    "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.5",
+    "@preact/preset-vite": "npm:@preact/preset-vite@2.10.2",
+    "vite": "npm:vite@^7.0.2",
+    "@instantdb/react": "npm:@instantdb/react@0.22.174",
+    "@instantdb/admin": "npm:@instantdb/admin@0.22.174",
+    "@instantdb/core": "npm:@instantdb/core@0.22.174",
+    "@uri/gamla": "jsr:@uri/gamla@0.0.14",
+    "@uri/crypto-utils": "jsr:@uri/crypto-utils@^0.0.2",
+    "buffer": "npm:buffer@6.0.3",
+    "typed-api": "jsr:@uri/typed-api@0.0.10",
+    "highlight.js": "npm:highlight.js@^11.11.1",
+    "highlight.js/lib/core": "npm:highlight.js@^11.11.1/lib/core",
+    "highlight.js/lib/languages/typescript": "npm:highlight.js@^11.11.1/lib/languages/typescript",
+    "highlight.js/styles/github-dark.css": "npm:highlight.js@^11.11.1/styles/github-dark.css",
+    "react-markdown": "npm:react-markdown@10.1.0",
+    "rehype-highlight": "npm:rehype-highlight@^7.0.2",
+    "remark-breaks": "npm:remark-breaks@4.0.0",
+    "remark-gfm": "npm:remark-gfm@4.0.1",
+    "react-icons/fa": "npm:react-icons@5.5.0/fa",
+    "react-hot-toast": "npm:react-hot-toast@2.5.2",
+    "@preact/signals": "npm:@preact/signals@2.1.1",
+    "@radix-ui/react-slot": "npm:@radix-ui/react-slot@1.1.2",
+    "posthog-js": "npm:posthog-js@1.313.0",
+    "preact": "npm:preact@10.26.7",
+    "preact/hooks": "npm:preact@10.26.7/hooks",
+    "preact/jsx-runtime": "npm:preact@10.26.7/jsx-runtime",
+    "preact-iso": "npm:preact-iso@2.9.1",
+    "qrcode": "npm:qrcode@1.5.4"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  }
+}

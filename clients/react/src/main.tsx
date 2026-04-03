@@ -466,6 +466,7 @@ export const Chat = (db: () => InstantReactWebDatabase<typeof schema>) =>
   if (convNotFound || !hasAccess) {
     return (
       <div
+        data-testid={convNotFound ? "chat-not-found" : "access-denied"}
         style={{
           display: "flex",
           flexDirection: "column",

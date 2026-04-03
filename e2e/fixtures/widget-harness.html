@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Widget Harness</title>
+  </head>
+  <body>
+    <h1>Widget Test Page</h1>
+    <p>The widget should appear as a floating button.</p>
+    <script src="/widget.iife.js" onload="
+      if (window.__WIDGET_PARAMS__) {
+        aliceAndBot.loadChatWidget(window.__WIDGET_PARAMS__);
+      }
+    "></script>
+  </body>
+</html>
