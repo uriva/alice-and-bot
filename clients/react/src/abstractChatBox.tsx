@@ -538,10 +538,14 @@ const FencedCodeBlock = (
       <button
         data-testid="copy-code-button"
         type="button"
-        onClick={() => {
-          navigator.clipboard.writeText(codeStr);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
+        onFocus={() => setHovered(true)}
+        onBlur={() => setHovered(false)}
+        onClick={async () => {
+          const ok = await copyToClipboard(codeStr);
+          if (ok) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1000);
+          }
         }}
         title={copied ? "Copied" : "Copy"}
         style={{

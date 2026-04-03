@@ -5,7 +5,6 @@
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.5",
     "@preact/preset-vite": "npm:@preact/preset-vite@2.10.2",
     "vite": "npm:vite@^7.0.2",
-
     "@instantdb/react": "npm:@instantdb/react@0.22.174",
     "@instantdb/admin": "npm:@instantdb/admin@0.22.174",
     "@instantdb/core": "npm:@instantdb/core@0.22.174",
@@ -26,14 +25,11 @@
     "@preact/signals": "npm:@preact/signals@2.1.1",
     "@radix-ui/react-slot": "npm:@radix-ui/react-slot@1.1.2",
     "posthog-js": "npm:posthog-js@1.313.0",
+    "preact": "npm:preact@10.26.7",
+    "preact/hooks": "npm:preact@10.26.7/hooks",
+    "preact/jsx-runtime": "npm:preact@10.26.7/jsx-runtime",
     "preact-iso": "npm:preact-iso@2.9.1",
-    "qrcode": "npm:qrcode@1.5.4",
-    "@google-cloud/storage": "npm:@google-cloud/storage@7.16.0",
-    "web-push": "npm:web-push@3.6.7",
-    "zod": "npm:zod@3.25.57",
-    "@tailwindcss/vite": "npm:@tailwindcss/vite@4.2.1",
-    "tailwindcss": "npm:tailwindcss@4.2.1",
-    "vite-prerender-plugin": "npm:vite-prerender-plugin@0.5.12"
+    "qrcode": "npm:qrcode@1.5.4"
   },
   "compilerOptions": {
     "jsx": "react-jsx",
