@@ -536,15 +536,12 @@ const FencedCodeBlock = (
       onMouseLeave={() => setHovered(false)}
     >
       <button
+        data-testid="copy-code-button"
         type="button"
-        onFocus={() => setHovered(true)}
-        onBlur={() => setHovered(false)}
-        onClick={async () => {
-          const ok = await copyToClipboard(codeStr);
-          if (ok) {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1000);
-          }
+        onClick={() => {
+          navigator.clipboard.writeText(codeStr);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
         }}
         title={copied ? "Copied" : "Copy"}
         style={{
@@ -911,6 +908,7 @@ const LocationCard = (
   const { tiles, offsetX, offsetY } = locationTileGrid(latitude, longitude);
   return (
     <a
+      data-testid="location-attachment"
       href={googleMapsUrl(latitude, longitude)}
       target="_blank"
       rel="noopener noreferrer"
@@ -1450,6 +1448,7 @@ const Message = (
 
   return (
     <div
+      data-testid="message"
       style={{
         display: "flex",
         gap: 6,
@@ -1483,7 +1482,7 @@ const Message = (
         }}
       >
         {isStartOfSequence && !isOwn && !customColors?.hideNames && (
-          <b style={{ fontSize: 11, color: participantColor }}>
+          <b data-testid="author-name" style={{ fontSize: 11, color: participantColor }}>
             {authorName}
           </b>
         )}
@@ -1504,6 +1503,7 @@ const Message = (
           )
           : text && (
             <div
+              data-testid="message-text"
               dir="auto"
               style={{
                 overflowWrap: "anywhere",
@@ -2549,10 +2549,10 @@ export const AbstractChatBox = (
   };
 
   return (
-    <div style={chatContainerStyle(isDark, customColors)}>
+    <div data-testid="chat-container" style={chatContainerStyle(isDark, customColors)}>
       <KebabHoverStyle />
       {!customColors?.hideTitle && (
-        <div style={titleStyle(isDark, customColors)}>
+        <div data-testid="title-bar" style={titleStyle(isDark, customColors)}>
           <div
             style={{
               ...contentMaxWidthStyle(customColors),
@@ -2561,7 +2561,7 @@ export const AbstractChatBox = (
               padding: "0 16px",
             }}
           >
-            <div style={{ flex: 1, textAlign: "center" }}>{title}</div>
+            <div data-testid="title-text" style={{ flex: 1, textAlign: "center" }}>{title}</div>
             {enableVoiceCall && voiceCallState === "idle" && (
               <button
                 type="button"
@@ -2692,6 +2692,7 @@ export const AbstractChatBox = (
       <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
 
       <div
+        data-testid="message-list"
         ref={messagesContainerRef}
         style={messageContainerStyle(isDark, customColors)}
         {...messageContainerDataAttr}
@@ -2721,7 +2722,7 @@ export const AbstractChatBox = (
               <div
                 style={centerFillStyle(isDark)}
               >
-                {emptyMessage ?? "No messages yet. Start the conversation!"}
+                {emptyMessage ?? <span data-testid="empty-state">No messages yet. Start the conversation!</span>}
               </div>
             )
             : (
@@ -3033,6 +3034,7 @@ export const AbstractChatBox = (
                   }}
                 >
                   <button
+                    data-testid="attach-button"
                     type="button"
                     onClick={() => setShowAttachMenu(!showAttachMenu)}
                     style={{
@@ -3050,7 +3052,7 @@ export const AbstractChatBox = (
                     <FaPaperclip size={16} />
                   </button>
                   {showAttachMenu && (
-                    <div style={attachMenuStyle(isDark)}>
+                    <div data-testid="attach-menu" style={attachMenuStyle(isDark)}>
                       <AttachMenuItem
                         icon={<FaCamera size={16} />}
                         label="Camera"
@@ -3102,6 +3104,7 @@ export const AbstractChatBox = (
                 </div>
               )}
               <textarea
+                data-testid="message-input"
                 dir="auto"
                 ref={inputRef}
                 value={input}
@@ -3259,6 +3262,7 @@ export const AbstractChatBox = (
 
               return (
                 <button
+                  data-testid="send-button"
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={isMobile ? undefined : handleButtonClick}

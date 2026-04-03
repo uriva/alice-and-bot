@@ -274,7 +274,7 @@ const NameDialog = (
         style={dialogBoxStyle({ colors, mode })}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={nameDialogTitleStyle}>Enter your display name</div>
+        <div data-testid="name-dialog-title" style={nameDialogTitleStyle}>Enter your display name</div>
         <div style={nameDialogHintStyle}>This will be shown to others.</div>
         <input
           autoFocus
@@ -544,6 +544,7 @@ const InnerWidget = ({
           : <Loading colors={colors} />
         : (
           <button
+            data-testid="widget-start-button"
             type="button"
             style={getStartButtonStyle(colors)}
             onClick={() => {
@@ -654,6 +655,7 @@ export const Widget = (props: WidgetProps): JSX.Element => {
             >
               {chatOpen.value && (
                 <button
+                  data-testid="widget-close-button"
                   type="button"
                   aria-label="Close chat"
                   style={closeButtonStyle({

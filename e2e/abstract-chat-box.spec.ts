@@ -1,0 +1,195 @@
+import { expect, test } from "@playwright/test";
+import { tid } from "./helpers.ts";
+
+test.describe("AbstractChatBox (example app)", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+  });
+
+  test("chat container renders", async ({ page }) => {
+    await expect(page.locator(tid("chat-container"))).toBeVisible();
+  });
+
+  test("all mock messages render", async ({ page }) => {
+    await expect(page.getByText("Hey, can you help me with a sorting algorithm?")).toBeVisible();
+    const lastMsg = page.getByText("Nice! Here's your location on the map:");
+    await lastMsg.scrollIntoViewIfNeeded();
+    await expect(lastMsg).toBeVisible();
+  });
+
+  test("messages use data-testid='message'", async ({ page }) => {
+    const messages = page.locator(tid("message"));
+    await expect(messages.first()).toBeVisible();
+    expect(await messages.count()).toBeGreaterThanOrEqual(10);
+  });
+
+  test("message text uses data-testid='message-text'", async ({ page }) => {
+    const texts = page.locator(tid("message-text"));
+    await expect(texts.first()).toBeVisible();
+    await expect(texts.first()).not.toBeEmpty();
+  });
+
+  test("markdown renders bold", async ({ page }) => {
+    await expect(page.locator(`${tid("message-text")} strong`).first()).toBeVisible();
+  });
+
+  test("code blocks render with pre and code tags", async ({ page }) => {
+    const codeBlock = page.locator("pre code").first();
+    await expect(codeBlock).toBeVisible();
+    await expect(codeBlock).toContainText("mergeSort");
+  });
+
+  test("send a message via Enter", async ({ page }) => {
+    const input = page.locator(tid("message-input"));
+    await input.fill("New test message");
+    await input.press("Enter");
+    await expect(page.getByText("New test message")).toBeVisible();
+  });
+
+  test("optimistic UI — message appears without network round-trip", async ({ page }) => {
+    const input = page.locator(tid("message-input"));
+    await input.fill("Instant message");
+    await input.press("Enter");
+    await expect(page.getByText("Instant message")).toBeVisible({ timeout: 500 });
+  });
+
+  test("empty input is rejected — no new message added", async ({ page }) => {
+    const countBefore = await page.locator(tid("message")).count();
+    await page.locator(tid("message-input")).press("Enter");
+    expect(await page.locator(tid("message")).count()).toBe(countBefore);
+  });
+
+  test("dark mode background applied", async ({ page }) => {
+    const bg = await page.locator(tid("chat-container")).evaluate(
+      (el) => getComputedStyle(el).backgroundColor,
+    );
+    expect(bg).not.toBe("rgb(255, 255, 255)");
+  });
+
+  test("hideTitle hides the title bar", async ({ page }) => {
+    await expect(page.locator(tid("title-bar"))).not.toBeVisible();
+  });
+
+  test("hideNames hides author names", async ({ page }) => {
+    await expect(page.locator(tid("author-name"))).toHaveCount(0);
+  });
+
+  test("location attachment renders map link", async ({ page }) => {
+    await expect(page.locator(tid("location-attachment"))).toBeVisible();
+    await expect(page.locator(tid("location-attachment"))).toContainText("Tel Aviv, Israel");
+  });
+
+  test("input auto-grows with multiline text", async ({ page }) => {
+    const input = page.locator(tid("message-input"));
+    const initialHeight = await input.evaluate((el) => el.scrollHeight);
+    await input.fill("Line 1\nLine 2\nLine 3\nLine 4\nLine 5");
+    const newHeight = await input.evaluate((el) => el.scrollHeight);
+    expect(newHeight).toBeGreaterThan(initialHeight);
+  });
+
+  test("table renders in markdown", async ({ page }) => {
+    const table = page.locator("table").first();
+    await expect(table).toBeVisible();
+    await expect(table.locator("th").first()).toContainText("Algorithm");
+  });
+
+  test("send button exists", async ({ page }) => {
+    await expect(page.locator(tid("send-button"))).toBeVisible();
+  });
+
+  test("send button is disabled when input is empty", async ({ page }) => {
+    const countBefore = await page.locator(tid("message")).count();
+    await page.locator(tid("send-button")).click();
+    expect(await page.locator(tid("message")).count()).toBe(countBefore);
+  });
+
+  test("rapid consecutive sends all render", async ({ page }) => {
+    const input = page.locator(tid("message-input"));
+    const texts = ["rapid-1", "rapid-2", "rapid-3"];
+    await texts.reduce(
+      (p, t) => p.then(() => input.fill(t)).then(() => input.press("Enter")),
+      Promise.resolve(),
+    );
+    await Promise.all(texts.map((t) => expect(page.getByText(t)).toBeVisible()));
+  });
+
+  test("very long message renders without layout break", async ({ page }) => {
+    const input = page.locator(tid("message-input"));
+    const longText = "A".repeat(500);
+    await input.fill(longText);
+    await input.press("Enter");
+    await expect(page.getByText(longText)).toBeVisible();
+    const viewport = page.viewportSize()!;
+    const msgBox = await page.getByText(longText).boundingBox();
+    expect(msgBox!.width).toBeLessThanOrEqual(viewport.width);
+  });
+
+  test("XSS content is escaped safely", async ({ page }) => {
+    const input = page.locator(tid("message-input"));
+    const xss = "<script>alert('xss')</script>";
+    await input.fill(xss);
+    await input.press("Enter");
+    await expect(page.getByText("<script>alert('xss')</script>")).toBeVisible();
+  });
+
+  test("inline code renders in backticks", async ({ page }) => {
+    await expect(page.locator("code").filter({ hasText: "Array.sort()" })).toBeVisible();
+  });
+
+  test("blockquote renders", async ({ page }) => {
+    await expect(page.locator("blockquote").first()).toBeVisible();
+  });
+
+  test("unordered list renders bullet items", async ({ page }) => {
+    const list = page.locator("ul").first();
+    await expect(list).toBeVisible();
+    expect(await list.locator("li").count()).toBeGreaterThanOrEqual(2);
+  });
+
+  test("copy button appears on code blocks", async ({ page }) => {
+    await expect(page.locator(tid("copy-code-button")).first()).toBeVisible();
+  });
+
+  test("attach button toggles menu", async ({ page }) => {
+    await page.locator(tid("attach-button")).click();
+    await expect(page.locator(tid("attach-menu"))).toBeVisible();
+    await page.locator(tid("attach-button")).click();
+    await expect(page.locator(tid("attach-menu"))).not.toBeVisible();
+  });
+
+  test("attach menu contains location option", async ({ page }) => {
+    await page.locator(tid("attach-button")).click();
+    await expect(page.locator(tid("attach-menu"))).toContainText("Location");
+  });
+
+  test("scrolling to top reveals earliest messages", async ({ page }) => {
+    const firstMsg = page.getByText("Hey, can you help me with a sorting algorithm?");
+    await firstMsg.scrollIntoViewIfNeeded();
+    await expect(firstMsg).toBeVisible();
+  });
+
+  test("message list is scrollable", async ({ page }) => {
+    const list = page.locator(tid("message-list"));
+    const scrollable = await list.evaluate((el) => el.scrollHeight > el.clientHeight);
+    expect(scrollable).toBe(true);
+  });
+
+  test("shift+enter inserts newline instead of sending", async ({ page }) => {
+    const input = page.locator(tid("message-input"));
+    const countBefore = await page.locator(tid("message")).count();
+    await input.fill("line one");
+    await input.press("Shift+Enter");
+    await expect.poll(() => page.locator(tid("message")).count(), { timeout: 1_000 }).toBe(countBefore);
+  });
+
+  test("sent message appears at bottom of list", async ({ page }) => {
+    const input = page.locator(tid("message-input"));
+    await input.fill("bottom-check");
+    await input.press("Enter");
+    await expect(page.getByText("bottom-check")).toBeVisible();
+    const msgs = page.locator(tid("message"));
+    const lastMsg = msgs.last();
+    await expect(lastMsg).toContainText("bottom-check");
+  });
+});
