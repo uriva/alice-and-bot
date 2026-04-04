@@ -37,6 +37,21 @@ const sessionToConvoKey = new Map<
   { conversation: string; conversationKey: string }
 >();
 const convoToSessionId = new Map<string, string>();
+const pendingPermissions = new Map<
+  string,
+  { requestId: string; sessionId: string; description: string }
+>();
+const permissionReplyCommands: Record<string, "once" | "always" | "reject"> = {
+  "/yes": "once",
+  "/y": "once",
+  "/allow": "once",
+  "/approve": "once",
+  "/no": "reject",
+  "/n": "reject",
+  "/deny": "reject",
+  "/reject": "reject",
+  "/always": "always",
+};
 const debugLogPath = path.join(
   os.homedir(),
   ".config",
@@ -61,6 +76,20 @@ const parsePhoneCommand = (text: string) => {
     command,
     arguments: rest.join(" ").trim(),
   };
+};
+
+const formatPermissionDescription = ({
+  permission,
+  metadata,
+}: {
+  permission: string;
+  metadata: Record<string, unknown>;
+}) => {
+  const details = Object.entries(metadata || {})
+    .filter(([, v]) => typeof v === "string")
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(", ");
+  return details ? `${permission} (${details})` : permission;
 };
 
 const notifyPhone = async ({
@@ -384,6 +413,54 @@ export default async function plugin(input: unknown) {
               return;
             }
 
+            const pending = pendingPermissions.get(targetSessionId);
+            const permissionReply =
+              permissionReplyCommands[commandText.toLowerCase()];
+            if (permissionReply && pending) {
+              await callFirstAvailable([
+                () =>
+                  (input as any).client.permission.reply({
+                    requestID: pending.requestId,
+                    reply: permissionReply,
+                  }),
+                () =>
+                  (input as any).client
+                    .postSessionByIdPermissionsByPermissionId(
+                      {
+                        path: {
+                          id: pending.sessionId,
+                          permissionId: pending.requestId,
+                        },
+                        body: { response: permissionReply },
+                      },
+                    ),
+              ]);
+              pendingPermissions.delete(targetSessionId);
+              const label = permissionReply === "reject"
+                ? "denied"
+                : `approved (${permissionReply})`;
+              await notifyPhone({
+                conversation: convoId,
+                conversationKey,
+                credentials,
+                text: `Permission ${label}.`,
+              }).catch(() => {});
+              await logDebug(
+                `Permission ${label} for ${pending.requestId}`,
+              );
+              return;
+            }
+            if (pending) {
+              await notifyPhone({
+                conversation: convoId,
+                conversationKey,
+                credentials,
+                text:
+                  `Pending permission: ${pending.description}\nReply /yes, /no, or /always`,
+              }).catch(() => {});
+              return;
+            }
+
             if (!message.attachments?.length) {
               try {
                 const commandResult = await runPhoneCommand({
@@ -513,6 +590,40 @@ export default async function plugin(input: unknown) {
         await showAliceLink(
           event.properties?.sessionID || currentSessionId || "",
         );
+      }
+      if (event.type === "permission.asked") {
+        const { id, sessionID, permission, metadata } = event.properties || {};
+        const description = formatPermissionDescription({
+          permission,
+          metadata,
+        });
+        pendingPermissions.set(sessionID, {
+          requestId: id,
+          sessionId: sessionID,
+          description,
+        });
+        await logDebug(
+          `Permission asked: ${description} (requestId=${id})`,
+        );
+        const convoInfo = sessionToConvoKey.get(sessionID);
+        if (convoInfo) {
+          await notifyPhone({
+            conversation: convoInfo.conversation,
+            conversationKey: convoInfo.conversationKey,
+            credentials,
+            text: `[Permission] ${description}\nReply /yes, /no, or /always`,
+          }).catch(() => {});
+        }
+      }
+      if (event.type === "permission.replied") {
+        const { sessionID, requestID } = event.properties || {};
+        const pending = pendingPermissions.get(sessionID);
+        if (pending?.requestId === requestID) {
+          pendingPermissions.delete(sessionID);
+          await logDebug(
+            `Permission cleared by TUI: requestId=${requestID}`,
+          );
+        }
       }
     },
     "chat.message": async (hookInput: any, output: any) => {
