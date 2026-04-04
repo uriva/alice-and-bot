@@ -382,8 +382,29 @@ const htmlAnchorToMarkdown = (text: string) =>
     (_, href, label) => `[${label}](${href})`,
   );
 
+const htmlStyledToMd = (tag: string, md: string) => (text: string) =>
+  text
+    .replace(
+      new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, "gi"),
+      `${md}$1${md}`,
+    )
+    .replace(
+      new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]+)$`, "gi"),
+      `${md}$1${md}`,
+    );
+
+const htmlInlineToMarkdown = (text: string) =>
+  [
+    { tag: "b", md: "**" },
+    { tag: "strong", md: "**" },
+    { tag: "i", md: "*" },
+    { tag: "em", md: "*" },
+  ].reduce((r, { tag, md }) => htmlStyledToMd(tag, md)(r), text);
+
 const preprocessText = (text: string) =>
-  htmlAnchorToMarkdown(htmlImgToMarkdown(htmlMediaToMarkdown(text)));
+  htmlAnchorToMarkdown(
+    htmlImgToMarkdown(htmlMediaToMarkdown(htmlInlineToMarkdown(text))),
+  );
 
 const copyOverlayStyle = (
   { isDark }: { isDark: boolean },
