@@ -393,7 +393,7 @@ const htmlStyledToMd = (tag: string, md: string) => (text: string) =>
       `${md}$1${md}`,
     );
 
-const htmlInlineToMarkdown = (text: string) =>
+export const htmlInlineToMarkdown = (text: string) =>
   [
     { tag: "b", md: "**" },
     { tag: "strong", md: "**" },
@@ -1507,7 +1507,10 @@ const Message = (
         }}
       >
         {isStartOfSequence && !isOwn && !customColors?.hideNames && (
-          <b data-testid="author-name" style={{ fontSize: 11, color: participantColor }}>
+          <b
+            data-testid="author-name"
+            style={{ fontSize: 11, color: participantColor }}
+          >
             {authorName}
           </b>
         )}
@@ -2574,7 +2577,10 @@ export const AbstractChatBox = (
   };
 
   return (
-    <div data-testid="chat-container" style={chatContainerStyle(isDark, customColors)}>
+    <div
+      data-testid="chat-container"
+      style={chatContainerStyle(isDark, customColors)}
+    >
       <KebabHoverStyle />
       {!customColors?.hideTitle && (
         <div data-testid="title-bar" style={titleStyle(isDark, customColors)}>
@@ -2586,7 +2592,12 @@ export const AbstractChatBox = (
               padding: "0 16px",
             }}
           >
-            <div data-testid="title-text" style={{ flex: 1, textAlign: "center" }}>{title}</div>
+            <div
+              data-testid="title-text"
+              style={{ flex: 1, textAlign: "center" }}
+            >
+              {title}
+            </div>
             {enableVoiceCall && voiceCallState === "idle" && (
               <button
                 type="button"
@@ -2747,7 +2758,11 @@ export const AbstractChatBox = (
               <div
                 style={centerFillStyle(isDark)}
               >
-                {emptyMessage ?? <span data-testid="empty-state">No messages yet. Start the conversation!</span>}
+                {emptyMessage ?? (
+                  <span data-testid="empty-state">
+                    No messages yet. Start the conversation!
+                  </span>
+                )}
               </div>
             )
             : (
@@ -3077,7 +3092,10 @@ export const AbstractChatBox = (
                     <FaPaperclip size={16} />
                   </button>
                   {showAttachMenu && (
-                    <div data-testid="attach-menu" style={attachMenuStyle(isDark)}>
+                    <div
+                      data-testid="attach-menu"
+                      style={attachMenuStyle(isDark)}
+                    >
                       <AttachMenuItem
                         icon={<FaCamera size={16} />}
                         label="Camera"

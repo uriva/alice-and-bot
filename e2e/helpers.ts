@@ -1,9 +1,9 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { setupInstantWsMock, type WsMock } from "./mocks/instant-ws.ts";
+import { setupInstantWsMock } from "./mocks/instant-ws.ts";
 import { setupBackendApiMock } from "./mocks/backend-api.ts";
 import { setupGcsMock } from "./mocks/gcs.ts";
-import type { TestData, TestCredentials } from "./mocks/test-data.ts";
+import type { TestCredentials, TestData } from "./mocks/test-data.ts";
 
 declare global {
   interface Window {
@@ -27,8 +27,9 @@ type WidgetTestParams = {
 
 export const tid = (id: string) => `[data-testid="${id}"]`;
 
-const credentialsPayload = ({ publicSignKey, privateSignKey, privateEncryptKey }: TestCredentials) =>
-  ({ publicSignKey, privateSignKey, privateEncryptKey });
+const credentialsPayload = (
+  { publicSignKey, privateSignKey, privateEncryptKey }: TestCredentials,
+) => ({ publicSignKey, privateSignKey, privateEncryptKey });
 
 export const setupChatMocks = async (
   page: Page,
@@ -40,11 +41,21 @@ export const setupChatMocks = async (
   const apiMock = await setupBackendApiMock(page, effective);
   await setupGcsMock(page);
   await page.addInitScript(
-    (d: { credentials: Window["__TEST_CREDENTIALS__"]; conversationId: string }) => {
+    (
+      d: {
+        credentials: Window["__TEST_CREDENTIALS__"];
+        conversationId: string;
+      },
+    ) => {
+      // deno-lint-ignore no-window
       window.__TEST_CREDENTIALS__ = d.credentials;
+      // deno-lint-ignore no-window
       window.__TEST_CONVERSATION_ID__ = d.conversationId;
     },
-    { credentials: credentialsPayload(data.alice), conversationId: effective.conversationId },
+    {
+      credentials: credentialsPayload(data.alice),
+      conversationId: effective.conversationId,
+    },
   );
   return { wsMock, apiMock };
 };
@@ -58,8 +69,15 @@ export const setupWidgetMocks = async (
   await setupBackendApiMock(page, data);
   await setupGcsMock(page);
   await page.addInitScript(
-    (params: WidgetTestParams) => { window.__WIDGET_PARAMS__ = params; },
-    { participants: [data.bob.publicSignKey], initialMessage: "Hi from widget!", ...extra },
+    (params: WidgetTestParams) => {
+      // deno-lint-ignore no-window
+      window.__WIDGET_PARAMS__ = params;
+    },
+    {
+      participants: [data.bob.publicSignKey],
+      initialMessage: "Hi from widget!",
+      ...extra,
+    },
   );
 };
 
@@ -69,9 +87,14 @@ export const setupMessengerMocks = async (page: Page, data: TestData) => {
   await setupGcsMock(page);
 };
 
-export const injectMessengerCredentials = (page: Page, data: TestData, key: string) =>
+export const injectMessengerCredentials = (
+  page: Page,
+  data: TestData,
+  key: string,
+) =>
   page.addInitScript(
-    (args: { key: string; creds: string }) => localStorage.setItem(args.key, args.creds),
+    (args: { key: string; creds: string }) =>
+      localStorage.setItem(args.key, args.creds),
     { key, creds: JSON.stringify(credentialsPayload(data.alice)) },
   );
 
@@ -84,10 +107,18 @@ export const waitForChat = (page: Page) =>
 export const pollSentMessages = (
   apiMock: { sentMessages: unknown[] },
   minCount = 1,
-) => expect.poll(() => apiMock.sentMessages.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(minCount);
+) =>
+  expect.poll(() => apiMock.sentMessages.length, { timeout: 10_000 })
+    .toBeGreaterThanOrEqual(minCount);
 
 export const pollLocalStorage = (page: Page, key: string) =>
-  expect.poll(() => page.evaluate((k: string) => localStorage.getItem(k), key), { timeout: 10_000 });
+  expect.poll(
+    () => page.evaluate((k: string) => localStorage.getItem(k), key),
+    { timeout: 10_000 },
+  );
 
 export const pollLocalStorageNull = (page: Page, key: string) =>
-  expect.poll(() => page.evaluate((k: string) => localStorage.getItem(k), key), { timeout: 3_000 }).toBeNull();
+  expect.poll(
+    () => page.evaluate((k: string) => localStorage.getItem(k), key),
+    { timeout: 3_000 },
+  ).toBeNull();

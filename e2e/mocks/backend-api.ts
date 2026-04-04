@@ -18,7 +18,9 @@ const str = (v: unknown): string => (typeof v === "string" ? v : "");
 const emptyPayload: Record<string, unknown> = {};
 const emptyBody = { endpoint: "", payload: emptyPayload };
 
-const parseBody = (raw: string | null): { endpoint: string; payload: Record<string, unknown> } => {
+const parseBody = (
+  raw: string | null,
+): { endpoint: string; payload: Record<string, unknown> } => {
   try {
     const parsed: unknown = JSON.parse(raw ?? "{}");
     if (!isRecord(parsed)) return emptyBody;
@@ -52,7 +54,9 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
       const conversation = str(payload.conversation);
       const encryptedMessage = str(payload.encryptedMessage);
       if (!conversation || !encryptedMessage) {
-        return route.fulfill(json({ error: "missing conversation or encryptedMessage" }, 400));
+        return route.fulfill(
+          json({ error: "missing conversation or encryptedMessage" }, 400),
+        );
       }
       sentMessages.push({ conversation, encryptedMessage });
       return route.fulfill(json({ messageId: randomUUID() }));
@@ -63,7 +67,9 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
     }
     if (endpoint === "getProfile") {
       await delay(50);
-      return route.fulfill(json({ profile: { name: "Alice", alias: "alice" } }));
+      return route.fulfill(
+        json({ profile: { name: "Alice", alias: "alice" } }),
+      );
     }
     if (endpoint === "aliasToPublicSignKey") {
       await delay(50);

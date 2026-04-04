@@ -12,7 +12,9 @@ test.describe("AbstractChatBox (example app)", () => {
   });
 
   test("all mock messages render", async ({ page }) => {
-    await expect(page.getByText("Hey, can you help me with a sorting algorithm?")).toBeVisible();
+    await expect(
+      page.getByText("Hey, can you help me with a sorting algorithm?"),
+    ).toBeVisible();
     const lastMsg = page.getByText("Nice! Here's your location on the map:");
     await lastMsg.scrollIntoViewIfNeeded();
     await expect(lastMsg).toBeVisible();
@@ -31,7 +33,8 @@ test.describe("AbstractChatBox (example app)", () => {
   });
 
   test("markdown renders bold", async ({ page }) => {
-    await expect(page.locator(`${tid("message-text")} strong`).first()).toBeVisible();
+    await expect(page.locator(`${tid("message-text")} strong`).first())
+      .toBeVisible();
   });
 
   test("code blocks render with pre and code tags", async ({ page }) => {
@@ -51,7 +54,9 @@ test.describe("AbstractChatBox (example app)", () => {
     const input = page.locator(tid("message-input"));
     await input.fill("Instant message");
     await input.press("Enter");
-    await expect(page.getByText("Instant message")).toBeVisible({ timeout: 500 });
+    await expect(page.getByText("Instant message")).toBeVisible({
+      timeout: 500,
+    });
   });
 
   test("empty input is rejected — no new message added", async ({ page }) => {
@@ -77,7 +82,9 @@ test.describe("AbstractChatBox (example app)", () => {
 
   test("location attachment renders map link", async ({ page }) => {
     await expect(page.locator(tid("location-attachment"))).toBeVisible();
-    await expect(page.locator(tid("location-attachment"))).toContainText("Tel Aviv, Israel");
+    await expect(page.locator(tid("location-attachment"))).toContainText(
+      "Tel Aviv, Israel",
+    );
   });
 
   test("input auto-grows with multiline text", async ({ page }) => {
@@ -111,7 +118,9 @@ test.describe("AbstractChatBox (example app)", () => {
       (p, t) => p.then(() => input.fill(t)).then(() => input.press("Enter")),
       Promise.resolve(),
     );
-    await Promise.all(texts.map((t) => expect(page.getByText(t)).toBeVisible()));
+    await Promise.all(
+      texts.map((t) => expect(page.getByText(t)).toBeVisible()),
+    );
   });
 
   test("very long message renders without layout break", async ({ page }) => {
@@ -134,7 +143,8 @@ test.describe("AbstractChatBox (example app)", () => {
   });
 
   test("inline code renders in backticks", async ({ page }) => {
-    await expect(page.locator("code").filter({ hasText: "Array.sort()" })).toBeVisible();
+    await expect(page.locator("code").filter({ hasText: "Array.sort()" }))
+      .toBeVisible();
   });
 
   test("blockquote renders", async ({ page }) => {
@@ -164,14 +174,18 @@ test.describe("AbstractChatBox (example app)", () => {
   });
 
   test("scrolling to top reveals earliest messages", async ({ page }) => {
-    const firstMsg = page.getByText("Hey, can you help me with a sorting algorithm?");
+    const firstMsg = page.getByText(
+      "Hey, can you help me with a sorting algorithm?",
+    );
     await firstMsg.scrollIntoViewIfNeeded();
     await expect(firstMsg).toBeVisible();
   });
 
   test("message list is scrollable", async ({ page }) => {
     const list = page.locator(tid("message-list"));
-    const scrollable = await list.evaluate((el) => el.scrollHeight > el.clientHeight);
+    const scrollable = await list.evaluate((el) =>
+      el.scrollHeight > el.clientHeight
+    );
     expect(scrollable).toBe(true);
   });
 
@@ -180,7 +194,9 @@ test.describe("AbstractChatBox (example app)", () => {
     const countBefore = await page.locator(tid("message")).count();
     await input.fill("line one");
     await input.press("Shift+Enter");
-    await expect.poll(() => page.locator(tid("message")).count(), { timeout: 1_000 }).toBe(countBefore);
+    await expect.poll(() => page.locator(tid("message")).count(), {
+      timeout: 1_000,
+    }).toBe(countBefore);
   });
 
   test("sent message appears at bottom of list", async ({ page }) => {

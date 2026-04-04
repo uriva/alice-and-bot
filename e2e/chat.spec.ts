@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { generateTestData, type TestData } from "./mocks/test-data.ts";
-import { tid, setupChatMocks, waitForChat, pollSentMessages } from "./helpers.ts";
+import {
+  pollSentMessages,
+  setupChatMocks,
+  tid,
+  waitForChat,
+} from "./helpers.ts";
 
 let data: TestData;
 
@@ -19,8 +24,14 @@ test.describe("Chat (full encryption pipeline)", () => {
     await setupChatMocks(page, data);
     await page.goto("/");
     await waitForChat(page);
-    await Promise.all(data.messages.map(({ text }) => expect(page.getByText(text)).toBeVisible({ timeout: 15_000 })));
-    expect(await page.locator(tid("message")).count()).toBeGreaterThanOrEqual(data.messages.length);
+    await Promise.all(
+      data.messages.map(({ text }) =>
+        expect(page.getByText(text)).toBeVisible({ timeout: 15_000 })
+      ),
+    );
+    expect(await page.locator(tid("message")).count()).toBeGreaterThanOrEqual(
+      data.messages.length,
+    );
   });
 
   test("message-text elements contain decrypted content", async ({ page }) => {
@@ -39,7 +50,9 @@ test.describe("Chat (full encryption pipeline)", () => {
     const input = page.locator(tid("message-input"));
     await input.fill("Outbound test message");
     await input.press("Enter");
-    await expect(page.getByText("Outbound test message")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Outbound test message")).toBeVisible({
+      timeout: 5_000,
+    });
     await pollSentMessages(apiMock);
     expect(apiMock.sentMessages[0].conversation).toBe(data.conversationId);
   });
@@ -47,13 +60,18 @@ test.describe("Chat (full encryption pipeline)", () => {
   test("title-text shows conversation title", async ({ page }) => {
     await setupChatMocks(page, data);
     await page.goto("/");
-    await expect(page.locator(tid("title-text"))).toContainText("Test Conversation", { timeout: 15_000 });
+    await expect(page.locator(tid("title-text"))).toContainText(
+      "Test Conversation",
+      { timeout: 15_000 },
+    );
   });
 
   test("empty conversation shows no messages", async ({ page }) => {
     await setupChatMocks(page, data, { dataOverride: { messages: [] } });
     await page.goto("/");
-    await expect(page.locator(tid("message-input"))).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(tid("message-input"))).toBeVisible({
+      timeout: 15_000,
+    });
     expect(await page.locator(tid("message")).count()).toBe(0);
   });
 
@@ -63,7 +81,11 @@ test.describe("Chat (full encryption pipeline)", () => {
     await waitForChat(page);
     const { makeEncryptedMessage } = await import("./mocks/test-data.ts");
     const realtimeText = "Real-time arrival!";
-    const payload = await makeEncryptedMessage(data.conversationKey, data.bob, realtimeText);
+    const payload = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      realtimeText,
+    );
     wsMock.pushNewMessage({
       id: crypto.randomUUID(),
       payload,
@@ -93,10 +115,13 @@ test.describe("Chat (full encryption pipeline)", () => {
     const input = page.locator(tid("message-input"));
     const texts = ["msg-one", "msg-two"];
     await texts.reduce(
-      (p, t) => p
-        .then(() => input.fill(t))
-        .then(() => input.press("Enter"))
-        .then(() => expect(page.getByText(t)).toBeVisible({ timeout: 5_000 })),
+      (p, t) =>
+        p
+          .then(() => input.fill(t))
+          .then(() => input.press("Enter"))
+          .then(() =>
+            expect(page.getByText(t)).toBeVisible({ timeout: 5_000 })
+          ),
       Promise.resolve(),
     );
     await pollSentMessages(apiMock, 2);
@@ -106,9 +131,13 @@ test.describe("Chat (full encryption pipeline)", () => {
     await setupChatMocks(page, data);
     await page.goto("/");
     await waitForChat(page);
-    await expect(page.getByText(data.messages[4].text)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(data.messages[4].text)).toBeVisible({
+      timeout: 15_000,
+    });
     const positions = await Promise.all(
-      data.messages.map(async (m) => (await page.getByText(m.text).boundingBox())?.y ?? 0),
+      data.messages.map(async (m) =>
+        (await page.getByText(m.text).boundingBox())?.y ?? 0
+      ),
     );
     expect(positions.slice(1).every((p, i) => p > positions[i])).toBe(true);
   });

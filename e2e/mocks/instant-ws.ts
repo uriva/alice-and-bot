@@ -10,7 +10,11 @@ const identIds: Record<string, string> = {};
 const aid = (key: string) => (attrIds[key] ??= randomUUID());
 const iid = (key: string) => (identIds[key] ??= randomUUID());
 
-const blobAttr = (etype: string, label: string, extra: Record<string, unknown> = {}) => ({
+const blobAttr = (
+  etype: string,
+  label: string,
+  extra: Record<string, unknown> = {},
+) => ({
   id: aid(`${etype}.${label}`),
   "value-type": "blob",
   cardinality: "one",
@@ -68,7 +72,10 @@ const buildAttrs = () => [
 
   idAttr("identities"),
   blobAttr("identities", "publicSignKey", { "unique?": true, "index?": true }),
-  blobAttr("identities", "publicEncryptKey", { "unique?": true, "index?": true }),
+  blobAttr("identities", "publicEncryptKey", {
+    "unique?": true,
+    "index?": true,
+  }),
   blobAttr("identities", "name"),
   blobAttr("identities", "avatar"),
   blobAttr("identities", "alias", { "unique?": true, "index?": true }),
@@ -104,21 +111,23 @@ const buildAttrs = () => [
   refAttr("conversations", "uiElements", "uiElements", "conversation"),
 ];
 
-const idTriple = (eid: string, etype: string, tx: number): Triple =>
-  [eid, aid(`${etype}.id`), eid, tx];
+const idTriple = (
+  eid: string,
+  etype: string,
+  tx: number,
+): Triple => [eid, aid(`${etype}.id`), eid, tx];
 
 const fieldTriples = (
   eid: string,
   etype: string,
   fields: Record<string, unknown>,
   tx: number,
-): Triple[] =>
-  [
-    idTriple(eid, etype, tx),
-    ...Object.entries(fields)
-      .filter(([, v]) => v !== undefined && v !== null)
-      .map(([f, v]): Triple => [eid, aid(`${etype}.${f}`), v, tx]),
-  ];
+): Triple[] => [
+  idTriple(eid, etype, tx),
+  ...Object.entries(fields)
+    .filter(([, v]) => v !== undefined && v !== null)
+    .map(([f, v]): Triple => [eid, aid(`${etype}.${f}`), v, tx]),
+];
 
 const link = (
   fwdEtype: string,
@@ -132,7 +141,12 @@ const wrapResult = (ns: string, triples: Triple[]) => [{
   data: {
     "datalog-result": { "join-rows": triples.length ? [triples] : [] },
     "page-info": {
-      [ns]: { "start-cursor": null, "end-cursor": null, "has-next-page?": false, "has-previous-page?": false },
+      [ns]: {
+        "start-cursor": null,
+        "end-cursor": null,
+        "has-next-page?": false,
+        "has-previous-page?": false,
+      },
     },
     aggregate: null,
   },
@@ -147,10 +161,15 @@ const queryResponse = (q: unknown, txId: number, result: unknown) =>
 const detectNs = (q: Record<string, unknown>): string | null =>
   Object.keys(q)[0] ?? null;
 
-
-
 export type WsMock = {
-  pushNewMessage: (msg: { id: string; payload: string; timestamp: number; senderPublicSignKey: string }) => void;
+  pushNewMessage: (
+    msg: {
+      id: string;
+      payload: string;
+      timestamp: number;
+      senderPublicSignKey: string;
+    },
+  ) => void;
 };
 
 export const setupInstantWsMock = async (
@@ -184,8 +203,16 @@ export const setupInstantWsMock = async (
           const tid = ++txCounter;
           if (ns === "keys") {
             const triples: Triple[] = [
-              ...fieldTriples(data.keyId, "keys", { key: data.aliceEncryptedKey }, tx),
-              link("conversations", "keys", data.conversationId, data.keyId, tx),
+              ...fieldTriples(data.keyId, "keys", {
+                key: data.aliceEncryptedKey,
+              }, tx),
+              link(
+                "conversations",
+                "keys",
+                data.conversationId,
+                data.keyId,
+                tx,
+              ),
               link("identities", "keys", data.aliceIdentityId, data.keyId, tx),
               ...fieldTriples(data.aliceIdentityId, "identities", {
                 publicSignKey: data.alice.publicSignKey,
@@ -200,7 +227,10 @@ export const setupInstantWsMock = async (
           if (ns === "messages") {
             messageQueries.push({ q: msg.q });
             const triples: Triple[] = data.messages.flatMap((m) => [
-              ...fieldTriples(m.id, "messages", { payload: m.payload, timestamp: m.timestamp }, tx),
+              ...fieldTriples(m.id, "messages", {
+                payload: m.payload,
+                timestamp: m.timestamp,
+              }, tx),
               link("messages", "conversation", m.id, data.conversationId, tx),
             ]);
             ws.send(queryResponse(msg.q, tid, wrapResult(ns, triples)));
@@ -230,8 +260,20 @@ export const setupInstantWsMock = async (
                 title: "Test Conversation",
                 updatedAt: Date.now(),
               }, tx),
-              link("conversations", "participants", data.conversationId, data.aliceIdentityId, tx),
-              link("conversations", "participants", data.conversationId, data.bobIdentityId, tx),
+              link(
+                "conversations",
+                "participants",
+                data.conversationId,
+                data.aliceIdentityId,
+                tx,
+              ),
+              link(
+                "conversations",
+                "participants",
+                data.conversationId,
+                data.bobIdentityId,
+                tx,
+              ),
               ...fieldTriples(data.aliceIdentityId, "identities", {
                 publicSignKey: data.alice.publicSignKey,
                 name: "Alice",
@@ -262,11 +304,16 @@ export const setupInstantWsMock = async (
       if (!serverWs || !messageQueries.length) return;
       const tx = Date.now();
       const triples: Triple[] = [
-        ...fieldTriples(msg.id, "messages", { payload: msg.payload, timestamp: msg.timestamp }, tx),
+        ...fieldTriples(msg.id, "messages", {
+          payload: msg.payload,
+          timestamp: msg.timestamp,
+        }, tx),
         link("messages", "conversation", msg.id, data.conversationId, tx),
       ];
       messageQueries.forEach(({ q }) => {
-        serverWs!.send(queryResponse(q, ++txCounter, wrapResult("messages", triples)));
+        serverWs!.send(
+          queryResponse(q, ++txCounter, wrapResult("messages", triples)),
+        );
       });
     },
   };

@@ -22,10 +22,16 @@ const containerStyle: Record<string, string> = {
 const Harness = () => {
   const creds = globalThis.window.__TEST_CREDENTIALS__;
   const conversationId = globalThis.window.__TEST_CONVERSATION_ID__;
-  if (!creds || !conversationId) return <div id="harness-error">Missing test credentials</div>;
+  if (!creds || !conversationId) {
+    return <div id="harness-error">Missing test credentials</div>;
+  }
   return (
     <div style={containerStyle}>
-      <Chat credentials={creds} conversationId={conversationId} darkModeOverride />
+      <Chat
+        credentials={creds}
+        conversationId={conversationId}
+        darkModeOverride
+      />
     </div>
   );
 };

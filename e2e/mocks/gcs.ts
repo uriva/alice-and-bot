@@ -7,7 +7,7 @@ const tinyPng = Buffer.from(
 );
 
 export const setupGcsMock = async (page: Page) => {
-  await page.route("**/storage.googleapis.com/**", async (route: Route) => {
+  await page.route("**/storage.googleapis.com/**", (route: Route) => {
     if (route.request().method() === "PUT") {
       return route.fulfill({ status: 200, body: "" });
     }

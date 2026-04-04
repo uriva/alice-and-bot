@@ -274,7 +274,9 @@ const NameDialog = (
         style={dialogBoxStyle({ colors, mode })}
         onClick={(e) => e.stopPropagation()}
       >
-        <div data-testid="name-dialog-title" style={nameDialogTitleStyle}>Enter your display name</div>
+        <div data-testid="name-dialog-title" style={nameDialogTitleStyle}>
+          Enter your display name
+        </div>
         <div style={nameDialogHintStyle}>This will be shown to others.</div>
         <input
           autoFocus

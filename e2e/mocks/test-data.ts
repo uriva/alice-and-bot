@@ -9,7 +9,10 @@ const ivLength = 12;
 
 const toBase64 = (buf: ArrayBufferLike) => Buffer.from(buf).toString("base64");
 
-const importRsa = (key: string, usage: "encrypt" | "decrypt" | "sign" | "verify") =>
+const importRsa = (
+  key: string,
+  usage: "encrypt" | "decrypt" | "sign" | "verify",
+) =>
   globalThis.crypto.subtle.importKey(
     usage === "decrypt" || usage === "sign" ? "pkcs8" : "spki",
     Buffer.from(key, "base64"),
@@ -38,8 +41,12 @@ const genRsaKeyPair = async (usage: "sign" | "encrypt") => {
     usage === "encrypt" ? ["encrypt", "decrypt"] : ["sign", "verify"],
   );
   return {
-    publicKey: toBase64(await globalThis.crypto.subtle.exportKey("spki", pair.publicKey)),
-    privateKey: toBase64(await globalThis.crypto.subtle.exportKey("pkcs8", pair.privateKey)),
+    publicKey: toBase64(
+      await globalThis.crypto.subtle.exportKey("spki", pair.publicKey),
+    ),
+    privateKey: toBase64(
+      await globalThis.crypto.subtle.exportKey("pkcs8", pair.privateKey),
+    ),
   };
 };
 
@@ -51,7 +58,10 @@ const genAesKey = async () => {
   return toBase64(await globalThis.crypto.subtle.exportKey("raw", key));
 };
 
-const encryptAsymmetric = async (publicKey: string, data: unknown): Promise<string> =>
+const encryptAsymmetric = async (
+  publicKey: string,
+  data: unknown,
+): Promise<string> =>
   toBase64(
     await globalThis.crypto.subtle.encrypt(
       encryptAlgo,
@@ -60,7 +70,10 @@ const encryptAsymmetric = async (publicKey: string, data: unknown): Promise<stri
     ),
   );
 
-const encryptSymmetric = async (key: string, data: unknown): Promise<string> => {
+const encryptSymmetric = async (
+  key: string,
+  data: unknown,
+): Promise<string> => {
   const iv = globalThis.crypto.getRandomValues(new Uint8Array(ivLength));
   const cryptoKey = await importAes(key, ["encrypt"]);
   const ciphertext = new Uint8Array(
