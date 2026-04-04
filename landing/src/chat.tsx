@@ -1899,17 +1899,18 @@ export const Messenger = () => {
   const route = useLocation().route;
   const [handledChatWith, setHandledChatWith] = useState<string | null>(null);
   const chatWithInFlight = useRef(false);
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
+  const conversationsLoaded = conversations !== null;
   useEffect(() => {
-    if (!credentials || !conversations) return;
+    if (!credentials || !conversationsRef.current) return;
     const cw = (chatWith as string | undefined) ?? undefined;
     if (!cw) return;
-    // To allow handling the same chatWith but different topic, we incorporate topic into the state string
     const handledKey = topic ? `${cw}-${topic}` : cw;
-    if (handledChatWith === handledKey) return; // already processed this value
-    if (chatWithInFlight.current) return; // creation already in progress
+    if (handledChatWith === handledKey) return;
+    if (chatWithInFlight.current) return;
     chatWithInFlight.current = true;
     (async () => {
-      // Resolve alias to public sign key if needed
       let resolvedKey = cw;
       try {
         const res = await aliasToPublicSignKey(cw);
@@ -1920,9 +1921,7 @@ export const Messenger = () => {
 
       let conversationId: string | null = null;
 
-      // If a topic is provided, first look for an existing conversation with that topic.
-      // If not found, create a new conversation with that topic.
-      const existing = conversations.find(
+      const existing = (conversationsRef.current ?? []).find(
         isMatch(credentials.publicSignKey, resolvedKey, topic),
       );
       if (existing) {
@@ -1934,10 +1933,9 @@ export const Messenger = () => {
 
       if (!conversationId) {
         chatWithInFlight.current = false;
-        return; // failed to create
+        return;
       }
 
-      // Build a stable URL: remove chatWith and topic, set c=<id>, ensure chats view
       const params = new URLSearchParams(globalThis.location.search);
       params.delete("chatWith");
       params.delete("topic");
@@ -1949,7 +1947,7 @@ export const Messenger = () => {
       setHandledChatWith(handledKey);
       chatWithInFlight.current = false;
     })();
-  }, [credentials, chatWith, topic, conversations, handledChatWith]);
+  }, [credentials, chatWith, topic, handledChatWith, conversationsLoaded]);
 
   // Keep URL in sync with current messenger state so browser Back works.
   useEffect(() => {

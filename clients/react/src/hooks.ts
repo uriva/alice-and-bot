@@ -145,6 +145,7 @@ export const useGetOrCreateConversation = (
   const fixedParticipants = sort(
     unique([credentials.publicSignKey, ...participants]),
   );
+  const inFlight = useRef(false);
   useEffect(() => {
     if (conversation || !conversations) return;
     const existingConversation = conversations.find(
@@ -154,10 +155,13 @@ export const useGetOrCreateConversation = (
       setConversation(existingConversation.id);
       return;
     }
+    if (inFlight.current) return;
+    inFlight.current = true;
     createConversation(adminDb)(fixedParticipants, "Chat", credentials).then(
       (result) => {
         if ("error" in result) {
           console.error("Error creating conversation:", result.error);
+          inFlight.current = false;
         }
       },
     );
