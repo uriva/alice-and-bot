@@ -1,5 +1,9 @@
 import { assertEquals } from "@std/assert";
-import { htmlInlineToMarkdown } from "./abstractChatBox.tsx";
+import {
+  decodeHtmlEntities,
+  htmlCodeToMarkdown,
+  htmlInlineToMarkdown,
+} from "./abstractChatBox.tsx";
 
 Deno.test("converts paired <b> to bold markdown", () => {
   assertEquals(htmlInlineToMarkdown("<b>hello</b>"), "**hello**");
@@ -49,4 +53,41 @@ Deno.test("case insensitive", () => {
 
 Deno.test("does not auto-close empty tag at end of string", () => {
   assertEquals(htmlInlineToMarkdown("text <b>"), "text <b>");
+});
+
+Deno.test("converts inline <code> to backtick", () => {
+  assertEquals(
+    htmlCodeToMarkdown("use <code>foo</code> here"),
+    "use `foo` here",
+  );
+});
+
+Deno.test("converts <pre><code> to fenced block", () => {
+  assertEquals(
+    htmlCodeToMarkdown("<pre><code>line1\nline2</code></pre>"),
+    "```\nline1\nline2\n```",
+  );
+});
+
+Deno.test("converts <code> with attributes", () => {
+  assertEquals(
+    htmlCodeToMarkdown('<code class="lang">x</code>'),
+    "`x`",
+  );
+});
+
+Deno.test("decodes &lt; and &gt; to angle brackets", () => {
+  assertEquals(decodeHtmlEntities("&lt;script&gt;"), "<script>");
+});
+
+Deno.test("decodes &amp; last to avoid double-decode", () => {
+  assertEquals(decodeHtmlEntities("&amp;lt;"), "&lt;");
+});
+
+Deno.test("decodes &quot; and &#39;", () => {
+  assertEquals(decodeHtmlEntities("&quot;hi&#39;"), "\"hi'");
+});
+
+Deno.test("leaves plain text unchanged in decodeHtmlEntities", () => {
+  assertEquals(decodeHtmlEntities("hello world"), "hello world");
 });

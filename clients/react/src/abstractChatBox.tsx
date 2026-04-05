@@ -401,9 +401,32 @@ export const htmlInlineToMarkdown = (text: string) =>
     { tag: "em", md: "*" },
   ].reduce((r, { tag, md }) => htmlStyledToMd(tag, md)(r), text);
 
+export const htmlCodeToMarkdown = (text: string) =>
+  text
+    .replace(
+      /<pre>\s*<code(?:\s[^>]*)?>([\s\S]*?)<\/code>\s*<\/pre>/gi,
+      (_, content) => `\`\`\`\n${content.trim()}\n\`\`\``,
+    )
+    .replace(
+      /<code(?:\s[^>]*)?>([\s\S]*?)<\/code>/gi,
+      (_, content) => `\`${content}\``,
+    );
+
+export const decodeHtmlEntities = (text: string) =>
+  text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+
 const preprocessText = (text: string) =>
-  htmlAnchorToMarkdown(
-    htmlImgToMarkdown(htmlMediaToMarkdown(htmlInlineToMarkdown(text))),
+  decodeHtmlEntities(
+    htmlCodeToMarkdown(
+      htmlAnchorToMarkdown(
+        htmlImgToMarkdown(htmlMediaToMarkdown(htmlInlineToMarkdown(text))),
+      ),
+    ),
   );
 
 const copyOverlayStyle = (
@@ -2566,14 +2589,10 @@ export const AbstractChatBox = (
     textarea.style.height = "auto";
     const scrollHeight = textarea.scrollHeight;
     const singleLine = textarea.value.indexOf("\n") === -1;
-    if (singleLine) {
-      const h = scrollHeight > 44 ? scrollHeight : 44;
-      setTextareaHeight(h);
-      setTextareaOverflow("hidden");
-    } else {
-      setTextareaHeight(scrollHeight);
-      setTextareaOverflow("auto");
-    }
+    const h = singleLine ? Math.max(scrollHeight, 44) : scrollHeight;
+    textarea.style.height = `${h}px`;
+    setTextareaHeight(h);
+    setTextareaOverflow(singleLine ? "hidden" : "auto");
   };
 
   return (
@@ -3433,7 +3452,7 @@ export const AbstractChatBox = (
     setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.focus();
-        inputRef.current.style.height = "auto";
+        inputRef.current.style.height = "44px";
       }
       scrollToBottom();
       requestAnimationFrame(scrollToBottom);
