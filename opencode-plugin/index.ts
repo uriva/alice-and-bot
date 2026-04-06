@@ -25,7 +25,6 @@ const aliceCommands = new Set([
   "ALICE_AND_BOT_COMMAND_INTERNAL",
 ]);
 const tuiCommandAliases: Record<string, string> = {
-  "/new": "session_new",
   "/share": "session_share",
   "/interrupt": "session_interrupt",
   "/compact": "session_compact",
@@ -459,6 +458,42 @@ export default async function plugin(input: unknown) {
                 text:
                   `Pending permission: ${pending.description}\nReply /yes, /no, or /always`,
               }).catch(() => {});
+              return;
+            }
+
+            if (commandText === "/new") {
+              try {
+                const result = await callFirstAvailable([
+                  () => client.session.create({}),
+                  () => client.session.create({ body: {} }),
+                  () => client.session.create(),
+                ]);
+                const newSessionId = (result as any)?.id ||
+                  (result as any)?.data?.id;
+                if (!newSessionId) throw new Error("No session ID returned");
+                currentSessionId = newSessionId;
+                await notifyPhone({
+                  conversation: convoId,
+                  conversationKey,
+                  credentials,
+                  text: `New session started.\n${getLink()}`,
+                });
+                await logDebug(
+                  `Created new session ${newSessionId} from /new command`,
+                );
+              } catch (err: unknown) {
+                await logDebug(
+                  `/new failed: ${(err as Error).message}`,
+                );
+                await notifyPhone({
+                  conversation: convoId,
+                  conversationKey,
+                  credentials,
+                  text: `Failed to create new session: ${
+                    (err as Error).message
+                  }`,
+                });
+              }
               return;
             }
 
