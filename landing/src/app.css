@@ -2,6 +2,15 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --toast-bg: #fff;
+  --toast-text: #363636;
+}
+.dark {
+  --toast-bg: #374151;
+  --toast-text: #f3f4f6;
+}
+
 @layer base {
   html,
   body {

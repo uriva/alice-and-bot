@@ -53,7 +53,11 @@ const NotFound = () => (
 
 const App = () => (
   <>
-    <Toaster />
+    <Toaster
+      toastOptions={{
+        style: { background: "var(--toast-bg)", color: "var(--toast-text)" },
+      }}
+    />
     <ErrorBoundary>
       <Router>
         {routes.map(({ path, component }) => (
