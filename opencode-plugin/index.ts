@@ -41,6 +41,7 @@ const pendingPermissions = new Map<
   string,
   { requestId: string; sessionId: string; description: string }
 >();
+const sentReasoningParts = new Set<string>();
 const permissionReplyCommands: Record<string, "once" | "always" | "reject"> = {
   "/yes": "once",
   "/y": "once",
@@ -623,6 +624,31 @@ export default async function plugin(input: unknown) {
           await logDebug(
             `Permission cleared by TUI: requestId=${requestID}`,
           );
+        }
+      }
+      if (event.type === "message.part.updated") {
+        const part = event.properties?.part;
+        if (
+          part?.type === "reasoning" &&
+          part.text &&
+          part.time?.end &&
+          !sentReasoningParts.has(part.id)
+        ) {
+          sentReasoningParts.add(part.id);
+          const convoInfo = sessionToConvoKey.get(part.sessionID);
+          if (convoInfo) {
+            await notifyPhone({
+              conversation: convoInfo.conversation,
+              conversationKey: convoInfo.conversationKey,
+              credentials,
+              text: `*${part.text}*`,
+            }).catch((e: any) =>
+              logDebug(`Error sending reasoning: ${e?.message}`)
+            );
+            await logDebug(
+              `Sent reasoning to phone convo ${convoInfo.conversation}`,
+            );
+          }
         }
       }
     },

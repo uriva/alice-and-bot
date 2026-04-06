@@ -24141,6 +24141,7 @@ var tuiCommandAliases = {
 var sessionToConvoKey = new Map;
 var convoToSessionId = new Map;
 var pendingPermissions = new Map;
+var sentReasoningParts = new Set;
 var permissionReplyCommands = {
   "/yes": "once",
   "/y": "once",
@@ -24587,6 +24588,22 @@ Reply /yes, /no, or /always`
         if (pending?.requestId === requestID) {
           pendingPermissions.delete(sessionID);
           await logDebug(`Permission cleared by TUI: requestId=${requestID}`);
+        }
+      }
+      if (event.type === "message.part.updated") {
+        const part = event.properties?.part;
+        if (part?.type === "reasoning" && part.text && part.time?.end && !sentReasoningParts.has(part.id)) {
+          sentReasoningParts.add(part.id);
+          const convoInfo = sessionToConvoKey.get(part.sessionID);
+          if (convoInfo) {
+            await notifyPhone({
+              conversation: convoInfo.conversation,
+              conversationKey: convoInfo.conversationKey,
+              credentials,
+              text: `*${part.text}*`
+            }).catch((e) => logDebug(`Error sending reasoning: ${e?.message}`));
+            await logDebug(`Sent reasoning to phone convo ${convoInfo.conversation}`);
+          }
         }
       }
     },
