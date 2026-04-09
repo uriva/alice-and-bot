@@ -328,6 +328,7 @@ export class ConnectedChat extends LitElement {
     enableAudioRecording: { type: Boolean },
     enableVoiceCall: { type: Boolean },
     isDark: { type: Boolean },
+    emptyMessage: { attribute: false },
   };
 
   credentials: Credentials | null = null;
@@ -339,6 +340,7 @@ export class ConnectedChat extends LitElement {
   enableAudioRecording = true;
   enableVoiceCall = false;
   isDark = false;
+  emptyMessage?: string;
 
   private _conversationKey: string | null = null;
   private _messages: DecipheredMessage[] | null = null;
@@ -679,6 +681,7 @@ export class ConnectedChat extends LitElement {
         .activeStreams="${activeStreams}"
         .isGroupChat="${this._isGroupChat}"
         .isDark="${this.isDark}"
+        .emptyMessage="${this.emptyMessage}"
       ></chat-box>
     `;
   }
