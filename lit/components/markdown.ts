@@ -64,6 +64,23 @@ const createMarked = (textColor: string, isDark: boolean) => {
         if (isAudioUrl(href)) return audioInlineHtml(href);
         return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:${textColor};text-decoration:underline;overflow-wrap:anywhere;word-break:break-word">${children}</a>`;
       },
+      list(
+        this: { parser: { parse(t: Token[]): string } },
+        { ordered, items }: Tokens.List,
+      ) {
+        const tag = ordered ? "ol" : "ul";
+        const listType = ordered ? "decimal" : "disc";
+        const body = items.map((item) => this.parser.parse(item.tokens)).join(
+          "",
+        );
+        return `<${tag} style="list-style:${listType};padding-left:1.5em;margin:0 0 8px 0">${body}</${tag}>`;
+      },
+      listitem(
+        this: { parser: { parse(t: Token[]): string } },
+        { tokens }: Tokens.ListItem,
+      ) {
+        return `<li style="margin:2px 0">${this.parser.parse(tokens)}</li>`;
+      },
       table(
         this: { parser: { parseInline(t: Token[]): string } },
         { header, rows }: Tokens.Table,
