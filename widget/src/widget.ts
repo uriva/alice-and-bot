@@ -524,16 +524,14 @@ export const createWidget = (
   });
 
   const unsubMobile = subscribeIsMobile((mobile) => {
-    const wasMobile = isMobile;
+    if (mobile === isMobile) return;
     isMobile = mobile;
-    if (isMobile !== wasMobile) {
-      setHostStyles(host, isOpen, isMobile);
-      if (bodyScrollUnlock) {
-        bodyScrollUnlock();
-        bodyScrollUnlock = null;
-      }
-      if (isOpen && isMobile) bodyScrollUnlock = lockBodyScroll();
+    setHostStyles(host, isOpen, isMobile);
+    if (bodyScrollUnlock) {
+      bodyScrollUnlock();
+      bodyScrollUnlock = null;
     }
+    if (isOpen && isMobile) bodyScrollUnlock = lockBodyScroll();
     updateShadowContent();
   });
 
