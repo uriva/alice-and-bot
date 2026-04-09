@@ -14,49 +14,23 @@ const skillInstallCommand = `mkdir -p ~/.agents/skills/alice-and-bot
 curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
   https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md`;
 
-const codeExample = `import {
-  createConversation,
-  createIdentity,
-  sendMessage,
-  setWebhook,
-} from "@alice-and-bot/core";
+const codeExample =
+  `import { createConversation, createIdentity, sendMessage, setWebhook } from "@alice-and-bot/core";
 
-// create two identities
-const alice = await createIdentity(
-  "Alice",
-  "alice",
-);
-const bot = await createIdentity(
-  "My Bot",
-  "my_bot",
+const alice = await createIdentity("Alice", "alice");
+const bot = await createIdentity("My Bot", "my_bot");
+
+const { conversationId } = await createConversation(
+  [alice.publicSignKey, bot.publicSignKey], "Hello", alice,
 );
 
-// start a conversation
-const { conversationId } =
-  await createConversation(
-    [
-      alice.publicSignKey,
-      bot.publicSignKey,
-    ],
-    "Hello",
-    alice,
-  );
-
-// send a message
 await sendMessage({
   credentials: alice,
   conversation: conversationId,
-  message: {
-    type: "text",
-    text: "Hey bot!",
-  },
+  message: { type: "text", text: "Hey bot!" },
 });
 
-// receive messages via webhook
-await setWebhook({
-  url: "https://my-server.com/hook",
-  credentials: bot,
-});`;
+await setWebhook({ url: "https://my-server.com/hook", credentials: bot });`;
 
 const featureCardClass =
   "flex flex-col p-8 bg-white/90 dark:bg-[#111]/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl hover:scale-105 hover:shadow-2xl transition-transform duration-200 ease-out";
