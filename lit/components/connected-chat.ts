@@ -395,12 +395,10 @@ export class ConnectedChat extends LitElement {
     this._teardown();
   }
 
-  override willUpdate(changed: Map<string, unknown>) {
-    if (
-      changed.has("darkModeOverride") && this.darkModeOverride !== undefined
-    ) {
-      this.isDark = this.darkModeOverride;
-    }
+  private get _effectiveDark() {
+    return this.darkModeOverride !== undefined
+      ? this.darkModeOverride
+      : this.isDark;
   }
 
   override updated(changed: Map<string, unknown>) {
@@ -673,11 +671,12 @@ export class ConnectedChat extends LitElement {
 
   override render(): TemplateResult | typeof nothing {
     if (!this.credentials || !this.conversationId) return nothing;
+    const isDark = this._effectiveDark;
     if (this._convNotFound) {
-      return notFoundHtml(this.customColors, this.isDark);
+      return notFoundHtml(this.customColors, isDark);
     }
     if (!this._hasAccess) {
-      return accessDeniedHtml(this.onClose, this.customColors, this.isDark);
+      return accessDeniedHtml(this.onClose, this.customColors, isDark);
     }
 
     const { chatMessages, activeSpinners, activeProgress, activeStreams } = this
@@ -709,7 +708,7 @@ export class ConnectedChat extends LitElement {
         .activeProgress="${activeProgress}"
         .activeStreams="${activeStreams}"
         .isGroupChat="${this._isGroupChat}"
-        .isDark="${this.isDark}"
+        .isDark="${isDark}"
         .emptyMessage="${this.emptyMessage}"
       ></chat-box>
       ${this._profileAuthorId
@@ -720,7 +719,7 @@ export class ConnectedChat extends LitElement {
               compactPublicKey(this._profileAuthorId)}"
             .authorAvatar="${this._identityDetails[this._profileAuthorId]
               ?.avatar ?? ""}"
-            .isDark="${this.isDark}"
+            .isDark="${isDark}"
             .onClose="${this._closeProfile}"
             .onChatWith="${this.onChatWith}"
           ></user-profile-popup>

@@ -744,7 +744,7 @@ export class ChatBox extends LitElement {
   };
 
   private _hoverAttachIn = (e: Event) => {
-    (e.currentTarget as HTMLElement).style.background = this.isDark
+    (e.currentTarget as HTMLElement).style.background = this._effectiveDark
       ? "#2a2a2a"
       : "#f3f4f6";
   };
@@ -753,12 +753,10 @@ export class ChatBox extends LitElement {
     (e.currentTarget as HTMLElement).style.background = "transparent";
   };
 
-  override willUpdate(changed: Map<string, unknown>) {
-    if (
-      changed.has("darkModeOverride") && this.darkModeOverride !== undefined
-    ) {
-      this.isDark = this.darkModeOverride;
-    }
+  private get _effectiveDark() {
+    return this.darkModeOverride !== undefined
+      ? this.darkModeOverride
+      : this.isDark;
   }
 
   override updated(changed: Map<string, unknown>) {
@@ -807,11 +805,14 @@ export class ChatBox extends LitElement {
       this._remoteAudioEl.play().catch(console.error);
     }
 
-    this._optimisticMessages = pruneOptimistic(
+    const pruned = pruneOptimistic(
       this.messages,
       this._optimisticMessages,
       this.userId,
     );
+    if (pruned !== this._optimisticMessages) {
+      this._optimisticMessages = pruned;
+    }
 
     if (this._isSending) {
       const hasNewAudio = this.messages.some(
@@ -829,9 +830,8 @@ export class ChatBox extends LitElement {
       this._messagesContainerEl.scrollTop =
         this._messagesContainerEl.scrollHeight - this._prevScrollHeight;
       this._loadingMore = false;
-      this._fetchingMore = false;
-    } else {
-      this._stuckToBottom = true;
+      if (this._fetchingMore) this._fetchingMore = false;
+    } else if (this._stuckToBottom || this._initialLoad) {
       this._scrollToBottom();
       requestAnimationFrame(() => this._scrollToBottom());
       if (this.messages.length > 0) this._initialLoad = false;
@@ -872,7 +872,8 @@ export class ChatBox extends LitElement {
   }
 
   override render(): TemplateResult {
-    const { isDark, customColors } = this;
+    const isDark = this._effectiveDark;
+    const { customColors } = this;
     const allMsgs = allMessagesFrom(
       this.messages,
       this._optimisticMessages,
@@ -1425,7 +1426,8 @@ export class ChatBox extends LitElement {
   }
 
   private _renderTimelineEntry(entry: TimelineEntry) {
-    const { isDark, customColors } = this;
+    const isDark = this._effectiveDark;
+    const { customColors } = this;
     if (entry.kind === "message") {
       return html`
         <chat-message
