@@ -79,7 +79,7 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     inputBackground: "#f9fafb",
     inputBorder: "#d1d5db",
     inputText: "#111827",
-    closeButtonBg: "rgba(0,0,0,0.06)",
+    closeButtonBg: "#f9fafb",
     closeButtonColor: "#111827",
   },
   dark: {
@@ -98,7 +98,7 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     inputBackground: "#374151",
     inputBorder: "#4b5563",
     inputText: "#f9fafb",
-    closeButtonBg: "rgba(255,255,255,0.08)",
+    closeButtonBg: "#374151",
     closeButtonColor: "#f3f4f6",
   },
 };
