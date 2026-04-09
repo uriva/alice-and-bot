@@ -1,5 +1,5 @@
 // Docs: https://www.instantdb.com/docs/permissions
-import type { InstantRules } from "@instantdb/react";
+import type { InstantRules } from "@instantdb/core";
 
 const rules = {
   $files: {
