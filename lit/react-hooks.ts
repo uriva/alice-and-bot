@@ -57,22 +57,24 @@ export const useDarkMode = (): boolean =>
 export const useIsMobile = (): boolean =>
   useSubscription(subscribeIsMobile, [], false);
 
-export const useConversations =
-  (_db?: unknown) => (publicSignKey: string): Conversation[] | null =>
-    useSubscription(
-      (cb) => subscribeConversations(publicSignKey, cb),
-      [publicSignKey],
-      null as Conversation[] | null,
-    );
+export const useConversations = (
+  publicSignKey: string,
+): Conversation[] | null =>
+  useSubscription(
+    (cb) => subscribeConversations(publicSignKey, cb),
+    [publicSignKey],
+    null as Conversation[] | null,
+  );
 
-export const useConversationKey =
-  (_db?: unknown) =>
-  (conversationId: string, credentials: Credentials): string | null =>
-    useSubscription(
-      (cb) => subscribeConversationKey(conversationId, credentials, cb),
-      [conversationId, credentials.publicSignKey],
-      null as string | null,
-    );
+export const useConversationKey = (
+  conversationId: string,
+  credentials: Credentials,
+): string | null =>
+  useSubscription(
+    (cb) => subscribeConversationKey(conversationId, credentials, cb),
+    [conversationId, credentials.publicSignKey],
+    null as string | null,
+  );
 
 export const useDecryptedMessages = (
   _db: unknown,
@@ -85,8 +87,7 @@ export const useDecryptedMessages = (
     { messages: null, canLoadMore: false, loadMore: () => {} },
   );
 
-export const useIdentityDetailsMap = (_db?: unknown) =>
-(
+export const useIdentityDetailsMap = (
   publicKeys: string[],
 ): Record<string, { name: string; avatar?: string }> =>
   useSubscription(
@@ -95,21 +96,19 @@ export const useIdentityDetailsMap = (_db?: unknown) =>
     {} as Record<string, { name: string; avatar?: string }>,
   );
 
-export const useIdentityProfile =
-  (_db?: unknown) => (publicSignKey: string): IdentityProfile =>
-    useSubscription(
-      (cb) => subscribeIdentityProfile(publicSignKey, cb),
-      [publicSignKey],
-      null as IdentityProfile,
-    );
+export const useIdentityProfile = (publicSignKey: string): IdentityProfile =>
+  useSubscription(
+    (cb) => subscribeIdentityProfile(publicSignKey, cb),
+    [publicSignKey],
+    null as IdentityProfile,
+  );
 
-export const useUserName =
-  (_db?: unknown) => (publicSignKey: string): string | null =>
-    useSubscription(
-      (cb) => subscribeUserName(publicSignKey, cb),
-      [publicSignKey],
-      null as string | null,
-    );
+export const useUserName = (publicSignKey: string): string | null =>
+  useSubscription(
+    (cb) => subscribeUserName(publicSignKey, cb),
+    [publicSignKey],
+    null as string | null,
+  );
 
 export const useCredentials = (
   name: string | null,
@@ -133,18 +132,12 @@ export const useEphemeralStreams = (
   );
 
 export const useGetOrCreateConversation = (
-  _adminDb?: unknown,
-  _db?: unknown,
-): (args: {
-  credentials: Credentials;
-  participants: string[];
-  initialMessage?: string;
-}) => string | null =>
-({ credentials, participants, initialMessage }: {
-  credentials: Credentials;
-  participants: string[];
-  initialMessage?: string;
-}): string | null => {
+  { credentials, participants, initialMessage }: {
+    credentials: Credentials;
+    participants: string[];
+    initialMessage?: string;
+  },
+): string | null => {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationKey, setConversationKey] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState<number | null>(null);
