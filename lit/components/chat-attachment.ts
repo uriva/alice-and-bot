@@ -68,7 +68,7 @@ export class ChatAttachment extends LitElement {
     _loading: { state: true },
   };
 
-  attachment!: Attachment;
+  declare attachment: Attachment;
   declare isDark: boolean;
   declare textColor: string;
   declare primaryColor: string;
