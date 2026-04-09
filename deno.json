@@ -44,6 +44,14 @@
     "kv"
   ],
   "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "dom.asynciterable",
+      "esnext",
+      "deno.ns",
+      "deno.unstable"
+    ],
     "types": [
       "./landing/src/vite-env.d.ts"
     ]
@@ -53,7 +61,7 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.251",
+  "version": "0.0.252",
   "exports": "./mod.ts",
   "deploy": {
     "org": "uriva",

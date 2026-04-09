@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { sortKey } from "@uri/gamla";
 import type {

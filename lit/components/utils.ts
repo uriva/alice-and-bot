@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import { empty, sortKey } from "@uri/gamla";
 import type {
   AbstracChatMessage,

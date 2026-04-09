@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import { coerce } from "@uri/gamla";
 import type {
   AbstracChatMessage,

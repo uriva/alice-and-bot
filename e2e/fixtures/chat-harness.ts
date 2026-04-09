@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import { coerce } from "@uri/gamla";
 import { ConnectedChat } from "../../lit/components/connected-chat.ts";
 

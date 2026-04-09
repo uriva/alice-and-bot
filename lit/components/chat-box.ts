@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { empty } from "@uri/gamla";
 import { maxTextLength } from "../../protocol/src/attachmentLimits.ts";

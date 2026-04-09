@@ -1,6 +1,8 @@
-/// <reference lib="dom" />
 import type { Credentials } from "../../protocol/src/clientApi.ts";
-import { loadOrCreateCredentials } from "../../lit/core/credentials.ts";
+import {
+  loadCredentials,
+  loadOrCreateCredentials,
+} from "../../lit/core/credentials.ts";
 import {
   type DarkModeOverride,
   setDarkModeOverride,
@@ -132,6 +134,7 @@ const resolveAppearance = (
 const widgetBaseCss = (colorScheme: "light" | "dark" | "light dark") => `
 :host, *, *::before, *::after { font-family: ${fontStack}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 :host { color-scheme: ${colorScheme}; }
+alice-connected-chat, chat-box { display:flex; flex-direction:column; flex-grow:1; min-height:0; }
 `;
 
 const startButtonCss = (colors: WidgetModeColors) =>
@@ -552,6 +555,12 @@ export const createWidget = (
   };
   const unsubViewport = setupViewport();
 
+  const existingCreds = loadCredentials("aliceAndBotCredentials");
+  if (existingCreds) {
+    credentials = existingCreds;
+    subscribeConversation();
+  }
+
   if (defaultName) {
     loadCredentialsForName(defaultName);
     if (startOpen) {
@@ -572,7 +581,11 @@ export const createWidget = (
       );
     }
   } else if (startOpen) {
-    openNameDialog();
+    if (credentials) {
+      setChatOpen(true);
+    } else {
+      openNameDialog();
+    }
   }
 
   updateShadowContent();

@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import { html, LitElement, nothing } from "lit";
 import type { Attachment } from "../../protocol/src/clientApi.ts";
 import { isLightColor } from "./design.ts";

@@ -1,5 +1,3 @@
-/// <reference lib="dom" />
-
 export const subscribeIsMobile = (
   onChange: (isMobile: boolean) => void,
 ): () => void => {

@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import { html, LitElement, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import type { Attachment } from "../../protocol/src/clientApi.ts";

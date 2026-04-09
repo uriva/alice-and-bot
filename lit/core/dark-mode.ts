@@ -1,5 +1,3 @@
-/// <reference lib="dom" />
-
 export type DarkModeOverride = "light" | "dark" | null;
 
 let override: DarkModeOverride = null;

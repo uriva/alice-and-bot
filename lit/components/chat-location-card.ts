@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import { html, LitElement } from "lit";
 import { faMapMarkerAlt } from "./icons.ts";
 import {

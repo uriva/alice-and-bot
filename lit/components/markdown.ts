@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 import { Marked, type Token, type Tokens } from "marked";
 import { isAudioUrl, isVideoUrl, preprocessText } from "./utils.ts";
 
