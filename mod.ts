@@ -39,11 +39,7 @@ export {
   type VideoAttachment,
   type WebhookUpdate,
 } from "./protocol/src/clientApi.ts";
-export { createWidget } from "./widget/src/widget.ts";
 export { setDarkModeOverride } from "./lit/core/dark-mode.ts";
-export { ConnectedChat } from "./lit/components/connected-chat.ts";
-export { ChatBox } from "./lit/components/chat-box.ts";
-export { AbstractChatBox, Chat, Widget } from "./lit/react-components.ts";
 export {
   type Conversation,
   getOrCreateConversation,
