@@ -379,6 +379,10 @@ export class ConnectedChat extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
+    console.log("[CC] connectedCallback", {
+      hasCreds: !!this.credentials,
+      convId: this.conversationId,
+    });
     this._setupSubscriptions();
   }
 
@@ -396,6 +400,7 @@ export class ConnectedChat extends LitElement {
   }
 
   override updated(changed: Map<string, unknown>) {
+    console.log("[CC] updated", [...changed.keys()]);
     if (changed.has("credentials") || changed.has("conversationId")) {
       this._teardown();
       this._setupSubscriptions();
@@ -416,6 +421,10 @@ export class ConnectedChat extends LitElement {
   }
 
   private _setupSubscriptions() {
+    console.log("[CC] _setupSubscriptions", {
+      hasCreds: !!this.credentials,
+      convId: this.conversationId,
+    });
     if (!this.credentials || !this.conversationId) return;
 
     const { publicSignKey } = this.credentials;
@@ -516,10 +525,15 @@ export class ConnectedChat extends LitElement {
 
   private _resubscribeMessages() {
     this._messagesUnsub?.();
+    console.log("[CC] _resubscribeMessages", {
+      convId: this.conversationId,
+      hasKey: !!this._conversationKey,
+    });
     this._messagesUnsub = subscribeDecryptedMessages(
       this.conversationId,
       this._conversationKey,
       ({ messages, canLoadMore, loadMore }) => {
+        console.log("[CC] messages arrived", messages?.length ?? "null");
         this._messages = messages;
         this._canLoadMore = canLoadMore;
         this._loadMore = loadMore;
@@ -654,6 +668,13 @@ export class ConnectedChat extends LitElement {
   };
 
   override render(): TemplateResult | typeof nothing {
+    console.log("[CC] render", {
+      hasCreds: !!this.credentials,
+      convId: this.conversationId,
+      msgCount: this._messages?.length ?? "null",
+      convNotFound: this._convNotFound,
+      hasAccess: this._hasAccess,
+    });
     if (!this.credentials || !this.conversationId) return nothing;
     if (this._convNotFound) {
       return notFoundHtml(this.customColors, this.isDark);
