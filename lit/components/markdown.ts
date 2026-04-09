@@ -20,7 +20,8 @@ const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
 
 const inlineCodeHtml = (code: string, isDark: boolean) => {
   const bg = isDark ? "#ffffff22" : "#00000012";
-  return `<code style="background:${bg};padding:0 4px;border-radius:4px;font-family:${monoFont};font-size:13px">${code}</code>`;
+  const color = isDark ? "#e5e7eb" : "#111";
+  return `<code style="background:${bg};color:${color};padding:0 4px;border-radius:4px;font-family:${monoFont};font-size:13px">${code}</code>`;
 };
 
 const videoPlayerHtml = (src: string) =>
