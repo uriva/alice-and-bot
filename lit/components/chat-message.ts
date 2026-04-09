@@ -148,6 +148,7 @@ export class ChatMessage extends LitElement {
     onDecryptAttachment: { attribute: false },
     sessionStart: { type: Number },
     onEdit: { attribute: false },
+    onAvatarClick: { attribute: false },
     customColors: { attribute: false },
     isDark: { type: Boolean },
     _isEditing: { state: true },
@@ -163,6 +164,7 @@ export class ChatMessage extends LitElement {
   declare onDecryptAttachment: ((url: string) => Promise<string>) | undefined;
   declare sessionStart: number;
   declare onEdit: ((newText: string) => void) | undefined;
+  declare onAvatarClick: ((authorId: string) => void) | undefined;
   declare customColors: CustomColors | undefined;
   declare isDark: boolean;
 
@@ -329,6 +331,8 @@ export class ChatMessage extends LitElement {
               .name="${authorName}"
               .baseColor="${participantColor}"
               .isDark="${isDark}"
+              style="cursor:pointer"
+              @click="${() => this.onAvatarClick?.(authorId)}"
             ></chat-avatar>
           `
           : nothing}

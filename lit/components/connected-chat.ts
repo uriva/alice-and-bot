@@ -24,6 +24,7 @@ import {
   subscribeEphemeralStreams,
 } from "../core/room.ts";
 import "./chat-box.ts";
+import "./user-profile-popup.ts";
 import type {
   AbstracChatMessage,
   ActiveProgress,
@@ -329,6 +330,7 @@ export class ConnectedChat extends LitElement {
     enableVoiceCall: { type: Boolean },
     isDark: { type: Boolean },
     emptyMessage: { attribute: false },
+    onChatWith: { attribute: false },
   };
 
   declare credentials: Credentials | null;
@@ -341,6 +343,7 @@ export class ConnectedChat extends LitElement {
   declare enableVoiceCall: boolean;
   declare isDark: boolean;
   declare emptyMessage: string | undefined;
+  declare onChatWith: ((publicSignKey: string) => void) | undefined;
 
   constructor() {
     super();
@@ -368,6 +371,7 @@ export class ConnectedChat extends LitElement {
   private _conversationTitle = "Chat";
   private _isGroupChat = false;
   private _progressMax = new Map<string, number>();
+  private _profileAuthorId: string | null = null;
 
   private _unsubs: (() => void)[] = [];
   private _typingNotifier: ReturnType<typeof createTypingNotifier> | null =
@@ -657,6 +661,16 @@ export class ConnectedChat extends LitElement {
     this._typingNotifier?.onInput();
   };
 
+  private _handleAvatarClick = (authorId: string) => {
+    this._profileAuthorId = authorId;
+    this.requestUpdate();
+  };
+
+  private _closeProfile = () => {
+    this._profileAuthorId = null;
+    this.requestUpdate();
+  };
+
   override render(): TemplateResult | typeof nothing {
     if (!this.credentials || !this.conversationId) return nothing;
     if (this._convNotFound) {
@@ -690,6 +704,7 @@ export class ConnectedChat extends LitElement {
         .onEdit="${this._handleEdit}"
         .onSendLocation="${this._handleSendLocation}"
         .onInputActivity="${this._handleInputActivity}"
+        .onAvatarClick="${this._handleAvatarClick}"
         .activeSpinners="${activeSpinners}"
         .activeProgress="${activeProgress}"
         .activeStreams="${activeStreams}"
@@ -697,6 +712,20 @@ export class ConnectedChat extends LitElement {
         .isDark="${this.isDark}"
         .emptyMessage="${this.emptyMessage}"
       ></chat-box>
+      ${this._profileAuthorId
+        ? html`
+          <user-profile-popup
+            .authorId="${this._profileAuthorId}"
+            .authorName="${this._identityDetails[this._profileAuthorId]?.name ??
+              compactPublicKey(this._profileAuthorId)}"
+            .authorAvatar="${this._identityDetails[this._profileAuthorId]
+              ?.avatar ?? ""}"
+            .isDark="${this.isDark}"
+            .onClose="${this._closeProfile}"
+            .onChatWith="${this.onChatWith}"
+          ></user-profile-popup>
+        `
+        : nothing}
     `;
   }
 }

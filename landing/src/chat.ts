@@ -1773,6 +1773,22 @@ const closeConversation = () => {
   rerenderChat();
 };
 
+const handleChatWith = async (publicSignKey: string) => {
+  if (!credentials || !conversations) return;
+  const existing = conversations.find(
+    isMatch(credentials.publicSignKey, publicSignKey),
+  );
+  if (existing) {
+    selectConversation(existing.id);
+    return;
+  }
+  const conversationId = await startConversation(credentials, publicSignKey);
+  if (conversationId) {
+    view = "chats";
+    rerenderChat();
+  }
+};
+
 const chatPanelTemplate = () => {
   if (!credentials || !selectedConversation) {
     return emptyChatsView(undefined, () => setView_("new_chat"));
@@ -1784,6 +1800,7 @@ const chatPanelTemplate = () => {
       .conversationId="${selectedConversation}"
       .darkModeOverride="${currentDark}"
       .onClose="${closeConversation}"
+      .onChatWith="${handleChatWith}"
       .enableVoiceCall="${true}"
     ></alice-connected-chat>
   `;
