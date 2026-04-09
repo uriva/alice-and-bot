@@ -208,6 +208,27 @@ test.describe("AbstractChatBox (example app)", () => {
     await expect(svg).toBeVisible();
   });
 
+  test("voice call button visible when enableVoiceCall is true", async ({ page }) => {
+    await page.evaluate(() => {
+      const chatBox = document.querySelector("chat-box") as
+        & HTMLElement
+        & Record<string, unknown>;
+      chatBox.enableVoiceCall = true;
+      const colors = chatBox.customColors as
+        | Record<string, unknown>
+        | undefined;
+      if (colors) colors.hideTitle = false;
+      chatBox.customColors = { ...colors };
+    });
+    await expect(page.locator(tid("voice-call-button"))).toBeVisible({
+      timeout: 5_000,
+    });
+  });
+
+  test("voice call button hidden when enableVoiceCall is false", async ({ page }) => {
+    await expect(page.locator(tid("voice-call-button"))).not.toBeVisible();
+  });
+
   test("sent message appears at bottom of list", async ({ page }) => {
     const input = page.locator(tid("message-input"));
     await input.fill("bottom-check");

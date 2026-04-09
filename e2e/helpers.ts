@@ -23,6 +23,7 @@ type WidgetTestParams = {
   startOpen?: boolean;
   buttonText?: string;
   defaultName?: string;
+  enableVoiceCall?: boolean;
 };
 
 export const tid = (id: string) => `[data-testid="${id}"]`;

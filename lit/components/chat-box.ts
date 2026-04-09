@@ -951,6 +951,7 @@ export class ChatBox extends LitElement {
                   ? html`
                     <button
                       type="button"
+                      data-testid="voice-call-button"
                       @click="${this.onStartCall}"
                       title="Start voice call"
                       style="${headerButtonStyle}"

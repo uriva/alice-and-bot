@@ -426,9 +426,9 @@ export const createWidget = (
         ) as HTMLElement & Record<string, unknown>;
         chat.credentials = credentials;
         chat.conversationId = conversationId;
-        chat.onClose = () => setChatOpen(false);
         chat.darkModeOverride = app.mode === "dark";
         chat.isDark = app.mode === "dark";
+        chat.enableVoiceCall = params.enableVoiceCall ?? false;
         chat.customColors = {
           background: app.colors.background,
           text: app.colors.text,

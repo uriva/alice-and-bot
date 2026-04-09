@@ -326,6 +326,7 @@ export class ConnectedChat extends LitElement {
     customColors: { attribute: false },
     enableAttachments: { type: Boolean },
     enableAudioRecording: { type: Boolean },
+    enableVoiceCall: { type: Boolean },
     isDark: { type: Boolean },
   };
 
@@ -336,6 +337,7 @@ export class ConnectedChat extends LitElement {
   customColors?: CustomColors;
   enableAttachments = true;
   enableAudioRecording = true;
+  enableVoiceCall = false;
   isDark = false;
 
   private _conversationKey: string | null = null;
@@ -668,6 +670,7 @@ export class ConnectedChat extends LitElement {
         .onDecryptAttachment="${this._handleDecryptAttachment}"
         .enableAttachments="${this.enableAttachments}"
         .enableAudioRecording="${this.enableAudioRecording}"
+        .enableVoiceCall="${this.enableVoiceCall}"
         .onEdit="${this._handleEdit}"
         .onSendLocation="${this._handleSendLocation}"
         .onInputActivity="${this._handleInputActivity}"
