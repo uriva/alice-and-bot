@@ -1448,6 +1448,7 @@ export class ChatBox extends LitElement {
               this.onReact!(entry.msg.id, emoji, remove)
             : undefined}"
           .userId="${this.userId}"
+          .isMobile="${this._isMobile}"
           .onAvatarClick="${this.onAvatarClick}"
           .customColors="${customColors}"
           .isDark="${isDark}"

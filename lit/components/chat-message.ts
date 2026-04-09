@@ -9,7 +9,7 @@ import {
 } from "./design.ts";
 import "./chat-attachment.ts";
 import "./chat-avatar.ts";
-import { faEllipsisV, faHistory, faPen, faPhoneAlt } from "./icons.ts";
+import { faEllipsisV, faHistory, faPen, faPhoneAlt, faSmile } from "./icons.ts";
 import { fencedCodeHoverCss, renderMarkdown } from "./markdown.ts";
 import type {
   AbstracChatMessage,
@@ -84,19 +84,26 @@ const saveButtonStyle = (isDark: boolean) =>
 const cancelButtonStyle =
   "padding:4px 8px;border-radius:6px;border:none;background:transparent;cursor:pointer;font-size:12px;opacity:0.7";
 
-const quickEmojis = ["👍", "❤️", "😂", "😮", "😢"];
+const quickEmojis = ["👍", "❤️", "😂", "😮", "🙏"];
 
-const reactionHoverCss =
-  `.msg-wrap .msg-react-bar{opacity:0;transition:opacity .15s;pointer-events:none}.msg-wrap:hover .msg-react-bar{opacity:1;pointer-events:auto}`;
+const smileyTriggerCss =
+  `.msg-wrap .msg-smiley-trigger{opacity:0;transition:opacity .15s;pointer-events:none}.msg-wrap:hover .msg-smiley-trigger{opacity:1;pointer-events:auto}`;
 
-const reactionBarStyle = (isDark: boolean, isOwn: boolean) =>
-  `position:absolute;${isOwn ? "left" : "right"}:100%;${
-    isOwn ? "margin-right" : "margin-left"
-  }:4px;top:0;display:flex;gap:2px;background:${
+const smileyTriggerStyle = (isDark: boolean) =>
+  `position:absolute;top:-4px;right:-4px;background:${
     isDark ? "#1a1a1a" : "#fff"
-  };border-radius:16px;padding:2px 4px;box-shadow:${
-    isDark ? "0 2px 8px #0006" : "0 2px 8px #0002"
-  }`;
+  };border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:${
+    isDark ? "0 1px 4px #0006" : "0 1px 4px #0002"
+  };color:${isDark ? "#aaa" : "#666"};font-size:14px;padding:0`;
+
+const quickEmojiRowStyle = (isDark: boolean, isOwn: boolean) =>
+  `position:absolute;top:-36px;${
+    isOwn ? "right" : "left"
+  }:0;display:flex;gap:2px;background:${
+    isDark ? "#1a1a1a" : "#fff"
+  };border-radius:20px;padding:4px 6px;box-shadow:${
+    isDark ? "0 2px 12px #0008" : "0 2px 12px #0003"
+  };z-index:100`;
 
 const reactionBtnStyle =
   "background:transparent;border:none;cursor:pointer;font-size:16px;padding:2px 3px;line-height:1;border-radius:4px";
@@ -302,12 +309,14 @@ export class ChatMessage extends LitElement {
     onAvatarClick: { attribute: false },
     customColors: { attribute: false },
     isDark: { type: Boolean },
+    isMobile: { type: Boolean },
     _isEditing: { state: true },
     _editText: { state: true },
     _showHistory: { state: true },
     _menuOpen: { state: true },
     _timeAgo: { state: true },
     _showEmojiPicker: { state: true },
+    _showQuickEmojis: { state: true },
   };
 
   declare msg: AbstracChatMessage;
@@ -321,6 +330,7 @@ export class ChatMessage extends LitElement {
   declare onAvatarClick: ((authorId: string) => void) | undefined;
   declare customColors: CustomColors | undefined;
   declare isDark: boolean;
+  declare isMobile: boolean;
 
   declare private _isEditing: boolean;
   declare private _editText: string;
@@ -328,16 +338,19 @@ export class ChatMessage extends LitElement {
   declare private _menuOpen: boolean;
   declare private _timeAgo: string;
   declare private _showEmojiPicker: boolean;
+  declare private _showQuickEmojis: boolean;
   private _timeInterval = 0;
   private _btnEl: HTMLButtonElement | null = null;
   private _menuEl: HTMLDivElement | null = null;
   private _outsideClickHandler: ((e: MouseEvent) => void) | null = null;
+  private _longPressTimer = 0;
 
   constructor() {
     super();
     this.isOwn = false;
     this.sessionStart = 0;
     this.isDark = false;
+    this.isMobile = false;
     this.userId = "";
     this._isEditing = false;
     this._editText = "";
@@ -345,6 +358,7 @@ export class ChatMessage extends LitElement {
     this._menuOpen = false;
     this._timeAgo = "";
     this._showEmojiPicker = false;
+    this._showQuickEmojis = false;
   }
 
   override createRenderRoot() {
@@ -364,6 +378,8 @@ export class ChatMessage extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     clearInterval(this._timeInterval);
+    clearTimeout(this._longPressTimer);
+    document.removeEventListener("mousedown", this._dismissQuickEmojis);
     this._removeOutsideClick();
     this.removeEventListener("click", this._handleCopyCode);
   }
@@ -443,6 +459,26 @@ export class ChatMessage extends LitElement {
       (r) => r.emoji === emoji && r.authorId === this.userId,
     );
     this.onReact(emoji, hasOwn || undefined);
+    this._showQuickEmojis = false;
+  };
+
+  private _longPressStart = () => {
+    if (!this.onReact || !this.isMobile) return;
+    this._longPressTimer = globalThis.setTimeout(() => {
+      this._showQuickEmojis = true;
+    }, 500);
+  };
+
+  private _longPressEnd = () => {
+    clearTimeout(this._longPressTimer);
+  };
+
+  private _dismissQuickEmojis = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest?.(".msg-quick-emojis")) {
+      this._showQuickEmojis = false;
+      document.removeEventListener("mousedown", this._dismissQuickEmojis);
+    }
   };
 
   override render() {
@@ -481,7 +517,7 @@ export class ChatMessage extends LitElement {
 
     return html`
       <style>
-      ${kebabHoverCss}${fencedCodeHoverCss}${reactionHoverCss}
+      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}
       </style>
       <div
         data-testid="message"
@@ -501,7 +537,14 @@ export class ChatMessage extends LitElement {
             ></chat-avatar>
           `
           : nothing}
-        <div class="msg-wrap" style="position:relative;max-width:80%">
+        <div
+          class="msg-wrap"
+          style="position:relative;max-width:80%"
+          @touchstart="${this._longPressStart}"
+          @touchend="${this._longPressEnd}"
+          @touchmove="${this._longPressEnd}"
+          @touchcancel="${this._longPressEnd}"
+        >
           <div
             class="msg-bubble"
             style="background:${noBubble
@@ -666,9 +709,31 @@ export class ChatMessage extends LitElement {
               >${this._timeAgo}</span>
             </div>
           </div>
-          ${this.onReact
+          ${this.onReact && !this.isMobile
             ? html`
-              <div class="msg-react-bar" style="${reactionBarStyle(
+              <button
+                type="button"
+                class="msg-smiley-trigger"
+                style="${smileyTriggerStyle(isDark)}"
+                @click="${() => {
+                  this._showQuickEmojis = !this._showQuickEmojis;
+                  if (this._showQuickEmojis) {
+                    requestAnimationFrame(() =>
+                      document.addEventListener(
+                        "mousedown",
+                        this._dismissQuickEmojis,
+                      )
+                    );
+                  }
+                }}"
+                title="React"
+              >
+                ${faSmile}
+              </button>
+            `
+            : nothing} ${this._showQuickEmojis && this.onReact
+            ? html`
+              <div class="msg-quick-emojis" style="${quickEmojiRowStyle(
                 isDark,
                 isOwn,
               )}">
@@ -687,6 +752,7 @@ export class ChatMessage extends LitElement {
                 <button
                   type="button"
                   @click="${() => {
+                    this._showQuickEmojis = false;
                     this._showEmojiPicker = true;
                   }}"
                   style="${reactionBtnStyle};font-size:14px"
