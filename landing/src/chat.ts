@@ -1784,6 +1784,7 @@ const chatPanelTemplate = () => {
       .conversationId="${selectedConversation}"
       .darkModeOverride="${currentDark}"
       .onClose="${closeConversation}"
+      .enableVoiceCall="${true}"
     ></alice-connected-chat>
   `;
 };

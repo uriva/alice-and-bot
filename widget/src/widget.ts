@@ -134,7 +134,6 @@ const resolveAppearance = (
 const widgetBaseCss = (colorScheme: "light" | "dark" | "light dark") => `
 :host, *, *::before, *::after { font-family: ${fontStack}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 :host { color-scheme: ${colorScheme}; }
-alice-connected-chat, chat-box { display:flex; flex-direction:column; flex-grow:1; min-height:0; }
 `;
 
 const startButtonCss = (colors: WidgetModeColors) =>
