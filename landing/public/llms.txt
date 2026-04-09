@@ -457,7 +457,7 @@ import {
   type Credentials,
   getConversations,
 } from "@alice-and-bot/core";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useState } from "react";
 
 // resolve the bot's public key from its alias (once, at module level)
 const botKeyPromise = aliasToPublicSignKey("your_bot_alias");
