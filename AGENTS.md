@@ -45,8 +45,8 @@ Backend deploys automatically from GitHub on Deno Deploy. Do not run manual
 deploy commands unless the user explicitly asks for a manual deploy.
 
 Frontend (landing page, chat UI, docs) is a static site that deploys separately.
-It uses Preact + preact-iso for SSR/prerendering and is built with Vite. The
-frontend deploys to a static hosting service (not Deno Deploy).
+It uses Lit web components with a vanilla History API router and is built with
+Vite. The frontend deploys to a static hosting service (not Deno Deploy).
 
 When adding logic, function bodies typically should not enlarge. New logic can
 be encapsulated in a new function. Or, one can refactor such that the old

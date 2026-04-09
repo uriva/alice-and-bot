@@ -1,29 +1,15 @@
-import type { InstantAdminDatabase } from "@instantdb/admin";
-import { init as adminInit } from "@instantdb/admin";
-import type { InstantReactWebDatabase } from "@instantdb/react";
-import { init } from "@instantdb/react";
-import type { JSX } from "preact";
 import {
   getConversationInfo as backendGetConversationInfo,
   getConversations as backendGetConversations,
   getProfile as backendGetProfile,
 } from "./backend/src/api.ts";
 import {
-  type Conversation,
-  useConversations as useConversationsNoDb,
-  useGetOrCreateConversation as useGetOrCreateConversationNoDb,
-  useIdentityProfile as useIdentityProfileNoDb,
-} from "./clients/react/src/hooks.ts";
-import { AbstractChatBox } from "./clients/react/src/abstractChatBox.tsx";
-import { Chat as ChatNoDb, type ChatProps } from "./clients/react/src/main.tsx";
-import schema from "./instant.schema.ts";
-import {
   createConversation as createConversationNoDb,
   type Credentials,
-  instantAppId,
   publicSignKeyToAlias as publicSignKeyToAliasNoDb,
 } from "./protocol/src/clientApi.ts";
-import type { WidgetParams } from "./widget/src/widget.tsx";
+import { accessAdminDb } from "./lit/core/instant-client.ts";
+import type { WidgetParams } from "./widget/src/widget.ts";
 export {
   aliasToPublicSignKey,
   getUploadUrl,
@@ -53,49 +39,43 @@ export {
   type VideoAttachment,
   type WebhookUpdate,
 } from "./protocol/src/clientApi.ts";
-export { Widget } from "./widget/src/widget.tsx";
-export { setDarkModeOverride } from "./clients/react/src/hooks.ts";
+export { createWidget } from "./widget/src/widget.ts";
+export { setDarkModeOverride } from "./lit/core/dark-mode.ts";
+export { ConnectedChat } from "./lit/components/connected-chat.ts";
+export { ChatBox } from "./lit/components/chat-box.ts";
+export { AbstractChatBox, Chat } from "./lit/react-components.ts";
+export {
+  type Conversation,
+  getOrCreateConversation,
+  subscribeConversations,
+  subscribeIdentityProfile,
+} from "./lit/core/subscriptions.ts";
+export {
+  loadCredentials,
+  loadOrCreateCredentials,
+  saveCredentials,
+} from "./lit/core/credentials.ts";
+export {
+  compactPublicKey,
+  useConversationKey,
+  useConversations,
+  useCredentials,
+  useDarkMode,
+  useDecryptedMessages,
+  useEphemeralStreams,
+  useGetOrCreateConversation,
+  useIdentityDetailsMap,
+  useIdentityProfile,
+  useIsMobile,
+  useTypingPresence,
+  useUserName,
+} from "./lit/react-hooks.ts";
+export type { DarkModeOverride } from "./lit/core/dark-mode.ts";
+export type { EphemeralStreamEvent } from "./lit/core/room.ts";
 
 export const publicSignKeyToAlias = (publicSignKey: string): Promise<
   { alias: string } | { error: "no-such-identity" | "no-alias" }
 > => publicSignKeyToAliasNoDb(publicSignKey);
-
-let db: InstantReactWebDatabase<typeof schema> | null = null;
-
-const accessDb = (): InstantReactWebDatabase<typeof schema> => {
-  if (!db) {
-    db = init({ appId: instantAppId, schema, devtool: false });
-  }
-  return db;
-};
-
-let adminDb: InstantAdminDatabase<typeof schema> | null = null;
-
-const accessAdminDb = (): InstantAdminDatabase<typeof schema> => {
-  if (!adminDb) {
-    adminDb = adminInit({ appId: instantAppId, schema }).asUser({
-      guest: true,
-    });
-  }
-  return adminDb;
-};
-
-export const useGetOrCreateConversation: (
-  params: {
-    credentials: Credentials;
-    participants: string[];
-    initialMessage?: string;
-  },
-) => string | null = useGetOrCreateConversationNoDb(accessAdminDb, accessDb);
-
-export const useConversations: (
-  publicSignKey: string,
-) => Conversation[] | null = useConversationsNoDb(accessDb);
-
-export const useIdentityProfile: (
-  publicSignKey: string,
-) => { name?: string; avatar?: string; alias?: string } | null =
-  useIdentityProfileNoDb(accessDb);
 
 export const getProfile = async (publicSignKey: string): Promise<
   {
@@ -107,10 +87,6 @@ export const getProfile = async (publicSignKey: string): Promise<
   const { profile } = await backendGetProfile(publicSignKey);
   return profile;
 };
-
-export const Chat: (
-  { credentials, conversationId, onClose }: ChatProps,
-) => JSX.Element = ChatNoDb(accessDb);
 
 export const createConversation: (
   publicSignKeys: string[],
@@ -144,7 +120,6 @@ export const getConversationInfo = (conversationId: string): Promise<
   }
   | { error: "not-found" }
 > => backendGetConversationInfo(conversationId);
-export { AbstractChatBox };
 
 export const embedScript = (params: WidgetParams): string => `
 <script type="application/json" id="alice-and-bot-params">

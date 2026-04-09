@@ -199,6 +199,15 @@ test.describe("AbstractChatBox (example app)", () => {
     }).toBe(countBefore);
   });
 
+  test("mic icon visible in send button when input is empty", async ({ page }) => {
+    const sendBtn = page.locator(tid("send-button"));
+    await expect(sendBtn).toBeVisible();
+    const micSpan = sendBtn.locator("span").first();
+    await expect(micSpan).toHaveCSS("opacity", "1");
+    const svg = micSpan.locator("svg");
+    await expect(svg).toBeVisible();
+  });
+
   test("sent message appears at bottom of list", async ({ page }) => {
     const input = page.locator(tid("message-input"));
     await input.fill("bottom-check");

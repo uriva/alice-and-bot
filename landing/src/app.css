@@ -7,7 +7,7 @@
   --toast-text: #363636;
 }
 .dark {
-  --toast-bg: #374151;
+  --toast-bg: #2a2a2a;
   --toast-text: #f3f4f6;
 }
 
@@ -182,7 +182,7 @@
     background: #6b7280;
   }
   .dark pre::-webkit-scrollbar-track {
-    background: #374151;
+    background: #2a2a2a;
   }
   .dark pre::-webkit-scrollbar-thumb {
     background: #6b7280;

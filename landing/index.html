@@ -47,21 +47,10 @@
     </style>
   </head>
   <body
-    class="bg-[#f8f7f4] dark:bg-[#0a0a0a]"
+    class="bg-white dark:bg-[#0a0a0a]"
     style="min-height: var(--app-height, 100dvh)"
   >
-    <script>
-      (function () {
-        var s = localStorage.getItem("theme");
-        if (
-          s === "dark" ||
-          (!s && matchMedia("(prefers-color-scheme:dark)").matches)
-        ) {
-          document.documentElement.classList.add("dark");
-        }
-      })();
-    </script>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

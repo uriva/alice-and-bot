@@ -12,7 +12,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "cd .. && deno task example",
+      command: "cd .. && deno task chatgpt-style",
       port: 3001,
       reuseExistingServer: true,
       timeout: 60_000,

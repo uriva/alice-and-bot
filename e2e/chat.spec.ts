@@ -188,6 +188,18 @@ test.describe("Chat (full encryption pipeline)", () => {
     await expect(page.locator(tid("send-button"))).toBeVisible();
   });
 
+  test("mic icon visible in send button when input empty", async ({ page }) => {
+    await setupChatMocks(page, data);
+    await page.goto("/");
+    await waitForChat(page);
+    const svg = page.locator(`${tid("send-button")} svg`).first();
+    await expect(svg).toBeVisible();
+    const box = await svg.boundingBox();
+    expect(box).toBeTruthy();
+    expect(box!.width).toBeGreaterThan(0);
+    expect(box!.height).toBeGreaterThan(0);
+  });
+
   test("title-bar shows for non-hideTitle config", async ({ page }) => {
     await setupChatMocks(page, data);
     await page.goto("/");

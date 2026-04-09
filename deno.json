@@ -1,12 +1,11 @@
 {
   "tasks": {
-    "build-landing": "mkdir -p landing/node_modules/vite-prerender-plugin && deno run -A --node-modules-dir=auto npm:vite build",
+    "build-landing": "deno run -A --node-modules-dir=auto npm:vite build",
     "landing": "deno run -A --node-modules-dir=auto npm:vite",
     "widget": "cd widget && deno run -A --node-modules-dir=auto npm:vite build --config vite.config.ts",
-    "dev": "cd clients/react; deno run -A --node-modules-dir=auto npm:vite",
-    "example": "cd example; deno run -A --node-modules-dir=auto npm:vite",
+    "chatgpt-style": "cd example; deno run -A --node-modules-dir=auto npm:vite",
     "build": "deno run -A --node-modules-dir=auto npm:vite build",
-    "check": "deno fmt --check && deno lint && deno check *.ts backend/**/*.ts clients/**/*.ts clients/**/*.tsx example/**/*.tsx landing/**/*.ts landing/**/*.tsx protocol/**/*.ts widget/**/*.ts widget/**/*.tsx",
+    "check": "deno fmt --check && deno lint && deno check *.ts backend/**/*.ts example/**/*.ts landing/**/*.ts lit/**/*.ts protocol/**/*.ts widget/**/*.ts",
     "test:e2e": "cd e2e && deno run -A --node-modules-dir=auto npm:playwright test"
   },
   "githooks": {
@@ -19,34 +18,23 @@
     "@google-cloud/storage": "npm:@google-cloud/storage@7.16.0",
     "@instantdb/admin": "npm:@instantdb/admin@0.22.174",
     "@instantdb/core": "npm:@instantdb/core@0.22.174",
-    "@instantdb/react": "npm:@instantdb/react@0.22.174",
-    "@preact/preset-vite": "npm:@preact/preset-vite@2.10.2",
-    "@radix-ui/react-slot": "npm:@radix-ui/react-slot@1.1.2",
-    "@preact/signals": "npm:@preact/signals@2.1.1",
     "@std/assert": "jsr:@std/assert@1",
     "@uri/gamla": "jsr:@uri/gamla@0.0.14",
     "buffer": "npm:buffer@6.0.3",
     "highlight.js": "npm:highlight.js@^11.11.1",
+    "@lit/react": "npm:@lit/react@1.0.8",
+    "lit": "npm:lit@3.3.2",
+    "marked": "npm:marked@15.0.7",
     "highlight.js/lib/core": "npm:highlight.js@^11.11.1/lib/core",
     "highlight.js/lib/languages/typescript": "npm:highlight.js@^11.11.1/lib/languages/typescript",
     "highlight.js/styles/github-dark.css": "npm:highlight.js@^11.11.1/styles/github-dark.css",
     "posthog-js": "npm:posthog-js@1.313.0",
-    "preact-iso": "npm:preact-iso@2.9.1",
-    "preact": "npm:preact@10.26.7",
     "qrcode": "npm:qrcode@1.5.4",
-    "preact/hooks": "npm:preact@10.26.7/hooks",
-    "preact/jsx-runtime": "npm:preact@10.26.7/jsx-runtime",
-    "react-hot-toast": "npm:react-hot-toast@2.5.2",
-    "react-icons/fa": "npm:react-icons@5.5.0/fa",
-    "react-markdown": "npm:react-markdown@10.1.0",
-    "rehype-highlight": "npm:rehype-highlight@^7.0.2",
-    "remark-breaks": "npm:remark-breaks@4.0.0",
-    "remark-gfm": "npm:remark-gfm@4.0.1",
+    "react": "npm:react@19.1.0",
     "safe-stable-stringify": "npm:safe-stable-stringify@2.5.0",
     "typed-api": "jsr:@uri/typed-api@0.0.10",
     "@tailwindcss/vite": "npm:@tailwindcss/vite@4.2.1",
     "tailwindcss": "npm:tailwindcss@4.2.1",
-    "vite-prerender-plugin": "npm:vite-prerender-plugin@0.5.12",
     "vite": "npm:vite@^7.0.2",
     "web-push": "npm:web-push@3.6.7",
     "zod": "npm:zod@3.25.57"
@@ -56,8 +44,6 @@
     "kv"
   ],
   "compilerOptions": {
-    "jsx": "react-jsx",
-    "jsxImportSource": "preact",
     "types": [
       "./landing/src/vite-env.d.ts"
     ]

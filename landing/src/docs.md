@@ -405,7 +405,7 @@ import {
   type Credentials,
   getConversations,
 } from "@alice-and-bot/core";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useState } from "react";
 ```
 
 #### 1. Create credentials

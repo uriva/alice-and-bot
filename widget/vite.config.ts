@@ -1,16 +1,15 @@
 import { defineConfig } from "vite";
-import preact from "@preact/preset-vite";
 import deno from "@deno/vite-plugin";
 
 export default defineConfig({
   root: "./",
   server: { port: 3000, allowedHosts: true },
-  plugins: [preact(), deno()],
+  plugins: [deno()],
   build: {
     sourcemap: true,
     outDir: "dist",
     lib: {
-      entry: "src/entry.tsx",
+      entry: "src/entry.ts",
       name: "aliceAndBot",
       fileName: "widget",
       formats: ["iife"],
