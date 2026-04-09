@@ -26,9 +26,16 @@ export class ChatLocationCard extends LitElement {
     label: {},
   };
 
-  latitude = 0;
-  longitude = 0;
-  label = "";
+  declare latitude: number;
+  declare longitude: number;
+  declare label: string;
+
+  constructor() {
+    super();
+    this.latitude = 0;
+    this.longitude = 0;
+    this.label = "";
+  }
 
   override createRenderRoot() {
     return this;

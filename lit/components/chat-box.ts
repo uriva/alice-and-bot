@@ -330,67 +330,102 @@ export class ChatBox extends LitElement {
     _textareaOverflow: { state: true },
   };
 
-  messages: AbstracChatMessage[] = [];
-  canLoadMore = false;
-  loadMore: () => void = () => {};
-  userId = "";
-  onSend: (input: string) => void = () => {};
-  onSendWithAttachments?: (
-    input: string,
-    files: File[],
-    audioDuration?: number,
-  ) => Promise<void>;
-  onClose?: () => void;
-  override title = "";
-  emptyMessage?: string;
-  typingUsers: string[] = [];
-  onInputActivity?: () => void;
-  isLoading = false;
-  darkModeOverride?: boolean;
-  customColors?: CustomColors;
-  onDecryptAttachment?: (
-    url: string,
-  ) => Promise<string>;
-  enableAttachments = false;
-  enableAudioRecording = false;
-  enableVoiceCall = false;
-  voiceCallState = "idle";
-  voiceCallDuration = 0;
-  voiceCallMuted = false;
-  remoteStream?: MediaStream | null;
-  onStartCall?: () => void;
-  onAcceptCall?: () => void;
-  onRejectCall?: () => void;
-  onEndCall?: () => void;
-  onToggleMute?: () => void;
-  onEdit?: (
-    messageId: string,
-    newText: string,
-  ) => void;
-  onSendLocation?: (
-    lat: number,
-    lng: number,
-    label?: string,
-  ) => void;
-  activeSpinners: ActiveSpinner[] = [];
-  activeProgress: ActiveProgress[] = [];
-  activeStreams: ActiveStream[] = [];
-  isGroupChat = false;
-  disableAutoFocus = false;
-  isDark = false;
+  declare messages: AbstracChatMessage[];
+  declare canLoadMore: boolean;
+  declare loadMore: () => void;
+  declare userId: string;
+  declare onSend: (input: string) => void;
+  declare onSendWithAttachments:
+    | ((
+      input: string,
+      files: File[],
+      audioDuration?: number,
+    ) => Promise<void>)
+    | undefined;
+  declare onClose: (() => void) | undefined;
+  declare title: string;
+  declare emptyMessage: string | undefined;
+  declare typingUsers: string[];
+  declare onInputActivity: (() => void) | undefined;
+  declare isLoading: boolean;
+  declare darkModeOverride: boolean | undefined;
+  declare customColors: CustomColors | undefined;
+  declare onDecryptAttachment:
+    | ((url: string) => Promise<string>)
+    | undefined;
+  declare enableAttachments: boolean;
+  declare enableAudioRecording: boolean;
+  declare enableVoiceCall: boolean;
+  declare voiceCallState: string;
+  declare voiceCallDuration: number;
+  declare voiceCallMuted: boolean;
+  declare remoteStream: MediaStream | null | undefined;
+  declare onStartCall: (() => void) | undefined;
+  declare onAcceptCall: (() => void) | undefined;
+  declare onRejectCall: (() => void) | undefined;
+  declare onEndCall: (() => void) | undefined;
+  declare onToggleMute: (() => void) | undefined;
+  declare onEdit:
+    | ((messageId: string, newText: string) => void)
+    | undefined;
+  declare onSendLocation:
+    | ((lat: number, lng: number, label?: string) => void)
+    | undefined;
+  declare activeSpinners: ActiveSpinner[];
+  declare activeProgress: ActiveProgress[];
+  declare activeStreams: ActiveStream[];
+  declare isGroupChat: boolean;
+  declare disableAutoFocus: boolean;
+  declare isDark: boolean;
 
-  private _input = "";
-  private _pendingFiles: File[] = [];
-  private _showAttachMenu = false;
-  private _isRecording = false;
-  private _recordingDuration = 0;
-  private _isRecordingLocked = false;
-  private _swipeOffset = { x: 0, y: 0 };
-  private _optimisticMessages: AbstracChatMessage[] = [];
-  private _isSending = false;
-  private _fetchingMore = false;
-  private _textareaHeight = 44;
-  private _textareaOverflow = "hidden";
+  declare private _input: string;
+  declare private _pendingFiles: File[];
+  declare private _showAttachMenu: boolean;
+  declare private _isRecording: boolean;
+  declare private _recordingDuration: number;
+  declare private _isRecordingLocked: boolean;
+  declare private _swipeOffset: { x: number; y: number };
+  declare private _optimisticMessages: AbstracChatMessage[];
+  declare private _isSending: boolean;
+  declare private _fetchingMore: boolean;
+  declare private _textareaHeight: number;
+  declare private _textareaOverflow: string;
+
+  constructor() {
+    super();
+    this.messages = [];
+    this.canLoadMore = false;
+    this.loadMore = () => {};
+    this.userId = "";
+    this.onSend = () => {};
+    this.title = "";
+    this.typingUsers = [];
+    this.isLoading = false;
+    this.enableAttachments = false;
+    this.enableAudioRecording = false;
+    this.enableVoiceCall = false;
+    this.voiceCallState = "idle";
+    this.voiceCallDuration = 0;
+    this.voiceCallMuted = false;
+    this.activeSpinners = [];
+    this.activeProgress = [];
+    this.activeStreams = [];
+    this.isGroupChat = false;
+    this.disableAutoFocus = false;
+    this.isDark = false;
+    this._input = "";
+    this._pendingFiles = [];
+    this._showAttachMenu = false;
+    this._isRecording = false;
+    this._recordingDuration = 0;
+    this._isRecordingLocked = false;
+    this._swipeOffset = { x: 0, y: 0 };
+    this._optimisticMessages = [];
+    this._isSending = false;
+    this._fetchingMore = false;
+    this._textareaHeight = 44;
+    this._textareaOverflow = "hidden";
+  }
 
   private _messagesContainerEl: HTMLDivElement | null = null;
   private _contentEl: HTMLDivElement | null = null;

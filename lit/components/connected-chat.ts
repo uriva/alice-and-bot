@@ -331,16 +331,26 @@ export class ConnectedChat extends LitElement {
     emptyMessage: { attribute: false },
   };
 
-  credentials: Credentials | null = null;
-  conversationId = "";
-  onClose?: () => void;
-  darkModeOverride?: boolean;
-  customColors?: CustomColors;
-  enableAttachments = true;
-  enableAudioRecording = true;
-  enableVoiceCall = false;
-  isDark = false;
-  emptyMessage?: string;
+  declare credentials: Credentials | null;
+  declare conversationId: string;
+  declare onClose: (() => void) | undefined;
+  declare darkModeOverride: boolean | undefined;
+  declare customColors: CustomColors | undefined;
+  declare enableAttachments: boolean;
+  declare enableAudioRecording: boolean;
+  declare enableVoiceCall: boolean;
+  declare isDark: boolean;
+  declare emptyMessage: string | undefined;
+
+  constructor() {
+    super();
+    this.credentials = null;
+    this.conversationId = "";
+    this.enableAttachments = true;
+    this.enableAudioRecording = true;
+    this.enableVoiceCall = false;
+    this.isDark = false;
+  }
 
   private _conversationKey: string | null = null;
   private _messages: DecipheredMessage[] | null = null;

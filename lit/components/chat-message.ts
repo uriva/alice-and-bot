@@ -158,23 +158,35 @@ export class ChatMessage extends LitElement {
   };
 
   msg!: AbstracChatMessage;
-  prev?: AbstracChatMessage;
-  isOwn = false;
-  onDecryptAttachment?: (url: string) => Promise<string>;
-  sessionStart = 0;
-  onEdit?: (newText: string) => void;
-  customColors?: CustomColors;
-  isDark = false;
+  declare prev: AbstracChatMessage | undefined;
+  declare isOwn: boolean;
+  declare onDecryptAttachment: ((url: string) => Promise<string>) | undefined;
+  declare sessionStart: number;
+  declare onEdit: ((newText: string) => void) | undefined;
+  declare customColors: CustomColors | undefined;
+  declare isDark: boolean;
 
-  private _isEditing = false;
-  private _editText = "";
-  private _showHistory = false;
-  private _menuOpen = false;
-  private _timeAgo = "";
+  declare private _isEditing: boolean;
+  declare private _editText: string;
+  declare private _showHistory: boolean;
+  declare private _menuOpen: boolean;
+  declare private _timeAgo: string;
   private _timeInterval = 0;
   private _btnEl: HTMLButtonElement | null = null;
   private _menuEl: HTMLDivElement | null = null;
   private _outsideClickHandler: ((e: MouseEvent) => void) | null = null;
+
+  constructor() {
+    super();
+    this.isOwn = false;
+    this.sessionStart = 0;
+    this.isDark = false;
+    this._isEditing = false;
+    this._editText = "";
+    this._showHistory = false;
+    this._menuOpen = false;
+    this._timeAgo = "";
+  }
 
   override createRenderRoot() {
     return this;

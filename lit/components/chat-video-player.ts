@@ -24,9 +24,16 @@ export class ChatVideoPlayer extends LitElement {
     _state: { state: true },
   };
 
-  src = "";
-  isDark = false;
-  private _state: "loading" | "ready" | "error" = "loading";
+  declare src: string;
+  declare isDark: boolean;
+  declare private _state: "loading" | "ready" | "error";
+
+  constructor() {
+    super();
+    this.src = "";
+    this.isDark = false;
+    this._state = "loading";
+  }
 
   override createRenderRoot() {
     return this;

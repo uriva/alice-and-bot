@@ -17,10 +17,18 @@ export class ChatAvatar extends LitElement {
     isDark: { type: Boolean },
   };
 
-  image = "";
-  name = "";
-  baseColor = "";
-  isDark = false;
+  declare image: string;
+  declare name: string;
+  declare baseColor: string;
+  declare isDark: boolean;
+
+  constructor() {
+    super();
+    this.image = "";
+    this.name = "";
+    this.baseColor = "";
+    this.isDark = false;
+  }
 
   override createRenderRoot() {
     return this;

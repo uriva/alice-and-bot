@@ -34,13 +34,24 @@ export class ChatAudioPlayer extends LitElement {
     _duration: { state: true },
   };
 
-  src = "";
-  isDark = false;
-  fallbackDuration = 0;
-  primaryColor = "#6366f1";
-  private _playing = false;
-  private _currentTime = 0;
-  private _duration = 0;
+  declare src: string;
+  declare isDark: boolean;
+  declare fallbackDuration: number;
+  declare primaryColor: string;
+  declare private _playing: boolean;
+  declare private _currentTime: number;
+  declare private _duration: number;
+
+  constructor() {
+    super();
+    this.src = "";
+    this.isDark = false;
+    this.fallbackDuration = 0;
+    this.primaryColor = "#6366f1";
+    this._playing = false;
+    this._currentTime = 0;
+    this._duration = 0;
+  }
 
   override createRenderRoot() {
     return this;

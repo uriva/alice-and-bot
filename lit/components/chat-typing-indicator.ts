@@ -19,10 +19,17 @@ export class ChatTypingIndicator extends LitElement {
     _dots: { state: true },
   };
 
-  names: string[] = [];
-  isDark = false;
-  private _dots = 0;
+  declare names: string[];
+  declare isDark: boolean;
+  declare private _dots: number;
   private _interval = 0;
+
+  constructor() {
+    super();
+    this.names = [];
+    this.isDark = false;
+    this._dots = 0;
+  }
 
   override createRenderRoot() {
     return this;

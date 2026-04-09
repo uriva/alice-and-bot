@@ -69,15 +69,27 @@ export class ChatAttachment extends LitElement {
   };
 
   attachment!: Attachment;
-  isDark = false;
-  textColor = "";
-  primaryColor = "#6366f1";
-  isOwn = false;
-  messageTimestamp = 0;
-  sessionStart = 0;
-  onDecrypt?: (url: string) => Promise<string>;
-  private _decryptedUrl: string | null = null;
-  private _loading = false;
+  declare isDark: boolean;
+  declare textColor: string;
+  declare primaryColor: string;
+  declare isOwn: boolean;
+  declare messageTimestamp: number;
+  declare sessionStart: number;
+  declare onDecrypt: ((url: string) => Promise<string>) | undefined;
+  declare private _decryptedUrl: string | null;
+  declare private _loading: boolean;
+
+  constructor() {
+    super();
+    this.isDark = false;
+    this.textColor = "";
+    this.primaryColor = "#6366f1";
+    this.isOwn = false;
+    this.messageTimestamp = 0;
+    this.sessionStart = 0;
+    this._decryptedUrl = null;
+    this._loading = false;
+  }
 
   override createRenderRoot() {
     return this;
