@@ -181,7 +181,7 @@ const headerButtonStyle =
   "background:transparent;border:none;cursor:pointer;color:inherit;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;padding:0";
 
 const messageContainerStyle = (isDark: boolean, custom?: CustomColors) =>
-  `flex-grow:1;overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-color:${
+  `flex-grow:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-color:${
     custom?.scrollbarColor ?? (isDark ? "#2a2a2a #111" : "#cbd5e1 #e2e8f0")
   };scrollbar-width:thin`;
 
