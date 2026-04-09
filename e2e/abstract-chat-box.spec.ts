@@ -238,4 +238,19 @@ test.describe("AbstractChatBox (example app)", () => {
     const lastMsg = msgs.last();
     await expect(lastMsg).toContainText("bottom-check");
   });
+
+  test("chat-message re-renders when msg property is updated", async ({ page }) => {
+    const original = "Hey, can you help me with a sorting algorithm?";
+    await expect(page.getByText(original)).toBeVisible();
+
+    const updated = "reactivity-check-updated-text";
+    await page.evaluate((text) => {
+      const el = document.querySelector("chat-message") as
+        & HTMLElement
+        & Record<string, unknown>;
+      el.msg = { ...(el.msg as Record<string, unknown>), text };
+    }, updated);
+
+    await expect(page.getByText(updated)).toBeVisible({ timeout: 3_000 });
+  });
 });

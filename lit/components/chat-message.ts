@@ -157,7 +157,7 @@ export class ChatMessage extends LitElement {
     _timeAgo: { state: true },
   };
 
-  declare msg: AbstracChatMessage;
+  msg!: AbstracChatMessage;
   declare prev: AbstracChatMessage | undefined;
   declare isOwn: boolean;
   declare onDecryptAttachment: ((url: string) => Promise<string>) | undefined;

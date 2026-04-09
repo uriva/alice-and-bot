@@ -379,6 +379,10 @@ export class ConnectedChat extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
+    this.style.display = "flex";
+    this.style.flexDirection = "column";
+    this.style.flexGrow = "1";
+    this.style.minHeight = "0";
     this._setupSubscriptions();
   }
 
