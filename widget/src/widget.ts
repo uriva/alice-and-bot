@@ -542,7 +542,14 @@ export const createWidget = (
     if (!vv) return () => {};
     const update = () => {
       viewportHeight = vv.height;
-      if (isMobile && isOpen) updateShadowContent();
+      if (isMobile && isOpen) {
+        containerEl.style.cssText = containerCss({
+          isMobile,
+          isDark: appearance().mode === "dark",
+          isOpen,
+          viewportHeight,
+        }) + ";pointer-events:auto";
+      }
     };
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
