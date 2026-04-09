@@ -309,6 +309,7 @@ export class ChatBox extends LitElement {
     onEndCall: { attribute: false },
     onToggleMute: { attribute: false },
     onEdit: { attribute: false },
+    onReact: { attribute: false },
     onAvatarClick: { attribute: false },
     onSendLocation: { attribute: false },
     activeSpinners: { type: Array },
@@ -368,6 +369,9 @@ export class ChatBox extends LitElement {
   declare onToggleMute: (() => void) | undefined;
   declare onEdit:
     | ((messageId: string, newText: string) => void)
+    | undefined;
+  declare onReact:
+    | ((messageId: string, emoji: string, remove?: boolean) => void)
     | undefined;
   declare onAvatarClick: ((authorId: string) => void) | undefined;
   declare onSendLocation:
@@ -1439,6 +1443,11 @@ export class ChatBox extends LitElement {
           .onEdit="${this.onEdit
             ? (newText: string) => this.onEdit!(entry.msg.id, newText)
             : undefined}"
+          .onReact="${this.onReact
+            ? (emoji: string, remove?: boolean) =>
+              this.onReact!(entry.msg.id, emoji, remove)
+            : undefined}"
+          .userId="${this.userId}"
           .onAvatarClick="${this.onAvatarClick}"
           .customColors="${customColors}"
           .isDark="${isDark}"

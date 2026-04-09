@@ -32,6 +32,7 @@ import type {
   ActiveStream,
   CustomColors,
   EditHistoryEntry,
+  Reaction,
 } from "./types.ts";
 
 type TextOrEditMessage = DecipheredMessage & { type: "text" | "edit" };
@@ -88,6 +89,37 @@ const foldEdits = (messages: DecipheredMessage[]) => {
         : undefined,
     };
   });
+};
+
+type ReactionMsg = DecipheredMessage & {
+  type: "reaction";
+  reactTo: string;
+  emoji: string;
+  remove?: boolean;
+};
+
+const isReaction = (m: DecipheredMessage): m is ReactionMsg =>
+  m.type === "reaction";
+
+const aggregateReactions = (
+  reactions: ReactionMsg[],
+  details: Record<string, { name: string; avatar?: string }>,
+) =>
+(msgId: string): Reaction[] => {
+  const active = new Map<string, ReactionMsg>();
+  sortKey((r: ReactionMsg) => r.timestamp)(
+    reactions.filter((r) => r.reactTo === msgId),
+  ).forEach((r) => {
+    const key = `${r.publicSignKey}:${r.emoji}`;
+    if (r.remove) active.delete(key);
+    else active.set(key, r);
+  });
+  return Array.from(active.values()).map((r) => ({
+    emoji: r.emoji,
+    authorId: r.publicSignKey,
+    authorName: details[r.publicSignKey]?.name ??
+      compactPublicKey(r.publicSignKey),
+  }));
 };
 
 const msgToUIMessage =
@@ -557,10 +589,15 @@ export class ConnectedChat extends LitElement {
     const details = this._identityDetails;
     const overrides = uiOverridesMap(this._uiElements);
     const knownIds = messageElementIds(messages);
+    const reactions = messages.filter(isReaction);
+    const addReactions = aggregateReactions(reactions, details);
     return {
       chatMessages: foldEdits(messages.filter(isTextOrEdit)).map(
         msgToUIMessageWithHistory(details),
-      ),
+      ).map((m) => {
+        const r = addReactions(m.id);
+        return r.length ? { ...m, reactions: r } : m;
+      }),
       activeSpinners: [
         ...latestSpinners(messages, details, overrides),
         ...standaloneSpinnerEntries(this._uiElements, knownIds),
@@ -637,6 +674,20 @@ export class ConnectedChat extends LitElement {
     });
   };
 
+  private _handleReact = (
+    messageId: string,
+    emoji: string,
+    remove?: boolean,
+  ) => {
+    if (!this._conversationKey || !this.credentials) return;
+    sendMessageWithKey({
+      conversationKey: this._conversationKey,
+      credentials: this.credentials,
+      message: { type: "reaction", reactTo: messageId, emoji, remove },
+      conversation: this.conversationId,
+    }).catch((err) => console.error("Failed to send reaction", err));
+  };
+
   private _handleSendLocation = (
     latitude: number,
     longitude: number,
@@ -701,6 +752,7 @@ export class ConnectedChat extends LitElement {
         .enableAudioRecording="${this.enableAudioRecording}"
         .enableVoiceCall="${this.enableVoiceCall}"
         .onEdit="${this._handleEdit}"
+        .onReact="${this._handleReact}"
         .onSendLocation="${this._handleSendLocation}"
         .onInputActivity="${this._handleInputActivity}"
         .onAvatarClick="${this._handleAvatarClick}"

@@ -6,6 +6,12 @@ export type EditHistoryEntry = {
   attachments?: Attachment[];
 };
 
+export type Reaction = {
+  emoji: string;
+  authorId: string;
+  authorName: string;
+};
+
 export type AbstracChatMessage = {
   id: string;
   authorId: string;
@@ -16,6 +22,7 @@ export type AbstracChatMessage = {
   attachments?: Attachment[];
   editHistory?: EditHistoryEntry[];
   callDetails?: { action: string; duration?: number };
+  reactions?: Reaction[];
 };
 
 export type ActiveStream = {

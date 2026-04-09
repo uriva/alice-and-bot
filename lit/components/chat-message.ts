@@ -16,6 +16,7 @@ import type {
   CustomColors,
   DiffPart,
   EditHistoryEntry,
+  Reaction,
 } from "./types.ts";
 import {
   computeTimeAgo,
@@ -83,6 +84,75 @@ const saveButtonStyle = (isDark: boolean) =>
 const cancelButtonStyle =
   "padding:4px 8px;border-radius:6px;border:none;background:transparent;cursor:pointer;font-size:12px;opacity:0.7";
 
+const quickEmojis = ["👍", "❤️", "😂", "😮", "😢"];
+
+const reactionHoverCss =
+  `.msg-wrap .msg-react-bar{opacity:0;transition:opacity .15s;pointer-events:none}.msg-wrap:hover .msg-react-bar{opacity:1;pointer-events:auto}`;
+
+const reactionBarStyle = (isDark: boolean, isOwn: boolean) =>
+  `position:absolute;${isOwn ? "left" : "right"}:100%;${
+    isOwn ? "margin-right" : "margin-left"
+  }:4px;top:0;display:flex;gap:2px;background:${
+    isDark ? "#1a1a1a" : "#fff"
+  };border-radius:16px;padding:2px 4px;box-shadow:${
+    isDark ? "0 2px 8px #0006" : "0 2px 8px #0002"
+  }`;
+
+const reactionBtnStyle =
+  "background:transparent;border:none;cursor:pointer;font-size:16px;padding:2px 3px;line-height:1;border-radius:4px";
+
+const reactionPillStyle = (isDark: boolean, isActive: boolean) =>
+  `display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:10px;font-size:12px;cursor:pointer;border:1px solid ${
+    isActive ? (isDark ? "#555" : "#bbb") : (isDark ? "#333" : "#e5e7eb")
+  };background:${
+    isActive
+      ? (isDark ? "#2a2a2a" : "#e8e8ff")
+      : (isDark ? "#141414" : "#f9fafb")
+  };color:${isDark ? "#e5e7eb" : "#222"}`;
+
+const emojiGridStyle = (isDark: boolean) =>
+  `background:${
+    isDark ? "#1a1a1a" : "#fff"
+  };border-radius:12px;padding:12px;max-width:320px;max-height:300px;overflow:auto;border:1px solid ${
+    isDark ? "#2a2a2a" : "#e5e7eb"
+  };box-shadow:${isDark ? "0 4px 16px #0008" : "0 4px 16px #0003"}`;
+
+const emojiGridBtnStyle =
+  "background:transparent;border:none;cursor:pointer;font-size:20px;padding:4px;border-radius:4px;line-height:1";
+
+const fullEmojiList = [
+  "👍",
+  "👎",
+  "❤️",
+  "🔥",
+  "😂",
+  "😮",
+  "😢",
+  "😡",
+  "🎉",
+  "🤔",
+  "👏",
+  "🙏",
+  "💯",
+  "✅",
+  "❌",
+  "👀",
+  "🚀",
+  "💪",
+  "🤝",
+  "😍",
+  "🥳",
+  "😎",
+  "🤯",
+  "🫡",
+  "💀",
+  "🤷",
+  "😭",
+  "🙌",
+  "💜",
+  "🫶",
+];
+
 const diffPartStyle = (kind: DiffPart["kind"], isDark: boolean) =>
   kind === "add"
     ? `background:${isDark ? "#16532e" : "#d4edda"};color:${
@@ -140,6 +210,85 @@ const renderEditHistory = (
     </div>
   `;
 
+type GroupedReaction = { emoji: string; count: number; hasOwn: boolean };
+
+const groupReactions =
+  (userId: string) => (reactions: Reaction[]): GroupedReaction[] => {
+    const map = new Map<string, { count: number; hasOwn: boolean }>();
+    reactions.forEach((r) => {
+      const entry = map.get(r.emoji) ?? { count: 0, hasOwn: false };
+      entry.count++;
+      if (r.authorId === userId) entry.hasOwn = true;
+      map.set(r.emoji, entry);
+    });
+    return Array.from(map.entries()).map(([emoji, { count, hasOwn }]) => ({
+      emoji,
+      count,
+      hasOwn,
+    }));
+  };
+
+const renderReactionPills = (
+  groups: GroupedReaction[],
+  isDark: boolean,
+  onToggle: (emoji: string) => void,
+) =>
+  html`
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+      ${groups.map(
+        ({ emoji, count, hasOwn }) =>
+          html`
+            <button
+              type="button"
+              @click="${() => onToggle(emoji)}"
+              style="${reactionPillStyle(isDark, hasOwn)}"
+              title="${hasOwn ? "Remove reaction" : "React"}"
+            >
+              <span>${emoji}</span>
+              <span style="font-size:11px">${count}</span>
+            </button>
+          `,
+      )}
+    </div>
+  `;
+
+const renderEmojiGrid = (
+  isDark: boolean,
+  onPick: (emoji: string) => void,
+  onClose: () => void,
+) =>
+  html`
+    <div style="${overlayStyle}" @click="${onClose}">
+      <div style="${emojiGridStyle(isDark)}" @click="${(e: Event) =>
+        e.stopPropagation()}">
+        <div
+          style="font-weight:bold;margin-bottom:8px;font-size:14px;color:${isDark
+            ? "#e5e7eb"
+            : "#222"}"
+        >
+          Pick a reaction
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px">
+          ${fullEmojiList.map(
+            (emoji) =>
+              html`
+                <button
+                  type="button"
+                  @click="${() => {
+                    onPick(emoji);
+                    onClose();
+                  }}"
+                  style="${emojiGridBtnStyle}"
+                >
+                  ${emoji}
+                </button>
+              `,
+          )}
+        </div>
+      </div>
+    </div>
+  `;
+
 export class ChatMessage extends LitElement {
   static override properties = {
     msg: { attribute: false },
@@ -148,6 +297,8 @@ export class ChatMessage extends LitElement {
     onDecryptAttachment: { attribute: false },
     sessionStart: { type: Number },
     onEdit: { attribute: false },
+    onReact: { attribute: false },
+    userId: { attribute: false },
     onAvatarClick: { attribute: false },
     customColors: { attribute: false },
     isDark: { type: Boolean },
@@ -156,6 +307,7 @@ export class ChatMessage extends LitElement {
     _showHistory: { state: true },
     _menuOpen: { state: true },
     _timeAgo: { state: true },
+    _showEmojiPicker: { state: true },
   };
 
   declare msg: AbstracChatMessage;
@@ -164,6 +316,8 @@ export class ChatMessage extends LitElement {
   declare onDecryptAttachment: ((url: string) => Promise<string>) | undefined;
   declare sessionStart: number;
   declare onEdit: ((newText: string) => void) | undefined;
+  declare onReact: ((emoji: string, remove?: boolean) => void) | undefined;
+  declare userId: string;
   declare onAvatarClick: ((authorId: string) => void) | undefined;
   declare customColors: CustomColors | undefined;
   declare isDark: boolean;
@@ -173,6 +327,7 @@ export class ChatMessage extends LitElement {
   declare private _showHistory: boolean;
   declare private _menuOpen: boolean;
   declare private _timeAgo: string;
+  declare private _showEmojiPicker: boolean;
   private _timeInterval = 0;
   private _btnEl: HTMLButtonElement | null = null;
   private _menuEl: HTMLDivElement | null = null;
@@ -183,11 +338,13 @@ export class ChatMessage extends LitElement {
     this.isOwn = false;
     this.sessionStart = 0;
     this.isDark = false;
+    this.userId = "";
     this._isEditing = false;
     this._editText = "";
     this._showHistory = false;
     this._menuOpen = false;
     this._timeAgo = "";
+    this._showEmojiPicker = false;
   }
 
   override createRenderRoot() {
@@ -280,6 +437,14 @@ export class ChatMessage extends LitElement {
     (e.currentTarget as HTMLElement).style.background = "transparent";
   };
 
+  private _toggleReaction = (emoji: string) => {
+    if (!this.onReact) return;
+    const hasOwn = (this.msg.reactions ?? []).some(
+      (r) => r.emoji === emoji && r.authorId === this.userId,
+    );
+    this.onReact(emoji, hasOwn || undefined);
+  };
+
   override render() {
     const {
       authorId,
@@ -316,7 +481,7 @@ export class ChatMessage extends LitElement {
 
     return html`
       <style>
-      ${kebabHoverCss}${fencedCodeHoverCss}
+      ${kebabHoverCss}${fencedCodeHoverCss}${reactionHoverCss}
       </style>
       <div
         data-testid="message"
@@ -336,170 +501,218 @@ export class ChatMessage extends LitElement {
             ></chat-avatar>
           `
           : nothing}
-        <div
-          class="msg-bubble"
-          style="background:${noBubble
-            ? "transparent"
-            : baseColor};color:${textColor};align-self:${isOwn
-            ? "flex-end"
-            : "flex-start"};border-radius:${noBubble
-            ? "0"
-            : "16px"};padding:${noBubble
-            ? "2px 0"
-            : "6px 12px"};margin-left:${isOwn
-            ? "0"
-            : showAvatar
-            ? "0"
-            : avatarSpace + "px"};margin-right:${isOwn
-            ? (showAvatar ? "0" : avatarSpace + "px")
-            : "0"};max-width:80%;overflow-x:hidden;overflow-y:hidden;word-break:break-word;overflow-wrap:anywhere"
-        >
-          ${isStartOfSequence && !isOwn && !customColors?.hideNames
-            ? html`
-              <b data-testid="author-name" style="font-size:11px;color:${participantColor}"
-              >${authorName}</b>
-            `
-            : nothing} ${this._isEditing
-            ? html`
-              <div style="margin-top:4px">
-                <textarea
-                  .value="${this._editText}"
-                  @input="${(e: InputEvent) => {
-                    this._editText = (e.target as HTMLTextAreaElement).value;
-                  }}"
-                  @keydown="${(e: KeyboardEvent) => e.stopPropagation()}"
-                  style="${editTextareaStyle}"
-                ></textarea>
-                <div style="display:flex;gap:4px;margin-top:4px">
-                  <button
-                    type="button"
-                    @click="${this._submitEdit}"
-                    ?disabled="${!canSave}"
-                    style="${saveButtonStyle(isDark)}${canSave
-                      ? ""
-                      : ";opacity:0.4;cursor:default"}"
-                  >
-                    Save
-                  </button>
-                  <button type="button" @click="${this
-                    ._cancelEdit}" style="${cancelButtonStyle}">
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            `
-            : text
-            ? html`
-              <div
-                data-testid="message-text"
-                dir="auto"
-                style="overflow-wrap:anywhere;word-break:break-word;min-width:0;${callDetails
-                  ? "display:flex;align-items:center;gap:8px"
-                  : ""}"
-              >
-                ${callDetails ? faPhoneAlt : nothing} ${unsafeHTML(
-                  markdownHtml,
-                )}
-              </div>
-            `
-            : nothing} ${attachments && attachments.length > 0
-            ? html`
-              <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
-                ${attachments.map(
-                  (att: Attachment) =>
-                    html`
-                      <chat-attachment
-                        .attachment="${att}"
-                        .isDark="${isDark}"
-                        .textColor="${textColor}"
-                        .primaryColor="${baseColor}"
-                        .isOwn="${isOwn}"
-                        .messageTimestamp="${timestamp}"
-                        .sessionStart="${this.sessionStart}"
-                        .onDecrypt="${this.onDecryptAttachment}"
-                      ></chat-attachment>
-                    `,
-                )}
-              </div>
-            `
-            : nothing}
+        <div class="msg-wrap" style="position:relative;max-width:80%">
           <div
-            style="display:flex;justify-content:flex-end;align-items:center;gap:4px"
+            class="msg-bubble"
+            style="background:${noBubble
+              ? "transparent"
+              : baseColor};color:${textColor};align-self:${isOwn
+              ? "flex-end"
+              : "flex-start"};border-radius:${noBubble
+              ? "0"
+              : "16px"};padding:${noBubble
+              ? "2px 0"
+              : "6px 12px"};margin-left:${isOwn
+              ? "0"
+              : showAvatar
+              ? "0"
+              : avatarSpace + "px"};margin-right:${isOwn
+              ? (showAvatar ? "0" : avatarSpace + "px")
+              : "0"};overflow-x:hidden;overflow-y:hidden;word-break:break-word;overflow-wrap:anywhere"
           >
-            ${showMenu
+            ${isStartOfSequence && !isOwn && !customColors?.hideNames
               ? html`
-                <div style="display:flex;align-items:center;gap:4px">
-                  ${hasEdits
-                    ? html`
-                      <span style="font-size:10px;opacity:0.7">edited</span>
-                    `
-                    : nothing}
-                  <button
-                    type="button"
-                    class="msg-kebab"
-                    ?data-open="${this._menuOpen || undefined}"
-                    @click="${this._toggleMenu}"
-                    style="${kebabMenuStyle(textColor)}"
-                    title="More options"
-                  >
-                    ${faEllipsisV}
-                  </button>
-                  ${this._menuOpen
-                    ? html`
-                      <div
-                        style="${dropdownMenuStyle(
-                          isDark,
-                          this._btnEl?.getBoundingClientRect() ?? new DOMRect(),
-                        )}"
-                      >
-                        ${canEdit
-                          ? html`
-                            <button
-                              type="button"
-                              @click="${this._startEdit}"
-                              style="${dropdownItemStyle(isDark)}"
-                              @mouseenter="${this._hoverIn}"
-                              @mouseleave="${this._hoverOut}"
-                            >
-                              ${faPen} Edit
-                            </button>
-                          `
-                          : nothing} ${hasEdits
-                          ? html`
-                            <button
-                              type="button"
-                              @click="${() => {
-                                this._menuOpen = false;
-                                this._removeOutsideClick();
-                                this._showHistory = true;
-                              }}"
-                              style="${dropdownItemStyle(isDark)}"
-                              @mouseenter="${this._hoverIn}"
-                              @mouseleave="${this._hoverOut}"
-                            >
-                              ${faHistory} View history
-                            </button>
-                          `
-                          : nothing}
-                      </div>
-                    `
-                    : nothing}
+                <b data-testid="author-name" style="font-size:11px;color:${participantColor}"
+                >${authorName}</b>
+              `
+              : nothing} ${this._isEditing
+              ? html`
+                <div style="margin-top:4px">
+                  <textarea
+                    .value="${this._editText}"
+                    @input="${(e: InputEvent) => {
+                      this._editText = (e.target as HTMLTextAreaElement).value;
+                    }}"
+                    @keydown="${(e: KeyboardEvent) => e.stopPropagation()}"
+                    style="${editTextareaStyle}"
+                  ></textarea>
+                  <div style="display:flex;gap:4px;margin-top:4px">
+                    <button
+                      type="button"
+                      @click="${this._submitEdit}"
+                      ?disabled="${!canSave}"
+                      style="${saveButtonStyle(isDark)}${canSave
+                        ? ""
+                        : ";opacity:0.4;cursor:default"}"
+                    >
+                      Save
+                    </button>
+                    <button type="button" @click="${this
+                      ._cancelEdit}" style="${cancelButtonStyle}">
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               `
-              : html`
-                <div style="display:flex;align-items:center;gap:4px">
-                  <button type="button" style="${kebabMenuStyle(
-                    textColor,
-                  )};visibility:hidden">
-                    ${faEllipsisV}
-                  </button>
+              : text
+              ? html`
+                <div
+                  data-testid="message-text"
+                  dir="auto"
+                  style="overflow-wrap:anywhere;word-break:break-word;min-width:0;${callDetails
+                    ? "display:flex;align-items:center;gap:8px"
+                    : ""}"
+                >
+                  ${callDetails ? faPhoneAlt : nothing} ${unsafeHTML(
+                    markdownHtml,
+                  )}
                 </div>
-              `}
-            <span style="color:${textColor};opacity:0.7;font-size:10px"
-            >${this._timeAgo}</span>
+              `
+              : nothing} ${attachments && attachments.length > 0
+              ? html`
+                <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+                  ${attachments.map(
+                    (att: Attachment) =>
+                      html`
+                        <chat-attachment
+                          .attachment="${att}"
+                          .isDark="${isDark}"
+                          .textColor="${textColor}"
+                          .primaryColor="${baseColor}"
+                          .isOwn="${isOwn}"
+                          .messageTimestamp="${timestamp}"
+                          .sessionStart="${this.sessionStart}"
+                          .onDecrypt="${this.onDecryptAttachment}"
+                        ></chat-attachment>
+                      `,
+                  )}
+                </div>
+              `
+              : nothing}
+            <div
+              style="display:flex;justify-content:flex-end;align-items:center;gap:4px"
+            >
+              ${showMenu
+                ? html`
+                  <div style="display:flex;align-items:center;gap:4px">
+                    ${hasEdits
+                      ? html`
+                        <span style="font-size:10px;opacity:0.7">edited</span>
+                      `
+                      : nothing}
+                    <button
+                      type="button"
+                      class="msg-kebab"
+                      ?data-open="${this._menuOpen || undefined}"
+                      @click="${this._toggleMenu}"
+                      style="${kebabMenuStyle(textColor)}"
+                      title="More options"
+                    >
+                      ${faEllipsisV}
+                    </button>
+                    ${this._menuOpen
+                      ? html`
+                        <div
+                          style="${dropdownMenuStyle(
+                            isDark,
+                            this._btnEl?.getBoundingClientRect() ??
+                              new DOMRect(),
+                          )}"
+                        >
+                          ${canEdit
+                            ? html`
+                              <button
+                                type="button"
+                                @click="${this._startEdit}"
+                                style="${dropdownItemStyle(isDark)}"
+                                @mouseenter="${this._hoverIn}"
+                                @mouseleave="${this._hoverOut}"
+                              >
+                                ${faPen} Edit
+                              </button>
+                            `
+                            : nothing} ${hasEdits
+                            ? html`
+                              <button
+                                type="button"
+                                @click="${() => {
+                                  this._menuOpen = false;
+                                  this._removeOutsideClick();
+                                  this._showHistory = true;
+                                }}"
+                                style="${dropdownItemStyle(isDark)}"
+                                @mouseenter="${this._hoverIn}"
+                                @mouseleave="${this._hoverOut}"
+                              >
+                                ${faHistory} View history
+                              </button>
+                            `
+                            : nothing}
+                        </div>
+                      `
+                      : nothing}
+                  </div>
+                `
+                : html`
+                  <div style="display:flex;align-items:center;gap:4px">
+                    <button type="button" style="${kebabMenuStyle(
+                      textColor,
+                    )};visibility:hidden">
+                      ${faEllipsisV}
+                    </button>
+                  </div>
+                `}
+              <span style="color:${textColor};opacity:0.7;font-size:10px"
+              >${this._timeAgo}</span>
+            </div>
           </div>
+          ${this.onReact
+            ? html`
+              <div class="msg-react-bar" style="${reactionBarStyle(
+                isDark,
+                isOwn,
+              )}">
+                ${quickEmojis.map(
+                  (emoji) =>
+                    html`
+                      <button
+                        type="button"
+                        @click="${() => this._toggleReaction(emoji)}"
+                        style="${reactionBtnStyle}"
+                      >
+                        ${emoji}
+                      </button>
+                    `,
+                )}
+                <button
+                  type="button"
+                  @click="${() => {
+                    this._showEmojiPicker = true;
+                  }}"
+                  style="${reactionBtnStyle};font-size:14px"
+                  title="More reactions"
+                >
+                  +
+                </button>
+              </div>
+            `
+            : nothing} ${!empty(this.msg.reactions ?? [])
+            ? renderReactionPills(
+              groupReactions(this.userId)(this.msg.reactions!),
+              isDark,
+              (emoji: string) => this._toggleReaction(emoji),
+            )
+            : nothing}
         </div>
-        ${this._showHistory && editHistory
+        ${this._showEmojiPicker
+          ? renderEmojiGrid(
+            isDark,
+            (emoji: string) => this._toggleReaction(emoji),
+            () => {
+              this._showEmojiPicker = false;
+            },
+          )
+          : nothing} ${this._showHistory && editHistory
           ? renderEditHistory(editHistory, text, isDark, () => {
             this._showHistory = false;
           })

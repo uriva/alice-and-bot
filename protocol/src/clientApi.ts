@@ -108,6 +108,13 @@ type ProgressMessage = {
   elementId: string;
 };
 
+type ReactionMessage = {
+  type: "reaction";
+  reactTo: string;
+  emoji: string;
+  remove?: boolean;
+};
+
 export type CallAction = "offer" | "answer" | "reject" | "end";
 
 export type CallMessage = {
@@ -123,7 +130,8 @@ type InternalMessage =
   | EditMessage
   | SpinnerMessage
   | ProgressMessage
-  | CallMessage;
+  | CallMessage
+  | ReactionMessage;
 
 export type Profile = {
   publicSignKey: string;
@@ -298,12 +306,20 @@ type DecipheredCallMessage = DecipheredMessageBase & {
   duration?: number;
 };
 
+type DecipheredReactionMessage = DecipheredMessageBase & {
+  type: "reaction";
+  reactTo: string;
+  emoji: string;
+  remove?: boolean;
+};
+
 export type DecipheredMessage =
   | DecipheredTextMessage
   | DecipheredEditMessage
   | DecipheredSpinnerMessage
   | DecipheredProgressMessage
-  | DecipheredCallMessage;
+  | DecipheredCallMessage
+  | DecipheredReactionMessage;
 
 type DistributeOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
   : never;
@@ -350,6 +366,15 @@ const decryptedPayloadToMessage = (
       type: "edit",
       editOf: decryptedPayload.editOf,
       attachments: decryptedPayload.attachments,
+    };
+  }
+  if (decryptedPayload.type === "reaction") {
+    return {
+      ...base,
+      type: "reaction",
+      reactTo: decryptedPayload.reactTo,
+      emoji: decryptedPayload.emoji,
+      remove: decryptedPayload.remove,
     };
   }
   return {
