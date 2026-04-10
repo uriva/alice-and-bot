@@ -51,7 +51,7 @@ const dropdownMenuStyle = (isDark: boolean, rect: DOMRect) =>
   };z-index:10000;min-width:120px;overflow:hidden`;
 
 const dropdownItemStyle = (isDark: boolean) =>
-  `display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:8px 12px;background:transparent;border:none;cursor:pointer;font-size:13px;color:${
+  `display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;background:transparent;border:none;cursor:pointer;font-size:13px;color:${
     isDark ? "#e5e7eb" : "#1a1a1a"
   };white-space:nowrap`;
 
@@ -83,7 +83,7 @@ const historyCloseButtonStyle = (isDark: boolean) =>
   }`;
 
 const editTextareaStyle =
-  "box-sizing:border-box;width:100%;padding:6px;border-radius:8px;border:none;font-size:14px;resize:vertical;min-height:40px";
+  "width:100%;padding:6px;border-radius:8px;border:none;font-size:14px;resize:vertical;min-height:40px";
 
 const saveButtonStyle = (isDark: boolean) =>
   `padding:4px 8px;border-radius:6px;border:none;background:${
@@ -130,7 +130,7 @@ const mobileContextEmojiRowStyle = (isDark: boolean) =>
   }`;
 
 const mobileContextActionStyle = (isDark: boolean) =>
-  `display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;padding:12px 16px;background:transparent;border:none;cursor:pointer;font-size:15px;color:${
+  `display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:transparent;border:none;cursor:pointer;font-size:15px;color:${
     isDark ? "#e5e7eb" : "#1a1a1a"
   }`;
 
