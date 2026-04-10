@@ -301,7 +301,7 @@ test.describe("AbstractChatBox (example app)", () => {
     await msgEl.hover();
     await msgEl.locator(".msg-reply-trigger").click();
     const inputArea = page.locator("[data-input-area]");
-    await expect(inputArea.getByText("You")).toBeVisible();
+    await expect(inputArea.getByText("You", { exact: true })).toBeVisible();
   });
 
   test("sending with reply bar clears reply state", async ({ page }) => {
@@ -309,7 +309,7 @@ test.describe("AbstractChatBox (example app)", () => {
     await msgEl.hover();
     await msgEl.locator(".msg-reply-trigger").click();
     const inputArea = page.locator("[data-input-area]");
-    await expect(inputArea.getByText("You")).toBeVisible();
+    await expect(inputArea.getByText("You", { exact: true })).toBeVisible();
     const input = page.locator(tid("message-input"));
     await input.fill("reply-test-msg");
     await input.press("Enter");
@@ -321,8 +321,8 @@ test.describe("AbstractChatBox (example app)", () => {
     await msgEl.hover();
     await msgEl.locator(".msg-reply-trigger").click();
     const inputArea = page.locator("[data-input-area]");
-    await expect(inputArea.getByText("You")).toBeVisible();
+    await expect(inputArea.getByText("You", { exact: true })).toBeVisible();
     await inputArea.locator("button", { hasText: "×" }).click();
-    await expect(inputArea.getByText("You")).not.toBeVisible();
+    await expect(inputArea.getByText("You", { exact: true })).not.toBeVisible();
   });
 });
