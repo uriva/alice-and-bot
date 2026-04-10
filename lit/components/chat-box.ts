@@ -256,7 +256,7 @@ const attachMenuStyle = (isDark: boolean) =>
   };z-index:200;min-width:140px;overflow:hidden`;
 
 const attachMenuItemStyle = (isDark: boolean) =>
-  `display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:transparent;border:none;cursor:pointer;font-size:14px;color:${
+  `display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:10px 14px;background:transparent;border:none;cursor:pointer;font-size:14px;color:${
     isDark ? "#e5e7eb" : "#1a1a1a"
   };white-space:nowrap`;
 
@@ -1076,7 +1076,7 @@ export class ChatBox extends LitElement {
               <div
                 style="${contentMaxWidthStyle(customColors)
                   ? contentMaxWidthStyle(customColors) + ";"
-                  : ""}width:100%;display:flex;align-items:center;padding:0 16px"
+                  : ""}width:100%;box-sizing:border-box;display:flex;align-items:center;padding:0 16px"
               >
                 <div data-testid="title-text" style="flex:1;text-align:center">
                   ${this.title}
