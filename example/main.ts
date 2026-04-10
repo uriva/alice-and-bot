@@ -47,7 +47,19 @@ const initialMessages: AbstracChatMessage[] = [
     `Here's a clean merge sort implementation:\n\n\`\`\`typescript\nconst merge = (left: number[], right: number[]): number[] => {\n  const result: number[] = [];\n  let i = 0;\n  let j = 0;\n  while (i < left.length && j < right.length) {\n    if (left[i] <= right[j]) {\n      result.push(left[i++]);\n    } else {\n      result.push(right[j++]);\n    }\n  }\n  return [...result, ...left.slice(i), ...right.slice(j)];\n};\n\nconst mergeSort = (arr: number[]): number[] => {\n  if (arr.length <= 1) return arr;\n  const mid = Math.floor(arr.length / 2);\n  return merge(\n    mergeSort(arr.slice(0, mid)),\n    mergeSort(arr.slice(mid)),\n  );\n};\n\`\`\`\n\nThis runs in **O(n log n)** time and **O(n)** space.`,
     27,
   ),
-  makeUserMsg("5", "Nice! What about the space complexity trade-offs?", 26),
+  {
+    ...makeUserMsg(
+      "5",
+      "Nice! What about the space complexity trade-offs?",
+      26,
+    ),
+    replyTo: {
+      id: "2",
+      authorId: botId,
+      authorName: "Assistant",
+      text: "Of course! What kind of sorting are you looking for?",
+    },
+  },
   makeUserMsg(
     "6",
     "Also, is merge sort stable? I need to sort objects by multiple keys.",
@@ -64,7 +76,14 @@ const initialMessages: AbstracChatMessage[] = [
     "Here's a comparison:\n\n| Algorithm | Best | Average | Worst | Space | Stable |\n|-----------|------|---------|-------|-------|--------|\n| Bubble Sort | O(n) | O(n^2) | O(n^2) | O(1) | Yes |\n| Merge Sort | O(n log n) | O(n log n) | O(n log n) | O(n) | Yes |\n| Quick Sort | O(n log n) | O(n log n) | O(n^2) | O(log n) | No |\n| Heap Sort | O(n log n) | O(n log n) | O(n log n) | O(1) | No |\n| Radix Sort | O(nk) | O(nk) | O(nk) | O(n+k) | Yes |\n\n> **Tip:** For most real-world use cases, the built-in `Array.sort()` in JS/TS uses TimSort (a hybrid of merge sort and insertion sort), which is both stable and efficient.",
     19,
   ),
-  makeUserMsg("10", "Thanks, this is really helpful!", 15),
+  {
+    ...makeUserMsg("10", "Thanks, this is really helpful!", 15),
+    reactions: [
+      { emoji: "👍", authorId: botId, authorName: "Assistant" },
+      { emoji: "👍", authorId: userId, authorName: "You" },
+      { emoji: "❤️", authorId: botId, authorName: "Assistant" },
+    ],
+  },
   makeBotMsg(
     "11",
     "You're welcome! Let me know if you need help with anything else. Here's one more useful pattern — a generic comparator-based sort:\n\n```typescript\ntype Comparator<T> = (a: T, b: T) => number;\n\nconst sortBy = <T,>(cmp: Comparator<T>) =>\n  (arr: T[]): T[] =>\n    [...arr].sort(cmp);\n\nconst byAge = sortBy<{ name: string; age: number }>(\n  (a, b) => a.age - b.age,\n);\n```\n\nThis gives you a reusable, curried sorting utility.",
@@ -114,7 +133,25 @@ chatBox.isDark = true;
 chatBox.customColors = chatGptColors;
 chatBox.enableAttachments = true;
 chatBox.enableAudioRecording = true;
-chatBox.onSend = (text: string) => {
+chatBox.onReact = (messageId: string, emoji: string, remove?: boolean) => {
+  messages = messages.map((m) =>
+    m.id !== messageId ? m : {
+      ...m,
+      reactions: remove
+        ? (m.reactions ?? []).filter((r) =>
+          !(r.emoji === emoji && r.authorId === userId)
+        )
+        : [...(m.reactions ?? []), {
+          emoji,
+          authorId: userId,
+          authorName: "You",
+        }],
+    }
+  );
+  chatBox.messages = messages;
+};
+chatBox.onSend = (text: string, replyTo?: string) => {
+  const replyMsg = replyTo ? messages.find((m) => m.id === replyTo) : undefined;
   messages = [
     ...messages,
     {
@@ -123,6 +160,16 @@ chatBox.onSend = (text: string) => {
       authorName: "You",
       text,
       timestamp: Date.now(),
+      ...(replyMsg
+        ? {
+          replyTo: {
+            id: replyMsg.id,
+            authorId: replyMsg.authorId,
+            authorName: replyMsg.authorName,
+            text: replyMsg.text,
+          },
+        }
+        : {}),
     },
   ];
   chatBox.messages = messages;

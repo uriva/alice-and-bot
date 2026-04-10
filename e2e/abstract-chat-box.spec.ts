@@ -253,4 +253,76 @@ test.describe("AbstractChatBox (example app)", () => {
 
     await expect(page.getByText(updated)).toBeVisible({ timeout: 3_000 });
   });
+
+  test("reaction pills render for message with reactions", async ({ page }) => {
+    const msgEl = page.locator("chat-message", {
+      hasText: "Thanks, this is really helpful!",
+    });
+    await msgEl.scrollIntoViewIfNeeded();
+    await expect(msgEl.locator("button", { hasText: "👍" })).toBeVisible();
+    await expect(msgEl.locator("button", { hasText: "❤️" })).toBeVisible();
+  });
+
+  test("reaction pill shows count", async ({ page }) => {
+    const msgEl = page.locator("chat-message", {
+      hasText: "Thanks, this is really helpful!",
+    });
+    await msgEl.scrollIntoViewIfNeeded();
+    await expect(msgEl.locator("button", { hasText: "👍" })).toContainText(
+      "2",
+    );
+  });
+
+  test("smiley trigger appears on hover for messages with onReact", async ({ page }) => {
+    const msgEl = page.locator("chat-message").first();
+    await msgEl.hover();
+    await expect(msgEl.locator(".msg-smiley-trigger")).toBeVisible();
+  });
+
+  test("reply trigger appears on hover", async ({ page }) => {
+    const msgEl = page.locator("chat-message").first();
+    await msgEl.hover();
+    await expect(msgEl.locator(".msg-reply-trigger")).toBeVisible();
+  });
+
+  test("quoted reply renders inside bubble", async ({ page }) => {
+    const msgEl = page.locator("chat-message", {
+      hasText: "Nice! What about the space complexity trade-offs?",
+    });
+    await msgEl.scrollIntoViewIfNeeded();
+    await expect(msgEl.getByText("Assistant")).toBeVisible();
+    await expect(
+      msgEl.getByText("Of course! What kind of sorting are you looking for?"),
+    ).toBeVisible();
+  });
+
+  test("clicking reply trigger shows reply bar above input", async ({ page }) => {
+    const msgEl = page.locator("chat-message").first();
+    await msgEl.hover();
+    await msgEl.locator(".msg-reply-trigger").click();
+    const inputArea = page.locator("[data-input-area]");
+    await expect(inputArea.getByText("You")).toBeVisible();
+  });
+
+  test("sending with reply bar clears reply state", async ({ page }) => {
+    const msgEl = page.locator("chat-message").first();
+    await msgEl.hover();
+    await msgEl.locator(".msg-reply-trigger").click();
+    const inputArea = page.locator("[data-input-area]");
+    await expect(inputArea.getByText("You")).toBeVisible();
+    const input = page.locator(tid("message-input"));
+    await input.fill("reply-test-msg");
+    await input.press("Enter");
+    await expect(page.getByText("reply-test-msg")).toBeVisible();
+  });
+
+  test("reply bar close button dismisses reply state", async ({ page }) => {
+    const msgEl = page.locator("chat-message").first();
+    await msgEl.hover();
+    await msgEl.locator(".msg-reply-trigger").click();
+    const inputArea = page.locator("[data-input-area]");
+    await expect(inputArea.getByText("You")).toBeVisible();
+    await inputArea.locator("button", { hasText: "×" }).click();
+    await expect(inputArea.getByText("You")).not.toBeVisible();
+  });
 });

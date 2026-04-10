@@ -15,6 +15,7 @@ import {
   faHistory,
   faPen,
   faPhoneAlt,
+  faReply,
   faSmile,
 } from "./icons.ts";
 import { fencedCodeHoverCss, renderMarkdown } from "./markdown.ts";
@@ -24,6 +25,7 @@ import type {
   DiffPart,
   EditHistoryEntry,
   Reaction,
+  ReplyQuote,
 } from "./types.ts";
 import {
   computeTimeAgo,
@@ -99,13 +101,23 @@ const longPressHighlightCss =
 const mobileContextOverlayStyle =
   "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999";
 
-const mobileContextMenuStyle = (isDark: boolean, touchY: number) => {
+const mobileContextMenuStyle = (
+  isDark: boolean,
+  touchY: number,
+  touchX: number,
+) => {
+  const menuWidth = 250;
   const menuHeight = 220;
   const vp = globalThis.innerHeight;
+  const vpW = globalThis.innerWidth;
   const top = touchY - menuHeight - 12 < 0
     ? Math.min(touchY + 12, vp - menuHeight - 12)
     : touchY - menuHeight - 12;
-  return `position:fixed;top:${top}px;left:50%;transform:translateX(-50%);background:${
+  const left = Math.max(
+    12,
+    Math.min(touchX - menuWidth / 2, vpW - menuWidth - 12),
+  );
+  return `position:fixed;top:${top}px;left:${left}px;background:${
     isDark ? "#1a1a1a" : "#fff"
   };border-radius:16px;padding:8px 0;min-width:220px;max-width:280px;box-shadow:${
     isDark ? "0 8px 32px #000a" : "0 8px 32px #0003"
@@ -123,7 +135,7 @@ const mobileContextActionStyle = (isDark: boolean) =>
   }`;
 
 const smileyTriggerCss =
-  `.msg-wrap .msg-smiley-trigger{opacity:0;transition:opacity .15s;pointer-events:none}.msg-wrap:hover .msg-smiley-trigger{opacity:1;pointer-events:auto}`;
+  `.msg-wrap .msg-smiley-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-smiley-trigger{opacity:1}`;
 
 const smileyTriggerStyle = (isDark: boolean, isOwn: boolean) =>
   `position:absolute;${
@@ -255,6 +267,49 @@ const renderEditHistory = (
     </div>
   `;
 
+const replyTriggerStyle = (isDark: boolean, isOwn: boolean) =>
+  `position:absolute;${
+    isOwn ? "left:-36px" : "right:-36px"
+  };top:calc(50% + 20px);transform:translateY(-50%);background:${
+    isDark ? "#1a1a1a" : "#fff"
+  };border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:${
+    isDark ? "0 1px 4px #0006" : "0 1px 4px #0002"
+  };color:${isDark ? "#aaa" : "#666"};font-size:13px;padding:0`;
+
+const quoteBarColor = (isDark: boolean, isOwn: boolean) =>
+  isOwn ? (isDark ? "#818cf8" : "#6366f1") : (isDark ? "#6366f1" : "#4f46e5");
+
+const renderQuotedMessage = (
+  reply: ReplyQuote,
+  isDark: boolean,
+  isOwn: boolean,
+  bubbleTextColor: string,
+) =>
+  html`
+    <div
+      style="margin-bottom:4px;padding:6px 8px;border-radius:6px;border-left:3px solid ${quoteBarColor(
+        isDark,
+        isOwn,
+      )};background:${isDark
+        ? "rgba(255,255,255,0.06)"
+        : "rgba(0,0,0,0.05)"};cursor:pointer"
+    >
+      <div
+        style="font-size:11px;font-weight:600;color:${quoteBarColor(
+          isDark,
+          isOwn,
+        )};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+      >
+        ${reply.authorName}
+      </div>
+      <div
+        style="font-size:12px;color:${bubbleTextColor};opacity:0.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px"
+      >
+        ${reply.text || "Attachment"}
+      </div>
+    </div>
+  `;
+
 type GroupedReaction = { emoji: string; count: number; hasOwn: boolean };
 
 const groupReactions =
@@ -343,6 +398,7 @@ export class ChatMessage extends LitElement {
     sessionStart: { type: Number },
     onEdit: { attribute: false },
     onReact: { attribute: false },
+    onReply: { attribute: false },
     userId: { attribute: false },
     onAvatarClick: { attribute: false },
     customColors: { attribute: false },
@@ -358,6 +414,7 @@ export class ChatMessage extends LitElement {
     _showMobileContext: { state: true },
     _longPressActive: { state: true },
     _touchY: { state: true },
+    _touchX: { state: true },
   };
 
   declare msg: AbstracChatMessage;
@@ -367,6 +424,7 @@ export class ChatMessage extends LitElement {
   declare sessionStart: number;
   declare onEdit: ((newText: string) => void) | undefined;
   declare onReact: ((emoji: string, remove?: boolean) => void) | undefined;
+  declare onReply: (() => void) | undefined;
   declare userId: string;
   declare onAvatarClick: ((authorId: string) => void) | undefined;
   declare customColors: CustomColors | undefined;
@@ -383,6 +441,7 @@ export class ChatMessage extends LitElement {
   declare private _showMobileContext: boolean;
   declare private _longPressActive: boolean;
   declare private _touchY: number;
+  declare private _touchX: number;
   private _timeInterval = 0;
   private _btnEl: HTMLButtonElement | null = null;
   private _menuEl: HTMLDivElement | null = null;
@@ -406,6 +465,7 @@ export class ChatMessage extends LitElement {
     this._showMobileContext = false;
     this._longPressActive = false;
     this._touchY = 0;
+    this._touchX = 0;
   }
 
   override createRenderRoot() {
@@ -514,6 +574,7 @@ export class ChatMessage extends LitElement {
     e.preventDefault();
     this._longPressActive = true;
     this._touchY = e.touches[0]?.clientY ?? 0;
+    this._touchX = e.touches[0]?.clientX ?? 0;
     this._longPressTimer = globalThis.setTimeout(() => {
       this._longPressActive = false;
       this._showMobileContext = true;
@@ -579,6 +640,7 @@ export class ChatMessage extends LitElement {
     return html`
       <style>
       ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}
+      .msg-wrap .msg-reply-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-reply-trigger{opacity:1}
       </style>
       <div
         data-testid="message"
@@ -634,6 +696,13 @@ export class ChatMessage extends LitElement {
                 <b data-testid="author-name" style="font-size:11px;color:${participantColor}"
                 >${authorName}</b>
               `
+              : nothing} ${this.msg.replyTo
+              ? renderQuotedMessage(
+                this.msg.replyTo,
+                isDark,
+                isOwn,
+                textColor,
+              )
               : nothing} ${this._isEditing
               ? html`
                 <div style="margin-top:4px">
@@ -797,6 +866,18 @@ export class ChatMessage extends LitElement {
                 ${faSmile}
               </button>
             `
+            : nothing} ${this.onReply && !this.isMobile
+            ? html`
+              <button
+                type="button"
+                class="msg-reply-trigger"
+                style="${replyTriggerStyle(isDark, isOwn)}"
+                @click="${() => this.onReply?.()}"
+                title="Reply"
+              >
+                ${faReply}
+              </button>
+            `
             : nothing} ${this._showQuickEmojis && this.onReact
             ? html`
               <div class="msg-quick-emojis" style="${quickEmojiRowStyle(
@@ -843,6 +924,7 @@ export class ChatMessage extends LitElement {
               <div style="${mobileContextMenuStyle(
                 isDark,
                 this._touchY,
+                this._touchX,
               )}" @click="${(
                 e: Event,
               ) => e.stopPropagation()}">
@@ -878,6 +960,19 @@ export class ChatMessage extends LitElement {
                         +
                       </button>
                     </div>
+                  `
+                  : nothing} ${this.onReply
+                  ? html`
+                    <button
+                      type="button"
+                      @click="${() => {
+                        this.onReply?.();
+                        this._closeMobileContext();
+                      }}"
+                      style="${mobileContextActionStyle(isDark)}"
+                    >
+                      ${faReply} Reply
+                    </button>
                   `
                   : nothing}
                 <button

@@ -19,6 +19,7 @@ import {
   faPaperclip,
   faPaperPlane,
   faPhoneAlt,
+  faReply,
   faStop,
 } from "./icons.ts";
 import "./chat-message.ts";
@@ -167,6 +168,56 @@ const sendingAudioIndicator = (primaryColor: string) =>
           ? "#222"
           : "#fff"};font-size:13px">Sending audio...</span>
       </div>
+    </div>
+  `;
+
+const replyBarStyle = (isDark: boolean, custom?: CustomColors) =>
+  `display:flex;align-items:center;gap:8px;padding:8px 12px;background:${
+    custom?.inputBackground ?? (isDark ? "#1a1a1a" : "#ffffff")
+  };border-top:1px solid ${isDark ? "#ffffff15" : "#00000015"}`;
+
+const replyBarQuoteStyle = (isDark: boolean) =>
+  `flex:1;min-width:0;border-left:3px solid ${
+    isDark ? "#6366f1" : "#4f46e5"
+  };padding:2px 8px;font-size:13px;overflow:hidden`;
+
+const renderReplyBar = (
+  reply: { authorName: string; text: string },
+  isDark: boolean,
+  onClear: () => void,
+  custom?: CustomColors,
+) =>
+  html`
+    <div style="${replyBarStyle(isDark, custom)}">
+      <span style="color:${isDark
+        ? "#9ca3af"
+        : "#6b7280"};font-size:16px;display:flex;align-items:center"
+      >${faReply}</span>
+      <div style="${replyBarQuoteStyle(isDark)}">
+        <div
+          style="font-weight:600;color:${isDark
+            ? "#a5b4fc"
+            : "#4f46e5"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+        >
+          ${reply.authorName}
+        </div>
+        <div
+          style="color:${isDark
+            ? "#9ca3af"
+            : "#6b7280"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+        >
+          ${reply.text || "Attachment"}
+        </div>
+      </div>
+      <button
+        type="button"
+        @click="${onClear}"
+        style="background:none;border:none;cursor:pointer;color:${isDark
+          ? "#6b7280"
+          : "#9ca3af"};font-size:18px;padding:4px;line-height:1"
+      >
+        &times;
+      </button>
     </div>
   `;
 
@@ -625,15 +676,17 @@ export class ChatBox extends LitElement {
     if (files.length === 0 && estimateSerializedLength(text) > maxTextLength) {
       return;
     }
+    const replyTo = this._replyingTo?.id;
     this._input = "";
     this._textareaHeight = 44;
     this._textareaOverflow = "hidden";
     this._pendingFiles = [];
+    this._replyingTo = null;
     this.onInputActivity?.();
 
     if (files.length > 0 && this.onSendWithAttachments) {
       this._isSending = true;
-      await this.onSendWithAttachments(text, files);
+      await this.onSendWithAttachments(text, files, undefined, replyTo);
       this._isSending = false;
     } else if (text) {
       this._optimisticMessages = [
@@ -646,7 +699,7 @@ export class ChatBox extends LitElement {
           timestamp: Date.now(),
         },
       ];
-      this.onSend(text);
+      this.onSend(text, replyTo);
     }
 
     setTimeout(() => {
@@ -658,6 +711,17 @@ export class ChatBox extends LitElement {
       requestAnimationFrame(() => this._scrollToBottom());
     }, 0);
   }
+
+  private _handleReply = (msgId: string) => {
+    const msg = this.messages.find((m) => m.id === msgId);
+    if (!msg) return;
+    this._replyingTo = {
+      id: msg.id,
+      authorName: msg.authorName,
+      text: msg.text,
+    };
+    setTimeout(() => this._inputEl?.focus(), 0);
+  };
 
   private _onTextareaInput = (e: InputEvent) => {
     this._input = (e.target as HTMLTextAreaElement).value;
@@ -1181,7 +1245,16 @@ export class ChatBox extends LitElement {
           data-input-area
           style="position:absolute;bottom:0;left:0;right:0;z-index:10"
         >
-          ${!empty(this._pendingFiles)
+          ${this._replyingTo
+            ? renderReplyBar(
+              this._replyingTo,
+              isDark,
+              () => {
+                this._replyingTo = null;
+              },
+              customColors,
+            )
+            : nothing} ${!empty(this._pendingFiles)
             ? html`
               <div style="background:${customColors?.inputBackground ??
                 (isDark ? "#1a1a1a" : "#ffffff")}">
@@ -1477,6 +1550,7 @@ export class ChatBox extends LitElement {
             ? (emoji: string, remove?: boolean) =>
               this.onReact!(entry.msg.id, emoji, remove)
             : undefined}"
+          .onReply="${() => this._handleReply(entry.msg.id)}"
           .userId="${this.userId}"
           .isMobile="${this._isMobile}"
           .onAvatarClick="${this.onAvatarClick}"
