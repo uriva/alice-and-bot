@@ -9,7 +9,14 @@ import {
 } from "./design.ts";
 import "./chat-attachment.ts";
 import "./chat-avatar.ts";
-import { faEllipsisV, faHistory, faPen, faPhoneAlt, faSmile } from "./icons.ts";
+import {
+  faCopy,
+  faEllipsisV,
+  faHistory,
+  faPen,
+  faPhoneAlt,
+  faSmile,
+} from "./icons.ts";
 import { fencedCodeHoverCss, renderMarkdown } from "./markdown.ts";
 import type {
   AbstracChatMessage,
@@ -86,15 +93,40 @@ const cancelButtonStyle =
 
 const quickEmojis = ["👍", "❤️", "😂", "😮", "🙏"];
 
+const longPressHighlightCss =
+  `@keyframes msg-highlight{0%{transform:scale(1);box-shadow:none}100%{transform:scale(1.02);box-shadow:0 0 16px rgba(100,100,255,0.25)}}`;
+
+const mobileContextOverlayStyle =
+  "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999;display:flex;align-items:center;justify-content:center";
+
+const mobileContextMenuStyle = (isDark: boolean) =>
+  `background:${
+    isDark ? "#1a1a1a" : "#fff"
+  };border-radius:16px;padding:8px 0;min-width:220px;max-width:280px;box-shadow:${
+    isDark ? "0 8px 32px #000a" : "0 8px 32px #0003"
+  };overflow:hidden`;
+
+const mobileContextEmojiRowStyle = (isDark: boolean) =>
+  `display:flex;justify-content:center;gap:4px;padding:8px 12px;border-bottom:1px solid ${
+    isDark ? "#2a2a2a" : "#e5e7eb"
+  }`;
+
+const mobileContextActionStyle = (isDark: boolean) =>
+  `display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:transparent;border:none;cursor:pointer;font-size:15px;color:${
+    isDark ? "#e5e7eb" : "#1a1a1a"
+  }`;
+
 const smileyTriggerCss =
   `.msg-wrap .msg-smiley-trigger{opacity:0;transition:opacity .15s;pointer-events:none}.msg-wrap:hover .msg-smiley-trigger{opacity:1;pointer-events:auto}`;
 
-const smileyTriggerStyle = (isDark: boolean) =>
-  `position:absolute;top:-4px;right:-4px;background:${
+const smileyTriggerStyle = (isDark: boolean, isOwn: boolean) =>
+  `position:absolute;${
+    isOwn ? "left:-18px" : "right:-18px"
+  };top:50%;transform:translateY(-50%);background:${
     isDark ? "#1a1a1a" : "#fff"
-  };border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:${
+  };border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:${
     isDark ? "0 1px 4px #0006" : "0 1px 4px #0002"
-  };color:${isDark ? "#aaa" : "#666"};font-size:14px;padding:0`;
+  };color:${isDark ? "#aaa" : "#666"};font-size:17px;padding:0`;
 
 const quickEmojiRowStyle = (isDark: boolean, isOwn: boolean) =>
   `position:absolute;top:-36px;${
@@ -317,6 +349,8 @@ export class ChatMessage extends LitElement {
     _timeAgo: { state: true },
     _showEmojiPicker: { state: true },
     _showQuickEmojis: { state: true },
+    _showMobileContext: { state: true },
+    _longPressActive: { state: true },
   };
 
   declare msg: AbstracChatMessage;
@@ -339,6 +373,8 @@ export class ChatMessage extends LitElement {
   declare private _timeAgo: string;
   declare private _showEmojiPicker: boolean;
   declare private _showQuickEmojis: boolean;
+  declare private _showMobileContext: boolean;
+  declare private _longPressActive: boolean;
   private _timeInterval = 0;
   private _btnEl: HTMLButtonElement | null = null;
   private _menuEl: HTMLDivElement | null = null;
@@ -359,6 +395,8 @@ export class ChatMessage extends LitElement {
     this._timeAgo = "";
     this._showEmojiPicker = false;
     this._showQuickEmojis = false;
+    this._showMobileContext = false;
+    this._longPressActive = false;
   }
 
   override createRenderRoot() {
@@ -462,15 +500,19 @@ export class ChatMessage extends LitElement {
     this._showQuickEmojis = false;
   };
 
-  private _longPressStart = () => {
-    if (!this.onReact || !this.isMobile) return;
+  private _longPressStart = (e: TouchEvent) => {
+    if (!this.isMobile) return;
+    e.preventDefault();
+    this._longPressActive = true;
     this._longPressTimer = globalThis.setTimeout(() => {
-      this._showQuickEmojis = true;
+      this._longPressActive = false;
+      this._showMobileContext = true;
     }, 500);
   };
 
   private _longPressEnd = () => {
     clearTimeout(this._longPressTimer);
+    this._longPressActive = false;
   };
 
   private _dismissQuickEmojis = (e: MouseEvent) => {
@@ -479,6 +521,15 @@ export class ChatMessage extends LitElement {
       this._showQuickEmojis = false;
       document.removeEventListener("mousedown", this._dismissQuickEmojis);
     }
+  };
+
+  private _closeMobileContext = () => {
+    this._showMobileContext = false;
+  };
+
+  private _copyText = () => {
+    copyToClipboard(this.msg.text);
+    this._showMobileContext = false;
   };
 
   override render() {
@@ -517,7 +568,7 @@ export class ChatMessage extends LitElement {
 
     return html`
       <style>
-      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}
+      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}
       </style>
       <div
         data-testid="message"
@@ -539,7 +590,9 @@ export class ChatMessage extends LitElement {
           : nothing}
         <div
           class="msg-wrap"
-          style="position:relative;max-width:80%"
+          style="position:relative;max-width:80%${this.isMobile
+            ? ";user-select:none;-webkit-user-select:none"
+            : ""}"
           @touchstart="${this._longPressStart}"
           @touchend="${this._longPressEnd}"
           @touchmove="${this._longPressEnd}"
@@ -561,7 +614,10 @@ export class ChatMessage extends LitElement {
               ? "0"
               : avatarSpace + "px"};margin-right:${isOwn
               ? (showAvatar ? "0" : avatarSpace + "px")
-              : "0"};overflow-x:hidden;overflow-y:hidden;word-break:break-word;overflow-wrap:anywhere"
+              : "0"};overflow-x:hidden;overflow-y:hidden;word-break:break-word;overflow-wrap:anywhere${this
+                ._longPressActive
+              ? ";animation:msg-highlight .3s ease forwards"
+              : ""}"
           >
             ${isStartOfSequence && !isOwn && !customColors?.hideNames
               ? html`
@@ -714,7 +770,7 @@ export class ChatMessage extends LitElement {
               <button
                 type="button"
                 class="msg-smiley-trigger"
-                style="${smileyTriggerStyle(isDark)}"
+                style="${smileyTriggerStyle(isDark, isOwn)}"
                 @click="${() => {
                   this._showQuickEmojis = !this._showQuickEmojis;
                   if (this._showQuickEmojis) {
@@ -770,7 +826,85 @@ export class ChatMessage extends LitElement {
             )
             : nothing}
         </div>
-        ${this._showEmojiPicker
+        ${this._showMobileContext
+          ? html`
+            <div style="${mobileContextOverlayStyle}" @click="${this
+              ._closeMobileContext}">
+              <div style="${mobileContextMenuStyle(isDark)}" @click="${(
+                e: Event,
+              ) => e.stopPropagation()}">
+                ${this.onReact
+                  ? html`
+                    <div style="${mobileContextEmojiRowStyle(isDark)}">
+                      ${quickEmojis.map(
+                        (emoji) =>
+                          html`
+                            <button
+                              type="button"
+                              @click="${() => {
+                                this._toggleReaction(emoji);
+                                this._showMobileContext = false;
+                              }}"
+                              style="${reactionBtnStyle};font-size:22px;padding:4px 6px"
+                            >
+                              ${emoji}
+                            </button>
+                          `,
+                      )}
+                      <button
+                        type="button"
+                        @click="${() => {
+                          this._showMobileContext = false;
+                          this._showEmojiPicker = true;
+                        }}"
+                        style="${reactionBtnStyle};font-size:16px;padding:4px 6px;color:${isDark
+                          ? "#aaa"
+                          : "#666"}"
+                        title="More reactions"
+                      >
+                        +
+                      </button>
+                    </div>
+                  `
+                  : nothing}
+                <button
+                  type="button"
+                  @click="${this._copyText}"
+                  style="${mobileContextActionStyle(isDark)}"
+                >
+                  ${faCopy} Copy
+                </button>
+                ${canEdit
+                  ? html`
+                    <button
+                      type="button"
+                      @click="${() => {
+                        this._showMobileContext = false;
+                        this._startEdit();
+                      }}"
+                      style="${mobileContextActionStyle(isDark)}"
+                    >
+                      ${faPen} Edit
+                    </button>
+                  `
+                  : nothing} ${hasEdits
+                  ? html`
+                    <button
+                      type="button"
+                      @click="${() => {
+                        this._showMobileContext = false;
+                        this._showHistory = true;
+                      }}"
+                      style="${mobileContextActionStyle(isDark)}"
+                    >
+                      ${faHistory} View history
+                    </button>
+                  `
+                  : nothing}
+              </div>
+            </div>
+          `
+          : nothing} ${this._showEmojiPicker
           ? renderEmojiGrid(
             isDark,
             (emoji: string) => this._toggleReaction(emoji),
