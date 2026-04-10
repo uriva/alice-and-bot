@@ -39,6 +39,19 @@ export const highlightCss = `
 const monoFont =
   "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
 
+const rtlChar = /[\u0590-\u08ff\ufb1d-\ufdfd\ufe70-\ufefc]/;
+
+const ltrChar = /[A-Za-z\u00c0-\u02af]/;
+
+const textDirection = (text: string) => {
+  const rtlIndex = text.search(rtlChar);
+  const ltrIndex = text.search(ltrChar);
+  if (rtlIndex === -1 && ltrIndex === -1) return "auto";
+  if (rtlIndex === -1) return "ltr";
+  if (ltrIndex === -1) return "rtl";
+  return rtlIndex < ltrIndex ? "rtl" : "ltr";
+};
+
 const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
   const bg = isDark ? "#0a0a0a" : "#1e1e1e";
   const color = "#e5e7eb";
@@ -130,13 +143,18 @@ const createMarked = (textColor: string, isDark: boolean) => {
         const tag = ordered ? "ol" : "ul";
         const listType = ordered ? "decimal" : "disc";
         const body = items.map((item) => this.listitem(item)).join("");
-        return `<${tag} dir="auto" style="list-style:${listType};padding-inline-start:1.5em;margin:0 0 8px 0">${body}</${tag}>`;
+        const direction = textDirection(
+          items.map((item) => item.text).join(" "),
+        );
+        return `<${tag} dir="${direction}" style="list-style:${listType};padding-inline-start:1.5em;margin:0 0 8px 0">${body}</${tag}>`;
       },
       listitem(
         this: { parser: { parse(t: Token[]): string } },
-        { tokens }: Tokens.ListItem,
+        item: Tokens.ListItem,
       ) {
-        return `<li style="margin:2px 0">${this.parser.parse(tokens)}</li>`;
+        return `<li dir="${textDirection(item.text)}" style="margin:2px 0">${
+          this.parser.parse(item.tokens)
+        }</li>`;
       },
       table(
         this: { parser: { parseInline(t: Token[]): string } },
