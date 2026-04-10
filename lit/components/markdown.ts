@@ -13,7 +13,7 @@ const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
   const label = lang
     ? `<span style="position:absolute;top:6px;left:8px;font-size:10px;line-height:1;border-radius:8px;padding:3px 6px;background:${labelBg};color:${labelColor};font-weight:600">${lang.toUpperCase()}</span>`
     : "";
-  return `<div style="position:relative;min-width:0;overflow:hidden" class="fenced-code-wrap"><button data-testid="copy-code-button" type="button" title="Copy" style="position:absolute;top:6px;right:8px;font-size:11px;line-height:1;border-radius:10px;border:1px solid ${btnBorder};padding:4px 8px;background:#111111cc;color:#fff;cursor:pointer;box-shadow:${
+  return `<div dir="ltr" style="position:relative;min-width:0;overflow:hidden" class="fenced-code-wrap"><button data-testid="copy-code-button" type="button" title="Copy" style="position:absolute;top:6px;right:8px;font-size:11px;line-height:1;border-radius:10px;border:1px solid ${btnBorder};padding:4px 8px;background:#111111cc;color:#fff;cursor:pointer;box-shadow:${
     isDark ? "0 2px 6px #0006" : "0 1px 3px #0002"
   };opacity:0;pointer-events:none;transition:opacity .15s ease-in-out;z-index:2">Copy</button><pre style="position:relative;padding:10px 12px;overflow:auto;max-width:100%;box-sizing:border-box;background:${bg};color:${color};border-radius:8px;font-family:${monoFont};font-size:13px"><div style="position:relative;display:inline-block;min-width:max-content">${label}<code>${code}</code></div></pre></div>`;
 };
