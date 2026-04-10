@@ -251,4 +251,44 @@ test.describe("Widget", () => {
       { timeout: 10_000 },
     ).not.toBeNull();
   });
+
+  test("chat layout components fit inside mobile viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Create an artificial message with a code block
+    const { makeEncryptedMessage } = await import("./mocks/test-data.ts");
+    const localData = { ...data };
+
+    const markdown = "```\n" + "A".repeat(150) + "\n```";
+    const payload = await makeEncryptedMessage(
+      localData.conversationKey,
+      localData.bob,
+      markdown,
+    );
+    localData.messages = [{
+      id: "msg_long",
+      payload,
+      text: markdown,
+      timestamp: Date.now(),
+      senderPublicSignKey: localData.bob.publicSignKey,
+    }];
+
+    const { injectMessengerCredentials } = await import("./helpers.ts");
+    await injectMessengerCredentials(page, localData, "aliceAndBotCredentials");
+
+    await setupWidgetMocks(page, localData, { startOpen: true });
+    await page.goto("/widget-harness.html");
+    await expect(page.locator(tid("widget-close-button"))).toBeVisible({
+      timeout: 10000,
+    });
+
+    const bubble = page.locator(".msg-bubble").first();
+    await expect(bubble).toBeVisible({ timeout: 10000 });
+
+    const box = await bubble.boundingBox();
+    console.log("Input Area Width:", box.width);
+
+    // Viewport width is 375
+    expect(box.width).toBeLessThanOrEqual(375);
+  });
 });

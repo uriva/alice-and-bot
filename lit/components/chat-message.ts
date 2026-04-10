@@ -666,7 +666,7 @@ export class ChatMessage extends LitElement {
           : nothing}
         <div
           class="msg-wrap"
-          style="position:relative;min-width:0;max-width:80%${this.isMobile
+          style="position:relative;max-width:80%${this.isMobile
             ? ";user-select:none;-webkit-user-select:none;-webkit-touch-callout:none"
             : ""}"
           @contextmenu="${(e: Event) => {
@@ -679,7 +679,7 @@ export class ChatMessage extends LitElement {
         >
           <div
             class="msg-bubble"
-            style="min-width:0;background:${noBubble
+            style="background:${noBubble
               ? "transparent"
               : baseColor};color:${textColor};align-self:${isOwn
               ? "flex-end"
