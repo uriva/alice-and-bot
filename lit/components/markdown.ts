@@ -130,7 +130,7 @@ const createMarked = (textColor: string, isDark: boolean) => {
         const tag = ordered ? "ol" : "ul";
         const listType = ordered ? "decimal" : "disc";
         const body = items.map((item) => this.listitem(item)).join("");
-        return `<${tag} style="list-style:${listType};padding-left:1.5em;margin:0 0 8px 0">${body}</${tag}>`;
+        return `<${tag} dir="auto" style="list-style:${listType};padding-inline-start:1.5em;margin:0 0 8px 0">${body}</${tag}>`;
       },
       listitem(
         this: { parser: { parse(t: Token[]): string } },
