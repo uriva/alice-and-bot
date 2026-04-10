@@ -18,7 +18,11 @@ import {
   faReply,
   faSmile,
 } from "./icons.ts";
-import { fencedCodeHoverCss, renderMarkdown } from "./markdown.ts";
+import {
+  fencedCodeHoverCss,
+  highlightCss,
+  renderMarkdown,
+} from "./markdown.ts";
 import type {
   AbstracChatMessage,
   CustomColors,
@@ -639,7 +643,7 @@ export class ChatMessage extends LitElement {
 
     return html`
       <style>
-      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}
+      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}${highlightCss}
       .msg-wrap .msg-reply-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-reply-trigger{opacity:1}
       </style>
       <div
@@ -662,7 +666,7 @@ export class ChatMessage extends LitElement {
           : nothing}
         <div
           class="msg-wrap"
-          style="position:relative;max-width:80%${this.isMobile
+          style="position:relative;min-width:0;max-width:80%${this.isMobile
             ? ";user-select:none;-webkit-user-select:none;-webkit-touch-callout:none"
             : ""}"
           @contextmenu="${(e: Event) => {
@@ -675,7 +679,7 @@ export class ChatMessage extends LitElement {
         >
           <div
             class="msg-bubble"
-            style="background:${noBubble
+            style="min-width:0;background:${noBubble
               ? "transparent"
               : baseColor};color:${textColor};align-self:${isOwn
               ? "flex-end"
