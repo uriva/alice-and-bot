@@ -97,14 +97,20 @@ const longPressHighlightCss =
   `@keyframes msg-highlight{0%{transform:scale(1);box-shadow:none}100%{transform:scale(1.02);box-shadow:0 0 16px rgba(100,100,255,0.25)}}`;
 
 const mobileContextOverlayStyle =
-  "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999;display:flex;align-items:center;justify-content:center";
+  "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999";
 
-const mobileContextMenuStyle = (isDark: boolean) =>
-  `background:${
+const mobileContextMenuStyle = (isDark: boolean, touchY: number) => {
+  const menuHeight = 220;
+  const vp = globalThis.innerHeight;
+  const top = touchY - menuHeight - 12 < 0
+    ? Math.min(touchY + 12, vp - menuHeight - 12)
+    : touchY - menuHeight - 12;
+  return `position:fixed;top:${top}px;left:50%;transform:translateX(-50%);background:${
     isDark ? "#1a1a1a" : "#fff"
   };border-radius:16px;padding:8px 0;min-width:220px;max-width:280px;box-shadow:${
     isDark ? "0 8px 32px #000a" : "0 8px 32px #0003"
   };overflow:hidden`;
+};
 
 const mobileContextEmojiRowStyle = (isDark: boolean) =>
   `display:flex;justify-content:center;gap:4px;padding:8px 12px;border-bottom:1px solid ${
@@ -121,7 +127,7 @@ const smileyTriggerCss =
 
 const smileyTriggerStyle = (isDark: boolean, isOwn: boolean) =>
   `position:absolute;${
-    isOwn ? "left:-18px" : "right:-18px"
+    isOwn ? "left:-36px" : "right:-36px"
   };top:50%;transform:translateY(-50%);background:${
     isDark ? "#1a1a1a" : "#fff"
   };border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:${
@@ -129,9 +135,9 @@ const smileyTriggerStyle = (isDark: boolean, isOwn: boolean) =>
   };color:${isDark ? "#aaa" : "#666"};font-size:17px;padding:0`;
 
 const quickEmojiRowStyle = (isDark: boolean, isOwn: boolean) =>
-  `position:absolute;top:-36px;${
-    isOwn ? "right" : "left"
-  }:0;display:flex;gap:2px;background:${
+  `position:absolute;top:50%;transform:translateY(calc(-100% - 24px));${
+    isOwn ? "left:-36px" : "right:-36px"
+  };display:flex;gap:2px;background:${
     isDark ? "#1a1a1a" : "#fff"
   };border-radius:20px;padding:4px 6px;box-shadow:${
     isDark ? "0 2px 12px #0008" : "0 2px 12px #0003"
@@ -351,6 +357,7 @@ export class ChatMessage extends LitElement {
     _showQuickEmojis: { state: true },
     _showMobileContext: { state: true },
     _longPressActive: { state: true },
+    _touchY: { state: true },
   };
 
   declare msg: AbstracChatMessage;
@@ -375,6 +382,7 @@ export class ChatMessage extends LitElement {
   declare private _showQuickEmojis: boolean;
   declare private _showMobileContext: boolean;
   declare private _longPressActive: boolean;
+  declare private _touchY: number;
   private _timeInterval = 0;
   private _btnEl: HTMLButtonElement | null = null;
   private _menuEl: HTMLDivElement | null = null;
@@ -397,6 +405,7 @@ export class ChatMessage extends LitElement {
     this._showQuickEmojis = false;
     this._showMobileContext = false;
     this._longPressActive = false;
+    this._touchY = 0;
   }
 
   override createRenderRoot() {
@@ -504,6 +513,7 @@ export class ChatMessage extends LitElement {
     if (!this.isMobile) return;
     e.preventDefault();
     this._longPressActive = true;
+    this._touchY = e.touches[0]?.clientY ?? 0;
     this._longPressTimer = globalThis.setTimeout(() => {
       this._longPressActive = false;
       this._showMobileContext = true;
@@ -830,7 +840,10 @@ export class ChatMessage extends LitElement {
           ? html`
             <div style="${mobileContextOverlayStyle}" @click="${this
               ._closeMobileContext}">
-              <div style="${mobileContextMenuStyle(isDark)}" @click="${(
+              <div style="${mobileContextMenuStyle(
+                isDark,
+                this._touchY,
+              )}" @click="${(
                 e: Event,
               ) => e.stopPropagation()}">
                 ${this.onReact

@@ -124,7 +124,7 @@ const aggregateReactions = (
 
 const msgToUIMessage =
   (details: Record<string, { name: string; avatar?: string }>) =>
-  (msg: DecipheredMessage): AbstracChatMessage => ({
+  (msg: DecipheredMessage): AbstracChatMessage & { _replyToId?: string } => ({
     id: msg.id,
     authorId: msg.publicSignKey,
     authorName: details[msg.publicSignKey]?.name ??
@@ -133,6 +133,7 @@ const msgToUIMessage =
     text: msg.text,
     timestamp: msg.timestamp,
     attachments: hasAttachments(msg) ? msg.attachments : undefined,
+    _replyToId: msg.type === "text" ? msg.replyTo : undefined,
   });
 
 const msgToUIMessageWithHistory =
@@ -146,6 +147,34 @@ const msgToUIMessageWithHistory =
     ...msgToUIMessage(details)(msg),
     editHistory,
   });
+
+const resolveReplyTo =
+  (msgMap: Map<string, AbstracChatMessage>) =>
+  (msg: AbstracChatMessage & { _replyToId?: string }): AbstracChatMessage => {
+    const { _replyToId, ...rest } = msg;
+    if (!_replyToId) return rest;
+    const target = msgMap.get(_replyToId);
+    if (!target) {
+      return {
+        ...rest,
+        replyTo: {
+          id: _replyToId,
+          authorId: "",
+          authorName: "Unknown",
+          text: "",
+        },
+      };
+    }
+    return {
+      ...rest,
+      replyTo: {
+        id: target.id,
+        authorId: target.authorId,
+        authorName: target.authorName,
+        text: target.text,
+      },
+    };
+  };
 
 type UiOverride = {
   active?: boolean;
@@ -591,13 +620,15 @@ export class ConnectedChat extends LitElement {
     const knownIds = messageElementIds(messages);
     const reactions = messages.filter(isReaction);
     const addReactions = aggregateReactions(reactions, details);
+    const withReactions = foldEdits(messages.filter(isTextOrEdit)).map(
+      msgToUIMessageWithHistory(details),
+    ).map((m) => {
+      const r = addReactions(m.id);
+      return r.length ? { ...m, reactions: r } : m;
+    });
+    const msgMap = new Map(withReactions.map((m) => [m.id, m]));
     return {
-      chatMessages: foldEdits(messages.filter(isTextOrEdit)).map(
-        msgToUIMessageWithHistory(details),
-      ).map((m) => {
-        const r = addReactions(m.id);
-        return r.length ? { ...m, reactions: r } : m;
-      }),
+      chatMessages: withReactions.map(resolveReplyTo(msgMap)),
       activeSpinners: [
         ...latestSpinners(messages, details, overrides),
         ...standaloneSpinnerEntries(this._uiElements, knownIds),
@@ -614,12 +645,12 @@ export class ConnectedChat extends LitElement {
     };
   }
 
-  private _handleSend = (text: string) => {
+  private _handleSend = (text: string, replyTo?: string) => {
     if (!this._conversationKey || !this.credentials) return;
     sendMessageWithKey({
       conversationKey: this._conversationKey,
       credentials: this.credentials,
-      message: { type: "text", text },
+      message: { type: "text", text, replyTo },
       conversation: this.conversationId,
     }).catch((err) => console.error("Failed to send message", err));
     this._typingNotifier?.onBlurOrSend();
@@ -629,6 +660,7 @@ export class ConnectedChat extends LitElement {
     text: string,
     files: File[],
     audioDuration?: number,
+    replyTo?: string,
   ) => {
     if (!this._conversationKey || !this.credentials) return;
     const attachments: Attachment[] = [];
@@ -649,7 +681,7 @@ export class ConnectedChat extends LitElement {
     await sendMessageWithKey({
       conversationKey: this._conversationKey,
       credentials: this.credentials,
-      message: { type: "text", text, attachments },
+      message: { type: "text", text, attachments, replyTo },
       conversation: this.conversationId,
     });
     this._typingNotifier?.onBlurOrSend();

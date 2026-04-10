@@ -331,18 +331,20 @@ export class ChatBox extends LitElement {
     _textareaHeight: { state: true },
     _textareaOverflow: { state: true },
     _inputAreaHeight: { state: true },
+    _replyingTo: { state: true },
   };
 
   declare messages: AbstracChatMessage[];
   declare canLoadMore: boolean;
   declare loadMore: () => void;
   declare userId: string;
-  declare onSend: (input: string) => void;
+  declare onSend: (input: string, replyTo?: string) => void;
   declare onSendWithAttachments:
     | ((
       input: string,
       files: File[],
       audioDuration?: number,
+      replyTo?: string,
     ) => Promise<void>)
     | undefined;
   declare onClose: (() => void) | undefined;
@@ -398,6 +400,9 @@ export class ChatBox extends LitElement {
   declare private _textareaHeight: number;
   declare private _textareaOverflow: string;
   declare private _inputAreaHeight: number;
+  declare private _replyingTo:
+    | { id: string; authorName: string; text: string }
+    | null;
 
   constructor() {
     super();
@@ -434,6 +439,7 @@ export class ChatBox extends LitElement {
     this._textareaHeight = 44;
     this._textareaOverflow = "hidden";
     this._inputAreaHeight = 72;
+    this._replyingTo = null;
   }
 
   private _messagesContainerEl: HTMLDivElement | null = null;

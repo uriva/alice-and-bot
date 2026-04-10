@@ -85,6 +85,7 @@ type TextMessage = {
   text: string;
   attachments?: Attachment[];
   elementId?: string;
+  replyTo?: string;
 };
 
 type EditMessage = {
@@ -278,6 +279,7 @@ type DecipheredTextMessage = DecipheredMessageBase & {
   type: "text";
   attachments?: Attachment[];
   elementId?: string;
+  replyTo?: string;
 };
 
 type DecipheredEditMessage = DecipheredMessageBase & {
@@ -384,6 +386,7 @@ const decryptedPayloadToMessage = (
     elementId: "elementId" in decryptedPayload
       ? decryptedPayload.elementId
       : undefined,
+    replyTo: decryptedPayload.replyTo,
   };
 };
 

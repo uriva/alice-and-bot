@@ -12,6 +12,13 @@ export type Reaction = {
   authorName: string;
 };
 
+export type ReplyQuote = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  text: string;
+};
+
 export type AbstracChatMessage = {
   id: string;
   authorId: string;
@@ -23,6 +30,7 @@ export type AbstracChatMessage = {
   editHistory?: EditHistoryEntry[];
   callDetails?: { action: string; duration?: number };
   reactions?: Reaction[];
+  replyTo?: ReplyQuote;
 };
 
 export type ActiveStream = {
