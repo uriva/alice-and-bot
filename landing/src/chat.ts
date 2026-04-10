@@ -1833,6 +1833,14 @@ const mobileBottomNav = () => {
         setView_("identity")}">
         Settings
       </button>
+      <button
+        type="button"
+        class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-[#141414] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] transition-colors"
+        title="${currentDark ? "Switch to light mode" : "Switch to dark mode"}"
+        @click="${toggleDark}"
+      >
+        ${currentDark ? sunSvg : moonSvg}
+      </button>
     </div>
   `;
 };
