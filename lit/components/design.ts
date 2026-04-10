@@ -38,7 +38,7 @@ export const chatContainerStyle = (
 
 export const contentMaxWidthStyle = (custom?: CustomColors) =>
   custom?.chatMaxWidth
-    ? `max-width:${custom.chatMaxWidth};margin:0 auto;width:100%`
+    ? `max-width:${custom.chatMaxWidth};margin:0 auto;width:100%;box-sizing:border-box`
     : "";
 
 export const loadingStyle = "font-size:12px;color:#bbb";

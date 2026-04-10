@@ -272,7 +272,7 @@ const textareaStyle = (
   height = 44,
   overflow: string = "hidden",
 ) =>
-  `width:100%;padding:${
+  `width:100%;box-sizing:border-box;padding:${
     enableAttachments ? "10px 36px 10px 16px" : "10px 16px"
   };border:none;border-radius:22px;background:${
     custom?.inputBackground ?? (isDark ? "#111" : "#ffffff")
