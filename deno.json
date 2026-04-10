@@ -21,6 +21,7 @@
     "@std/assert": "jsr:@std/assert@1",
     "@uri/gamla": "jsr:@uri/gamla@0.0.14",
     "buffer": "npm:buffer@6.0.3",
+    "emoji-picker-element": "npm:emoji-picker-element@^1.29.1",
     "highlight.js": "npm:highlight.js@^11.11.1",
     "@lit/react": "npm:@lit/react@1.0.8",
     "lit": "npm:lit@3.3.2",

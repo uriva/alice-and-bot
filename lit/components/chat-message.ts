@@ -1,3 +1,4 @@
+import "emoji-picker-element";
 import { html, LitElement, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import type { Attachment } from "../../protocol/src/clientApi.ts";
@@ -171,49 +172,6 @@ const reactionPillStyle = (isDark: boolean, isActive: boolean) =>
       : (isDark ? "#141414" : "#f9fafb")
   };color:${isDark ? "#e5e7eb" : "#222"}`;
 
-const emojiGridStyle = (isDark: boolean) =>
-  `background:${
-    isDark ? "#1a1a1a" : "#fff"
-  };border-radius:12px;padding:12px;max-width:320px;max-height:300px;overflow:auto;border:1px solid ${
-    isDark ? "#2a2a2a" : "#e5e7eb"
-  };box-shadow:${isDark ? "0 4px 16px #0008" : "0 4px 16px #0003"}`;
-
-const emojiGridBtnStyle =
-  "background:transparent;border:none;cursor:pointer;font-size:20px;padding:4px;border-radius:4px;line-height:1";
-
-const fullEmojiList = [
-  "👍",
-  "👎",
-  "❤️",
-  "🔥",
-  "😂",
-  "😮",
-  "😢",
-  "😡",
-  "🎉",
-  "🤔",
-  "👏",
-  "🙏",
-  "💯",
-  "✅",
-  "❌",
-  "👀",
-  "🚀",
-  "💪",
-  "🤝",
-  "😍",
-  "🥳",
-  "😎",
-  "🤯",
-  "🫡",
-  "💀",
-  "🤷",
-  "😭",
-  "🙌",
-  "💜",
-  "🫶",
-];
-
 const diffPartStyle = (kind: DiffPart["kind"], isDark: boolean) =>
   kind === "add"
     ? `background:${isDark ? "#16532e" : "#d4edda"};color:${
@@ -363,32 +321,24 @@ const renderEmojiGrid = (
 ) =>
   html`
     <div style="${overlayStyle}" @click="${onClose}">
-      <div style="${emojiGridStyle(isDark)}" @click="${(e: Event) =>
-        e.stopPropagation()}">
-        <div
-          style="font-weight:bold;margin-bottom:8px;font-size:14px;color:${isDark
-            ? "#e5e7eb"
-            : "#222"}"
-        >
-          Pick a reaction
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px">
-          ${fullEmojiList.map(
-            (emoji) =>
-              html`
-                <button
-                  type="button"
-                  @click="${() => {
-                    onPick(emoji);
-                    onClose();
-                  }}"
-                  style="${emojiGridBtnStyle}"
-                >
-                  ${emoji}
-                </button>
-              `,
-          )}
-        </div>
+      <div
+        style="background:${isDark
+          ? "#1a1a1a"
+          : "#fff"};border-radius:12px;overflow:hidden;border:1px solid ${isDark
+          ? "#2a2a2a"
+          : "#e5e7eb"};box-shadow:${isDark
+          ? "0 4px 16px #0008"
+          : "0 4px 16px #0003"};display:flex;align-items:center;justify-content:center"
+        @click="${(e: Event) => e.stopPropagation()}"
+      >
+        <emoji-picker
+          class="${isDark ? "dark" : "light"}"
+          style="width:100%;height:350px;max-height:60vh;max-width:350px;--background:transparent"
+          @emoji-click="${(e: CustomEvent) => {
+            onPick(e.detail.unicode);
+            onClose();
+          }}"
+        ></emoji-picker>
       </div>
     </div>
   `;
@@ -666,7 +616,9 @@ export class ChatMessage extends LitElement {
           : nothing}
         <div
           class="msg-wrap"
-          style="position:relative;max-width:80%${this.isMobile
+          style="display:flex;flex-direction:column;min-width:0;align-items:${isOwn
+            ? "flex-end"
+            : "flex-start"};position:relative;max-width:80%${this.isMobile
             ? ";user-select:none;-webkit-user-select:none;-webkit-touch-callout:none"
             : ""}"
           @contextmenu="${(e: Event) => {
@@ -679,7 +631,7 @@ export class ChatMessage extends LitElement {
         >
           <div
             class="msg-bubble"
-            style="background:${noBubble
+            style="min-width:0;background:${noBubble
               ? "transparent"
               : baseColor};color:${textColor};align-self:${isOwn
               ? "flex-end"
