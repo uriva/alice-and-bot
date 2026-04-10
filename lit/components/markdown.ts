@@ -65,14 +65,12 @@ const createMarked = (textColor: string, isDark: boolean) => {
         return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:${textColor};text-decoration:underline;overflow-wrap:anywhere;word-break:break-word">${children}</a>`;
       },
       list(
-        this: { parser: { parse(t: Token[]): string } },
+        this: { listitem(t: Tokens.ListItem): string },
         { ordered, items }: Tokens.List,
       ) {
         const tag = ordered ? "ol" : "ul";
         const listType = ordered ? "decimal" : "disc";
-        const body = items.map((item) => this.parser.parse(item.tokens)).join(
-          "",
-        );
+        const body = items.map((item) => this.listitem(item)).join("");
         return `<${tag} style="list-style:${listType};padding-left:1.5em;margin:0 0 8px 0">${body}</${tag}>`;
       },
       listitem(

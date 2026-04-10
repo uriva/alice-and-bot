@@ -140,7 +140,7 @@ const smileyTriggerCss =
 const smileyTriggerStyle = (isDark: boolean, isOwn: boolean) =>
   `position:absolute;${
     isOwn ? "left:-36px" : "right:-36px"
-  };top:50%;transform:translateY(-50%);background:${
+  };top:calc(50% - 18px);transform:translateY(-50%);background:${
     isDark ? "#1a1a1a" : "#fff"
   };border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:${
     isDark ? "0 1px 4px #0006" : "0 1px 4px #0002"

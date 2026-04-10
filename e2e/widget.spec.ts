@@ -181,6 +181,24 @@ test.describe("Widget", () => {
     }
   });
 
+  test("chat elements do not overflow viewport horizontally on mobile", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await setupWidgetMocks(page, data, {
+      startOpen: true,
+      defaultName: "MobileUser",
+    });
+    await page.goto("/widget-harness.html");
+    await expect(page.locator(tid("widget-close-button"))).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const host = page.locator("#alice-and-bot-widget-root > div[dir='ltr']");
+    const hasOverflow = await host.evaluate((el) =>
+      el.scrollWidth > el.clientWidth
+    );
+    expect(hasOverflow).toBe(false);
+  });
+
   test("re-open after close works", async ({ page }) => {
     await setupWidgetMocks(page, data, {
       startOpen: true,

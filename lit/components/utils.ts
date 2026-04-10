@@ -105,11 +105,20 @@ export const decodeHtmlEntities = (text: string) =>
     .replace(/&#39;/g, "'")
     .replace(/&amp;/g, "&");
 
+export const htmlListToMarkdown = (text: string) =>
+  text
+    .replace(/<\/?ul[^>]*>/gi, "")
+    .replace(/<\/?ol[^>]*>/gi, "")
+    .replace(/<li[^>]*>/gi, "- ")
+    .replace(/<\/li>/gi, "\n");
+
 export const preprocessText = (text: string) =>
   decodeHtmlEntities(
     htmlCodeToMarkdown(
-      htmlAnchorToMarkdown(
-        htmlImgToMarkdown(htmlMediaToMarkdown(htmlInlineToMarkdown(text))),
+      htmlListToMarkdown(
+        htmlAnchorToMarkdown(
+          htmlImgToMarkdown(htmlMediaToMarkdown(htmlInlineToMarkdown(text))),
+        ),
       ),
     ),
   );
