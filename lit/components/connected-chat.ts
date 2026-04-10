@@ -318,6 +318,7 @@ const standaloneStreamEntries = (
       text: el.text ?? "",
       elementId: el.elementId,
       timestamp: el.updatedAt,
+      active: el.active !== false,
     }));
 
 const uiOverridesMap = (uiElements: UiElement[]) =>

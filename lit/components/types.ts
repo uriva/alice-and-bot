@@ -40,6 +40,7 @@ export type ActiveStream = {
   text: string;
   elementId: string;
   timestamp: number;
+  active: boolean;
 };
 
 export type ActiveSpinner = {

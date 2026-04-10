@@ -103,6 +103,31 @@ const quickEmojis = ["👍", "❤️", "😂", "😮", "🙏"];
 const longPressHighlightCss =
   `@keyframes msg-highlight{0%{transform:scale(1);box-shadow:none}100%{transform:scale(1.02);box-shadow:0 0 16px rgba(100,100,255,0.25)}}`;
 
+const liveCursorCss =
+  `@keyframes msg-live-cursor{0%,100%{opacity:.35;transform:scaleY(.9)}50%{opacity:1;transform:scaleY(1)}}`;
+
+const streamTickMs = 28;
+
+const streamCatchupSize = (targetLength: number, visibleLength: number) =>
+  Math.min(4, Math.max(1, Math.ceil((targetLength - visibleLength) / 24)));
+
+const nextVisibleText = (target: string, visible: string, active: boolean) => {
+  if (visible === target) return visible;
+  if (!target.startsWith(visible)) return target;
+  const size = active ? streamCatchupSize(target.length, visible.length) : 6;
+  return target.slice(0, Math.min(target.length, visible.length + size));
+};
+
+const liveCursorTemplate = (isDark: boolean) =>
+  html`
+    <span
+      aria-hidden="true"
+      style="display:inline-block;width:2px;height:1.05em;margin-inline-start:2px;border-radius:999px;vertical-align:-0.12em;background:${isDark
+        ? "#ffffffcc"
+        : "#111111aa"};animation:msg-live-cursor .9s ease-in-out infinite"
+    ></span>
+  `;
+
 const mobileContextOverlayStyle =
   "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999";
 
@@ -358,6 +383,7 @@ export class ChatMessage extends LitElement {
     customColors: { attribute: false },
     isDark: { type: Boolean },
     isMobile: { type: Boolean },
+    streamActive: { type: Boolean },
     _isEditing: { state: true },
     _editText: { state: true },
     _showHistory: { state: true },
@@ -384,6 +410,7 @@ export class ChatMessage extends LitElement {
   declare customColors: CustomColors | undefined;
   declare isDark: boolean;
   declare isMobile: boolean;
+  declare streamActive: boolean;
 
   declare private _isEditing: boolean;
   declare private _editText: string;
@@ -396,6 +423,8 @@ export class ChatMessage extends LitElement {
   declare private _longPressActive: boolean;
   declare private _touchY: number;
   declare private _touchX: number;
+  declare private _visibleText: string;
+  private _streamTimer = 0;
   private _timeInterval = 0;
   private _btnEl: HTMLButtonElement | null = null;
   private _menuEl: HTMLDivElement | null = null;
@@ -408,6 +437,7 @@ export class ChatMessage extends LitElement {
     this.sessionStart = 0;
     this.isDark = false;
     this.isMobile = false;
+    this.streamActive = false;
     this.userId = "";
     this._isEditing = false;
     this._editText = "";
@@ -420,6 +450,7 @@ export class ChatMessage extends LitElement {
     this._longPressActive = false;
     this._touchY = 0;
     this._touchX = 0;
+    this._visibleText = "";
   }
 
   override createRenderRoot() {
@@ -434,11 +465,13 @@ export class ChatMessage extends LitElement {
       30000,
     );
     this.addEventListener("click", this._handleCopyCode);
+    this._syncVisibleText();
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     clearInterval(this._timeInterval);
+    clearTimeout(this._streamTimer);
     clearTimeout(this._longPressTimer);
     document.removeEventListener("mousedown", this._dismissQuickEmojis);
     this._removeOutsideClick();
@@ -456,6 +489,41 @@ export class ChatMessage extends LitElement {
 
   private _updateTimeAgo() {
     this._timeAgo = computeTimeAgo(this.msg.timestamp);
+  }
+
+  private _scheduleStreamTick = () => {
+    clearTimeout(this._streamTimer);
+    const target = this.msg.text;
+    if (this._visibleText === target) return;
+    this._streamTimer = globalThis.setTimeout(() => {
+      const next = nextVisibleText(
+        target,
+        this._visibleText,
+        this.streamActive,
+      );
+      if (next !== this._visibleText) {
+        this._visibleText = next;
+      }
+      this._scheduleStreamTick();
+    }, streamTickMs);
+  };
+
+  private _syncVisibleText = () => {
+    if (!this.streamActive) {
+      this._visibleText = this.msg.text;
+      clearTimeout(this._streamTimer);
+      return;
+    }
+    if (!this.msg.text.startsWith(this._visibleText)) {
+      this._visibleText = "";
+    }
+    this._scheduleStreamTick();
+  };
+
+  override willUpdate(changed: Map<PropertyKey, unknown>) {
+    if (changed.has("msg") || changed.has("streamActive")) {
+      this._syncVisibleText();
+    }
   }
 
   private _removeOutsideClick() {
@@ -587,13 +655,14 @@ export class ChatMessage extends LitElement {
       Date.now() - timestamp < editWindowMs);
     const hasEdits = !empty(editHistory ?? []);
     const showMenu = (canEdit || hasEdits) && !this._isEditing;
-    const markdownHtml = renderMarkdown(text, textColor, isDark);
+    const displayedText = this.streamActive ? this._visibleText : text;
+    const markdownHtml = renderMarkdown(displayedText, textColor, isDark);
     const canSave = !!this._editText.trim() &&
       this._editText !== text;
 
     return html`
       <style>
-      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}${highlightCss}
+      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}${liveCursorCss}${highlightCss}
       .msg-wrap .msg-reply-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-reply-trigger{opacity:1}
       </style>
       <div
@@ -691,7 +760,7 @@ export class ChatMessage extends LitElement {
                   </div>
                 </div>
               `
-              : text
+              : displayedText || this.streamActive
               ? html`
                 <div
                   data-testid="message-text"
@@ -702,7 +771,7 @@ export class ChatMessage extends LitElement {
                 >
                   ${callDetails ? faPhoneAlt : nothing} ${unsafeHTML(
                     markdownHtml,
-                  )}
+                  )}${this.streamActive ? liveCursorTemplate(isDark) : nothing}
                 </div>
               `
               : nothing} ${attachments && attachments.length > 0
