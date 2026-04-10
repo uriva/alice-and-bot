@@ -571,7 +571,7 @@ export class ChatMessage extends LitElement {
 
   private _longPressStart = (e: TouchEvent) => {
     if (!this.isMobile) return;
-    e.preventDefault();
+    // Removed e.preventDefault() so that normal browser scrolling isn't blocked.
     this._longPressActive = true;
     this._touchY = e.touches[0]?.clientY ?? 0;
     this._touchX = e.touches[0]?.clientX ?? 0;
@@ -663,8 +663,11 @@ export class ChatMessage extends LitElement {
         <div
           class="msg-wrap"
           style="position:relative;max-width:80%${this.isMobile
-            ? ";user-select:none;-webkit-user-select:none"
+            ? ";user-select:none;-webkit-user-select:none;-webkit-touch-callout:none"
             : ""}"
+          @contextmenu="${(e: Event) => {
+            if (this.isMobile) e.preventDefault();
+          }}"
           @touchstart="${this._longPressStart}"
           @touchend="${this._longPressEnd}"
           @touchmove="${this._longPressEnd}"
