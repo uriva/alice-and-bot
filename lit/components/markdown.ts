@@ -1,21 +1,80 @@
 import { Marked, type Token, type Tokens } from "marked";
 import { isAudioUrl, isVideoUrl, preprocessText } from "./utils.ts";
+import hljs from "highlight.js/lib/core";
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import python from "highlight.js/lib/languages/python";
+import bash from "highlight.js/lib/languages/bash";
+import json from "highlight.js/lib/languages/json";
+import css from "highlight.js/lib/languages/css";
+import xml from "highlight.js/lib/languages/xml";
+
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("xml", xml);
+hljs.registerLanguage("html", xml);
+
+export const highlightCss = `
+.hljs{color:#c9d1d9;background:transparent}
+.hljs-doctag,.hljs-keyword,.hljs-meta .hljs-keyword,.hljs-template-tag,.hljs-template-variable,.hljs-type,.hljs-variable.language_{color:#ff7b72}
+.hljs-title,.hljs-title.class_,.hljs-title.class_.inherited__,.hljs-title.function_{color:#d2a8ff}
+.hljs-attr,.hljs-attribute,.hljs-literal,.hljs-meta,.hljs-number,.hljs-operator,.hljs-variable,.hljs-selector-attr,.hljs-selector-class,.hljs-selector-id{color:#79c0ff}
+.hljs-regexp,.hljs-string,.hljs-meta .hljs-string{color:#a5d6ff}
+.hljs-built_in,.hljs-symbol{color:#ffa657}
+.hljs-comment,.hljs-code,.hljs-formula{color:#8b949e}
+.hljs-name,.hljs-quote,.hljs-selector-tag,.hljs-selector-pseudo{color:#7ee787}
+.hljs-subst{color:#c9d1d9}
+.hljs-section{color:#1f6feb;font-weight:bold}
+.hljs-bullet{color:#f2cc60}
+.hljs-emphasis{color:#c9d1d9;font-style:italic}
+.hljs-strong{color:#c9d1d9;font-weight:bold}
+.hljs-addition{color:#aff5b4;background-color:#033a16}
+.hljs-deletion{color:#ffdcd7;background-color:#67060c}
+`;
 
 const monoFont =
   "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
 
 const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
-  const bg = isDark ? "#0a0a0a" : "#f3f4f6";
-  const color = isDark ? "#e5e7eb" : "#111";
-  const labelBg = isDark ? "#ffffff1a" : "#0000000f";
-  const labelColor = isDark ? "#e5e7eb" : "#111";
-  const btnBorder = isDark ? "#2a2a2a" : "#00000020";
+  const bg = isDark ? "#0a0a0a" : "#1e1e1e";
+  const color = "#e5e7eb";
+  const labelBg = isDark ? "#ffffff1a" : "#2d2d2d";
+  const labelColor = "#e5e7eb";
+  const btnBorder = isDark ? "#2a2a2a" : "#333";
+
+  let highlighted = code;
+  if (lang && hljs.getLanguage(lang)) {
+    try {
+      highlighted = hljs.highlight(code, { language: lang }).value;
+    } catch (_) {
+      // fallback
+    }
+  } else {
+    try {
+      highlighted = hljs.highlightAuto(code).value;
+    } catch (_) {
+      // fallback
+    }
+  }
+
   const label = lang
-    ? `<span style="position:absolute;top:6px;left:8px;font-size:10px;line-height:1;border-radius:8px;padding:3px 6px;background:${labelBg};color:${labelColor};font-weight:600">${lang.toUpperCase()}</span>`
-    : "";
-  return `<div dir="ltr" style="position:relative;min-width:0;overflow:hidden" class="fenced-code-wrap"><button data-testid="copy-code-button" type="button" title="Copy" style="position:absolute;top:6px;right:8px;font-size:11px;line-height:1;border-radius:10px;border:1px solid ${btnBorder};padding:4px 8px;background:#111111cc;color:#fff;cursor:pointer;box-shadow:${
-    isDark ? "0 2px 6px #0006" : "0 1px 3px #0002"
-  };opacity:0;pointer-events:none;transition:opacity .15s ease-in-out;z-index:2">Copy</button><pre style="position:relative;padding:10px 12px;overflow:auto;max-width:100%;box-sizing:border-box;background:${bg};color:${color};border-radius:8px;font-family:${monoFont};font-size:13px"><div style="position:relative;display:inline-block;min-width:max-content">${label}<code>${code}</code></div></pre></div>`;
+    ? `<div style="font-size:11px;font-family:${monoFont};color:${labelColor};background:${labelBg};padding:4px 12px;border-top-left-radius:8px;border-top-right-radius:8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid ${btnBorder}">${lang.toUpperCase()}
+<button data-testid="copy-code-button" type="button" title="Copy" style="font-size:11px;line-height:1;border-radius:4px;border:none;background:transparent;color:${labelColor};cursor:pointer;padding:2px 4px;opacity:0.7;transition:opacity .15s">Copy</button>
+</div>`
+    : `<div style="display:flex;justify-content:flex-end;padding:4px 8px;background:${labelBg};border-top-left-radius:8px;border-top-right-radius:8px;border-bottom:1px solid ${btnBorder}">
+<button data-testid="copy-code-button" type="button" title="Copy" style="font-size:11px;line-height:1;border-radius:4px;border:none;background:transparent;color:${labelColor};cursor:pointer;padding:2px 4px;opacity:0.7;transition:opacity .15s">Copy</button>
+</div>`;
+
+  return `<div dir="ltr" style="background:${bg};color:${color};border-radius:8px;min-width:0;overflow:hidden;margin-bottom:8px;box-shadow:inset 0 0 0 1px ${
+    isDark ? "#ffffff1a" : "#0000001a"
+  }" class="fenced-code-wrap hljs">
+    ${label}
+    <pre style="margin:0;padding:10px 12px;overflow:auto;max-width:100%;box-sizing:border-box;font-family:${monoFont};font-size:13px"><code style="background:transparent;color:inherit;padding:0;border-radius:0">${highlighted}</code></pre>
+  </div>`;
 };
 
 const inlineCodeHtml = (code: string, isDark: boolean) => {
@@ -116,4 +175,4 @@ export const renderMarkdown = (
   );
 
 export const fencedCodeHoverCss =
-  `.fenced-code-wrap:hover [data-testid="copy-code-button"]{opacity:.95!important;pointer-events:auto!important}`;
+  `.fenced-code-wrap:hover [data-testid="copy-code-button"]{opacity:1!important;background:#ffffff1a!important}`;
