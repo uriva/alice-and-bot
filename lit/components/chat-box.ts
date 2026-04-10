@@ -330,6 +330,7 @@ export class ChatBox extends LitElement {
     _fetchingMore: { state: true },
     _textareaHeight: { state: true },
     _textareaOverflow: { state: true },
+    _inputAreaHeight: { state: true },
   };
 
   declare messages: AbstracChatMessage[];
@@ -396,6 +397,7 @@ export class ChatBox extends LitElement {
   declare private _fetchingMore: boolean;
   declare private _textareaHeight: number;
   declare private _textareaOverflow: string;
+  declare private _inputAreaHeight: number;
 
   constructor() {
     super();
@@ -431,6 +433,7 @@ export class ChatBox extends LitElement {
     this._fetchingMore = false;
     this._textareaHeight = 44;
     this._textareaOverflow = "hidden";
+    this._inputAreaHeight = 72;
   }
 
   private _messagesContainerEl: HTMLDivElement | null = null;
@@ -456,6 +459,8 @@ export class ChatBox extends LitElement {
   private _loadingMore = false;
   private _prevScrollHeight = 0;
   private _resizeObserver: ResizeObserver | null = null;
+  private _inputResizeObserver: ResizeObserver | null = null;
+  private _inputAreaEl: HTMLDivElement | null = null;
   private _escHandler: ((e: KeyboardEvent) => void) | null = null;
   private _attachOutsideHandler: ((e: MouseEvent) => void) | null = null;
   private _isMobile = false;
@@ -488,6 +493,10 @@ export class ChatBox extends LitElement {
     if (this._resizeObserver) {
       this._resizeObserver.disconnect();
       this._resizeObserver = null;
+    }
+    if (this._inputResizeObserver) {
+      this._inputResizeObserver.disconnect();
+      this._inputResizeObserver = null;
     }
     this._removeAttachOutside();
     if (this._recordingInterval) clearInterval(this._recordingInterval);
@@ -785,6 +794,9 @@ export class ChatBox extends LitElement {
     this._attachMenuEl = this.querySelector<HTMLDivElement>(
       "[data-attach-wrapper]",
     );
+    this._inputAreaEl = this.querySelector<HTMLDivElement>(
+      "[data-input-area]",
+    );
     this._remoteAudioEl = this.querySelector<HTMLAudioElement>(
       "[data-remote-audio]",
     );
@@ -798,6 +810,14 @@ export class ChatBox extends LitElement {
         if (this._stuckToBottom) this._scrollToBottom();
       });
       this._resizeObserver.observe(this._contentEl);
+    }
+
+    if (this._inputAreaEl && this._contentEl && !this._inputResizeObserver) {
+      this._inputResizeObserver = new ResizeObserver(([entry]) => {
+        this._inputAreaHeight = entry.contentRect.height + 8;
+        if (this._stuckToBottom) this._scrollToBottom();
+      });
+      this._inputResizeObserver.observe(this._inputAreaEl);
     }
 
     if (!this._isMobile && !this.disableAutoFocus && this._inputEl) {
@@ -1105,9 +1125,10 @@ export class ChatBox extends LitElement {
         >
           <div
             data-content-inner
-            style="display:flex;flex-direction:column;gap:8px;padding:4px 4px 72px 4px;flex-grow:1;box-sizing:border-box;min-width:0;${contentMaxWidthStyle(
-              customColors,
-            )}"
+            style="display:flex;flex-direction:column;gap:8px;padding:4px 4px ${this
+              ._inputAreaHeight}px 4px;flex-grow:1;box-sizing:border-box;min-width:0;${contentMaxWidthStyle(
+                customColors,
+              )}"
           >
             ${this.isLoading
               ? html`
@@ -1150,7 +1171,10 @@ export class ChatBox extends LitElement {
           </div>
         </div>
 
-        <div style="position:absolute;bottom:0;left:0;right:0;z-index:10">
+        <div
+          data-input-area
+          style="position:absolute;bottom:0;left:0;right:0;z-index:10"
+        >
           ${!empty(this._pendingFiles)
             ? html`
               <div style="background:${customColors?.inputBackground ??
