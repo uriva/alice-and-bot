@@ -22,6 +22,7 @@ import {
   faReply,
   faStop,
 } from "./icons.ts";
+import "./chat-animated-row.ts";
 import "./chat-message.ts";
 import "./chat-typing-indicator.ts";
 import type {
@@ -85,24 +86,33 @@ const renderSpinnerIndicator = (
   color?: string,
 ) =>
   html`
-    <div style="${indicatorTextStyle(isDark, color)}">
-      <span>${showAuthorName(hideNames, isGroupChat)
-        ? `${spinner.authorName}: ${spinner.text}`
-        : spinner.text}</span>
-      ${spinner.active
-        ? html`
-          <div style="${linearBarTrackStyle(
-            isDark,
-            color,
-          )}"><div style="${indeterminateBarStyle(isDark, color)}"></div></div>
-        `
-        : html`
-          <div style="${linearBarTrackStyle(
-            isDark,
-            color,
-          )}"><div style="${linearBarFillStyle(1, isDark, color)}"></div></div>
-        `}
-    </div>
+    <chat-animated-row>
+      <div style="${indicatorTextStyle(isDark, color)}">
+        <span>${showAuthorName(hideNames, isGroupChat)
+          ? `${spinner.authorName}: ${spinner.text}`
+          : spinner.text}</span>
+        ${spinner.active
+          ? html`
+            <div style="${linearBarTrackStyle(
+              isDark,
+              color,
+            )}"><div style="${indeterminateBarStyle(
+              isDark,
+              color,
+            )}"></div></div>
+          `
+          : html`
+            <div style="${linearBarTrackStyle(
+              isDark,
+              color,
+            )}"><div style="${linearBarFillStyle(
+              1,
+              isDark,
+              color,
+            )}"></div></div>
+          `}
+      </div>
+    </chat-animated-row>
   `;
 
 const renderProgressIndicator = (
@@ -113,19 +123,21 @@ const renderProgressIndicator = (
   color?: string,
 ) =>
   html`
-    <div style="${indicatorTextStyle(isDark, color)}">
-      <span>${showAuthorName(hideNames, isGroupChat)
-        ? `${progress.authorName}: ${progress.text}`
-        : progress.text} (${Math.round(progress.percentage * 100)}%)</span>
-      <div style="${linearBarTrackStyle(
-        isDark,
-        color,
-      )}"><div style="${linearBarFillStyle(
-        progress.percentage,
-        isDark,
-        color,
-      )}"></div></div>
-    </div>
+    <chat-animated-row>
+      <div style="${indicatorTextStyle(isDark, color)}">
+        <span>${showAuthorName(hideNames, isGroupChat)
+          ? `${progress.authorName}: ${progress.text}`
+          : progress.text} (${Math.round(progress.percentage * 100)}%)</span>
+        <div style="${linearBarTrackStyle(
+          isDark,
+          color,
+        )}"><div style="${linearBarFillStyle(
+          progress.percentage,
+          isDark,
+          color,
+        )}"></div></div>
+      </div>
+    </chat-animated-row>
   `;
 
 const spinnerKeyframes =
@@ -150,28 +162,30 @@ const spinnerEl = (isDark: boolean, color?: string) =>
 
 const sendingAudioIndicator = (primaryColor: string) =>
   html`
-    <div style="display:flex;flex-direction:row-reverse;gap:6px">
-      <div
-        style="background:${primaryColor};border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:10px;opacity:0.7"
-      >
-        <style>
-        ${spinnerKeyframes}
-        </style>
+    <chat-animated-row>
+      <div style="display:flex;flex-direction:row-reverse;gap:6px">
         <div
-          style="width:20px;height:20px;border:3px solid ${isLightColor(
-              primaryColor,
-            )
-            ? "#00000010"
-            : "#ffffff1a"};border-top:3px solid ${isLightColor(primaryColor)
-            ? "#00000040"
-            : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
+          style="background:${primaryColor};border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:10px;opacity:0.7"
         >
+          <style>
+          ${spinnerKeyframes}
+          </style>
+          <div
+            style="width:20px;height:20px;border:3px solid ${isLightColor(
+                primaryColor,
+              )
+              ? "#00000010"
+              : "#ffffff1a"};border-top:3px solid ${isLightColor(primaryColor)
+              ? "#00000040"
+              : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
+          >
+          </div>
+          <span style="color:${isLightColor(primaryColor)
+            ? "#222"
+            : "#fff"};font-size:13px">Sending audio...</span>
         </div>
-        <span style="color:${isLightColor(primaryColor)
-          ? "#222"
-          : "#fff"};font-size:13px">Sending audio...</span>
       </div>
-    </div>
+    </chat-animated-row>
   `;
 
 const replyBarStyle = (isDark: boolean, custom?: CustomColors) =>
@@ -1236,10 +1250,12 @@ export class ChatBox extends LitElement {
                   )
                   : nothing} ${!empty(this.typingUsers)
                   ? html`
-                    <chat-typing-indicator
-                      .names="${this.typingUsers}"
-                      .isDark="${isDark}"
-                    ></chat-typing-indicator>
+                    <chat-animated-row>
+                      <chat-typing-indicator
+                        .names="${this.typingUsers}"
+                        .isDark="${isDark}"
+                      ></chat-typing-indicator>
+                    </chat-animated-row>
                   `
                   : nothing}
               `}
