@@ -53,6 +53,9 @@ const indicatorTextStyle = (isDark: boolean, color?: string) =>
     indicatorColor(isDark, color)
   };font-size:14px`;
 
+const nextFrame = () =>
+  new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
 const linearBarTrackStyle = (isDark: boolean, color?: string) =>
   `width:200px;height:8px;border:1px solid ${
     indicatorColor(isDark, color)
@@ -699,6 +702,8 @@ export class ChatBox extends LitElement {
           timestamp: Date.now(),
         },
       ];
+      await this.updateComplete;
+      await nextFrame();
       this.onSend(text, replyTo);
     }
 
