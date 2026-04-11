@@ -22,7 +22,6 @@ import {
   faReply,
   faStop,
 } from "./icons.ts";
-import "./chat-animated-row.ts";
 import "./chat-message.ts";
 import "./chat-typing-indicator.ts";
 import type {
@@ -31,10 +30,8 @@ import type {
   ActiveSpinner,
   ActiveStream,
   CustomColors,
-  TimelineEntry,
 } from "./types.ts";
 import {
-  buildTimeline,
   charCountThreshold,
   estimateSerializedLength,
   formatDuration,
@@ -56,6 +53,17 @@ const indicatorTextStyle = (isDark: boolean, color?: string) =>
 
 const nextFrame = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+const transientStackTransitionMs = 240;
+
+const transientStackStyle =
+  `display:flex;flex-direction:column;gap:8px;overflow:hidden;transition:max-height .24s ease`;
+
+const messageEntries = (messages: AbstracChatMessage[]) =>
+  messages.map((msg, i) => ({
+    msg,
+    prevMsg: messages[i - 1],
+  }));
 
 const linearBarTrackStyle = (isDark: boolean, color?: string) =>
   `width:200px;height:8px;border:1px solid ${
@@ -86,33 +94,31 @@ const renderSpinnerIndicator = (
   color?: string,
 ) =>
   html`
-    <chat-animated-row>
-      <div style="${indicatorTextStyle(isDark, color)}">
-        <span>${showAuthorName(hideNames, isGroupChat)
-          ? `${spinner.authorName}: ${spinner.text}`
-          : spinner.text}</span>
-        ${spinner.active
-          ? html`
-            <div style="${linearBarTrackStyle(
-              isDark,
-              color,
-            )}"><div style="${indeterminateBarStyle(
-              isDark,
-              color,
-            )}"></div></div>
-          `
-          : html`
-            <div style="${linearBarTrackStyle(
-              isDark,
-              color,
-            )}"><div style="${linearBarFillStyle(
-              1,
-              isDark,
-              color,
-            )}"></div></div>
-          `}
-      </div>
-    </chat-animated-row>
+    <div style="${indicatorTextStyle(isDark, color)}">
+      <span>${showAuthorName(hideNames, isGroupChat)
+        ? `${spinner.authorName}: ${spinner.text}`
+        : spinner.text}</span>
+      ${spinner.active
+        ? html`
+          <div style="${linearBarTrackStyle(
+            isDark,
+            color,
+          )}"><div style="${indeterminateBarStyle(
+            isDark,
+            color,
+          )}"></div></div>
+        `
+        : html`
+          <div style="${linearBarTrackStyle(
+            isDark,
+            color,
+          )}"><div style="${linearBarFillStyle(
+            1,
+            isDark,
+            color,
+          )}"></div></div>
+        `}
+    </div>
   `;
 
 const renderProgressIndicator = (
@@ -123,21 +129,19 @@ const renderProgressIndicator = (
   color?: string,
 ) =>
   html`
-    <chat-animated-row>
-      <div style="${indicatorTextStyle(isDark, color)}">
-        <span>${showAuthorName(hideNames, isGroupChat)
-          ? `${progress.authorName}: ${progress.text}`
-          : progress.text} (${Math.round(progress.percentage * 100)}%)</span>
-        <div style="${linearBarTrackStyle(
-          isDark,
-          color,
-        )}"><div style="${linearBarFillStyle(
-          progress.percentage,
-          isDark,
-          color,
-        )}"></div></div>
-      </div>
-    </chat-animated-row>
+    <div style="${indicatorTextStyle(isDark, color)}">
+      <span>${showAuthorName(hideNames, isGroupChat)
+        ? `${progress.authorName}: ${progress.text}`
+        : progress.text} (${Math.round(progress.percentage * 100)}%)</span>
+      <div style="${linearBarTrackStyle(
+        isDark,
+        color,
+      )}"><div style="${linearBarFillStyle(
+        progress.percentage,
+        isDark,
+        color,
+      )}"></div></div>
+    </div>
   `;
 
 const spinnerKeyframes =
@@ -162,30 +166,28 @@ const spinnerEl = (isDark: boolean, color?: string) =>
 
 const sendingAudioIndicator = (primaryColor: string) =>
   html`
-    <chat-animated-row>
-      <div style="display:flex;flex-direction:row-reverse;gap:6px">
+    <div style="display:flex;flex-direction:row-reverse;gap:6px">
+      <div
+        style="background:${primaryColor};border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:10px;opacity:0.7"
+      >
+        <style>
+        ${spinnerKeyframes}
+        </style>
         <div
-          style="background:${primaryColor};border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:10px;opacity:0.7"
+          style="width:20px;height:20px;border:3px solid ${isLightColor(
+              primaryColor,
+            )
+            ? "#00000010"
+            : "#ffffff1a"};border-top:3px solid ${isLightColor(primaryColor)
+            ? "#00000040"
+            : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
         >
-          <style>
-          ${spinnerKeyframes}
-          </style>
-          <div
-            style="width:20px;height:20px;border:3px solid ${isLightColor(
-                primaryColor,
-              )
-              ? "#00000010"
-              : "#ffffff1a"};border-top:3px solid ${isLightColor(primaryColor)
-              ? "#00000040"
-              : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
-          >
-          </div>
-          <span style="color:${isLightColor(primaryColor)
-            ? "#222"
-            : "#fff"};font-size:13px">Sending audio...</span>
         </div>
+        <span style="color:${isLightColor(primaryColor)
+          ? "#222"
+          : "#fff"};font-size:13px">Sending audio...</span>
       </div>
-    </chat-animated-row>
+    </div>
   `;
 
 const replyBarStyle = (isDark: boolean, custom?: CustomColors) =>
@@ -471,6 +473,10 @@ export class ChatBox extends LitElement {
   declare private _replyingTo:
     | { id: string; authorName: string; text: string }
     | null;
+  declare private _transientHeight: number;
+  declare private _transientPrevHeight: number;
+  declare private _transientAnimating: boolean;
+  private _transientTimer = 0;
 
   constructor() {
     super();
@@ -507,6 +513,9 @@ export class ChatBox extends LitElement {
     this._textareaHeight = 44;
     this._textareaOverflow = "hidden";
     this._inputAreaHeight = 72;
+    this._transientHeight = 0;
+    this._transientPrevHeight = 0;
+    this._transientAnimating = false;
     this._replyingTo = null;
   }
 
@@ -526,6 +535,29 @@ export class ChatBox extends LitElement {
   private _sessionStart = Date.now();
   private _initialLoad = true;
   private _pendingAudioMessageCount: number | null = null;
+  private _measureTransientHeight = () =>
+    this.querySelector<HTMLElement>("[data-transient-stack]")?.scrollHeight ??
+      0;
+
+  private _animateTransientStack = () => {
+    const nextHeight = this._measureTransientHeight();
+    if (nextHeight === this._transientHeight && !this._transientAnimating) {
+      return;
+    }
+    clearTimeout(this._transientTimer);
+    this._transientPrevHeight = this._transientAnimating
+      ? this._transientHeight
+      : this._measureTransientHeight();
+    this._transientHeight = this._transientPrevHeight;
+    this._transientAnimating = true;
+    requestAnimationFrame(() => {
+      this._transientHeight = nextHeight;
+      this._transientTimer = globalThis.setTimeout(() => {
+        this._transientAnimating = false;
+        this._transientPrevHeight = nextHeight;
+      }, transientStackTransitionMs);
+    });
+  };
   private _touchStart: { x: number; y: number } | null = null;
   private _prevActiveSpinnerIds = new Set<string>();
   private _prevMessageCount = 0;
@@ -909,6 +941,14 @@ export class ChatBox extends LitElement {
       this._inputResizeObserver.observe(this._inputAreaEl);
     }
 
+    if (
+      changed.has("typingUsers") || changed.has("activeSpinners") ||
+      changed.has("activeProgress") || changed.has("activeStreams") ||
+      changed.has("_isSending")
+    ) {
+      this._animateTransientStack();
+    }
+
     if (!this._isMobile && !this.disableAutoFocus && this._inputEl) {
       if (changed.has("title")) this._inputEl.focus();
     }
@@ -992,12 +1032,7 @@ export class ChatBox extends LitElement {
       this._optimisticMessages,
       this.userId,
     );
-    const timeline = buildTimeline(
-      allMsgs,
-      this.activeSpinners,
-      this.activeProgress,
-      this.activeStreams,
-    );
+    const timeline = messageEntries(allMsgs);
 
     const hasContent = !!this._input.trim() || this._pendingFiles.length > 0;
     const showMic = this.enableAudioRecording && !hasContent &&
@@ -1242,22 +1277,68 @@ export class ChatBox extends LitElement {
                 </div>
               `
               : html`
-                ${timeline.map((entry) =>
-                  this._renderTimelineEntry(entry)
-                )} ${this._isSending
-                  ? sendingAudioIndicator(
-                    customColors?.primary ?? defaultPrimary(isDark),
-                  )
-                  : nothing} ${!empty(this.typingUsers)
-                  ? html`
-                    <chat-animated-row>
+                ${timeline.map((entry) => this._renderMessageEntry(entry))}
+                <div
+                  data-transient-stack
+                  style="${transientStackStyle};max-height:${this
+                      ._transientAnimating || this._transientHeight > 0
+                    ? `${this._transientHeight}px`
+                    : "none"}"
+                >
+                  ${this.activeSpinners.map((spinner) =>
+                    renderSpinnerIndicator(
+                      spinner,
+                      isDark,
+                      customColors?.hideNames,
+                      this.isGroupChat,
+                      customColors?.text,
+                    )
+                  )} ${this.activeProgress.map((progress) =>
+                    renderProgressIndicator(
+                      progress,
+                      isDark,
+                      customColors?.hideNames,
+                      this.isGroupChat,
+                      customColors?.text,
+                    )
+                  )} ${this.activeStreams.map((stream) => {
+                    const streamMsg: AbstracChatMessage = {
+                      id: stream.elementId,
+                      authorId: stream.authorPublicKey ?? stream.authorName,
+                      authorName: stream.authorName,
+                      authorAvatar: stream.authorAvatar,
+                      text: stream.text,
+                      timestamp: stream.timestamp,
+                    };
+                    const prevMsg = allMsgs.filter((m) =>
+                      m.timestamp <= stream.timestamp
+                    ).pop();
+                    return html`
+                      <chat-message
+                        .msg="${streamMsg}"
+                        .prev="${prevMsg}"
+                        .isOwn="${false}"
+                        .streamActive="${stream.active}"
+                        .onDecryptAttachment="${this.onDecryptAttachment}"
+                        .sessionStart="${this._sessionStart}"
+                        .onAvatarClick="${this.onAvatarClick}"
+                        .customColors="${customColors}"
+                        .isDark="${isDark}"
+                      ></chat-message>
+                    `;
+                  })} ${this._isSending
+                    ? sendingAudioIndicator(
+                      customColors?.primary ?? defaultPrimary(isDark),
+                    )
+                    : nothing} ${!empty(this.typingUsers)
+                    ? html`
                       <chat-typing-indicator
                         .names="${this.typingUsers}"
                         .isDark="${isDark}"
                       ></chat-typing-indicator>
-                    </chat-animated-row>
-                  `
-                  : nothing}
+                    `
+                    : nothing}
+                </div>
               `}
           </div>
         </div>
@@ -1553,72 +1634,33 @@ export class ChatBox extends LitElement {
     `;
   }
 
-  private _renderTimelineEntry(entry: TimelineEntry) {
+  private _renderMessageEntry(
+    entry: { msg: AbstracChatMessage; prevMsg?: AbstracChatMessage },
+  ) {
     const isDark = this._effectiveDark;
     const { customColors } = this;
-    if (entry.kind === "message") {
-      return html`
-        <chat-message
-          .msg="${entry.msg}"
-          .prev="${entry.prevMsg}"
-          .isOwn="${entry.msg.authorId === this.userId}"
-          .onDecryptAttachment="${this.onDecryptAttachment}"
-          .sessionStart="${this._sessionStart}"
-          .onEdit="${this.onEdit
-            ? (newText: string) => this.onEdit!(entry.msg.id, newText)
-            : undefined}"
-          .onReact="${this.onReact
-            ? (emoji: string, remove?: boolean) =>
-              this.onReact!(entry.msg.id, emoji, remove)
-            : undefined}"
-          .onReply="${() => this._handleReply(entry.msg.id)}"
-          .userId="${this.userId}"
-          .isMobile="${this._isMobile}"
-          .onAvatarClick="${this.onAvatarClick}"
-          .customColors="${customColors}"
-          .isDark="${isDark}"
-        ></chat-message>
-      `;
-    }
-    if (entry.kind === "stream") {
-      const streamMsg: AbstracChatMessage = {
-        id: entry.stream.elementId,
-        authorId: entry.stream.authorPublicKey ?? entry.stream.authorName,
-        authorName: entry.stream.authorName,
-        authorAvatar: entry.stream.authorAvatar,
-        text: entry.stream.text,
-        timestamp: entry.stream.timestamp,
-      };
-      return html`
-        <chat-message
-          .msg="${streamMsg}"
-          .prev="${entry.prevMsg}"
-          .isOwn="${false}"
-          .streamActive="${entry.stream.active}"
-          .onDecryptAttachment="${this.onDecryptAttachment}"
-          .sessionStart="${this._sessionStart}"
-          .onAvatarClick="${this.onAvatarClick}"
-          .customColors="${customColors}"
-          .isDark="${isDark}"
-        ></chat-message>
-      `;
-    }
-    if (entry.kind === "spinner") {
-      return renderSpinnerIndicator(
-        entry.spinner,
-        isDark,
-        customColors?.hideNames,
-        this.isGroupChat,
-        customColors?.text,
-      );
-    }
-    return renderProgressIndicator(
-      entry.progress,
-      isDark,
-      customColors?.hideNames,
-      this.isGroupChat,
-      customColors?.text,
-    );
+    return html`
+      <chat-message
+        .msg="${entry.msg}"
+        .prev="${entry.prevMsg}"
+        .isOwn="${entry.msg.authorId === this.userId}"
+        .onDecryptAttachment="${this.onDecryptAttachment}"
+        .sessionStart="${this._sessionStart}"
+        .onEdit="${this.onEdit
+          ? (newText: string) => this.onEdit!(entry.msg.id, newText)
+          : undefined}"
+        .onReact="${this.onReact
+          ? (emoji: string, remove?: boolean) =>
+            this.onReact!(entry.msg.id, emoji, remove)
+          : undefined}"
+        .onReply="${() => this._handleReply(entry.msg.id)}"
+        .userId="${this.userId}"
+        .isMobile="${this._isMobile}"
+        .onAvatarClick="${this.onAvatarClick}"
+        .customColors="${customColors}"
+        .isDark="${isDark}"
+      ></chat-message>
+    `;
   }
 }
 
