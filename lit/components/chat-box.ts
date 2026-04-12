@@ -1321,7 +1321,7 @@ export class ChatBox extends LitElement {
                       <chat-message
                         .msg="${streamMsg}"
                         .prev="${prevMsg}"
-                        .isOwn="${false}"
+                        .isOwn="${streamMsg.authorId === this.userId}"
                         .streamActive="${stream.active}"
                         .onDecryptAttachment="${this.onDecryptAttachment}"
                         .sessionStart="${this._sessionStart}"
