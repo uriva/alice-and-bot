@@ -338,4 +338,11 @@ test.describe("AbstractChatBox (example app)", () => {
       timeout: 2000,
     });
   });
+
+  test("messages render in chronological order (oldest first)", async ({ page }) => {
+    const texts = await page.locator(tid("message-text")).allInnerTexts();
+    expect(texts.length).toBeGreaterThan(1);
+    expect(texts[0]).toContain("sorting algorithm");
+    expect(texts[texts.length - 1]).not.toContain("sorting algorithm");
+  });
 });

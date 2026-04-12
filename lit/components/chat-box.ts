@@ -59,11 +59,13 @@ const transientStackTransitionMs = 240;
 const transientStackStyle =
   `display:flex;flex-direction:column;gap:8px;overflow:hidden;transition:max-height .24s ease`;
 
-const messageEntries = (messages: AbstracChatMessage[]) =>
-  messages.map((msg, i) => ({
+const messageEntries = (messages: AbstracChatMessage[]) => {
+  const sorted = [...messages].sort((a, b) => a.timestamp - b.timestamp);
+  return sorted.map((msg, i) => ({
     msg,
-    prevMsg: messages[i - 1],
+    prevMsg: sorted[i - 1],
   }));
+};
 
 const linearBarTrackStyle = (isDark: boolean, color?: string) =>
   `width:200px;height:8px;border:1px solid ${
