@@ -24371,7 +24371,6 @@ async function plugin(input) {
     return `${baseUrl}/chat?chatWith=${encodeURIComponent(credentials.publicSignKey)}&topic=${encodeURIComponent(topic)}`;
   };
   const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${relayToken}`;
-  let reconnectTimer;
   const setupWebSocket = () => {
     const wsUrl = `wss://api.aliceandbot.com/relay/ws/${relayToken}`;
     const ws = new WebSocket(wsUrl);
@@ -24550,17 +24549,23 @@ ${getLink()}`
     ws.onclose = () => {
       clearInterval(pingInterval);
       logDebug("WebSocket closed, reconnecting in 5 seconds...");
-      clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(setupWebSocket, 5000);
+      clearTimeout(globalThis.__aliceReconnectTimer);
+      globalThis.__aliceReconnectTimer = setTimeout(() => {
+        globalThis.__aliceWebSocket = setupWebSocket();
+      }, 5000);
     };
     ws.onerror = (err) => {
       logDebug(`WebSocket error: ${err}`);
     };
+    return ws;
   };
-  if (!globalThis.__aliceWebSocket) {
-    globalThis.__aliceWebSocket = true;
-    setupWebSocket();
+  const existingWs = globalThis.__aliceWebSocket;
+  if (existingWs && typeof existingWs.close === "function") {
+    existingWs.onclose = null;
+    existingWs.close();
   }
+  clearTimeout(globalThis.__aliceReconnectTimer);
+  globalThis.__aliceWebSocket = setupWebSocket();
   const client = input.client;
   const showAliceLink = async (sessionId) => {
     currentSessionId = sessionId;

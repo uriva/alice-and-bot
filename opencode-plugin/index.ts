@@ -345,7 +345,6 @@ export default async function plugin(input: unknown) {
 
   const webhookUrl = `https://api.aliceandbot.com/relay/webhook/${relayToken}`;
 
-  let reconnectTimer: any;
   const setupWebSocket = () => {
     const wsUrl = `wss://api.aliceandbot.com/relay/ws/${relayToken}`;
     const ws = new WebSocket(wsUrl);
@@ -573,19 +572,26 @@ export default async function plugin(input: unknown) {
     ws.onclose = () => {
       clearInterval(pingInterval);
       logDebug("WebSocket closed, reconnecting in 5 seconds...");
-      clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(setupWebSocket, 5000);
+      clearTimeout((globalThis as any).__aliceReconnectTimer);
+      (globalThis as any).__aliceReconnectTimer = setTimeout(() => {
+        (globalThis as any).__aliceWebSocket = setupWebSocket();
+      }, 5000);
     };
 
     ws.onerror = (err) => {
       logDebug(`WebSocket error: ${err}`);
     };
+
+    return ws;
   };
 
-  if (!(globalThis as any).__aliceWebSocket) {
-    (globalThis as any).__aliceWebSocket = true;
-    setupWebSocket();
+  const existingWs = (globalThis as any).__aliceWebSocket;
+  if (existingWs && typeof existingWs.close === "function") {
+    existingWs.onclose = null;
+    existingWs.close();
   }
+  clearTimeout((globalThis as any).__aliceReconnectTimer);
+  (globalThis as any).__aliceWebSocket = setupWebSocket();
 
   const client = (input as any).client;
 
