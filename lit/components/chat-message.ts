@@ -770,7 +770,7 @@ export class ChatMessage extends LitElement {
                     : ""}"
                 >
                   ${callDetails ? faPhoneAlt : nothing} ${unsafeHTML(
-                    this.streamActive && displayedText
+                    this.streamActive && displayedText.trim()
                       ? injectCursorAtEnd(markdownHtml, liveCursorHtml(isDark))
                       : markdownHtml,
                   )}
