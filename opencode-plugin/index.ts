@@ -5,7 +5,10 @@ import {
   handleWebhookUpdate,
   sendMessageWithKey,
 } from "./node_modules/@alice-and-bot/core/protocol/src/clientApi.js";
-import { setWebhook } from "./node_modules/@alice-and-bot/core/backend/src/api.js";
+import {
+  sendTyping,
+  setWebhook,
+} from "./node_modules/@alice-and-bot/core/backend/src/api.js";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
@@ -587,6 +590,11 @@ export default async function plugin(input: unknown) {
                 path: { id: targetSessionId },
                 body: { parts },
               });
+              await sendTyping({
+                conversation: convoId,
+                isTyping: true,
+                publicSignKey: (credentials as any).publicSignKey,
+              }).catch(() => {});
             } catch (err: any) {
               await logDebug(
                 `Failed to prompt session (it may have died): ${err?.message}`,
@@ -786,6 +794,11 @@ export default async function plugin(input: unknown) {
           } catch (e: unknown) {
             await logDebug(`Error sending reply: ${(e as Error)?.message}`);
           }
+          await sendTyping({
+            conversation: convoInfo.conversation,
+            isTyping: false,
+            publicSignKey: (credentials as any).publicSignKey,
+          }).catch(() => {});
         } else {
           await logDebug("No phone convo linked to this session.");
         }

@@ -16329,6 +16329,10 @@ var setWebhook = ({ url: url2, credentials: { publicSignKey } }) => apiClient2({
     publicSignKey
   }
 });
+var sendTyping = (params) => apiClient2({
+  endpoint: "sendTyping",
+  payload: params
+});
 
 // node_modules/@alice-and-bot/core/protocol/src/attachmentLimits.js
 var MB = 1024 * 1024;
@@ -24552,6 +24556,11 @@ ${getLink()}`
                 path: { id: targetSessionId },
                 body: { parts }
               });
+              await sendTyping({
+                conversation: convoId,
+                isTyping: true,
+                publicSignKey: credentials.publicSignKey
+              }).catch(() => {});
             } catch (err) {
               await logDebug(`Failed to prompt session (it may have died): ${err?.message}`);
               await sendMessageWithKey({
@@ -24707,6 +24716,11 @@ Reply /yes, /no, or /always`
           } catch (e) {
             await logDebug(`Error sending reply: ${e?.message}`);
           }
+          await sendTyping({
+            conversation: convoInfo.conversation,
+            isTyping: false,
+            publicSignKey: credentials.publicSignKey
+          }).catch(() => {});
         } else {
           await logDebug("No phone convo linked to this session.");
         }
