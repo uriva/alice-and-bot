@@ -135,10 +135,12 @@ test.describe("AbstractChatBox (example app)", () => {
   });
 
   test("wide code block does not break layout", async ({ page }) => {
-    const wideCode =
-      '```\nInvalid arguments: {"name":"ZodError","message":"[\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"content\\",\\n      \\"machineId\\",\\n      \\"filePath\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized keys: \\\\\\"\\"content\\\\\\"\\", \\\\\\"\\"\\"machineId\\\\\\"\\", \\\\\\"\\"\\"filePath\\\\\\"\\"\\"\\"\\n  }\\n]"}\n```';
+    const codeLine = String
+      .raw`Invalid arguments: {"name":"ZodError","message":"[\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"content\",\n      \"machineId\",\n      \"filePath\"\n    ],\n    \"path\": [],\n    \"message\": \"Unrecognized keys: \\\"content\\\", \\\"machineId\\\", \\\"filePath\\\"\"\n  }\n]"}`;
+    const msg =
+      `when agent get typing wrong for tools we return\n\nTool response:\n\n\`\`\`\n${codeLine}\n\`\`\`\n\ncan this be more concise?`;
     const input = page.locator(tid("message-input"));
-    await input.fill(wideCode);
+    await input.fill(msg);
     await input.press("Enter");
     await expect(page.locator("pre code").last()).toBeVisible();
     const viewport = page.viewportSize()!;
@@ -148,6 +150,25 @@ test.describe("AbstractChatBox (example app)", () => {
     const bubble = page.locator(".msg-bubble").last();
     const bubbleBox = await bubble.boundingBox();
     expect(bubbleBox!.width).toBeLessThanOrEqual(containerBox!.width);
+  });
+
+  test("no horizontal overflow on any element after code block message", async ({ page }) => {
+    const longLine = "x".repeat(500);
+    const wideCode = `Here is the error:\n\n\`\`\`\n${longLine}\n\`\`\``;
+    const input = page.locator(tid("message-input"));
+    await input.fill(wideCode);
+    await input.press("Enter");
+    await expect(page.locator("pre code").last()).toBeVisible();
+    const viewport = page.viewportSize()!;
+    const bubble = page.locator(".msg-bubble").last();
+    const bubbleBox = await bubble.boundingBox();
+    expect(bubbleBox!.width).toBeLessThanOrEqual(
+      Math.ceil(viewport.width * 0.8) + 2,
+    );
+    const docScrollW = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    expect(docScrollW).toBeLessThanOrEqual(viewport.width);
   });
 
   test("XSS content is escaped safely", async ({ page }) => {
