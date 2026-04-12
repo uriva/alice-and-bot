@@ -172,7 +172,7 @@ export const subscribeUserName = (
     },
   );
 
-const typingTtl = 20000;
+export const typingTtl = 20000;
 
 type TypingState = {
   owner?: { publicSignKey?: string; name?: string };
@@ -196,7 +196,13 @@ const typingNamesFromStates = (
     .filter((x): x is string => Boolean(x));
 };
 
-export const subscribeTypingStates = (
+type SubscribeQuery = (
+  query: Record<string, unknown>,
+  cb: (result: { data?: { typingStates?: TypingState[] } }) => void,
+) => () => void;
+
+export const makeSubscribeTypingStates = (subscribeQuery: SubscribeQuery) =>
+(
   conversationId: string,
   selfPublicSignKey: string,
   onChange: (typingNames: string[]) => void,
@@ -205,7 +211,35 @@ export const subscribeTypingStates = (
   const emit = () =>
     onChange(typingNamesFromStates(latestStates, selfPublicSignKey));
   const interval = setInterval(emit, 5000);
-  const unsub = accessDb().subscribeQuery(
+  const unsub = subscribeQuery(
+    {
+      typingStates: {
+        owner: {},
+        $: { where: { conversation: conversationId } },
+      },
+    },
+    ({ data }) => {
+      latestStates = data?.typingStates ?? [];
+      emit();
+    },
+  );
+  return () => {
+    clearInterval(interval);
+    unsub();
+  };
+};
+
+export const subscribeTypingStates = (
+  conversationId: string,
+  selfPublicSignKey: string,
+  onChange: (typingNames: string[]) => void,
+) => {
+  const db = accessDb();
+  let latestStates: TypingState[] = [];
+  const emit = () =>
+    onChange(typingNamesFromStates(latestStates, selfPublicSignKey));
+  const interval = setInterval(emit, 5000);
+  const unsub = db.subscribeQuery(
     {
       typingStates: {
         owner: {},

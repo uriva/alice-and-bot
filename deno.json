@@ -13,6 +13,8 @@
     "pre-commit": "check"
   },
   "imports": {
+    "@std/testing": "jsr:@std/testing@^1.0.17",
+    "@std/testing/time": "jsr:@std/testing@^1.0.17/time",
     "@uri/crypto-utils": "jsr:@uri/crypto-utils@^0.0.2",
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.5",
     "@google-cloud/storage": "npm:@google-cloud/storage@7.16.0",
