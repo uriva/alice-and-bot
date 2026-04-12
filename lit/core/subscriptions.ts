@@ -172,12 +172,40 @@ export const subscribeUserName = (
     },
   );
 
+const typingTtl = 20000;
+
+type TypingState = {
+  owner?: { publicSignKey?: string; name?: string };
+  updatedAt?: number;
+};
+
+const typingNamesFromStates = (
+  states: TypingState[],
+  selfPublicSignKey: string,
+) => {
+  const now = Date.now();
+  return states
+    .filter((t) => t.owner?.publicSignKey !== selfPublicSignKey)
+    .filter((t) => t.updatedAt && now - t.updatedAt < typingTtl)
+    .map((t) =>
+      t.owner?.name ||
+      (t.owner?.publicSignKey
+        ? compactPublicKey(t.owner.publicSignKey)
+        : undefined)
+    )
+    .filter((x): x is string => Boolean(x));
+};
+
 export const subscribeTypingStates = (
   conversationId: string,
   selfPublicSignKey: string,
   onChange: (typingNames: string[]) => void,
-) =>
-  accessDb().subscribeQuery(
+) => {
+  let latestStates: TypingState[] = [];
+  const emit = () =>
+    onChange(typingNamesFromStates(latestStates, selfPublicSignKey));
+  const interval = setInterval(emit, 5000);
+  const unsub = accessDb().subscribeQuery(
     {
       typingStates: {
         owner: {},
@@ -185,24 +213,15 @@ export const subscribeTypingStates = (
       },
     },
     ({ data }) => {
-      const ttl = 20000;
-      const now = Date.now();
-      onChange(
-        (data?.typingStates ?? [])
-          .filter((t) => t.owner?.publicSignKey !== selfPublicSignKey)
-          .filter((t) => t.updatedAt && now - t.updatedAt < ttl)
-          .map((t) =>
-            t.owner?.name ||
-            (t.owner?.publicSignKey
-              ? compactPublicKey(t.owner.publicSignKey)
-              : undefined)
-          )
-          .filter((x): x is string => Boolean(x)),
-      );
+      latestStates = data?.typingStates ?? [];
+      emit();
     },
   );
-
-const typingTtl = 20000;
+  return () => {
+    clearInterval(interval);
+    unsub();
+  };
+};
 
 export const createTypingNotifier = (
   conversationId: string,
