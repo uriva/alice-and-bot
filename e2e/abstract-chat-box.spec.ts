@@ -134,6 +134,22 @@ test.describe("AbstractChatBox (example app)", () => {
     expect(msgBox!.width).toBeLessThanOrEqual(viewport.width);
   });
 
+  test("wide code block does not break layout", async ({ page }) => {
+    const wideCode =
+      '```\nInvalid arguments: {"name":"ZodError","message":"[\\n  {\\n    \\"code\\": \\"unrecognized_keys\\",\\n    \\"keys\\": [\\n      \\"content\\",\\n      \\"machineId\\",\\n      \\"filePath\\"\\n    ],\\n    \\"path\\": [],\\n    \\"message\\": \\"Unrecognized keys: \\\\\\"\\"content\\\\\\"\\", \\\\\\"\\"\\"machineId\\\\\\"\\", \\\\\\"\\"\\"filePath\\\\\\"\\"\\"\\"\\n  }\\n]"}\n```';
+    const input = page.locator(tid("message-input"));
+    await input.fill(wideCode);
+    await input.press("Enter");
+    await expect(page.locator("pre code").last()).toBeVisible();
+    const viewport = page.viewportSize()!;
+    const container = page.locator(tid("chat-container"));
+    const containerBox = await container.boundingBox();
+    expect(containerBox!.width).toBeLessThanOrEqual(viewport.width);
+    const bubble = page.locator(".msg-bubble").last();
+    const bubbleBox = await bubble.boundingBox();
+    expect(bubbleBox!.width).toBeLessThanOrEqual(containerBox!.width);
+  });
+
   test("XSS content is escaped safely", async ({ page }) => {
     const input = page.locator(tid("message-input"));
     const xss = "<script>alert('xss')</script>";

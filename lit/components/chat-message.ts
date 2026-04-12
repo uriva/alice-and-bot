@@ -700,7 +700,7 @@ export class ChatMessage extends LitElement {
         >
           <div
             class="msg-bubble"
-            style="min-width:0;background:${noBubble
+            style="min-width:0;max-width:100%;background:${noBubble
               ? "transparent"
               : baseColor};color:${textColor};align-self:${isOwn
               ? "flex-end"
