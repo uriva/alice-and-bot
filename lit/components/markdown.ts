@@ -152,9 +152,9 @@ const createMarked = (textColor: string, isDark: boolean) => {
         this: { parser: { parse(t: Token[]): string } },
         item: Tokens.ListItem,
       ) {
-        return `<li dir="${textDirection(item.text)}" style="margin:2px 0">${
+        return `<li style="margin:2px 0"><span dir="auto">${
           this.parser.parse(item.tokens)
-        }</li>`;
+        }</span></li>`;
       },
       table(
         this: { parser: { parseInline(t: Token[]): string } },
