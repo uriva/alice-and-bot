@@ -402,6 +402,8 @@ export class ChatBox extends LitElement {
     _textareaOverflow: { state: true },
     _inputAreaHeight: { state: true },
     _replyingTo: { state: true },
+    _transientHeight: { state: true },
+    _transientAnimating: { state: true },
   };
 
   declare messages: AbstracChatMessage[];
