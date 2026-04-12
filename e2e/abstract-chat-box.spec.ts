@@ -325,4 +325,17 @@ test.describe("AbstractChatBox (example app)", () => {
     await inputArea.locator("button", { hasText: "×" }).click();
     await expect(inputArea.getByText("You", { exact: true })).not.toBeVisible();
   });
+
+  test("transient stack animates to a pixel max-height when typing indicator appears", async ({ page }) => {
+    await page.evaluate(() => {
+      const chatBox = document.querySelector("chat-box") as
+        & HTMLElement
+        & Record<string, unknown>;
+      chatBox.typingUsers = ["Alice"];
+    });
+    const stack = page.locator("[data-transient-stack]");
+    await expect(stack).toHaveAttribute("style", /max-height:\s*\d+px/, {
+      timeout: 2000,
+    });
+  });
 });

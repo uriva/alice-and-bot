@@ -948,7 +948,7 @@ export class ChatBox extends LitElement {
       changed.has("activeProgress") || changed.has("activeStreams") ||
       changed.has("_isSending")
     ) {
-      this._animateTransientStack();
+      requestAnimationFrame(() => this._animateTransientStack());
     }
 
     if (!this._isMobile && !this.disableAutoFocus && this._inputEl) {
