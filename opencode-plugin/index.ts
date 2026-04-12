@@ -58,11 +58,50 @@ const debugLogPath = path.join(
   "opencode",
   "alice_plugin.log",
 );
+const statePath = path.join(
+  os.homedir(),
+  ".config",
+  "opencode",
+  "alice_plugin_state.json",
+);
 
 async function logDebug(msg: string) {
   const timestamp = new Date().toISOString();
   await fs.appendFile(debugLogPath, `[${timestamp}] ${msg}\n`).catch(() => {});
 }
+
+const loadState = async () => {
+  try {
+    const raw = await fs.readFile(statePath, "utf-8");
+    const state = JSON.parse(raw);
+    if (state.currentSessionId) currentSessionId = state.currentSessionId;
+    if (state.sessionToConvoKey) {
+      Object.entries(state.sessionToConvoKey).forEach(([k, v]) =>
+        sessionToConvoKey.set(k, v as any)
+      );
+    }
+    if (state.convoToSessionId) {
+      Object.entries(state.convoToSessionId).forEach(([k, v]) =>
+        convoToSessionId.set(k, v as string)
+      );
+    }
+    await logDebug(
+      `Loaded persisted state: currentSessionId=${currentSessionId}, sessions=${sessionToConvoKey.size}, convos=${convoToSessionId.size}`,
+    );
+  } catch {
+    await logDebug("No persisted state found (first run or corrupted file).");
+  }
+};
+
+const saveState = () =>
+  fs.writeFile(
+    statePath,
+    JSON.stringify({
+      currentSessionId,
+      sessionToConvoKey: Object.fromEntries(sessionToConvoKey),
+      convoToSessionId: Object.fromEntries(convoToSessionId),
+    }),
+  ).catch(() => {});
 
 const getMessageText = (message: any) => message?.text?.trim() || "";
 
@@ -308,6 +347,7 @@ const buildPromptParts = async (message: any) => {
 
 export default async function plugin(input: unknown) {
   await logDebug("Plugin initialized.");
+  await loadState();
   const configDir = path.join(os.homedir(), ".config", "opencode");
   const credsFile = path.join(configDir, "alice_creds.json");
   const stateFile = path.join(configDir, "alice_state.json");
@@ -395,6 +435,7 @@ export default async function plugin(input: unknown) {
               conversation: convoId,
               conversationKey,
             });
+            await saveState();
             await logDebug(
               `Bound new convo ${convoId} to session ${currentSessionId}`,
             );
@@ -471,6 +512,7 @@ export default async function plugin(input: unknown) {
                   (result as any)?.data?.id;
                 if (!newSessionId) throw new Error("No session ID returned");
                 currentSessionId = newSessionId;
+                await saveState();
                 await notifyPhone({
                   conversation: convoId,
                   conversationKey,
@@ -597,6 +639,7 @@ export default async function plugin(input: unknown) {
 
   const showAliceLink = async (sessionId: string) => {
     currentSessionId = sessionId;
+    await saveState();
     await logDebug(`Set active session ${sessionId}`);
 
     let sessionTitle: string | undefined;
