@@ -850,6 +850,17 @@ Deno.serve(async (req: Request) => {
           })();
         };
 
+        socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "ping") {
+              socket.send(JSON.stringify({ type: "pong" }));
+            }
+          } catch (_) {
+            // ignore malformed messages
+          }
+        };
+
         socket.onclose = () => {
           // cleanup if needed
         };

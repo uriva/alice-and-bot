@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-version="v3.4.0"
+version="v3.5.0"
 cacheBuster="$(date +%s)"
 
 echo "Installing Alice&Bot OpenCode plugin ${version} (Phone Command Routing)..."

@@ -393,21 +393,35 @@ export default async function plugin(input: unknown) {
     const ws = new WebSocket(wsUrl);
 
     let pingInterval: any;
+    let lastMessageReceivedAt = Date.now();
+    const STALE_THRESHOLD_MS = 90000;
+
     ws.onopen = async () => {
       await logDebug(`Connected to WebSocket relay at ${wsUrl}`);
+      lastMessageReceivedAt = Date.now();
       const res = await setWebhook({ url: webhookUrl, credentials });
       await logDebug(`setWebhook response: ${JSON.stringify(res)}`);
       await logDebug("Webhook URL registered on backend for WS relay.");
       pingInterval = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
+          const staleDuration = Date.now() - lastMessageReceivedAt;
+          if (staleDuration > STALE_THRESHOLD_MS) {
+            logDebug(
+              `WebSocket stale for ${staleDuration}ms, force-closing to reconnect`,
+            );
+            ws.close();
+            return;
+          }
           ws.send(JSON.stringify({ type: "ping" }));
         }
       }, 30000);
     };
 
     ws.onmessage = async (event) => {
+      lastMessageReceivedAt = Date.now();
       try {
         const jsonBody = JSON.parse(event.data.toString());
+        if (jsonBody.type === "pong") return;
         await logDebug(
           `Received message from WS relay: ${
             JSON.stringify(jsonBody).slice(0, 100)
@@ -629,7 +643,8 @@ export default async function plugin(input: unknown) {
     };
 
     ws.onerror = (err) => {
-      logDebug(`WebSocket error: ${err}`);
+      logDebug(`WebSocket error: ${err}, closing to trigger reconnect`);
+      ws.close();
     };
 
     return ws;
