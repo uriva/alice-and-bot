@@ -957,6 +957,10 @@ export class ChatBox extends LitElement {
       if (changed.has("title")) this._inputEl.focus();
     }
 
+    if (changed.has("title") && !empty(this._optimisticMessages)) {
+      this._optimisticMessages = [];
+    }
+
     if (this._remoteAudioEl && this.remoteStream) {
       this._remoteAudioEl.srcObject = this.remoteStream;
       this._remoteAudioEl.play().catch(console.error);
