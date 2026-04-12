@@ -51,7 +51,8 @@ export const centerFillStyle = (isDarkMode: boolean) =>
 export const defaultOtherBubble = (isDark: boolean) =>
   isDark ? "#1e1e22" : "#ffffff";
 
-const avatarHues = [195, 105, 30, 300, 270, 0, 210, 150];
+export const primaryHue = 195;
+const avatarHues = [primaryHue, 105, 30, 300, 270, 0, 210, 150];
 
 export const avatarColor = (str: string, isDark: boolean) => {
   let hash = 0;
@@ -78,4 +79,4 @@ export const isLightColor = (color: string) => {
 };
 
 export const defaultPrimary = (isDark: boolean) =>
-  isDark ? "#1a1a1a" : "#dbeafe";
+  isDark ? `hsl(${primaryHue}, 45%, 22%)` : "#dbeafe";
