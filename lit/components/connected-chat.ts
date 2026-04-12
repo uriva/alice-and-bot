@@ -306,11 +306,12 @@ const standaloneStreamEntries = (
   details: Record<string, { name: string; avatar?: string }>,
 ): ActiveStream[] =>
   streams
-    .filter((el) =>
-      !knownIds.has(el.elementId) &&
-      (el.active !== false ||
-        (el.text && el.text.trim() !== "" && !persistedTexts.has(el.text)))
-    )
+    .filter((el) => {
+      if (knownIds.has(el.elementId)) return false;
+      const trimmed = el.text?.trim() ?? "";
+      if (trimmed !== "" && persistedTexts.has(el.text ?? "")) return false;
+      return el.active !== false || trimmed !== "";
+    })
     .map((el) => ({
       authorName: el.authorId
         ? (details[el.authorId]?.name || "Assistant")
