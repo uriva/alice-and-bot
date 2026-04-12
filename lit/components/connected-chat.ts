@@ -302,12 +302,14 @@ const standaloneSpinnerEntries = (
 const standaloneStreamEntries = (
   streams: EphemeralStreamEvent[],
   knownIds: Set<string>,
+  persistedTexts: Set<string>,
   details: Record<string, { name: string; avatar?: string }>,
 ): ActiveStream[] =>
   streams
     .filter((el) =>
       !knownIds.has(el.elementId) &&
-      (el.active !== false || (el.text && el.text.trim() !== ""))
+      (el.active !== false ||
+        (el.text && el.text.trim() !== "" && !persistedTexts.has(el.text)))
     )
     .map((el) => ({
       authorName: el.authorId
@@ -628,6 +630,7 @@ export class ConnectedChat extends LitElement {
       return r.length ? { ...m, reactions: r } : m;
     });
     const msgMap = new Map(withReactions.map((m) => [m.id, m]));
+    const persistedTexts = new Set(withReactions.map((m) => m.text));
     return {
       chatMessages: withReactions.map(resolveReplyTo(msgMap)),
       activeSpinners: [
@@ -641,6 +644,7 @@ export class ConnectedChat extends LitElement {
       activeStreams: standaloneStreamEntries(
         this._ephemeralStreams,
         knownIds,
+        persistedTexts,
         details,
       ),
     };
