@@ -118,15 +118,15 @@ const nextVisibleText = (target: string, visible: string, active: boolean) => {
   return target.slice(0, Math.min(target.length, visible.length + size));
 };
 
-const liveCursorTemplate = (isDark: boolean) =>
-  html`
-    <span
-      aria-hidden="true"
-      style="display:inline-block;width:2px;height:1.05em;margin-inline-start:2px;border-radius:999px;vertical-align:-0.12em;background:${isDark
-        ? "#ffffffcc"
-        : "#111111aa"};animation:msg-live-cursor .9s ease-in-out infinite"
-    ></span>
-  `;
+const liveCursorHtml = (isDark: boolean) =>
+  `<span aria-hidden="true" style="display:inline-block;width:2px;height:1.05em;margin-inline-start:2px;border-radius:999px;vertical-align:-0.12em;background:${
+    isDark ? "#ffffffcc" : "#111111aa"
+  };animation:msg-live-cursor .9s ease-in-out infinite"></span>`;
+
+const injectCursorAtEnd = (html: string, cursor: string) => {
+  const i = html.lastIndexOf("</div>");
+  return i === -1 ? html + cursor : html.slice(0, i) + cursor + html.slice(i);
+};
 
 const mobileContextOverlayStyle =
   "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999";
@@ -770,8 +770,10 @@ export class ChatMessage extends LitElement {
                     : ""}"
                 >
                   ${callDetails ? faPhoneAlt : nothing} ${unsafeHTML(
-                    markdownHtml,
-                  )}${this.streamActive ? liveCursorTemplate(isDark) : nothing}
+                    this.streamActive
+                      ? injectCursorAtEnd(markdownHtml, liveCursorHtml(isDark))
+                      : markdownHtml,
+                  )}
                 </div>
               `
               : nothing} ${attachments && attachments.length > 0
