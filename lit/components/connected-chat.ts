@@ -96,6 +96,15 @@ type IdentityDetails = Record<string, { name: string; avatar?: string }>;
 const resolveName = (details: IdentityDetails) => (key: string): string =>
   details[key]?.name ?? compactPublicKey(key);
 
+const removeTypingNameForAuthor = (
+  details: IdentityDetails,
+  typingNames: string[],
+  authorPublicSignKey: string,
+) =>
+  typingNames.filter((name) =>
+    name !== resolveName(details)(authorPublicSignKey)
+  );
+
 const sameCredentials = (
   a: Credentials | null,
   b: Credentials | null,
@@ -442,6 +451,7 @@ export class ConnectedChat extends LitElement {
   private _messages: DecipheredMessage[] | null = null;
   private _hadMessages = false;
   private _lastMessageSubscriptionKey: string | null | undefined = undefined;
+  private _lastMessageCount = 0;
   private _canLoadMore = false;
   private _loadMore: () => void = () => {};
   private _typingNames: string[] = [];
@@ -508,6 +518,7 @@ export class ConnectedChat extends LitElement {
     this._progressMax.clear();
     this._hadMessages = false;
     this._lastMessageSubscriptionKey = undefined;
+    this._lastMessageCount = 0;
   }
 
   private _setupSubscriptions() {
@@ -619,7 +630,18 @@ export class ConnectedChat extends LitElement {
       ({ messages, canLoadMore, loadMore }) => {
         if (!messages) return;
         if (messages.length === 0 && this._hadMessages) return;
+        if (messages.length > this._lastMessageCount) {
+          const latestMessage = messages.at(-1);
+          if (latestMessage) {
+            this._typingNames = removeTypingNameForAuthor(
+              this._identityDetails,
+              this._typingNames,
+              latestMessage.publicSignKey,
+            );
+          }
+        }
         this._messages = messages;
+        this._lastMessageCount = messages.length;
         this._hadMessages = this._hadMessages || messages.length > 0;
         this._canLoadMore = canLoadMore;
         this._loadMore = loadMore;

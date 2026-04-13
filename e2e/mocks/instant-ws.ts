@@ -188,6 +188,7 @@ export type WsMock = {
   ) => void;
   pushMessageSnapshot: (messages: TestData["messages"]) => void;
   pushConversationKeySnapshot: () => void;
+  pushTypingSnapshot: (updatedAt: number) => void;
 };
 
 export const setupInstantWsMock = async (
@@ -196,6 +197,7 @@ export const setupInstantWsMock = async (
 ): Promise<WsMock> => {
   const messageQueries: Array<{ q: unknown }> = [];
   const keyQueries: Array<{ q: unknown }> = [];
+  const typingQueries: Array<{ q: unknown }> = [];
   let serverWs: WebSocketRoute | null = null;
   let txCounter = 100;
 
@@ -254,6 +256,12 @@ export const setupInstantWsMock = async (
               link("messages", "conversation", m.id, data.conversationId, tx),
             ]);
             ws.send(queryResponse(msg.q, tid, wrapResult(ns, triples)));
+            return;
+          }
+
+          if (ns === "typingStates") {
+            typingQueries.push({ q: msg.q });
+            ws.send(queryResponse(msg.q, tid, emptyResult(ns)));
             return;
           }
 
@@ -373,6 +381,38 @@ export const setupInstantWsMock = async (
       keyQueries.forEach(({ q }) => {
         serverWs!.send(
           queryResponse(q, ++txCounter, wrapResult("keys", triples)),
+        );
+      });
+    },
+    pushTypingSnapshot: (updatedAt) => {
+      if (!serverWs || !typingQueries.length) return;
+      const tx = Date.now();
+      const typingStateId = randomUUID();
+      const triples: Triple[] = [
+        ...fieldTriples(typingStateId, "typingStates", { updatedAt }, tx),
+        link(
+          "conversations",
+          "typingStates",
+          data.conversationId,
+          typingStateId,
+          tx,
+        ),
+        link(
+          "identities",
+          "typingStates",
+          data.bobIdentityId,
+          typingStateId,
+          tx,
+        ),
+        ...fieldTriples(data.bobIdentityId, "identities", {
+          publicSignKey: data.bob.publicSignKey,
+          publicEncryptKey: data.bob.publicEncryptKey,
+          name: "Bob",
+        }, tx),
+      ];
+      typingQueries.forEach(({ q }) => {
+        serverWs!.send(
+          queryResponse(q, ++txCounter, wrapResult("typingStates", triples)),
         );
       });
     },

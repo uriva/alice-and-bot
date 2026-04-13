@@ -95,6 +95,34 @@ test.describe("Chat (full encryption pipeline)", () => {
     await expect(page.getByText(realtimeText)).toBeVisible({ timeout: 10_000 });
   });
 
+  test("typing indicator clears when matching message arrives", async ({ page }) => {
+    const { wsMock } = await setupChatMocks(page, data);
+    await page.goto("/");
+    await waitForChat(page);
+
+    wsMock.pushTypingSnapshot(Date.now());
+    await expect(page.getByText("Bob is typing...")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const realtimeText = "Message after typing";
+    const { makeEncryptedMessage } = await import("./mocks/test-data.ts");
+    const payload = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      realtimeText,
+    );
+    wsMock.pushNewMessage({
+      id: crypto.randomUUID(),
+      payload,
+      timestamp: Date.now(),
+      senderPublicSignKey: data.bob.publicSignKey,
+    });
+
+    await expect(page.getByText(realtimeText)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Bob is typing...")).toHaveCount(0);
+  });
+
   test("transient empty snapshot does not flash empty state", async ({ page }) => {
     const { wsMock } = await setupChatMocks(page, data);
     await page.goto("/");
