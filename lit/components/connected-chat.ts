@@ -91,6 +91,11 @@ const foldEdits = (messages: DecipheredMessage[]) => {
   });
 };
 
+type IdentityDetails = Record<string, { name: string; avatar?: string }>;
+
+const resolveName = (details: IdentityDetails) => (key: string): string =>
+  details[key]?.name ?? compactPublicKey(key);
+
 type ReactionMsg = DecipheredMessage & {
   type: "reaction";
   reactTo: string;
@@ -103,7 +108,7 @@ const isReaction = (m: DecipheredMessage): m is ReactionMsg =>
 
 const aggregateReactions = (
   reactions: ReactionMsg[],
-  details: Record<string, { name: string; avatar?: string }>,
+  details: IdentityDetails,
 ) =>
 (msgId: string): Reaction[] => {
   const active = new Map<string, ReactionMsg>();
@@ -117,18 +122,16 @@ const aggregateReactions = (
   return Array.from(active.values()).map((r) => ({
     emoji: r.emoji,
     authorId: r.publicSignKey,
-    authorName: details[r.publicSignKey]?.name ??
-      compactPublicKey(r.publicSignKey),
+    authorName: resolveName(details)(r.publicSignKey),
   }));
 };
 
 const msgToUIMessage =
-  (details: Record<string, { name: string; avatar?: string }>) =>
+  (details: IdentityDetails) =>
   (msg: DecipheredMessage): AbstracChatMessage & { _replyToId?: string } => ({
     id: msg.id,
     authorId: msg.publicSignKey,
-    authorName: details[msg.publicSignKey]?.name ??
-      compactPublicKey(msg.publicSignKey),
+    authorName: resolveName(details)(msg.publicSignKey),
     authorAvatar: details[msg.publicSignKey]?.avatar,
     text: msg.text,
     timestamp: msg.timestamp,
@@ -136,17 +139,16 @@ const msgToUIMessage =
     _replyToId: msg.type === "text" ? msg.replyTo : undefined,
   });
 
-const msgToUIMessageWithHistory =
-  (details: Record<string, { name: string; avatar?: string }>) =>
-  (
-    { msg, editHistory }: {
-      msg: DecipheredMessage;
-      editHistory?: EditHistoryEntry[];
-    },
-  ): AbstracChatMessage => ({
-    ...msgToUIMessage(details)(msg),
-    editHistory,
-  });
+const msgToUIMessageWithHistory = (details: IdentityDetails) =>
+(
+  { msg, editHistory }: {
+    msg: DecipheredMessage;
+    editHistory?: EditHistoryEntry[];
+  },
+): AbstracChatMessage => ({
+  ...msgToUIMessage(details)(msg),
+  editHistory,
+});
 
 const resolveReplyTo =
   (msgMap: Map<string, AbstracChatMessage>) =>
@@ -185,7 +187,7 @@ type UiOverride = {
 
 const latestSpinners = (
   messages: DecipheredMessage[],
-  details: Record<string, { name: string; avatar?: string }>,
+  details: IdentityDetails,
   uiOverrides: Map<string, UiOverride>,
 ): ActiveSpinner[] => {
   const byElement = new Map<string, DecipheredMessage>();
@@ -200,8 +202,7 @@ const latestSpinners = (
       if (m.type !== "spinner") throw new Error("unreachable");
       const override = uiOverrides.get(m.elementId);
       return {
-        authorName: details[m.publicSignKey]?.name ??
-          compactPublicKey(m.publicSignKey),
+        authorName: resolveName(details)(m.publicSignKey),
         text: m.text,
         elementId: m.elementId,
         timestamp: m.timestamp,
@@ -212,7 +213,7 @@ const latestSpinners = (
 
 const latestProgress = (
   messages: DecipheredMessage[],
-  details: Record<string, { name: string; avatar?: string }>,
+  details: IdentityDetails,
   uiOverrides: Map<string, UiOverride>,
 ): ActiveProgress[] => {
   const byElement = new Map<string, DecipheredMessage>();
@@ -227,8 +228,7 @@ const latestProgress = (
       if (m.type !== "progress") throw new Error("unreachable");
       const override = uiOverrides.get(m.elementId);
       return {
-        authorName: details[m.publicSignKey]?.name ??
-          compactPublicKey(m.publicSignKey),
+        authorName: resolveName(details)(m.publicSignKey),
         text: m.text,
         percentage: override?.percentage ?? m.percentage,
         elementId: m.elementId,
@@ -303,7 +303,7 @@ const standaloneStreamEntries = (
   streams: EphemeralStreamEvent[],
   knownIds: Set<string>,
   persistedTexts: Set<string>,
-  details: Record<string, { name: string; avatar?: string }>,
+  details: IdentityDetails,
 ): ActiveStream[] =>
   streams
     .filter((el) => {
@@ -313,9 +313,7 @@ const standaloneStreamEntries = (
       return el.active !== false || trimmed !== "";
     })
     .map((el) => ({
-      authorName: el.authorId
-        ? (details[el.authorId]?.name || "Assistant")
-        : "Assistant",
+      authorName: el.authorId ? resolveName(details)(el.authorId) : "",
       authorAvatar: el.authorId ? details[el.authorId]?.avatar : undefined,
       authorPublicKey: el.authorId,
       text: el.text ?? "",
@@ -425,10 +423,7 @@ export class ConnectedChat extends LitElement {
   private _canLoadMore = false;
   private _loadMore: () => void = () => {};
   private _typingNames: string[] = [];
-  private _identityDetails: Record<
-    string,
-    { name: string; avatar?: string }
-  > = {};
+  private _identityDetails: IdentityDetails = {};
   private _ephemeralStreams: EphemeralStreamEvent[] = [];
   private _uiElements: UiElement[] = [];
   private _hasAccess = true;
@@ -805,8 +800,9 @@ export class ConnectedChat extends LitElement {
         ? html`
           <user-profile-popup
             .authorId="${this._profileAuthorId}"
-            .authorName="${this._identityDetails[this._profileAuthorId]?.name ??
-              compactPublicKey(this._profileAuthorId)}"
+            .authorName="${resolveName(this._identityDetails)(
+              this._profileAuthorId,
+            )}"
             .authorAvatar="${this._identityDetails[this._profileAuthorId]
               ?.avatar ?? ""}"
             .isDark="${isDark}"
