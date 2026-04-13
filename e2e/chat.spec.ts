@@ -125,6 +125,28 @@ test.describe("Chat (full encryption pipeline)", () => {
     await expect(page.getByText(data.messages[0].text)).toBeVisible();
   });
 
+  test("equivalent credentials reassignment does not flash empty state", async ({ page }) => {
+    await setupChatMocks(page, data);
+    await page.goto("/");
+    await waitForChat(page);
+    await expect(page.getByText(data.messages[0].text)).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await page.evaluate(() => {
+      const chat = globalThis.__TEST_CHAT__!;
+      const credentials = chat.credentials!;
+      chat.credentials = {
+        publicSignKey: credentials.publicSignKey,
+        privateSignKey: credentials.privateSignKey,
+        privateEncryptKey: credentials.privateEncryptKey,
+      };
+    });
+
+    await expect(page.locator(tid("empty-state"))).toHaveCount(0);
+    await expect(page.getByText(data.messages[0].text)).toBeVisible();
+  });
+
   test("own vs other messages have different x alignment", async ({ page }) => {
     await setupChatMocks(page, data);
     await page.goto("/");

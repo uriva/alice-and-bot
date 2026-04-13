@@ -96,6 +96,26 @@ type IdentityDetails = Record<string, { name: string; avatar?: string }>;
 const resolveName = (details: IdentityDetails) => (key: string): string =>
   details[key]?.name ?? compactPublicKey(key);
 
+const sameCredentials = (
+  a: Credentials | null,
+  b: Credentials | null,
+): boolean =>
+  a === b || !!a && !!b && a.publicSignKey === b.publicSignKey &&
+    a.privateSignKey === b.privateSignKey &&
+    a.privateEncryptKey === b.privateEncryptKey;
+
+const credentialsOrNull = (value: unknown): Credentials | null => {
+  if (!value || typeof value !== "object") return null;
+  const publicSignKey = Reflect.get(value, "publicSignKey");
+  const privateSignKey = Reflect.get(value, "privateSignKey");
+  const privateEncryptKey = Reflect.get(value, "privateEncryptKey");
+  return typeof publicSignKey === "string" &&
+      typeof privateSignKey === "string" &&
+      typeof privateEncryptKey === "string"
+    ? { publicSignKey, privateSignKey, privateEncryptKey }
+    : null;
+};
+
 type ReactionMsg = DecipheredMessage & {
   type: "reaction";
   reactTo: string;
@@ -464,7 +484,12 @@ export class ConnectedChat extends LitElement {
   }
 
   override updated(changed: Map<string, unknown>) {
-    if (changed.has("credentials") || changed.has("conversationId")) {
+    const credentialsChanged = changed.has("credentials") &&
+      !sameCredentials(
+        credentialsOrNull(changed.get("credentials")),
+        this.credentials,
+      );
+    if (credentialsChanged || changed.has("conversationId")) {
       this._teardown();
       this._setupSubscriptions();
     }

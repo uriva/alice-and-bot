@@ -2,6 +2,7 @@ import { coerce } from "@uri/gamla";
 import { ConnectedChat } from "../../lit/components/connected-chat.ts";
 
 declare global {
+  var __TEST_CHAT__: ConnectedChat | undefined;
   interface Window {
     __TEST_CREDENTIALS__?: {
       publicSignKey: string;
@@ -31,5 +32,6 @@ if (!creds || !conversationId) {
   chat.credentials = creds;
   chat.conversationId = conversationId;
   chat.darkModeOverride = true;
+  globalThis.__TEST_CHAT__ = chat;
   root.appendChild(chat);
 }
