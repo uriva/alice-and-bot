@@ -586,6 +586,7 @@ export class ConnectedChat extends LitElement {
       this.conversationId,
       this._conversationKey,
       ({ messages, canLoadMore, loadMore }) => {
+        if (!messages) return;
         this._messages = messages;
         this._canLoadMore = canLoadMore;
         this._loadMore = loadMore;
