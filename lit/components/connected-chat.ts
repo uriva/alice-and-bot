@@ -421,6 +421,7 @@ export class ConnectedChat extends LitElement {
   private _conversationKey: string | null = null;
   private _messages: DecipheredMessage[] | null = null;
   private _hadMessages = false;
+  private _lastMessageSubscriptionKey: string | null | undefined = undefined;
   private _canLoadMore = false;
   private _loadMore: () => void = () => {};
   private _typingNames: string[] = [];
@@ -481,6 +482,7 @@ export class ConnectedChat extends LitElement {
     this._lastIdentityKeys = "";
     this._progressMax.clear();
     this._hadMessages = false;
+    this._lastMessageSubscriptionKey = undefined;
   }
 
   private _setupSubscriptions() {
@@ -537,6 +539,8 @@ export class ConnectedChat extends LitElement {
         this.conversationId,
         this.credentials,
         (key) => {
+          if (key === this._lastMessageSubscriptionKey) return;
+          this._lastMessageSubscriptionKey = key;
           this._conversationKey = key;
           this._resubscribeMessages();
           this.requestUpdate();

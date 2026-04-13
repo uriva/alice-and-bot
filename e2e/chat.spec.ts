@@ -109,6 +109,22 @@ test.describe("Chat (full encryption pipeline)", () => {
     await expect(page.getByText(data.messages[0].text)).toBeVisible();
   });
 
+  test("repeated conversation key snapshots do not flash empty state", async ({ page }) => {
+    const { wsMock } = await setupChatMocks(page, data);
+    await page.goto("/");
+    await waitForChat(page);
+    await expect(page.getByText(data.messages[0].text)).toBeVisible({
+      timeout: 15_000,
+    });
+
+    wsMock.pushConversationKeySnapshot();
+    wsMock.pushConversationKeySnapshot();
+    wsMock.pushConversationKeySnapshot();
+
+    await expect(page.locator(tid("empty-state"))).toHaveCount(0);
+    await expect(page.getByText(data.messages[0].text)).toBeVisible();
+  });
+
   test("own vs other messages have different x alignment", async ({ page }) => {
     await setupChatMocks(page, data);
     await page.goto("/");

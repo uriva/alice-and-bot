@@ -187,6 +187,7 @@ export type WsMock = {
     },
   ) => void;
   pushMessageSnapshot: (messages: TestData["messages"]) => void;
+  pushConversationKeySnapshot: () => void;
 };
 
 export const setupInstantWsMock = async (
@@ -194,6 +195,7 @@ export const setupInstantWsMock = async (
   data: TestData,
 ): Promise<WsMock> => {
   const messageQueries: Array<{ q: unknown }> = [];
+  const keyQueries: Array<{ q: unknown }> = [];
   let serverWs: WebSocketRoute | null = null;
   let txCounter = 100;
 
@@ -219,6 +221,7 @@ export const setupInstantWsMock = async (
           const ns = detectNs(msg.q);
           const tid = ++txCounter;
           if (ns === "keys") {
+            keyQueries.push({ q: msg.q });
             const triples: Triple[] = [
               ...fieldTriples(data.keyId, "keys", {
                 key: data.aliceEncryptedKey,
@@ -343,6 +346,33 @@ export const setupInstantWsMock = async (
             ++txCounter,
             messageSnapshotResult(data.conversationId, messages, tx),
           ),
+        );
+      });
+    },
+    pushConversationKeySnapshot: () => {
+      if (!serverWs || !keyQueries.length) return;
+      const tx = Date.now();
+      const triples: Triple[] = [
+        ...fieldTriples(data.keyId, "keys", {
+          key: data.aliceEncryptedKey,
+        }, tx),
+        link(
+          "conversations",
+          "keys",
+          data.conversationId,
+          data.keyId,
+          tx,
+        ),
+        link("identities", "keys", data.aliceIdentityId, data.keyId, tx),
+        ...fieldTriples(data.aliceIdentityId, "identities", {
+          publicSignKey: data.alice.publicSignKey,
+          publicEncryptKey: data.alice.publicEncryptKey,
+          name: "Alice",
+        }, tx),
+      ];
+      keyQueries.forEach(({ q }) => {
+        serverWs!.send(
+          queryResponse(q, ++txCounter, wrapResult("keys", triples)),
         );
       });
     },
