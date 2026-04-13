@@ -257,16 +257,22 @@ export const subscribeTypingStates = (
   };
 };
 
-export const createTypingNotifier = (
+type SendTypingFn = (
+  params: { conversation: string; isTyping: boolean; publicSignKey: string },
+) => Promise<unknown>;
+
+export const makeCreateTypingNotifier = (sendTypingFn: SendTypingFn) =>
+(
   conversationId: string,
   selfPublicSignKey: string,
 ) => {
   let timer: number | null = null;
   let typing = false;
+  let sentStop = false;
 
   const notify = (isTyping: boolean) => {
     typing = isTyping;
-    sendTyping({
+    sendTypingFn({
       conversation: conversationId,
       isTyping,
       publicSignKey: selfPublicSignKey,
@@ -275,9 +281,14 @@ export const createTypingNotifier = (
 
   return {
     onInput: () => {
+      if (sentStop) {
+        sentStop = false;
+        return;
+      }
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         typing = false;
+        sentStop = true;
         notify(false);
       }, typingTtl) as unknown as number;
       if (!typing) notify(true);
@@ -289,6 +300,7 @@ export const createTypingNotifier = (
         timer = null;
       }
       if (typing) notify(false);
+      sentStop = true;
     },
     stop: () => {
       if (timer) {
@@ -296,9 +308,12 @@ export const createTypingNotifier = (
         timer = null;
       }
       if (typing) notify(false);
+      sentStop = true;
     },
   };
 };
+
+export const createTypingNotifier = makeCreateTypingNotifier(sendTyping);
 
 const matchesParticipants =
   (participants: string[]) =>
