@@ -420,6 +420,7 @@ export class ConnectedChat extends LitElement {
 
   private _conversationKey: string | null = null;
   private _messages: DecipheredMessage[] | null = null;
+  private _hadMessages = false;
   private _canLoadMore = false;
   private _loadMore: () => void = () => {};
   private _typingNames: string[] = [];
@@ -479,6 +480,7 @@ export class ConnectedChat extends LitElement {
     this._identityUnsub = null;
     this._lastIdentityKeys = "";
     this._progressMax.clear();
+    this._hadMessages = false;
   }
 
   private _setupSubscriptions() {
@@ -587,7 +589,9 @@ export class ConnectedChat extends LitElement {
       this._conversationKey,
       ({ messages, canLoadMore, loadMore }) => {
         if (!messages) return;
+        if (messages.length === 0 && this._hadMessages) return;
         this._messages = messages;
+        this._hadMessages = this._hadMessages || messages.length > 0;
         this._canLoadMore = canLoadMore;
         this._loadMore = loadMore;
         this._resubscribeIdentities();

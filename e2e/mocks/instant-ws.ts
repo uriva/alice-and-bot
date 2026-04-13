@@ -155,6 +155,22 @@ const wrapResult = (ns: string, triples: Triple[]) => [{
 
 const emptyResult = (ns: string) => wrapResult(ns, []);
 
+const messageSnapshotResult = (
+  conversationId: string,
+  messages: TestData["messages"],
+  tx: number,
+) =>
+  wrapResult(
+    "messages",
+    messages.flatMap((message) => [
+      ...fieldTriples(message.id, "messages", {
+        payload: message.payload,
+        timestamp: message.timestamp,
+      }, tx),
+      link("messages", "conversation", message.id, conversationId, tx),
+    ]),
+  );
+
 const queryResponse = (q: unknown, txId: number, result: unknown) =>
   JSON.stringify({ op: "add-query-ok", q, "processed-tx-id": txId, result });
 
@@ -170,6 +186,7 @@ export type WsMock = {
       senderPublicSignKey: string;
     },
   ) => void;
+  pushMessageSnapshot: (messages: TestData["messages"]) => void;
 };
 
 export const setupInstantWsMock = async (
@@ -313,6 +330,19 @@ export const setupInstantWsMock = async (
       messageQueries.forEach(({ q }) => {
         serverWs!.send(
           queryResponse(q, ++txCounter, wrapResult("messages", triples)),
+        );
+      });
+    },
+    pushMessageSnapshot: (messages) => {
+      if (!serverWs || !messageQueries.length) return;
+      const tx = Date.now();
+      messageQueries.forEach(({ q }) => {
+        serverWs!.send(
+          queryResponse(
+            q,
+            ++txCounter,
+            messageSnapshotResult(data.conversationId, messages, tx),
+          ),
         );
       });
     },
