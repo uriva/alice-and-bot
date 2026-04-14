@@ -504,6 +504,7 @@ export class ChatMessage extends LitElement {
   private _syncVisibleText = () => {
     if (!this.streamActive) {
       if (
+        this._visibleText &&
         this._visibleText !== this.msg.text &&
         this.msg.text.startsWith(this._visibleText)
       ) {

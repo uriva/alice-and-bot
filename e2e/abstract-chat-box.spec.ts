@@ -276,6 +276,13 @@ test.describe("AbstractChatBox (example app)", () => {
     await expect(lastMsg).toContainText("bottom-check");
   });
 
+  test("old messages show full text immediately without streaming animation", async ({ page }) => {
+    const firstText = page.locator(tid("message-text")).first();
+    await expect(firstText).toContainText("sorting algorithm", {
+      timeout: 200,
+    });
+  });
+
   test("chat-message re-renders when msg property is updated", async ({ page }) => {
     const original = "Hey, can you help me with a sorting algorithm?";
     await expect(page.getByText(original)).toBeVisible();
