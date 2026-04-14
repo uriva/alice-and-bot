@@ -61,3 +61,6 @@ If a type is inferrable from the function, prefer not to annotate it. This is
 the common case.
 
 Never make a breaking change without consulting with the user first.
+
+When fixing bugs, always write a failing test first that reproduces the bug,
+then fix the code to make the test pass. Do not skip this step.
