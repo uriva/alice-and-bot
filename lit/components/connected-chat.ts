@@ -625,7 +625,7 @@ export class ConnectedChat extends LitElement {
         if (!messages) return;
         if (messages.length === 0 && this._hadMessages) return;
         if (messages.length > this._lastMessageCount) {
-          const latestMessage = messages.at(-1);
+          const latestMessage = messages[0];
           if (latestMessage) {
             this._suppressTypingAuthor?.(latestMessage.publicSignKey);
           }

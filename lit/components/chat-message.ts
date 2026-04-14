@@ -495,6 +495,7 @@ export class ChatMessage extends LitElement {
       const next = nextVisibleText(target, this._visibleText);
       if (next !== this._visibleText) {
         this._visibleText = next;
+        this.requestUpdate();
       }
       this._scheduleStreamTick();
     }, streamTickMs);
@@ -502,6 +503,13 @@ export class ChatMessage extends LitElement {
 
   private _syncVisibleText = () => {
     if (!this.streamActive) {
+      if (
+        this._visibleText !== this.msg.text &&
+        this.msg.text.startsWith(this._visibleText)
+      ) {
+        this._scheduleStreamTick();
+        return;
+      }
       this._visibleText = this.msg.text;
       clearTimeout(this._streamTimer);
       return;
@@ -647,7 +655,11 @@ export class ChatMessage extends LitElement {
       Date.now() - timestamp < editWindowMs);
     const hasEdits = !empty(editHistory ?? []);
     const showMenu = (canEdit || hasEdits) && !this._isEditing;
-    const displayedText = this.streamActive ? this._visibleText : text;
+    const isRevealing = this._visibleText !== text &&
+      text.startsWith(this._visibleText);
+    const displayedText = this.streamActive || isRevealing
+      ? this._visibleText
+      : text;
     const markdownHtml = renderMarkdown(displayedText, textColor, isDark);
     const canSave = !!this._editText.trim() &&
       this._editText !== text;
@@ -762,7 +774,7 @@ export class ChatMessage extends LitElement {
                     : ""}"
                 >
                   ${callDetails ? faPhoneAlt : nothing} ${unsafeHTML(
-                    this.streamActive && displayedText.trim()
+                    (this.streamActive || isRevealing) && displayedText.trim()
                       ? injectCursorAtEnd(markdownHtml, liveCursorHtml(isDark))
                       : markdownHtml,
                   )}
