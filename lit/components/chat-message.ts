@@ -106,16 +106,12 @@ const longPressHighlightCss =
 const liveCursorCss =
   `@keyframes msg-live-cursor{0%,100%{opacity:.35;transform:scaleY(.9)}50%{opacity:1;transform:scaleY(1)}}`;
 
-const streamTickMs = 28;
+const streamTickMs = 20;
 
-const streamCatchupSize = (targetLength: number, visibleLength: number) =>
-  Math.min(4, Math.max(1, Math.ceil((targetLength - visibleLength) / 24)));
-
-const nextVisibleText = (target: string, visible: string, active: boolean) => {
+const nextVisibleText = (target: string, visible: string) => {
   if (visible === target) return visible;
   if (!target.startsWith(visible)) return target;
-  const size = active ? streamCatchupSize(target.length, visible.length) : 6;
-  return target.slice(0, Math.min(target.length, visible.length + size));
+  return target.slice(0, visible.length + 1);
 };
 
 const liveCursorHtml = (isDark: boolean) =>
@@ -496,11 +492,7 @@ export class ChatMessage extends LitElement {
     const target = this.msg.text;
     if (this._visibleText === target) return;
     this._streamTimer = globalThis.setTimeout(() => {
-      const next = nextVisibleText(
-        target,
-        this._visibleText,
-        this.streamActive,
-      );
+      const next = nextVisibleText(target, this._visibleText);
       if (next !== this._visibleText) {
         this._visibleText = next;
       }
