@@ -179,13 +179,23 @@ type TypingState = {
   updatedAt?: number;
 };
 
+const isNotSuppressed =
+  (suppressed: Map<string, number>) => (t: TypingState) => {
+    const key = t.owner?.publicSignKey;
+    if (!key) return true;
+    const ts = suppressed.get(key);
+    return ts === undefined || (t.updatedAt ?? 0) > ts;
+  };
+
 const typingNamesFromStates = (
   states: TypingState[],
   selfPublicSignKey: string,
+  suppressed: Map<string, number>,
 ) => {
   const now = Date.now();
   return states
     .filter((t) => t.owner?.publicSignKey !== selfPublicSignKey)
+    .filter(isNotSuppressed(suppressed))
     .filter((t) => t.updatedAt && now - t.updatedAt < typingTtl)
     .map((t) =>
       t.owner?.name ||
@@ -208,10 +218,13 @@ export const makeSubscribeTypingStates = (subscribeQuery: SubscribeQuery) =>
   onChange: (typingNames: string[]) => void,
 ) => {
   let latestStates: TypingState[] = [];
+  const suppressed = new Map<string, number>();
   const emit = () =>
-    onChange(typingNamesFromStates(latestStates, selfPublicSignKey));
+    onChange(
+      typingNamesFromStates(latestStates, selfPublicSignKey, suppressed),
+    );
   const interval = setInterval(emit, 5000);
-  const unsub = subscribeQuery(
+  const unsubQuery = subscribeQuery(
     {
       typingStates: {
         owner: {},
@@ -223,9 +236,15 @@ export const makeSubscribeTypingStates = (subscribeQuery: SubscribeQuery) =>
       emit();
     },
   );
-  return () => {
-    clearInterval(interval);
-    unsub();
+  return {
+    unsub: () => {
+      clearInterval(interval);
+      unsubQuery();
+    },
+    suppressAuthor: (publicSignKey: string) => {
+      suppressed.set(publicSignKey, Date.now());
+      emit();
+    },
   };
 };
 
@@ -236,10 +255,13 @@ export const subscribeTypingStates = (
 ) => {
   const db = accessDb();
   let latestStates: TypingState[] = [];
+  const suppressed = new Map<string, number>();
   const emit = () =>
-    onChange(typingNamesFromStates(latestStates, selfPublicSignKey));
+    onChange(
+      typingNamesFromStates(latestStates, selfPublicSignKey, suppressed),
+    );
   const interval = setInterval(emit, 5000);
-  const unsub = db.subscribeQuery(
+  const unsubQuery = db.subscribeQuery(
     {
       typingStates: {
         owner: {},
@@ -251,9 +273,15 @@ export const subscribeTypingStates = (
       emit();
     },
   );
-  return () => {
-    clearInterval(interval);
-    unsub();
+  return {
+    unsub: () => {
+      clearInterval(interval);
+      unsubQuery();
+    },
+    suppressAuthor: (publicSignKey: string) => {
+      suppressed.set(publicSignKey, Date.now());
+      emit();
+    },
   };
 };
 

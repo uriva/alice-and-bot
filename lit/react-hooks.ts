@@ -205,16 +205,25 @@ export const useTypingPresence = (
     return () => notifierRef.current.stop();
   }, [conversationId, selfPublicSignKey]);
 
-  useEffect(
-    () =>
-      subscribeTypingStates(conversationId, selfPublicSignKey, setTypingNames),
-    [conversationId, selfPublicSignKey],
-  );
+  const suppressRef = useRef<((key: string) => void) | null>(null);
 
   useEffect(() => {
-    if (lastMessageAuthorPublicKey != null && isTyping) {
-      notifierRef.current.onBlurOrSend();
-      setIsTyping(false);
+    const { unsub, suppressAuthor } = subscribeTypingStates(
+      conversationId,
+      selfPublicSignKey,
+      setTypingNames,
+    );
+    suppressRef.current = suppressAuthor;
+    return unsub;
+  }, [conversationId, selfPublicSignKey]);
+
+  useEffect(() => {
+    if (lastMessageAuthorPublicKey != null) {
+      suppressRef.current?.(lastMessageAuthorPublicKey);
+      if (isTyping) {
+        notifierRef.current.onBlurOrSend();
+        setIsTyping(false);
+      }
     }
   }, [lastMessageAuthorPublicKey]);
 

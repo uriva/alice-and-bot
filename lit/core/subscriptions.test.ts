@@ -27,7 +27,7 @@ Deno.test("typing indicator clears after TTL without new DB events", () => {
   try {
     const received: string[][] = [];
     let dbCallback!: DbCallback;
-    const unsub = makeSubscribeTypingStates(
+    const { unsub } = makeSubscribeTypingStates(
       fakeSubscribeQuery((cb) => dbCallback = cb),
     )("convo1", "selfKey", (names) => received.push([...names]));
 
@@ -55,7 +55,7 @@ Deno.test("typing indicator shows immediately on fresh DB event", () => {
   try {
     const received: string[][] = [];
     let dbCallback!: DbCallback;
-    const unsub = makeSubscribeTypingStates(
+    const { unsub } = makeSubscribeTypingStates(
       fakeSubscribeQuery((cb) => dbCallback = cb),
     )("convo1", "selfKey", (names) => received.push([...names]));
 
@@ -79,7 +79,7 @@ Deno.test("typing indicator excludes self", () => {
   try {
     const received: string[][] = [];
     let dbCallback!: DbCallback;
-    const unsub = makeSubscribeTypingStates(
+    const { unsub } = makeSubscribeTypingStates(
       fakeSubscribeQuery((cb) => dbCallback = cb),
     )("convo1", "selfKey", (names) => received.push([...names]));
 
@@ -103,7 +103,7 @@ Deno.test("typing indicator clears when updatedAt is set to 0 (isTyping: false)"
   try {
     const received: string[][] = [];
     let dbCallback!: DbCallback;
-    const unsub = makeSubscribeTypingStates(
+    const { unsub } = makeSubscribeTypingStates(
       fakeSubscribeQuery((cb) => dbCallback = cb),
     )("convo1", "selfKey", (names) => received.push([...names]));
 
@@ -137,7 +137,7 @@ Deno.test("typing indicator clears when typingStates record is deleted", () => {
   try {
     const received: string[][] = [];
     let dbCallback!: DbCallback;
-    const unsub = makeSubscribeTypingStates(
+    const { unsub } = makeSubscribeTypingStates(
       fakeSubscribeQuery((cb) => dbCallback = cb),
     )("convo1", "selfKey", (names) => received.push([...names]));
 
@@ -164,7 +164,7 @@ Deno.test("typing indicator stays visible while DB keeps refreshing updatedAt", 
   try {
     const received: string[][] = [];
     let dbCallback!: DbCallback;
-    const unsub = makeSubscribeTypingStates(
+    const { unsub } = makeSubscribeTypingStates(
       fakeSubscribeQuery((cb) => dbCallback = cb),
     )("convo1", "selfKey", (names) => received.push([...names]));
 
@@ -202,7 +202,7 @@ Deno.test("unsubscribe stops interval emissions", () => {
   try {
     const received: string[][] = [];
     let dbCallback!: DbCallback;
-    const unsub = makeSubscribeTypingStates(
+    const { unsub } = makeSubscribeTypingStates(
       fakeSubscribeQuery((cb) => dbCallback = cb),
     )("convo1", "selfKey", (names) => received.push([...names]));
 
@@ -219,6 +219,104 @@ Deno.test("unsubscribe stops interval emissions", () => {
 
     time.tick(10000);
     assertEquals(received.length, countAfterEmit);
+  } finally {
+    time.restore();
+  }
+});
+
+Deno.test("suppressAuthor prevents re-emission on interval tick", () => {
+  const time = new FakeTime();
+  try {
+    const received: string[][] = [];
+    let dbCallback!: DbCallback;
+    const { unsub, suppressAuthor } = makeSubscribeTypingStates(
+      fakeSubscribeQuery((cb) => dbCallback = cb),
+    )("convo1", "selfKey", (names) => received.push([...names]));
+
+    dbCallback({
+      data: {
+        typingStates: [{
+          owner: { publicSignKey: "otherKey", name: "Alice" },
+          updatedAt: Date.now(),
+        }],
+      },
+    });
+    assertEquals(received.at(-1), ["Alice"]);
+
+    suppressAuthor("otherKey");
+    time.tick(5000);
+    assertEquals(received.at(-1), []);
+
+    unsub();
+  } finally {
+    time.restore();
+  }
+});
+
+Deno.test("suppressAuthor clears when newer typing event arrives", () => {
+  const time = new FakeTime();
+  try {
+    const received: string[][] = [];
+    let dbCallback!: DbCallback;
+    const { unsub, suppressAuthor } = makeSubscribeTypingStates(
+      fakeSubscribeQuery((cb) => dbCallback = cb),
+    )("convo1", "selfKey", (names) => received.push([...names]));
+
+    const firstTypingTime = Date.now();
+    dbCallback({
+      data: {
+        typingStates: [{
+          owner: { publicSignKey: "otherKey", name: "Alice" },
+          updatedAt: firstTypingTime,
+        }],
+      },
+    });
+    assertEquals(received.at(-1), ["Alice"]);
+
+    suppressAuthor("otherKey");
+    time.tick(5000);
+    assertEquals(received.at(-1), []);
+
+    time.tick(1000);
+    dbCallback({
+      data: {
+        typingStates: [{
+          owner: { publicSignKey: "otherKey", name: "Alice" },
+          updatedAt: Date.now(),
+        }],
+      },
+    });
+    assertEquals(received.at(-1), ["Alice"]);
+
+    unsub();
+  } finally {
+    time.restore();
+  }
+});
+
+Deno.test("suppressAuthor emits immediately to clear indicator", () => {
+  const time = new FakeTime();
+  try {
+    const received: string[][] = [];
+    let dbCallback!: DbCallback;
+    const { unsub, suppressAuthor } = makeSubscribeTypingStates(
+      fakeSubscribeQuery((cb) => dbCallback = cb),
+    )("convo1", "selfKey", (names) => received.push([...names]));
+
+    dbCallback({
+      data: {
+        typingStates: [{
+          owner: { publicSignKey: "otherKey", name: "Alice" },
+          updatedAt: Date.now(),
+        }],
+      },
+    });
+    assertEquals(received.at(-1), ["Alice"]);
+
+    suppressAuthor("otherKey");
+    assertEquals(received.at(-1), []);
+
+    unsub();
   } finally {
     time.restore();
   }

@@ -123,6 +123,39 @@ test.describe("Chat (full encryption pipeline)", () => {
     await expect(page.getByText("Bob is typing...")).toHaveCount(0);
   });
 
+  test("typing indicator stays cleared after re-emitted typing snapshot", async ({ page }) => {
+    const { wsMock } = await setupChatMocks(page, data);
+    await page.goto("/");
+    await waitForChat(page);
+
+    const typingTime = Date.now();
+    wsMock.pushTypingSnapshot(typingTime);
+    await expect(page.getByText("Bob is typing...")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const realtimeText = "Message suppresses typing";
+    const { makeEncryptedMessage } = await import("./mocks/test-data.ts");
+    const payload = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      realtimeText,
+    );
+    wsMock.pushNewMessage({
+      id: crypto.randomUUID(),
+      payload,
+      timestamp: Date.now(),
+      senderPublicSignKey: data.bob.publicSignKey,
+    });
+
+    await expect(page.getByText(realtimeText)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Bob is typing...")).toHaveCount(0);
+
+    wsMock.pushTypingSnapshot(typingTime);
+    await page.waitForTimeout(500);
+    await expect(page.getByText("Bob is typing...")).toHaveCount(0);
+  });
+
   test("transient empty snapshot does not flash empty state", async ({ page }) => {
     const { wsMock } = await setupChatMocks(page, data);
     await page.goto("/");

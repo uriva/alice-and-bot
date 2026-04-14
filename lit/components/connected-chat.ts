@@ -96,15 +96,6 @@ type IdentityDetails = Record<string, { name: string; avatar?: string }>;
 const resolveName = (details: IdentityDetails) => (key: string): string =>
   details[key]?.name ?? compactPublicKey(key);
 
-const removeTypingNameForAuthor = (
-  details: IdentityDetails,
-  typingNames: string[],
-  authorPublicSignKey: string,
-) =>
-  typingNames.filter((name) =>
-    name !== resolveName(details)(authorPublicSignKey)
-  );
-
 const sameCredentials = (
   a: Credentials | null,
   b: Credentials | null,
@@ -468,6 +459,8 @@ export class ConnectedChat extends LitElement {
   private _unsubs: (() => void)[] = [];
   private _typingNotifier: ReturnType<typeof createTypingNotifier> | null =
     null;
+  private _suppressTypingAuthor: ((publicSignKey: string) => void) | null =
+    null;
 
   override createRenderRoot(): HTMLElement {
     return this;
@@ -510,6 +503,7 @@ export class ConnectedChat extends LitElement {
     this._unsubs = [];
     this._typingNotifier?.stop();
     this._typingNotifier = null;
+    this._suppressTypingAuthor = null;
     this._messagesUnsub?.();
     this._messagesUnsub = null;
     this._identityUnsub?.();
@@ -584,16 +578,16 @@ export class ConnectedChat extends LitElement {
       ),
     );
 
-    this._unsubs.push(
-      subscribeTypingStates(
-        this.conversationId,
-        publicSignKey,
-        (names) => {
-          this._typingNames = names;
-          this.requestUpdate();
-        },
-      ),
+    const typingSub = subscribeTypingStates(
+      this.conversationId,
+      publicSignKey,
+      (names) => {
+        this._typingNames = names;
+        this.requestUpdate();
+      },
     );
+    this._unsubs.push(typingSub.unsub);
+    this._suppressTypingAuthor = typingSub.suppressAuthor;
 
     this._unsubs.push(
       subscribeEphemeralStreams(this.conversationId, (streams) => {
@@ -633,11 +627,7 @@ export class ConnectedChat extends LitElement {
         if (messages.length > this._lastMessageCount) {
           const latestMessage = messages.at(-1);
           if (latestMessage) {
-            this._typingNames = removeTypingNameForAuthor(
-              this._identityDetails,
-              this._typingNames,
-              latestMessage.publicSignKey,
-            );
+            this._suppressTypingAuthor?.(latestMessage.publicSignKey);
           }
         }
         this._messages = messages;
