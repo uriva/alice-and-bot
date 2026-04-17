@@ -63,7 +63,8 @@ export type TimelineEntry =
   | { kind: "message"; msg: AbstracChatMessage; prevMsg?: AbstracChatMessage }
   | { kind: "spinner"; spinner: ActiveSpinner }
   | { kind: "progress"; progress: ActiveProgress }
-  | { kind: "stream"; stream: ActiveStream; prevMsg?: AbstracChatMessage };
+  | { kind: "stream"; stream: ActiveStream; prevMsg?: AbstracChatMessage }
+  | { kind: "typing"; timestamp: number };
 
 export type CustomColors = {
   background?: string;

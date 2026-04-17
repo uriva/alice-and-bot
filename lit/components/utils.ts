@@ -252,6 +252,8 @@ const tsOf = (e: TimelineEntry): number =>
     ? e.stream.timestamp
     : e.kind === "spinner"
     ? e.spinner.timestamp
+    : e.kind === "typing"
+    ? e.timestamp
     : e.progress.timestamp;
 
 export const buildTimeline = (

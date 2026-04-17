@@ -305,11 +305,12 @@ const standaloneProgressEntries = (
 const standaloneSpinnerEntries = (
   uiElements: UiElement[],
   knownIds: Set<string>,
+  minUpdatedAt: number,
 ): ActiveSpinner[] =>
   uiElements
     .filter((el) =>
       el.type === "spinner" && !knownIds.has(el.elementId) &&
-      el.active !== false
+      el.active !== false && el.updatedAt >= minUpdatedAt
     )
     .map((el) => ({
       authorName: "",
@@ -663,6 +664,7 @@ export class ConnectedChat extends LitElement {
     const details = this._identityDetails;
     const overrides = uiOverridesMap(this._uiElements);
     const knownIds = messageElementIds(messages);
+    const messageTimestampFloor = latestTimestamp(messages);
     const reactions = messages.filter(isReaction);
     const addReactions = aggregateReactions(reactions, details);
     const withReactions = foldEdits(messages.filter(isTextOrEdit)).map(
@@ -677,7 +679,11 @@ export class ConnectedChat extends LitElement {
       chatMessages: withReactions.map(resolveReplyTo(msgMap)),
       activeSpinners: [
         ...latestSpinners(messages, details, overrides),
-        ...standaloneSpinnerEntries(this._uiElements, knownIds),
+        ...standaloneSpinnerEntries(
+          this._uiElements,
+          knownIds,
+          messageTimestampFloor,
+        ),
       ],
       activeProgress: enforceMonotonic(this._progressMax, [
         ...latestProgress(messages, details, overrides),
@@ -862,3 +868,8 @@ export class ConnectedChat extends LitElement {
 }
 
 customElements.define("alice-connected-chat", ConnectedChat);
+const latestTimestamp = (messages: DecipheredMessage[]): number =>
+  messages.reduce(
+    (maxTimestamp, message) => Math.max(maxTimestamp, message.timestamp),
+    0,
+  );

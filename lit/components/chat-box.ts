@@ -30,8 +30,10 @@ import type {
   ActiveSpinner,
   ActiveStream,
   CustomColors,
+  TimelineEntry,
 } from "./types.ts";
 import {
+  buildTimeline,
   charCountThreshold,
   estimateSerializedLength,
   formatDuration,
@@ -53,19 +55,6 @@ const indicatorTextStyle = (isDark: boolean, color?: string) =>
 
 const nextFrame = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-const transientStackTransitionMs = 240;
-
-const transientStackStyle =
-  `display:flex;flex-direction:column;gap:8px;overflow:hidden;transition:max-height .24s ease`;
-
-const messageEntries = (messages: AbstracChatMessage[]) => {
-  const sorted = [...messages].sort((a, b) => a.timestamp - b.timestamp);
-  return sorted.map((msg, i) => ({
-    msg,
-    prevMsg: sorted[i - 1],
-  }));
-};
 
 const linearBarTrackStyle = (isDark: boolean, color?: string) =>
   `width:200px;height:8px;border:1px solid ${
@@ -145,6 +134,34 @@ const renderProgressIndicator = (
       )}"></div></div>
     </div>
   `;
+
+const renderTypingIndicatorEntry = (typingUsers: string[], isDark: boolean) =>
+  empty(typingUsers) ? nothing : html`
+    <chat-typing-indicator
+      .names="${typingUsers}"
+      .isDark="${isDark}"
+    ></chat-typing-indicator>
+  `;
+
+const timelineWithTransientEvents = (
+  timelineMessages: AbstracChatMessage[],
+  activeSpinners: ActiveSpinner[],
+  activeProgress: ActiveProgress[],
+  activeStreams: ActiveStream[],
+  typingUsers: string[],
+) => {
+  const typingTimestamp = Date.now();
+  return buildTimeline(
+    timelineMessages,
+    activeSpinners,
+    activeProgress,
+    activeStreams,
+  ).concat(
+    empty(typingUsers)
+      ? []
+      : [{ kind: "typing" as const, timestamp: typingTimestamp }],
+  );
+};
 
 const spinnerKeyframes =
   `@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`;
@@ -404,8 +421,6 @@ export class ChatBox extends LitElement {
     _textareaOverflow: { state: true },
     _inputAreaHeight: { state: true },
     _replyingTo: { state: true },
-    _transientHeight: { state: true },
-    _transientAnimating: { state: true },
   };
 
   declare messages: AbstracChatMessage[];
@@ -477,10 +492,6 @@ export class ChatBox extends LitElement {
   declare private _replyingTo:
     | { id: string; authorName: string; text: string }
     | null;
-  declare private _transientHeight: number;
-  declare private _transientPrevHeight: number;
-  declare private _transientAnimating: boolean;
-  private _transientTimer = 0;
 
   constructor() {
     super();
@@ -517,9 +528,6 @@ export class ChatBox extends LitElement {
     this._textareaHeight = 44;
     this._textareaOverflow = "hidden";
     this._inputAreaHeight = 72;
-    this._transientHeight = 0;
-    this._transientPrevHeight = 0;
-    this._transientAnimating = false;
     this._replyingTo = null;
   }
 
@@ -539,29 +547,6 @@ export class ChatBox extends LitElement {
   private _sessionStart = Date.now();
   private _initialLoad = true;
   private _pendingAudioMessageCount: number | null = null;
-  private _measureTransientHeight = () =>
-    this.querySelector<HTMLElement>("[data-transient-stack]")?.scrollHeight ??
-      0;
-
-  private _animateTransientStack = () => {
-    const nextHeight = this._measureTransientHeight();
-    if (nextHeight === this._transientHeight && !this._transientAnimating) {
-      return;
-    }
-    clearTimeout(this._transientTimer);
-    this._transientPrevHeight = this._transientAnimating
-      ? this._transientHeight
-      : this._measureTransientHeight();
-    this._transientHeight = this._transientPrevHeight;
-    this._transientAnimating = true;
-    requestAnimationFrame(() => {
-      this._transientHeight = nextHeight;
-      this._transientTimer = globalThis.setTimeout(() => {
-        this._transientAnimating = false;
-        this._transientPrevHeight = nextHeight;
-      }, transientStackTransitionMs);
-    });
-  };
   private _touchStart: { x: number; y: number } | null = null;
   private _prevActiveSpinnerIds = new Set<string>();
   private _prevMessageCount = 0;
@@ -945,14 +930,6 @@ export class ChatBox extends LitElement {
       this._inputResizeObserver.observe(this._inputAreaEl);
     }
 
-    if (
-      changed.has("typingUsers") || changed.has("activeSpinners") ||
-      changed.has("activeProgress") || changed.has("activeStreams") ||
-      changed.has("_isSending")
-    ) {
-      requestAnimationFrame(() => this._animateTransientStack());
-    }
-
     if (!this._isMobile && !this.disableAutoFocus && this._inputEl) {
       if (changed.has("title")) this._inputEl.focus();
     }
@@ -1040,7 +1017,13 @@ export class ChatBox extends LitElement {
       this._optimisticMessages,
       this.userId,
     );
-    const timeline = messageEntries(allMsgs);
+    const timeline = timelineWithTransientEvents(
+      allMsgs,
+      this.activeSpinners,
+      this.activeProgress,
+      this.activeStreams,
+      this.typingUsers,
+    );
 
     const hasContent = !!this._input.trim() || this._pendingFiles.length > 0;
     const showMic = this.enableAudioRecording && !hasContent &&
@@ -1285,68 +1268,18 @@ export class ChatBox extends LitElement {
                 </div>
               `
               : html`
-                ${timeline.map((entry) => this._renderMessageEntry(entry))}
-                <div
-                  data-transient-stack
-                  style="${transientStackStyle};max-height:${this
-                      ._transientAnimating || this._transientHeight > 0
-                    ? `${this._transientHeight}px`
-                    : "none"}"
-                >
-                  ${this.activeSpinners.map((spinner) =>
-                    renderSpinnerIndicator(
-                      spinner,
-                      isDark,
-                      customColors?.hideNames,
-                      this.isGroupChat,
-                      customColors?.text,
-                    )
-                  )} ${this.activeProgress.map((progress) =>
-                    renderProgressIndicator(
-                      progress,
-                      isDark,
-                      customColors?.hideNames,
-                      this.isGroupChat,
-                      customColors?.text,
-                    )
-                  )} ${this.activeStreams.map((stream) => {
-                    const streamMsg: AbstracChatMessage = {
-                      id: stream.elementId,
-                      authorId: stream.authorPublicKey ?? stream.authorName,
-                      authorName: stream.authorName,
-                      authorAvatar: stream.authorAvatar,
-                      text: stream.text,
-                      timestamp: stream.timestamp,
-                    };
-                    const prevMsg = allMsgs.filter((m) =>
-                      m.timestamp <= stream.timestamp
-                    ).pop();
-                    return html`
-                      <chat-message
-                        .msg="${streamMsg}"
-                        .prev="${prevMsg}"
-                        .isOwn="${streamMsg.authorId === this.userId}"
-                        .streamActive="${stream.active}"
-                        .onDecryptAttachment="${this.onDecryptAttachment}"
-                        .sessionStart="${this._sessionStart}"
-                        .onAvatarClick="${this.onAvatarClick}"
-                        .customColors="${customColors}"
-                        .isDark="${isDark}"
-                      ></chat-message>
-                    `;
-                  })} ${this._isSending
-                    ? sendingAudioIndicator(
-                      customColors?.primary ?? defaultPrimary(isDark),
-                    )
-                    : nothing} ${!empty(this.typingUsers)
-                    ? html`
-                      <chat-typing-indicator
-                        .names="${this.typingUsers}"
-                        .isDark="${isDark}"
-                      ></chat-typing-indicator>
-                    `
-                    : nothing}
-                </div>
+                ${timeline.map((entry) =>
+                  this._renderTimelineEntry(
+                    entry,
+                    allMsgs,
+                    customColors,
+                    isDark,
+                  )
+                )} ${this._isSending
+                  ? sendingAudioIndicator(
+                    customColors?.primary ?? defaultPrimary(isDark),
+                  )
+                  : nothing}
               `}
           </div>
         </div>
@@ -1664,6 +1597,60 @@ export class ChatBox extends LitElement {
         .onReply="${() => this._handleReply(entry.msg.id)}"
         .userId="${this.userId}"
         .isMobile="${this._isMobile}"
+        .onAvatarClick="${this.onAvatarClick}"
+        .customColors="${customColors}"
+        .isDark="${isDark}"
+      ></chat-message>
+    `;
+  }
+
+  private _renderTimelineEntry(
+    entry: TimelineEntry,
+    allMsgs: AbstracChatMessage[],
+    customColors: CustomColors | undefined,
+    isDark: boolean,
+  ) {
+    if (entry.kind === "message") return this._renderMessageEntry(entry);
+    if (entry.kind === "spinner") {
+      return renderSpinnerIndicator(
+        entry.spinner,
+        isDark,
+        customColors?.hideNames,
+        this.isGroupChat,
+        customColors?.text,
+      );
+    }
+    if (entry.kind === "progress") {
+      return renderProgressIndicator(
+        entry.progress,
+        isDark,
+        customColors?.hideNames,
+        this.isGroupChat,
+        customColors?.text,
+      );
+    }
+    if (entry.kind === "typing") {
+      return renderTypingIndicatorEntry(this.typingUsers, isDark);
+    }
+    const streamMsg: AbstracChatMessage = {
+      id: entry.stream.elementId,
+      authorId: entry.stream.authorPublicKey ?? entry.stream.authorName,
+      authorName: entry.stream.authorName,
+      authorAvatar: entry.stream.authorAvatar,
+      text: entry.stream.text,
+      timestamp: entry.stream.timestamp,
+    };
+    const prevMsg = allMsgs.filter((message) =>
+      message.timestamp <= entry.stream.timestamp
+    ).pop();
+    return html`
+      <chat-message
+        .msg="${streamMsg}"
+        .prev="${prevMsg}"
+        .isOwn="${streamMsg.authorId === this.userId}"
+        .streamActive="${entry.stream.active}"
+        .onDecryptAttachment="${this.onDecryptAttachment}"
+        .sessionStart="${this._sessionStart}"
         .onAvatarClick="${this.onAvatarClick}"
         .customColors="${customColors}"
         .isDark="${isDark}"
