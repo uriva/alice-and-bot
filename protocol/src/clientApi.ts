@@ -73,6 +73,7 @@ export type Attachment =
   | LocationAttachment;
 
 import {
+  assertTextLengthOk,
   fileSizeLimits,
   getFileSizeLimitByMimeType,
   maxTextLength,
@@ -196,11 +197,7 @@ const encryptAndSign = async (
   message: InternalMessage,
 ) => {
   const serialized = msgToStr(message);
-  if (serialized.length > maxTextLength) {
-    throw new Error(
-      `Message exceeds maximum length of ${maxTextLength} characters`,
-    );
-  }
+  assertTextLengthOk(serialized);
   return encryptSymmetric(conversationKey, {
     payload: message,
     publicSignKey,

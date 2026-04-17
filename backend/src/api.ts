@@ -9,9 +9,8 @@ import {
 import { z } from "zod/v4";
 import { buildSignedRequest } from "../../protocol/src/authClient.ts";
 import { serverBaseUrl } from "../../protocol/src/serverUrl.ts";
+import { maxEncryptedMessageLength } from "../../protocol/src/attachmentLimits.ts";
 import type { Credentials } from "../../protocol/src/clientApi.ts";
-
-const maxEncryptedMessageLength = 50_000;
 
 const authenticatedInput = <T extends z.ZodTypeAny>(payloadSchema: T) =>
   z.object({

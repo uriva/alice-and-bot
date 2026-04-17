@@ -2,7 +2,21 @@ export const MB = 1024 * 1024;
 
 export const encryptionOverhead = 12 + 16;
 
-export const maxTextLength = 10_000;
+export const maxTextLength = 4_000;
+
+const signedPayloadOverhead = 500;
+
+export const maxEncryptedMessageLength = Math.ceil(
+  (maxTextLength + signedPayloadOverhead) * 4 / 3,
+) + 2_000;
+
+export const assertTextLengthOk = (serialized: string): void => {
+  if (serialized.length > maxTextLength) {
+    throw new Error(
+      `Message exceeds maximum length of ${maxTextLength} characters`,
+    );
+  }
+};
 
 export const fileSizeLimits = {
   image: 10 * MB,
