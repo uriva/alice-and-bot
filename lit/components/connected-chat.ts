@@ -34,6 +34,10 @@ import type {
   EditHistoryEntry,
   Reaction,
 } from "./types.ts";
+import {
+  latestTimestamp,
+  standaloneSpinnerEntries,
+} from "./transient-elements.ts";
 
 type TextOrEditMessage = DecipheredMessage & { type: "text" | "edit" };
 
@@ -300,24 +304,6 @@ const standaloneProgressEntries = (
       percentage: el.percentage ?? 0,
       elementId: el.elementId,
       timestamp: el.updatedAt,
-    }));
-
-const standaloneSpinnerEntries = (
-  uiElements: UiElement[],
-  knownIds: Set<string>,
-  minUpdatedAt: number,
-): ActiveSpinner[] =>
-  uiElements
-    .filter((el) =>
-      el.type === "spinner" && !knownIds.has(el.elementId) &&
-      el.active !== false && el.updatedAt >= minUpdatedAt
-    )
-    .map((el) => ({
-      authorName: "",
-      text: el.text ?? "",
-      elementId: el.elementId,
-      timestamp: el.updatedAt,
-      active: el.active !== false,
     }));
 
 const standaloneStreamEntries = (
@@ -868,8 +854,3 @@ export class ConnectedChat extends LitElement {
 }
 
 customElements.define("alice-connected-chat", ConnectedChat);
-const latestTimestamp = (messages: DecipheredMessage[]): number =>
-  messages.reduce(
-    (maxTimestamp, message) => Math.max(maxTimestamp, message.timestamp),
-    0,
-  );
