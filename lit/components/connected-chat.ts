@@ -23,6 +23,10 @@ import {
   type EphemeralStreamEvent,
   subscribeEphemeralStreams,
 } from "../core/room.ts";
+import {
+  createVoiceCall,
+  type VoiceCallController,
+} from "../core/voice-call.ts";
 import "./chat-box.ts";
 import "./user-profile-popup.ts";
 import type {
@@ -448,6 +452,7 @@ export class ConnectedChat extends LitElement {
     null;
   private _suppressTypingAuthor: ((publicSignKey: string) => void) | null =
     null;
+  private _voiceCall: VoiceCallController | null = null;
 
   override createRenderRoot(): HTMLElement {
     return this;
@@ -491,6 +496,8 @@ export class ConnectedChat extends LitElement {
     this._typingNotifier?.stop();
     this._typingNotifier = null;
     this._suppressTypingAuthor = null;
+    this._voiceCall?.cleanup();
+    this._voiceCall = null;
     this._messagesUnsub?.();
     this._messagesUnsub = null;
     this._identityUnsub?.();
@@ -511,6 +518,14 @@ export class ConnectedChat extends LitElement {
       this.conversationId,
       publicSignKey,
     );
+
+    this._voiceCall = createVoiceCall({
+      conversationId: this.conversationId,
+      credentials: this.credentials,
+      getConversationKey: () => this._conversationKey,
+      getMessages: () => this._messages ?? [],
+      onChange: () => this.requestUpdate(),
+    });
 
     this._unsubs.push(
       accessDb().subscribeQuery(
@@ -623,6 +638,7 @@ export class ConnectedChat extends LitElement {
         this._canLoadMore = canLoadMore;
         this._loadMore = loadMore;
         this._resubscribeIdentities();
+        this._voiceCall?.handleMessages();
         this.requestUpdate();
       },
     );
@@ -786,6 +802,22 @@ export class ConnectedChat extends LitElement {
     this.requestUpdate();
   };
 
+  private _handleStartCall = () => {
+    this._voiceCall?.startCall();
+  };
+  private _handleAcceptCall = () => {
+    this._voiceCall?.acceptCall();
+  };
+  private _handleRejectCall = () => {
+    this._voiceCall?.rejectCall();
+  };
+  private _handleEndCall = () => {
+    this._voiceCall?.endCall();
+  };
+  private _handleToggleMute = () => {
+    this._voiceCall?.toggleMute();
+  };
+
   private _closeProfile = () => {
     this._profileAuthorId = null;
     this.requestUpdate();
@@ -822,6 +854,15 @@ export class ConnectedChat extends LitElement {
         .enableAttachments="${this.enableAttachments}"
         .enableAudioRecording="${this.enableAudioRecording}"
         .enableVoiceCall="${this.enableVoiceCall}"
+        .voiceCallState="${this._voiceCall?.getState() ?? "idle"}"
+        .voiceCallDuration="${this._voiceCall?.getDuration() ?? 0}"
+        .voiceCallMuted="${this._voiceCall?.getMuted() ?? false}"
+        .remoteStream="${this._voiceCall?.getRemoteStream() ?? null}"
+        .onStartCall="${this._handleStartCall}"
+        .onAcceptCall="${this._handleAcceptCall}"
+        .onRejectCall="${this._handleRejectCall}"
+        .onEndCall="${this._handleEndCall}"
+        .onToggleMute="${this._handleToggleMute}"
         .onEdit="${this._handleEdit}"
         .onReact="${this._handleReact}"
         .onSendLocation="${this._handleSendLocation}"
