@@ -7,6 +7,11 @@ import {
   waitForChat,
 } from "./helpers.ts";
 
+declare global {
+  // deno-lint-ignore no-explicit-any
+  var __TEST_CHAT__: any;
+}
+
 let data: TestData;
 
 test.beforeAll(async () => {

@@ -286,9 +286,9 @@ test.describe("Widget", () => {
     await expect(bubble).toBeVisible({ timeout: 10000 });
 
     const box = await bubble.boundingBox();
-    console.log("Input Area Width:", box.width);
+    console.log("Input Area Width:", box!.width);
 
     // Viewport width is 375
-    expect(box.width).toBeLessThanOrEqual(375);
+    expect(box!.width).toBeLessThanOrEqual(375);
   });
 });

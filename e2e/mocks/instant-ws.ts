@@ -207,7 +207,7 @@ export const setupInstantWsMock = async (
       serverWs = ws;
       const tx = Date.now();
 
-      ws.onMessage((raw: string | ArrayBuffer) => {
+      ws.onMessage((raw) => {
         const msg = JSON.parse(String(raw));
 
         if (msg.op === "init") {
