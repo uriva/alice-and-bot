@@ -390,3 +390,33 @@ test.describe("AbstractChatBox (example app)", () => {
     expect(texts[texts.length - 1]).not.toContain("sorting algorithm");
   });
 });
+
+test.describe("AbstractChatBox mobile history load", () => {
+  test.use({ viewport: { width: 375, height: 667 } });
+
+  test("loading older history with wide bubbles does not cause horizontal overflow", async ({ page }) => {
+    await page.goto("/?loadMore=1");
+    await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+    const scroller = page.locator(tid("chat-container")).locator(
+      'div[style*="overflow-y:auto"]',
+    ).first();
+    await scroller.evaluate((el) => {
+      el.scrollTop = 0;
+    });
+    await expect(page.getByText("Older message 1.0")).toBeVisible();
+    const viewport = page.viewportSize()!;
+    const docScrollW = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    expect(docScrollW).toBeLessThanOrEqual(viewport.width);
+    const containerBox = await page.locator(tid("chat-container"))
+      .boundingBox();
+    expect(containerBox!.width).toBeLessThanOrEqual(viewport.width);
+    const bubbleBoxes = await page.locator(".msg-bubble").evaluateAll(
+      (els: Element[]) => els.map((el) => el.getBoundingClientRect().width),
+    );
+    bubbleBoxes.forEach((w: number) =>
+      expect(w).toBeLessThanOrEqual(viewport.width)
+    );
+  });
+});

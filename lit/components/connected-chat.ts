@@ -464,6 +464,8 @@ export class ConnectedChat extends LitElement {
     this.style.flexDirection = "column";
     this.style.flexGrow = "1";
     this.style.minHeight = "0";
+    this.style.minWidth = "0";
+    this.style.maxWidth = "100%";
     this._setupSubscriptions();
   }
 

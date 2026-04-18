@@ -9,6 +9,7 @@ export default defineConfig({
     headless: true,
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    launchOptions: { channel: "chromium" },
   },
   webServer: [
     {

@@ -114,23 +114,112 @@ const chatGptColors: CustomColors = {
   inputBackground: "#1a1b2e",
 };
 
+const loadMoreEnabled = new URLSearchParams(globalThis.location.search).has(
+  "loadMore",
+);
+
+const wideCodeLine = "x".repeat(500);
+const wideTextLine = "y".repeat(500);
+const makeHistoryBatch = (batchIndex: number): AbstracChatMessage[] =>
+  [0, 1, 2].map((i) => ({
+    id: `history-${batchIndex}-${i}`,
+    authorId: i % 2 === 0 ? botId : userId,
+    authorName: i % 2 === 0 ? "Assistant" : "You",
+    text:
+      `Older message ${batchIndex}.${i} ${wideTextLine}\n\n\`\`\`\n${wideCodeLine}\n\`\`\`\n\n${wideTextLine}`,
+    timestamp: now - (60 + batchIndex * 10 + i) * minute,
+  }));
+
 let messages = [...initialMessages];
 let nextId = initialMessages.length + 1;
+let historyBatchIndex = 0;
+
+const messengerBg = "#0b0c10";
+const messengerPanel = "#14151c";
+const messengerBorder = "#22232d";
+const messengerText = "#e4e4e7";
+const messengerMuted = "#9ca3af";
+const narrowBreakpoint = "768px";
+
+const responsiveCss = `
+.mess-root{height:100vh;width:100%;display:flex;flex-direction:row;background:${messengerBg};color:${messengerText};font-family:system-ui,-apple-system,sans-serif}
+.mess-sidebar{width:280px;flex-shrink:0;border-right:1px solid ${messengerBorder};background:${messengerPanel};display:flex;flex-direction:column;min-height:0}
+.mess-sidebar-header{padding:14px 16px;border-bottom:1px solid ${messengerBorder};font-weight:600;font-size:16px}
+.mess-contact-list{flex:1;overflow-y:auto;min-height:0}
+.mess-contact-row{padding:10px 14px;border-bottom:1px solid ${messengerBorder};cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.mess-contact-row.active{background:#1f2030}
+.mess-contact-name{font-weight:500;font-size:14px}
+.mess-contact-preview{font-size:12px;color:${messengerMuted}}
+@media (max-width:${narrowBreakpoint}){.mess-sidebar{display:none}}
+`;
+
+const contactNames = [
+  "Alice",
+  "Bob",
+  "Charlie",
+  "Diana",
+  "Eli",
+  "Farah",
+  "Gita",
+  "Hugo",
+];
+
+const contactRow = (name: string, active: boolean) => {
+  const row = document.createElement("div");
+  row.className = `mess-contact-row${active ? " active" : ""}`;
+  const n = document.createElement("div");
+  n.className = "mess-contact-name";
+  n.textContent = name;
+  const p = document.createElement("div");
+  p.className = "mess-contact-preview";
+  p.textContent = "Latest message preview…";
+  row.append(n, p);
+  return row;
+};
+
+const makeMessengerLayout = (host: HTMLElement) => {
+  host.className = "mess-root";
+  host.innerHTML = `
+    <aside class="mess-sidebar">
+      <div class="mess-sidebar-header">Chats</div>
+      <div class="mess-contact-list"></div>
+    </aside>
+  `;
+  const list = host.querySelector(".mess-contact-list")!;
+  contactNames.forEach((n, i) => list.appendChild(contactRow(n, i === 0)));
+  return host;
+};
+
+const plainLayout = (host: HTMLElement) => {
+  host.style.cssText =
+    "height:100vh;width:100%;display:flex;flex-direction:column";
+  return host;
+};
+
+const styleTag = document.createElement("style");
+styleTag.textContent = responsiveCss;
+document.head.appendChild(styleTag);
 
 const root = coerce(document.getElementById("root"));
-root.style.height = "100vh";
-root.style.width = "100%";
-root.style.display = "flex";
-root.style.flexDirection = "column";
+
+const chatParent = loadMoreEnabled
+  ? makeMessengerLayout(root)
+  : plainLayout(root);
 
 const chatBox = new ChatBox();
 chatBox.userId = userId;
 chatBox.messages = messages;
-chatBox.canLoadMore = false;
-chatBox.loadMore = () => {};
+chatBox.canLoadMore = loadMoreEnabled;
+chatBox.loadMore = () => {
+  if (!loadMoreEnabled) return;
+  historyBatchIndex++;
+  messages = [...makeHistoryBatch(historyBatchIndex), ...messages];
+  chatBox.messages = messages;
+  if (historyBatchIndex >= 3) chatBox.canLoadMore = false;
+};
 chatBox.title = "ChatGPT Example";
 chatBox.isDark = true;
-chatBox.customColors = chatGptColors;
+if (!loadMoreEnabled) chatBox.customColors = chatGptColors;
 chatBox.enableAttachments = true;
 chatBox.enableAudioRecording = true;
 chatBox.onReact = (messageId: string, emoji: string, remove?: boolean) => {
@@ -198,4 +287,4 @@ chatBox.onSendLocation = (
   chatBox.messages = messages;
 };
 
-root.appendChild(chatBox);
+chatParent.appendChild(chatBox);
