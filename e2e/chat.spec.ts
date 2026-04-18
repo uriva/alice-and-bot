@@ -319,4 +319,22 @@ test.describe("Chat (full encryption pipeline)", () => {
     await waitForChat(page);
     await expect(page.locator(tid("title-bar"))).toBeVisible();
   });
+
+  test("voice call click transitions chat-box into calling state", async ({ page, context }) => {
+    await context.grantPermissions(["microphone"]);
+    await setupChatMocks(page, data);
+    await page.goto("/");
+    await waitForChat(page);
+    await page.evaluate(() => {
+      globalThis.__TEST_CHAT__!.enableVoiceCall = true;
+    });
+    await page.locator(tid("voice-call-button")).click();
+    await expect(page.getByText("Calling...")).toBeVisible({ timeout: 5_000 });
+    const hasHandler = await page.evaluate(() => {
+      const chatBox = document.querySelector("chat-box");
+      return typeof (chatBox as unknown as { onStartCall?: unknown })
+        ?.onStartCall === "function";
+    });
+    expect(hasHandler).toBe(true);
+  });
 });
