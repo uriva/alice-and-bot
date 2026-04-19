@@ -100,9 +100,9 @@ const developerFeatures = [
       "Send and receive messages via API and webhooks. No extra cost, no friction. Cloud storage is built in for device independence.",
   },
   {
-    title: "Integrated Crypto Ledger",
+    title: "Built-in Monetization",
     description:
-      "Balances are tracked in USD cents to avoid crypto volatility, funded via a secure crypto webhook. Built-in ledgers handle user payments automatically.",
+      "Easily monetize your agents. Balances are tracked in USD cents and managed automatically by built-in ledgers, so you can focus on building.",
   },
   {
     title: "Browser & Server",
