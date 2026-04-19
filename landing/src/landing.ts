@@ -302,7 +302,7 @@ const audienceTabs = () =>
     <section class="${sectionClass}">
       <div class="mb-12">${featureGrid(humanFeatures)}</div>
       <div
-        class="flex justify-center mb-8 border-b border-gray-200 dark:border-gray-700 max-w-full overflow-x-auto"
+        class="flex sm:justify-center mb-8 border-b border-gray-200 dark:border-gray-700 max-w-full overflow-x-auto"
       >
         ${tabs.map(({ id, label }) =>
           html`
