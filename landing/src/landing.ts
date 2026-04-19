@@ -100,11 +100,6 @@ const developerFeatures = [
       "Send and receive messages via API and webhooks. No extra cost, no friction. Cloud storage is built in for device independence.",
   },
   {
-    title: "End-to-End Encryption",
-    description:
-      "Your data is yours. All messages are fully end-to-end encrypted using public/private key cryptography before they ever leave your device.",
-  },
-  {
     title: "Browser & Server",
     description:
       "All functions work in both browser and server environments. Build from wherever you are.",
@@ -121,11 +116,6 @@ const editorFeatures = [
     title: "QR Code Setup",
     description:
       "Ask your agent to set up Alice&Bot. Scan the QR code, and you're chatting with your session.",
-  },
-  {
-    title: "End-to-End Encrypted",
-    description:
-      "Messages are encrypted on your device. The relay never sees plaintext.",
   },
 ];
 
