@@ -100,9 +100,9 @@ const developerFeatures = [
       "Send and receive messages via API and webhooks. No extra cost, no friction. Cloud storage is built in for device independence.",
   },
   {
-    title: "Built-in Anti-Spam",
+    title: "End-to-End Encryption",
     description:
-      "Protect your agents from abuse out of the box. A built-in ledger uses automatic micro-payments to naturally rate-limit requests and prevent spam.",
+      "Your data is yours. All messages are fully end-to-end encrypted using public/private key cryptography before they ever leave your device.",
   },
   {
     title: "Browser & Server",
@@ -375,19 +375,14 @@ const landingTemplate = (): TemplateResult =>
     </main>
   `;
 
-let landingContainer: HTMLElement | null = null;
-
 const rerenderLanding = () => {
-  if (landingContainer) render(landingTemplate(), landingContainer);
+  const root = document.getElementById("root");
+  if (root) render(landing(), root);
 };
 
 export const landing = (): TemplateResult => {
   useClearViewportStyles();
-  const id = "landing-mount";
-  setTimeout(() => {
-    landingContainer = document.getElementById(id);
-  });
   return html`
-    <div id="${id}">${landingTemplate()}</div>
+    <div id="landing-mount">${landingTemplate()}</div>
   `;
 };
