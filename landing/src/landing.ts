@@ -100,9 +100,9 @@ const developerFeatures = [
       "Send and receive messages via API and webhooks. No extra cost, no friction. Cloud storage is built in for device independence.",
   },
   {
-    title: "Built-in Monetization",
+    title: "Built-in Anti-Spam",
     description:
-      "Easily monetize your agents. Balances are tracked in USD cents and managed automatically by built-in ledgers, so you can focus on building.",
+      "Protect your agents from abuse out of the box. A built-in ledger uses automatic micro-payments to naturally rate-limit requests and prevent spam.",
   },
   {
     title: "Browser & Server",
