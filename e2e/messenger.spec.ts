@@ -243,6 +243,28 @@ test.describe("Messenger (landing /chat)", () => {
     expect(r).toBeLessThan(50);
   });
 
+  test("first /chat load in system dark mode keeps messenger shell dark", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await setupMessengerMocks(page, data);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.addInitScript(() => localStorage.removeItem("theme"));
+    await page.goto("/chat");
+    await expect(page.getByText("Test Conversation").first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect.poll(
+      () =>
+        page.evaluate(() =>
+          document.documentElement.classList.contains("dark")
+        ),
+      { timeout: 3_000 },
+    ).toBe(true);
+    const sidebarBg = await page.getByTitle("Messages").evaluate((button) =>
+      getComputedStyle(button.parentElement!).backgroundColor
+    );
+    expect(sidebarBg).not.toBe("rgb(248, 247, 244)");
+  });
+
   test("credentials persist across page reload", async ({ page }) => {
     await setupMessengerMocks(page, data);
     await injectMessengerCredentials(page, data, credKey);

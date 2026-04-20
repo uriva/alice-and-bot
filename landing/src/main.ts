@@ -1,4 +1,5 @@
 import { html } from "lit";
+import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { initRouter } from "./router.ts";
 import { chat } from "./chat.ts";
@@ -22,13 +23,18 @@ import {
 } from "./paths.ts";
 import "./app.css";
 
+const setDocumentDarkClass = (isDark: boolean) => {
+  document.documentElement.classList.toggle("dark", isDark);
+};
+
 const storedTheme = localStorage.getItem("theme");
 if (storedTheme === "dark") {
-  document.documentElement.classList.add("dark");
   setDarkModeOverride("dark");
 } else if (storedTheme === "light") {
   setDarkModeOverride("light");
 }
+
+subscribeDarkMode(setDocumentDarkClass);
 
 const notFound = () =>
   html`
