@@ -94,7 +94,14 @@ export const htmlCodeToMarkdown = (text: string) =>
     )
     .replace(
       /<code(?:\s[^>]*)?>([\s\S]*?)<\/code>/gi,
-      (_, content) => `\`${content}\``,
+      (_, content) => {
+        const normalized = content
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/&lt;br\s*\/?&gt;/gi, "\n")
+          .trim();
+        const isBlock = /\n/.test(normalized);
+        return isBlock ? `\`\`\`\n${normalized}\n\`\`\`` : `\`${normalized}\``;
+      },
     );
 
 export const decodeHtmlEntities = (text: string) =>

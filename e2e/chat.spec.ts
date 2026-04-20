@@ -7,6 +7,75 @@ import {
   waitForChat,
 } from "./helpers.ts";
 
+const problematicMobileMessage = String
+  .raw`Here is the TypeScript script I ran. It fetches data directly from a public screener page, parses the HTML table, and filters the results to ensure they match exact market cap and P/E criteria:
+
+<br><br>
+<code>
+import * as cheerio from "npm:cheerio";&lt;br&gt;
+&lt;br&gt;
+async function getFinviz() {&lt;br&gt;
+&nbsp;&nbsp;// URL includes filters: EPS growth past 5y &gt; 10%, P/E &gt; 8, P/E &lt; 15&lt;br&gt;
+&nbsp;&nbsp;const url = "https://example.invalid/screener?f=eps5y_o10,pe_o8,pe_u15";&lt;br&gt;
+&nbsp;&nbsp;&lt;br&gt;
+&nbsp;&nbsp;const res = await fetch(url, {&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;headers: {&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"User-Agent": "REDACTED_TEST_USER_AGENT"&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;}&lt;br&gt;
+&nbsp;&nbsp;});&lt;br&gt;
+&lt;br&gt;
+&nbsp;&nbsp;const text = await res.text();&lt;br&gt;
+&nbsp;&nbsp;const $ = cheerio.load(text);&lt;br&gt;
+&nbsp;&nbsp;&lt;br&gt;
+&nbsp;&nbsp;let found = [];&lt;br&gt;
+&lt;br&gt;
+&nbsp;&nbsp;// Parse the screener table&lt;br&gt;
+&nbsp;&nbsp;$("table.styled-table-new tr").each((i, el) =&gt; {&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;const row = $(el);&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;const cells = [];&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;row.find("td").each((j, td) =&gt; {&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cells.push($(td).text().trim());&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;});&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;// Skip header rows and empty rows&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;if (cells.length &gt; 5 &amp;&amp; cells[1] &amp;&amp; cells[1] !== 'Ticker') {&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const ticker = cells[1];&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const company = cells[2];&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const sector = cells[3];&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const mcapStr = cells[6];&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const peStr = cells[7];&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const priceStr = cells[8];&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Convert market cap string (e.g. "4.08B") to a number for filtering&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let mcap = 0;&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (mcapStr.endsWith("B")) mcap = parseFloat(mcapStr) * 1e9;&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else if (mcapStr.endsWith("M")) mcap = parseFloat(mcapStr) * 1e6;&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else mcap = parseFloat(mcapStr);&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const pe = parseFloat(peStr);&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Ensure Market Cap is under 5B and P/E is between 8 and 15&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (mcap &lt; 5e9 &amp;&amp; pe &gt;= 8 &amp;&amp; pe &lt;= 15) {&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;found.push({&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ticker, company, sector, marketCap: mcapStr, pe: peStr, price: priceStr&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;});&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&lt;br&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;}&lt;br&gt;
+&nbsp;&nbsp;});&lt;br&gt;
+&nbsp;&nbsp;&lt;br&gt;
+&nbsp;&nbsp;return JSON.stringify(found.slice(0, 10), null, 2);&lt;br&gt;
+}&lt;br&gt;
+&lt;br&gt;
+await getFinviz();&lt;br&gt;
+</code>
+<br><br>
+If you want, I can set this up to run daily and send you the results!`;
+
+const longUnbrokenInlineCode = "x".repeat(2000);
+
+const mobileOverflowPayload =
+  `${problematicMobileMessage}<br><br><code>${longUnbrokenInlineCode}</code>`;
+
 declare global {
   // deno-lint-ignore no-explicit-any
   var __TEST_CHAT__: any;
@@ -19,6 +88,48 @@ test.beforeAll(async () => {
 });
 
 test.describe("Chat (full encryption pipeline)", () => {
+  test("mobile: long code-like message does not overflow or clip bubble content", async ({ page }) => {
+    const { makeEncryptedMessage } = await import("./mocks/test-data.ts");
+    const payload = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      mobileOverflowPayload,
+    );
+    const overflowMessage = {
+      ...data.messages[0],
+      id: crypto.randomUUID(),
+      payload,
+      text: mobileOverflowPayload,
+      timestamp: Date.now(),
+      senderPublicSignKey: data.bob.publicSignKey,
+    };
+    await page.setViewportSize({ width: 375, height: 667 });
+    await setupChatMocks(page, data, {
+      dataOverride: { messages: [...data.messages, overflowMessage] },
+    });
+    await page.goto("/");
+    await waitForChat(page);
+    const lastBubble = page.locator(".msg-bubble").last();
+    await expect(lastBubble).toBeVisible({ timeout: 15_000 });
+    const overflowStats = await lastBubble.evaluate((bubble) => {
+      const descendants = [bubble, ...Array.from(bubble.querySelectorAll("*"))];
+      const offenders = descendants.filter((el) => {
+        const htmlEl = el as HTMLElement;
+        return htmlEl.scrollWidth - htmlEl.clientWidth > 1;
+      });
+      return {
+        hasOverflowingDescendants: offenders.length > 0,
+        offenderCount: offenders.length,
+      };
+    });
+    expect(overflowStats.hasOverflowingDescendants).toBe(false);
+    const pageHasHorizontalOverflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth >
+        document.documentElement.clientWidth
+    );
+    expect(pageHasHorizontalOverflow).toBe(false);
+  });
+
   test("chat-container renders with data-testid", async ({ page }) => {
     await setupChatMocks(page, data);
     await page.goto("/");

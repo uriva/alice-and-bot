@@ -140,7 +140,7 @@ export const codeBlock = (
       </div>
       <pre
         class="${codeBlockBaseClass} my-0 rounded-t-none"
-        style="margin:0;white-space:pre;overflow-x:auto"
+        style="margin:0;white-space:pre-wrap;overflow:hidden;overflow-wrap:anywhere;word-break:break-word"
       ><code class="language-${lang}">${unsafeHTML(
         highlight(code, lang),
       )}</code></pre>
@@ -159,7 +159,7 @@ export const shellCode = (code: string): TemplateResult => {
       </div>
       <pre
         class="${codeBlockBaseClass} my-0 rounded-t-none text-gray-700 dark:text-cyan-400"
-        style="margin:0;white-space:pre;overflow-x:auto"
+        style="margin:0;white-space:pre-wrap;overflow:hidden;overflow-wrap:anywhere;word-break:break-word"
       ><code>${code}</code></pre>
     </div>
   `;

@@ -86,7 +86,7 @@ const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
     isDark ? "#ffffff1a" : "#0000001a"
   }" class="fenced-code-wrap hljs">
     ${label}
-    <pre style="margin:0;padding:10px 12px;overflow:auto;max-width:100%;box-sizing:border-box;font-family:${monoFont};font-size:13px;word-break:normal;overflow-wrap:normal"><div style="position:relative"><code style="background:transparent;color:inherit;padding:0;border-radius:0">${highlighted}</code></div></pre>
+    <pre style="margin:0;padding:10px 12px;overflow:hidden;max-width:100%;box-sizing:border-box;font-family:${monoFont};font-size:13px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere"><div style="position:relative;max-width:100%;min-width:0;white-space:inherit;word-break:inherit;overflow-wrap:inherit"><code style="display:block;background:transparent;color:inherit;padding:0;border-radius:0;white-space:inherit;word-break:inherit;overflow-wrap:inherit;max-width:100%;min-width:0">${highlighted}</code></div></pre>
   </div>`;
 };
 
