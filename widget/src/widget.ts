@@ -53,8 +53,6 @@ type WidgetModeColors = {
   inputBackground: string;
   inputBorder: string;
   inputText: string;
-  closeButtonBg: string;
-  closeButtonColor: string;
 };
 
 export type WidgetColorScheme = {
@@ -79,8 +77,6 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     inputBackground: "#f9fafb",
     inputBorder: "#d1d5db",
     inputText: "#111827",
-    closeButtonBg: "#f9fafb",
-    closeButtonColor: "#111827",
   },
   dark: {
     background: "#2a2a2a",
@@ -98,8 +94,6 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     inputBackground: "#374151",
     inputBorder: "#4b5563",
     inputText: "#f9fafb",
-    closeButtonBg: "#374151",
-    closeButtonColor: "#f3f4f6",
   },
 };
 
@@ -142,7 +136,7 @@ const startButtonCss = (colors: WidgetModeColors) =>
 const closeButtonCss = (
   { colors, mode }: { colors: WidgetModeColors; mode: WidgetMode },
 ) =>
-  `position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:16px;border:none;background:${colors.closeButtonBg};color:${colors.closeButtonColor};cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:${
+  `position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:16px;border:none;background:${colors.inputBackground};color:${colors.inputText};cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:${
     mode === "dark" ? "0 2px 6px rgba(0,0,0,0.4)" : "0 2px 6px rgba(0,0,0,0.15)"
   };z-index:1`;
 
