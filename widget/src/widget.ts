@@ -427,6 +427,7 @@ export const createWidget = (
           text: app.colors.text,
           primary: app.colors.primary,
           otherBubble: app.colors.surface,
+          inputBackground: app.colors.inputBackground,
         };
         chatWrapper.appendChild(chat);
         containerEl.appendChild(chatWrapper);
