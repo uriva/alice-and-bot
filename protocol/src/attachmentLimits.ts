@@ -6,8 +6,10 @@ export const maxTextLength = 4_000;
 
 const signedPayloadOverhead = 500;
 
-export const maxEncryptedMessageLength = Math.ceil(
-  (maxTextLength + signedPayloadOverhead) * 4 / 3,
+const maxBytesPerChar = 3;
+
+export const maxEncryptedMessageLength: number = Math.ceil(
+  (maxTextLength + signedPayloadOverhead) * maxBytesPerChar * 4 / 3,
 ) + 2_000;
 
 export const assertTextLengthOk = (serialized: string): void => {

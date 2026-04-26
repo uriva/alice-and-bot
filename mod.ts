@@ -39,6 +39,10 @@ export {
   type VideoAttachment,
   type WebhookUpdate,
 } from "./protocol/src/clientApi.ts";
+export {
+  maxEncryptedMessageLength,
+  maxTextLength,
+} from "./protocol/src/attachmentLimits.ts";
 export { setDarkModeOverride } from "./lit/core/dark-mode.ts";
 export {
   type Conversation,
