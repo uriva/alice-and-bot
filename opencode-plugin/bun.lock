@@ -6,7 +6,7 @@
       "name": "opencode-alice-plugin",
       "dependencies": {
         "@alice-and-bot/core": "npm:@jsr/alice-and-bot__core@^0.0.237",
-        "@instantdb/core": "^0.22.174",
+        "@instantdb/core": "^1.0.21",
         "clipboardy": "^5.3.1",
         "localtunnel": "^2.0.2",
         "qrcode-terminal": "^0.12.0",
@@ -18,13 +18,13 @@
 
     "@instantdb/admin": ["@instantdb/admin@0.22.41", "", { "dependencies": { "@instantdb/core": "v0.22.41", "@instantdb/version": "v0.22.41", "eventsource": "^4.0.0" } }, "sha512-/pbCKi6er/F91OX26hFlpBxRsFOkCgr6/UZMYQYil/epKOYg/ueGdoo/gQx2CXAribj15r2ELNtb/dOumL5T+w=="],
 
-    "@instantdb/core": ["@instantdb/core@0.22.174", "", { "dependencies": { "@instantdb/version": "0.22.174", "mutative": "^1.0.10", "uuid": "^11.1.0" } }, "sha512-hXoouIHu3PmnUjQPiol+5TyF5LvY1Sz9Nvk1nRRFXxPw8yK1Aabj7ej0oMsajT2lz333fU7eJ0GoOHl03XDIHw=="],
+    "@instantdb/core": ["@instantdb/core@1.0.21", "", { "dependencies": { "@instantdb/version": "1.0.21", "mutative": "^1.0.10", "uuid": "^11.1.0" } }, "sha512-JDzFJZiQb9Vj0SR/6sJ4R0mXea/LhKU27vOj3H6U39WrIbzCqvk3T2vBsy4VfimSRSDHgOTis+0sZjDr7aa9/Q=="],
 
     "@instantdb/react": ["@instantdb/react@0.22.41", "", { "dependencies": { "@instantdb/core": "v0.22.41", "@instantdb/react-common": "v0.22.41", "@instantdb/version": "v0.22.41", "eventsource": "^4.0.0" }, "peerDependencies": { "react": ">=16" } }, "sha512-05RLcTBJQ/gQKDr5SN6PW8NHbUzoDKU7cvLYRxMN8jobElSBd14DAFlMYnpoyuw1/NHoQjf51faZPWNP9JP11Q=="],
 
     "@instantdb/react-common": ["@instantdb/react-common@0.22.41", "", { "dependencies": { "@instantdb/core": "v0.22.41", "@instantdb/version": "v0.22.41" }, "peerDependencies": { "react": ">=16" } }, "sha512-3SzHt8Yn8FKsB0vxe2dTfn16wR+xkqicbW4qiVoHq3Wzc1Ty8oyULGqItqVIyNW0oc8c34GR3L1QYZ/tiIu07w=="],
 
-    "@instantdb/version": ["@instantdb/version@0.22.174", "", {}, "sha512-isJyY7dM3X+y7+N/Kb7ZBlnliFx6VZMOSYTg4i1tODVfyEWwcIiVmxoRDTcIqy7XZlFIRumif5B3eg1PqL1Avw=="],
+    "@instantdb/version": ["@instantdb/version@1.0.21", "", {}, "sha512-55Vr4KKaAeRoyajE8g9FiAe6POvSFOSeebdPn4NWdCwodAX+ILSz75+0U0thQqa6RImp84LJkooRlyF/hUMH5g=="],
 
     "@jsr/noble__hashes": ["@jsr/noble__hashes@2.0.0", "https://npm.jsr.io/~/11/@jsr/noble__hashes/2.0.0.tgz", {}, "sha512-2Q+5bMd7rnRVMQVexpu6r5nhb+eh1WYxNj5wDxrdGebXA4NvmJ64qI5dkDDCehdcSgCvlGsX/D/pn9hcm146bA=="],
 
