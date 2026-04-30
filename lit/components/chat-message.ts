@@ -3,6 +3,7 @@ import { html, LitElement, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import type { Attachment } from "../../protocol/src/clientApi.ts";
 import {
+  attachmentPrimaryColor,
   avatarColor,
   defaultOtherBubble,
   defaultPrimary,
@@ -791,7 +792,10 @@ export class ChatMessage extends LitElement {
                           .attachment="${att}"
                           .isDark="${isDark}"
                           .textColor="${textColor}"
-                          .primaryColor="${baseColor}"
+                          .primaryColor="${attachmentPrimaryColor(
+                            isDark,
+                            customColors,
+                          )}"
                           .isOwn="${isOwn}"
                           .messageTimestamp="${timestamp}"
                           .sessionStart="${this.sessionStart}"

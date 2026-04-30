@@ -86,6 +86,8 @@ export const htmlInlineToMarkdown = (text: string) =>
     { tag: "em", md: "*" },
   ].reduce((r, { tag, md }) => htmlStyledToMd(tag, md)(r), text);
 
+const hrPattern = /^\s*([-*_])\s*\1\s*\1\s*$/;
+
 export const htmlCodeToMarkdown = (text: string) =>
   text
     .replace(
@@ -95,12 +97,13 @@ export const htmlCodeToMarkdown = (text: string) =>
     .replace(
       /<code(?:\s[^>]*)?>([\s\S]*?)<\/code>/gi,
       (_, content) => {
-        const normalized = content
+        const trimmed = content
           .replace(/<br\s*\/?>/gi, "\n")
           .replace(/&lt;br\s*\/?&gt;/gi, "\n")
           .trim();
-        const isBlock = /\n/.test(normalized);
-        return isBlock ? `\`\`\`\n${normalized}\n\`\`\`` : `\`${normalized}\``;
+        if (hrPattern.test(trimmed)) return `\n${trimmed}\n`;
+        const isBlock = /\n/.test(trimmed);
+        return isBlock ? `\`\`\`\n${trimmed}\n\`\`\`` : `\`${trimmed}\``;
       },
     );
 

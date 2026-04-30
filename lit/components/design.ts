@@ -80,3 +80,8 @@ export const isLightColor = (color: string) => {
 
 export const defaultPrimary = (isDark: boolean) =>
   isDark ? `hsl(${primaryHue}, 45%, 22%)` : "#dbeafe";
+
+export const attachmentPrimaryColor = (
+  isDark: boolean,
+  customColors?: CustomColors,
+) => customColors?.primary ?? defaultPrimary(isDark);
