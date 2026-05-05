@@ -1,5 +1,5 @@
 import { assertStringIncludes } from "@std/assert";
-import { avatarImageStyle } from "./chat-avatar.ts";
+import { avatarContainerStyle, avatarImageStyle } from "./chat-avatar.ts";
 
 Deno.test("avatar image style constrains SVG intrinsic size", () => {
   assertStringIncludes(avatarImageStyle, "width:100%");
@@ -7,4 +7,12 @@ Deno.test("avatar image style constrains SVG intrinsic size", () => {
   assertStringIncludes(avatarImageStyle, "max-width:100%");
   assertStringIncludes(avatarImageStyle, "max-height:100%");
   assertStringIncludes(avatarImageStyle, "object-fit:cover");
+});
+
+Deno.test("avatar image container has no colored inset ring", () => {
+  assertStringIncludes(avatarContainerStyle("#f0a", true, true), "padding:0");
+  assertStringIncludes(
+    avatarContainerStyle("#f0a", true, false),
+    "padding:4px",
+  );
 });
