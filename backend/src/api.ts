@@ -77,6 +77,16 @@ export const backendApiSchema = {
       }),
     ]),
   ),
+  setAvatar: authenticatedEndpoint(
+    z.object({ avatar: z.string().optional() }),
+    z.union([
+      z.object({ success: z.literal(true) }),
+      z.object({
+        success: z.literal(false),
+        error: z.enum(["not-found", "invalid-auth", "invalid-avatar"]),
+      }),
+    ]),
+  ),
   setPriceTag: authenticatedEndpoint(
     z.object({ priceTag: z.number().optional() }),
     z.union([
@@ -421,6 +431,21 @@ export const setAliasSigned = async (
       params.credentials,
       "setAlias",
       { alias: params.alias },
+    ),
+  });
+
+export const setAvatarSigned = async (
+  params: { avatar?: string; credentials: Credentials },
+): Promise<
+  | { success: true }
+  | { success: false; error: "not-found" | "invalid-auth" | "invalid-avatar" }
+> =>
+  apiClient({
+    endpoint: "setAvatar",
+    payload: await buildSignedRequest(
+      params.credentials,
+      "setAvatar",
+      { avatar: params.avatar },
     ),
   });
 

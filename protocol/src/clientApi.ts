@@ -541,6 +541,23 @@ export const setName = async ({
     }),
   });
 
+export const setAvatar = async ({
+  avatar,
+  credentials,
+}: { avatar?: string; credentials: Credentials }): Promise<
+  | { success: true }
+  | {
+    success: false;
+    error: "not-found" | "invalid-auth" | "invalid-avatar";
+  }
+> =>
+  apiClient({
+    endpoint: "setAvatar",
+    payload: await buildSignedRequest(credentials, "setAvatar", {
+      avatar: avatar?.trim() || undefined,
+    }),
+  });
+
 export const renameConversation = async ({
   conversationId,
   title,

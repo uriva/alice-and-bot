@@ -33,6 +33,7 @@ export {
   sendMessage,
   sendMessageWithKey,
   setAlias,
+  setAvatar,
   setName,
   uiUpdateUrl,
   uploadAttachment,

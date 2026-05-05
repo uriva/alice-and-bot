@@ -332,6 +332,30 @@ const endpoints: BackendApiImpl = {
       );
       return { success: true };
     },
+    setAvatar: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authOk = await verifyAuthToken({
+        action: "setAvatar",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      const avatar = payload.avatar?.trim() || undefined;
+      if (avatar && avatar.length > 2048) {
+        return { success: false, error: "invalid-avatar" };
+      }
+      const { identities: identityMatches } = await query({
+        identities: { wallet: {}, $: { where: { publicSignKey } } },
+      });
+      if (identityMatches.length === 0) {
+        return { success: false, error: "not-found" };
+      }
+      if (!authOk) return { success: false, error: "invalid-auth" };
+      await transact(
+        tx.identities[identityMatches[0].id].update({ avatar }),
+      );
+      return { success: true };
+    },
     setPriceTag: async ({ payload, publicSignKey, nonce, authToken }) => {
       const authOk = await verifyAuthToken({
         action: "setPriceTag",
