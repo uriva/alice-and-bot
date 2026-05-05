@@ -2,9 +2,12 @@ import { html, LitElement } from "lit";
 import { isLightColor } from "./design.ts";
 
 const avatarContainerStyle = (baseColor: string, isDark: boolean) =>
-  `display:flex;align-items:center;justify-content:center;flex-shrink:0;width:32px;height:32px;padding:4px;border-radius:50%;background:${baseColor};box-shadow:${
+  `display:flex;align-items:center;justify-content:center;flex-shrink:0;width:32px;height:32px;padding:4px;overflow:hidden;border-radius:50%;background:${baseColor};box-shadow:${
     isDark ? "0 1px 4px #0004" : "0 1px 4px #0001"
   };transition:background 0.2s,box-shadow 0.2s`;
+
+export const avatarImageStyle =
+  "display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;border-radius:50%";
 
 const initialsColor = (baseColor: string, isDark: boolean) =>
   isLightColor(baseColor) ? (isDark ? "#fff" : "#222") : "#fff";
@@ -42,7 +45,7 @@ export class ChatAvatar extends LitElement {
             <img
               src="${this.image}"
               alt="${this.name}"
-              style="object-fit:cover;border-radius:50%"
+              style="${avatarImageStyle}"
             />
           `
           : html`
