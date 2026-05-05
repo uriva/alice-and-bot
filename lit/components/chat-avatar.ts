@@ -8,7 +8,9 @@ export const avatarContainerStyle = (
 ) =>
   `display:flex;align-items:center;justify-content:center;flex-shrink:0;width:32px;height:32px;padding:${
     hasImage ? "0" : "4px"
-  };overflow:hidden;border-radius:50%;background:${baseColor};box-shadow:${
+  };overflow:hidden;border-radius:50%;background:${
+    hasImage ? "transparent" : baseColor
+  };box-shadow:${
     isDark ? "0 1px 4px #0004" : "0 1px 4px #0001"
   };transition:background 0.2s,box-shadow 0.2s`;
 

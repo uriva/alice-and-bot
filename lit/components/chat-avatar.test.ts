@@ -12,7 +12,15 @@ Deno.test("avatar image style constrains SVG intrinsic size", () => {
 Deno.test("avatar image container has no colored inset ring", () => {
   assertStringIncludes(avatarContainerStyle("#f0a", true, true), "padding:0");
   assertStringIncludes(
+    avatarContainerStyle("#f0a", true, true),
+    "background:transparent",
+  );
+  assertStringIncludes(
     avatarContainerStyle("#f0a", true, false),
     "padding:4px",
+  );
+  assertStringIncludes(
+    avatarContainerStyle("#f0a", true, false),
+    "background:#f0a",
   );
 });
