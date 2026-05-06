@@ -49,10 +49,12 @@ const sentCompletionKeys = new Set<string>();
 const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const typingSessions = new Set<string>();
 const sessionToActiveMessageId = new Map<string, string>();
+const sessionToLastMessageId = new Map<string, string>();
 const sessionSwitchCodes = new Map<string, string>();
 const switchCodeToSessionId = new Map<string, string>();
 const rememberedSetMax = 500;
 const typingFallbackMs = 60000;
+const completionDuplicateWindowMs = 10000;
 const permissionReplyCommands: Record<string, "once" | "always" | "reject"> = {
   "/yes": "once",
   "/y": "once",
@@ -152,8 +154,8 @@ const listSessions = async (client: any) => {
   const method = client?.session?.list;
   if (typeof method !== "function") return [];
   const result = await callFirstAvailable([
-    () => method({}),
-    () => method(),
+    () => method.call(client.session, {}),
+    () => method.call(client.session),
   ]);
   return Array.isArray(sessionsFromResult(result))
     ? sessionsFromResult(result)
@@ -167,8 +169,8 @@ const getSession = async ({ client, sessionId }: {
   const method = client?.session?.get;
   if (typeof method !== "function") return undefined;
   return await callFirstAvailable([
-    () => method({ path: { id: sessionId } }),
-    () => method({ sessionID: sessionId }),
+    () => method.call(client.session, { path: { id: sessionId } }),
+    () => method.call(client.session, { sessionID: sessionId }),
   ]);
 };
 
@@ -180,10 +182,23 @@ const completionKey = ({ hookInput, currentOutput }: {
     ? `${hookInput?.sessionID}:${
       sessionToActiveMessageId.get(hookInput?.sessionID)
     }`
+    : sessionToLastMessageId.has(hookInput?.sessionID)
+    ? `${hookInput?.sessionID}:${
+      sessionToLastMessageId.get(hookInput?.sessionID)
+    }`
     : currentOutput?.id || currentOutput?.messageID ||
       currentOutput?.messageId ||
       hookInput?.messageID || hookInput?.messageId ||
       `${hookInput?.sessionID ?? "unknown"}:${currentOutput?.text ?? ""}`;
+
+const markSessionMessageCompleted = (sessionId: string) => {
+  sessionToActiveMessageId.delete(sessionId);
+  setTimeout(() => {
+    if (!sessionToActiveMessageId.has(sessionId)) {
+      sessionToLastMessageId.delete(sessionId);
+    }
+  }, completionDuplicateWindowMs);
+};
 
 const parsePhoneCommand = (text: string) => {
   if (!text.startsWith("/")) return;
@@ -347,17 +362,11 @@ const executeSessionCommand = async ({
 
 const runPhoneCommand = async ({
   client,
-  conversation,
-  conversationKey,
-  credentials,
   getLink,
   sessionId,
   text,
 }: {
   client: any;
-  conversation: string;
-  conversationKey: string;
-  credentials: unknown;
   getLink: (sessionTitle?: string) => string;
   sessionId: string;
   text: string;
@@ -720,9 +729,6 @@ export default async function plugin(input: unknown) {
               try {
                 const commandResult = await runPhoneCommand({
                   client: (input as any).client,
-                  conversation: convoId,
-                  conversationKey,
-                  credentials,
                   getLink,
                   sessionId: targetSessionId,
                   text: commandText,
@@ -770,6 +776,7 @@ export default async function plugin(input: unknown) {
                 body: { parts },
               });
               sessionToActiveMessageId.set(targetSessionId, messageId);
+              sessionToLastMessageId.set(targetSessionId, messageId);
               await startTyping({
                 conversation: convoId,
                 publicSignKey: (credentials as any).publicSignKey,
@@ -995,7 +1002,7 @@ export default async function plugin(input: unknown) {
             publicSignKey: (credentials as any).publicSignKey,
             sessionId: hookInput.sessionID,
           });
-          sessionToActiveMessageId.delete(hookInput.sessionID);
+          markSessionMessageCompleted(hookInput.sessionID);
         } else {
           await logDebug("No phone convo linked to this session.");
         }

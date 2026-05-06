@@ -24150,10 +24150,12 @@ var sentCompletionKeys = new Set;
 var typingTimers = new Map;
 var typingSessions = new Set;
 var sessionToActiveMessageId = new Map;
+var sessionToLastMessageId = new Map;
 var sessionSwitchCodes = new Map;
 var switchCodeToSessionId = new Map;
 var rememberedSetMax = 500;
 var typingFallbackMs = 60000;
+var completionDuplicateWindowMs = 1e4;
 var permissionReplyCommands = {
   "/yes": "once",
   "/y": "once",
@@ -24222,8 +24224,8 @@ var listSessions = async (client) => {
   if (typeof method !== "function")
     return [];
   const result = await callFirstAvailable([
-    () => method({}),
-    () => method()
+    () => method.call(client.session, {}),
+    () => method.call(client.session)
   ]);
   return Array.isArray(sessionsFromResult(result)) ? sessionsFromResult(result) : [];
 };
@@ -24232,11 +24234,19 @@ var getSession = async ({ client, sessionId }) => {
   if (typeof method !== "function")
     return;
   return await callFirstAvailable([
-    () => method({ path: { id: sessionId } }),
-    () => method({ sessionID: sessionId })
+    () => method.call(client.session, { path: { id: sessionId } }),
+    () => method.call(client.session, { sessionID: sessionId })
   ]);
 };
-var completionKey = ({ hookInput, currentOutput }) => sessionToActiveMessageId.has(hookInput?.sessionID) ? `${hookInput?.sessionID}:${sessionToActiveMessageId.get(hookInput?.sessionID)}` : currentOutput?.id || currentOutput?.messageID || currentOutput?.messageId || hookInput?.messageID || hookInput?.messageId || `${hookInput?.sessionID ?? "unknown"}:${currentOutput?.text ?? ""}`;
+var completionKey = ({ hookInput, currentOutput }) => sessionToActiveMessageId.has(hookInput?.sessionID) ? `${hookInput?.sessionID}:${sessionToActiveMessageId.get(hookInput?.sessionID)}` : sessionToLastMessageId.has(hookInput?.sessionID) ? `${hookInput?.sessionID}:${sessionToLastMessageId.get(hookInput?.sessionID)}` : currentOutput?.id || currentOutput?.messageID || currentOutput?.messageId || hookInput?.messageID || hookInput?.messageId || `${hookInput?.sessionID ?? "unknown"}:${currentOutput?.text ?? ""}`;
+var markSessionMessageCompleted = (sessionId) => {
+  sessionToActiveMessageId.delete(sessionId);
+  setTimeout(() => {
+    if (!sessionToActiveMessageId.has(sessionId)) {
+      sessionToLastMessageId.delete(sessionId);
+    }
+  }, completionDuplicateWindowMs);
+};
 var parsePhoneCommand = (text) => {
   if (!text.startsWith("/"))
     return;
@@ -24355,9 +24365,6 @@ var executeSessionCommand = async ({
 };
 var runPhoneCommand = async ({
   client,
-  conversation,
-  conversationKey,
-  credentials,
   getLink,
   sessionId,
   text
@@ -24650,9 +24657,6 @@ ${getLink()}`
               try {
                 const commandResult = await runPhoneCommand({
                   client: input.client,
-                  conversation: convoId,
-                  conversationKey,
-                  credentials,
                   getLink,
                   sessionId: targetSessionId,
                   text: commandText
@@ -24688,6 +24692,7 @@ ${getLink()}`
                 body: { parts }
               });
               sessionToActiveMessageId.set(targetSessionId, messageId);
+              sessionToLastMessageId.set(targetSessionId, messageId);
               await startTyping({
                 conversation: convoId,
                 publicSignKey: credentials.publicSignKey,
@@ -24869,7 +24874,7 @@ Reply /yes, /no, or /always`
             publicSignKey: credentials.publicSignKey,
             sessionId: hookInput.sessionID
           });
-          sessionToActiveMessageId.delete(hookInput.sessionID);
+          markSessionMessageCompleted(hookInput.sessionID);
         } else {
           await logDebug("No phone convo linked to this session.");
         }
