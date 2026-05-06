@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-version="v3.5.0"
+version="v3.6.0"
 cacheBuster="$(date +%s)"
 
-echo "Installing Alice&Bot OpenCode plugin ${version} (Phone Command Routing)..."
+echo "Installing Alice&Bot OpenCode plugin ${version} (Idempotent Phone Routing)..."
 echo "Cache buster: ${cacheBuster}"
 
 PLUGIN_DIR="$HOME/.config/opencode/plugins/alice-and-bot"

@@ -44,6 +44,15 @@ const pendingPermissions = new Map<
   { requestId: string; sessionId: string; description: string }
 >();
 const sentReasoningParts = new Set<string>();
+const seenAliceMessageIds = new Set<string>();
+const sentCompletionKeys = new Set<string>();
+const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const typingSessions = new Set<string>();
+const sessionToActiveMessageId = new Map<string, string>();
+const sessionSwitchCodes = new Map<string, string>();
+const switchCodeToSessionId = new Map<string, string>();
+const rememberedSetMax = 500;
+const typingFallbackMs = 60000;
 const permissionReplyCommands: Record<string, "once" | "always" | "reject"> = {
   "/yes": "once",
   "/y": "once",
@@ -108,6 +117,74 @@ const saveState = () =>
 
 const getMessageText = (message: any) => message?.text?.trim() || "";
 
+const rememberOnce = (set: Set<string>, key: string) => {
+  if (set.has(key)) return false;
+  set.add(key);
+  const oldest = set.values().next().value;
+  if (set.size > rememberedSetMax && oldest) set.delete(oldest);
+  return true;
+};
+
+const trimLine = (text: string, max = 60) =>
+  text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+
+const sessionCode = (sessionId: string) => {
+  const existing = sessionSwitchCodes.get(sessionId);
+  if (existing) return existing;
+  const code = (sessionSwitchCodes.size + 1).toString(36);
+  sessionSwitchCodes.set(sessionId, code);
+  switchCodeToSessionId.set(code, sessionId);
+  return code;
+};
+
+const sessionTitle = (session: any) =>
+  session?.data?.info?.title || session?.data?.title || session?.info?.title ||
+  session?.title || session?.id || session?.sessionID || "Untitled session";
+
+const sessionIdOf = (session: any) =>
+  session?.id || session?.sessionID || session?.data?.id ||
+  session?.data?.sessionID;
+
+const sessionsFromResult = (result: any) =>
+  result?.data?.sessions || result?.data || result?.sessions || result || [];
+
+const listSessions = async (client: any) => {
+  const method = client?.session?.list;
+  if (typeof method !== "function") return [];
+  const result = await callFirstAvailable([
+    () => method({}),
+    () => method(),
+  ]);
+  return Array.isArray(sessionsFromResult(result))
+    ? sessionsFromResult(result)
+    : [];
+};
+
+const getSession = async ({ client, sessionId }: {
+  client: any;
+  sessionId: string;
+}) => {
+  const method = client?.session?.get;
+  if (typeof method !== "function") return undefined;
+  return await callFirstAvailable([
+    () => method({ path: { id: sessionId } }),
+    () => method({ sessionID: sessionId }),
+  ]);
+};
+
+const completionKey = ({ hookInput, currentOutput }: {
+  hookInput: any;
+  currentOutput: any;
+}) =>
+  sessionToActiveMessageId.has(hookInput?.sessionID)
+    ? `${hookInput?.sessionID}:${
+      sessionToActiveMessageId.get(hookInput?.sessionID)
+    }`
+    : currentOutput?.id || currentOutput?.messageID ||
+      currentOutput?.messageId ||
+      hookInput?.messageID || hookInput?.messageId ||
+      `${hookInput?.sessionID ?? "unknown"}:${currentOutput?.text ?? ""}`;
+
 const parsePhoneCommand = (text: string) => {
   if (!text.startsWith("/")) return;
   const [rawCommand, ...rest] = text.split(/\s+/);
@@ -151,6 +228,46 @@ const notifyPhone = async ({
     credentials: credentials as any,
     message: { type: "text", text },
   });
+};
+
+const clearTyping = async ({
+  conversation,
+  publicSignKey,
+  sessionId,
+}: {
+  conversation: string;
+  publicSignKey: string;
+  sessionId: string;
+}) => {
+  clearTimeout(typingTimers.get(sessionId));
+  typingTimers.delete(sessionId);
+  if (!typingSessions.has(sessionId)) return;
+  typingSessions.delete(sessionId);
+  await sendTyping({ conversation, isTyping: false, publicSignKey }).catch(
+    () => {},
+  );
+};
+
+const startTyping = async ({
+  conversation,
+  publicSignKey,
+  sessionId,
+}: {
+  conversation: string;
+  publicSignKey: string;
+  sessionId: string;
+}) => {
+  clearTimeout(typingTimers.get(sessionId));
+  typingSessions.add(sessionId);
+  await sendTyping({ conversation, isTyping: true, publicSignKey }).catch(
+    () => {},
+  );
+  typingTimers.set(
+    sessionId,
+    setTimeout(() => {
+      clearTyping({ conversation, publicSignKey, sessionId });
+    }, typingFallbackMs),
+  );
 };
 
 const callFirstAvailable = async (
@@ -230,25 +347,64 @@ const executeSessionCommand = async ({
 
 const runPhoneCommand = async ({
   client,
+  conversation,
+  conversationKey,
+  credentials,
+  getLink,
   sessionId,
   text,
 }: {
   client: any;
+  conversation: string;
+  conversationKey: string;
+  credentials: unknown;
+  getLink: (sessionTitle?: string) => string;
   sessionId: string;
   text: string;
 }) => {
   const parsed = parsePhoneCommand(text);
   if (!parsed) return false;
 
+  if (parsed.raw === "/sessions") {
+    const sessions = await listSessions(client);
+    if (!sessions.length) {
+      return { handled: true, reply: "No OpenCode sessions found." };
+    }
+    const lines = sessions.map((session: any) => {
+      const id = sessionIdOf(session);
+      const marker = id === currentSessionId ? "*" : "";
+      return `${sessionCode(id)} ${marker}${trimLine(sessionTitle(session))}`;
+    });
+    return {
+      handled: true,
+      reply: `OpenCode sessions:\n${
+        lines.join("\n")
+      }\n\nReply /switch <code> to switch.`,
+    };
+  }
+
+  if (parsed.raw === "/switch") {
+    const targetSessionId = switchCodeToSessionId.get(parsed.arguments);
+    if (!targetSessionId) {
+      return {
+        handled: true,
+        reply: "Unknown session code. Send /sessions to list current codes.",
+      };
+    }
+    currentSessionId = targetSessionId;
+    const session = await getSession({ client, sessionId: targetSessionId });
+    const link = getLink(sessionTitle(session));
+    await saveState();
+    return {
+      handled: true,
+      reply:
+        `Open this link to start a chat tied to session ${parsed.arguments}:\n${link}`,
+    };
+  }
+
   if (parsed.raw === "/models") {
     if (await executeTuiAction({ client, action: "openModels" })) {
       return { handled: true, reply: "Opened the model picker in OpenCode." };
-    }
-  }
-
-  if (parsed.raw === "/sessions") {
-    if (await executeTuiAction({ client, action: "openSessions" })) {
-      return { handled: true, reply: "Opened the session picker in OpenCode." };
     }
   }
 
@@ -435,13 +591,18 @@ export default async function plugin(input: unknown) {
         const update = await handleWebhookUpdate(jsonBody, credentials);
         if (!update) return;
 
-        const { message, conversationId: convoId, conversationKey } = update;
+        const { message, conversationId: convoId, conversationKey, messageId } =
+          update;
         await logDebug(`Decrypted message: type=${message?.type}`);
 
         if (
           message?.type === "text" &&
           message.publicSignKey !== (credentials as any).publicSignKey
         ) {
+          if (!rememberOnce(seenAliceMessageIds, messageId)) {
+            await logDebug(`Ignoring duplicate Alice messageId=${messageId}`);
+            return;
+          }
           await logDebug(`[Phone]: ${message.text || "(attachment)"}`);
 
           let targetSessionId = convoToSessionId.get(convoId);
@@ -559,6 +720,10 @@ export default async function plugin(input: unknown) {
               try {
                 const commandResult = await runPhoneCommand({
                   client: (input as any).client,
+                  conversation: convoId,
+                  conversationKey,
+                  credentials,
+                  getLink,
                   sessionId: targetSessionId,
                   text: commandText,
                 });
@@ -604,15 +769,21 @@ export default async function plugin(input: unknown) {
                 path: { id: targetSessionId },
                 body: { parts },
               });
-              await sendTyping({
+              sessionToActiveMessageId.set(targetSessionId, messageId);
+              await startTyping({
                 conversation: convoId,
-                isTyping: true,
                 publicSignKey: (credentials as any).publicSignKey,
-              }).catch(() => {});
+                sessionId: targetSessionId,
+              });
             } catch (err: any) {
               await logDebug(
                 `Failed to prompt session (it may have died): ${err?.message}`,
               );
+              await clearTyping({
+                conversation: convoId,
+                publicSignKey: (credentials as any).publicSignKey,
+                sessionId: targetSessionId,
+              });
               await sendMessageWithKey({
                 conversationKey,
                 conversation: convoId,
@@ -778,8 +949,8 @@ export default async function plugin(input: unknown) {
       return output;
     },
     "experimental.text.complete": async (
-      hookInput: unknown,
-      currentOutput: unknown,
+      hookInput: any,
+      currentOutput: any,
     ) => {
       await logDebug(
         `Hook experimental.text.complete: output text length: ${currentOutput?.text?.length}, sessionId: ${hookInput.sessionID}, currentSessionId: ${currentSessionId}`,
@@ -795,7 +966,17 @@ export default async function plugin(input: unknown) {
 
         const convoInfo = sessionToConvoKey.get(hookInput.sessionID);
         if (convoInfo) {
+          const key = completionKey({ hookInput, currentOutput });
           try {
+            if (!rememberOnce(sentCompletionKeys, key)) {
+              await logDebug(`Ignoring duplicate completion key=${key}`);
+              await clearTyping({
+                conversation: convoInfo.conversation,
+                publicSignKey: (credentials as any).publicSignKey,
+                sessionId: hookInput.sessionID,
+              });
+              return currentOutput;
+            }
             await logDebug(
               `Sending reply to phone convo ${convoInfo.conversation}`,
             );
@@ -809,11 +990,12 @@ export default async function plugin(input: unknown) {
           } catch (e: unknown) {
             await logDebug(`Error sending reply: ${(e as Error)?.message}`);
           }
-          await sendTyping({
+          await clearTyping({
             conversation: convoInfo.conversation,
-            isTyping: false,
             publicSignKey: (credentials as any).publicSignKey,
-          }).catch(() => {});
+            sessionId: hookInput.sessionID,
+          });
+          sessionToActiveMessageId.delete(hookInput.sessionID);
         } else {
           await logDebug("No phone convo linked to this session.");
         }
