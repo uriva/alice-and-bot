@@ -1,5 +1,5 @@
-import { assertMatch } from "@std/assert";
-import { preprocessText } from "./utils.ts";
+import { assertEquals, assertMatch } from "@std/assert";
+import { buildTimeline, preprocessText } from "./utils.ts";
 
 Deno.test("preprocessText converts multiline html code blocks to fenced markdown", () => {
   const input = [
@@ -17,4 +17,16 @@ Deno.test("preprocessText converts multiline html code blocks to fenced markdown
     result,
     /```[\s\S]*const url = "https:\/\/example\.invalid\/screener";[\s\S]*const token = x+/,
   );
+});
+
+Deno.test("buildTimeline excludes active empty streams to avoid empty chat bubbles", () => {
+  const result = buildTimeline([], [], [], [{
+    authorName: "Bot",
+    text: "",
+    elementId: "empty-stream",
+    timestamp: 1,
+    active: true,
+  }]);
+
+  assertEquals(result, []);
 });

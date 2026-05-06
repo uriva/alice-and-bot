@@ -286,11 +286,13 @@ export const buildTimeline = (
     kind: "progress",
     progress: p,
   }));
-  const streamEntries: TimelineEntry[] = streams.map((s) => ({
-    kind: "stream",
-    stream: s,
-    prevMsg: sorted.filter((m) => m.timestamp <= s.timestamp).pop(),
-  }));
+  const streamEntries: TimelineEntry[] = streams
+    .filter((s) => s.text.trim() !== "")
+    .map((s) => ({
+      kind: "stream",
+      stream: s,
+      prevMsg: sorted.filter((m) => m.timestamp <= s.timestamp).pop(),
+    }));
   return sortKey(tsOf)([
     ...msgEntries,
     ...spinnerEntries,
