@@ -16464,6 +16464,7 @@ var createIdentity = async (name, alias) => {
   };
 };
 var uiUpdateUrl = `${serverBaseUrl}/ui-update`;
+var buildUiUpdateUrl = (elementId) => `${uiUpdateUrl}?elementId=${encodeURIComponent(elementId)}`;
 
 // index.ts
 import fs7 from "fs/promises";
@@ -24124,6 +24125,24 @@ var clipboard7 = {
 };
 var clipboardy_default = clipboard7;
 
+// reasoning.ts
+var reasoningStreamUpdate = ({
+  conversationId,
+  part,
+  publicSignKey
+}) => {
+  if (part?.type !== "reasoning" || !part.text)
+    return;
+  return {
+    active: !part.time?.end,
+    authorId: publicSignKey,
+    conversationId,
+    elementId: `opencode-reasoning-${part.id}`,
+    text: part.text,
+    type: "stream"
+  };
+};
+
 // index.ts
 var currentSessionId;
 var aliceCommands = new Set([
@@ -24247,6 +24266,13 @@ var markSessionMessageCompleted = (sessionId) => {
     }
   }, completionDuplicateWindowMs);
 };
+var sendUiUpdate = async (body) => {
+  await fetch(buildUiUpdateUrl(String(body.elementId)), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+};
 var parsePhoneCommand = (text) => {
   if (!text.startsWith("/"))
     return;
@@ -24287,8 +24313,6 @@ var clearTyping = async ({
 }) => {
   clearTimeout(typingTimers.get(sessionId));
   typingTimers.delete(sessionId);
-  if (!typingSessions.has(sessionId))
-    return;
   typingSessions.delete(sessionId);
   await sendTyping({ conversation, isTyping: false, publicSignKey }).catch(() => {});
 };
@@ -24805,17 +24829,23 @@ Reply /yes, /no, or /always`
       }
       if (event.type === "message.part.updated") {
         const part = event.properties?.part;
-        if (part?.type === "reasoning" && part.text && part.time?.end && !sentReasoningParts.has(part.id)) {
-          sentReasoningParts.add(part.id);
-          const convoInfo = sessionToConvoKey.get(part.sessionID);
-          if (convoInfo) {
-            await notifyPhone({
+        const convoInfo = sessionToConvoKey.get(part?.sessionID);
+        if (convoInfo) {
+          const streamUpdate = reasoningStreamUpdate({
+            conversationId: convoInfo.conversation,
+            part,
+            publicSignKey: credentials.publicSignKey
+          });
+          const reasoningKey = `${part?.id}:${part?.text}:${part?.time?.end ?? ""}`;
+          if (streamUpdate && rememberOnce(sentReasoningParts, reasoningKey)) {
+            await sendUiUpdate(streamUpdate).catch((e) => logDebug(`Error sending reasoning stream: ${e?.message}`));
+          }
+          if (part?.time?.end) {
+            await clearTyping({
               conversation: convoInfo.conversation,
-              conversationKey: convoInfo.conversationKey,
-              credentials,
-              text: `*${part.text}*`
-            }).catch((e) => logDebug(`Error sending reasoning: ${e?.message}`));
-            await logDebug(`Sent reasoning to phone convo ${convoInfo.conversation}`);
+              publicSignKey: credentials.publicSignKey,
+              sessionId: part.sessionID
+            });
           }
         }
       }
