@@ -18,6 +18,7 @@ import { Buffer } from "node:buffer";
 import qrcode from "qrcode-terminal";
 import clipboardy from "clipboardy";
 import { reasoningStreamUpdate } from "./reasoning.ts";
+import { isWebhookEnvelope } from "./relay.ts";
 
 let currentSessionId: string | undefined;
 const aliceCommands = new Set([
@@ -80,6 +81,12 @@ const statePath = path.join(
   "opencode",
   "alice_plugin_state.json",
 );
+const seenMessageDir = path.join(
+  os.homedir(),
+  ".config",
+  "opencode",
+  "alice_seen_messages",
+);
 
 async function logDebug(msg: string) {
   const timestamp = new Date().toISOString();
@@ -118,6 +125,20 @@ const saveState = () =>
       convoToSessionId: Object.fromEntries(convoToSessionId),
     }),
   ).catch(() => {});
+
+const claimAliceMessage = async (messageId: string) => {
+  await fs.mkdir(seenMessageDir, { recursive: true }).catch(() => {});
+  try {
+    const handle = await fs.open(
+      path.join(seenMessageDir, encodeURIComponent(messageId)),
+      "wx",
+    );
+    await handle.close();
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const getMessageText = (message: any) => message?.text?.trim() || "";
 
@@ -596,6 +617,7 @@ export default async function plugin(input: unknown) {
       try {
         const jsonBody = JSON.parse(event.data.toString());
         if (jsonBody.type === "pong") return;
+        if (!isWebhookEnvelope(jsonBody)) return;
         await logDebug(
           `Received message from WS relay: ${
             JSON.stringify(jsonBody).slice(0, 100)
@@ -617,7 +639,10 @@ export default async function plugin(input: unknown) {
           message?.type === "text" &&
           message.publicSignKey !== (credentials as any).publicSignKey
         ) {
-          if (!rememberOnce(seenAliceMessageIds, messageId)) {
+          if (
+            !rememberOnce(seenAliceMessageIds, messageId) ||
+            !await claimAliceMessage(messageId)
+          ) {
             await logDebug(`Ignoring duplicate Alice messageId=${messageId}`);
             return;
           }

@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { reasoningStreamUpdate } from "./reasoning.ts";
+import { isWebhookEnvelope } from "./relay.ts";
 
 Deno.test("reasoningStreamUpdate turns reasoning into transient stream updates", () => {
   assertEquals(
@@ -21,5 +22,20 @@ Deno.test("reasoningStreamUpdate turns reasoning into transient stream updates",
       text: "thinking aloud",
       type: "stream",
     },
+  );
+});
+
+Deno.test("isWebhookEnvelope ignores relay pong messages", () => {
+  assertEquals(isWebhookEnvelope({ type: "pong" }), false);
+});
+
+Deno.test("isWebhookEnvelope accepts encrypted message envelopes", () => {
+  assertEquals(
+    isWebhookEnvelope({
+      conversationId: "conversation-1",
+      messageId: "message-1",
+      payload: "ciphertext",
+    }),
+    true,
   );
 });

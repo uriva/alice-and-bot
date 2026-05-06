@@ -24143,6 +24143,14 @@ var reasoningStreamUpdate = ({
   };
 };
 
+// relay.ts
+var isWebhookEnvelope = (value) => {
+  if (!value || typeof value !== "object")
+    return false;
+  const record2 = value;
+  return typeof record2.conversationId === "string" && typeof record2.payload === "string" && typeof record2.messageId === "string";
+};
+
 // index.ts
 var currentSessionId;
 var aliceCommands = new Set([
@@ -24188,6 +24196,7 @@ var permissionReplyCommands = {
 };
 var debugLogPath = path8.join(os2.homedir(), ".config", "opencode", "alice_plugin.log");
 var statePath = path8.join(os2.homedir(), ".config", "opencode", "alice_plugin_state.json");
+var seenMessageDir = path8.join(os2.homedir(), ".config", "opencode", "alice_seen_messages");
 async function logDebug(msg) {
   const timestamp = new Date().toISOString();
   await fs7.appendFile(debugLogPath, `[${timestamp}] ${msg}
@@ -24215,6 +24224,16 @@ var saveState = () => fs7.writeFile(statePath, JSON.stringify({
   sessionToConvoKey: Object.fromEntries(sessionToConvoKey),
   convoToSessionId: Object.fromEntries(convoToSessionId)
 })).catch(() => {});
+var claimAliceMessage = async (messageId) => {
+  await fs7.mkdir(seenMessageDir, { recursive: true }).catch(() => {});
+  try {
+    const handle = await fs7.open(path8.join(seenMessageDir, encodeURIComponent(messageId)), "wx");
+    await handle.close();
+    return true;
+  } catch {
+    return false;
+  }
+};
 var getMessageText = (message) => message?.text?.trim() || "";
 var rememberOnce = (set2, key) => {
   if (set2.has(key))
@@ -24571,6 +24590,8 @@ async function plugin(input) {
         const jsonBody = JSON.parse(event.data.toString());
         if (jsonBody.type === "pong")
           return;
+        if (!isWebhookEnvelope(jsonBody))
+          return;
         await logDebug(`Received message from WS relay: ${JSON.stringify(jsonBody).slice(0, 100)}...`);
         if (Object.keys(jsonBody).length === 0) {
           return;
@@ -24581,7 +24602,7 @@ async function plugin(input) {
         const { message, conversationId: convoId, conversationKey, messageId } = update;
         await logDebug(`Decrypted message: type=${message?.type}`);
         if (message?.type === "text" && message.publicSignKey !== credentials.publicSignKey) {
-          if (!rememberOnce(seenAliceMessageIds, messageId)) {
+          if (!rememberOnce(seenAliceMessageIds, messageId) || !await claimAliceMessage(messageId)) {
             await logDebug(`Ignoring duplicate Alice messageId=${messageId}`);
             return;
           }
