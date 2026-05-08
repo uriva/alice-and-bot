@@ -1,4 +1,5 @@
 import { assertEquals } from "@std/assert";
+import { promptWasAcceptedDespiteError } from "./prompt.ts";
 import { reasoningStreamUpdate } from "./reasoning.ts";
 import { isWebhookEnvelope } from "./relay.ts";
 
@@ -36,6 +37,15 @@ Deno.test("isWebhookEnvelope accepts encrypted message envelopes", () => {
       messageId: "message-1",
       payload: "ciphertext",
     }),
+    true,
+  );
+});
+
+Deno.test("promptWasAcceptedDespiteError detects empty JSON response parse errors", () => {
+  assertEquals(
+    promptWasAcceptedDespiteError(
+      new Error("JSON Parse error: Unexpected EOF"),
+    ),
     true,
   );
 });

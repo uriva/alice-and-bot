@@ -24125,6 +24125,12 @@ var clipboard7 = {
 };
 var clipboardy_default = clipboard7;
 
+// prompt.ts
+var promptWasAcceptedDespiteError = (error38) => {
+  const message = error38 instanceof Error ? error38.message : String(error38);
+  return message.includes("JSON Parse error: Unexpected EOF") || message.includes("Unexpected end of JSON input");
+};
+
 // reasoning.ts
 var reasoningStreamUpdate = ({
   conversationId,
@@ -24745,6 +24751,16 @@ ${getLink()}`
               });
             } catch (err) {
               await logDebug(`Failed to prompt session (it may have died): ${err?.message}`);
+              if (promptWasAcceptedDespiteError(err)) {
+                sessionToActiveMessageId.set(targetSessionId, messageId);
+                sessionToLastMessageId.set(targetSessionId, messageId);
+                await startTyping({
+                  conversation: convoId,
+                  publicSignKey: credentials.publicSignKey,
+                  sessionId: targetSessionId
+                });
+                return;
+              }
               await clearTyping({
                 conversation: convoId,
                 publicSignKey: credentials.publicSignKey,

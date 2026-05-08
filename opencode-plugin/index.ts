@@ -17,6 +17,7 @@ import { Buffer } from "node:buffer";
 
 import qrcode from "qrcode-terminal";
 import clipboardy from "clipboardy";
+import { promptWasAcceptedDespiteError } from "./prompt.ts";
 import { reasoningStreamUpdate } from "./reasoning.ts";
 import { isWebhookEnvelope } from "./relay.ts";
 
@@ -820,6 +821,16 @@ export default async function plugin(input: unknown) {
               await logDebug(
                 `Failed to prompt session (it may have died): ${err?.message}`,
               );
+              if (promptWasAcceptedDespiteError(err)) {
+                sessionToActiveMessageId.set(targetSessionId, messageId);
+                sessionToLastMessageId.set(targetSessionId, messageId);
+                await startTyping({
+                  conversation: convoId,
+                  publicSignKey: (credentials as any).publicSignKey,
+                  sessionId: targetSessionId,
+                });
+                return;
+              }
               await clearTyping({
                 conversation: convoId,
                 publicSignKey: (credentials as any).publicSignKey,
