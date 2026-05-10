@@ -1,5 +1,5 @@
 import { assertEquals, assertMatch } from "@std/assert";
-import { buildTimeline, preprocessText } from "./utils.ts";
+import { buildTimeline, formatFullTimestamp, preprocessText } from "./utils.ts";
 
 Deno.test("preprocessText converts multiline html code blocks to fenced markdown", () => {
   const input = [
@@ -29,4 +29,11 @@ Deno.test("buildTimeline excludes active empty streams to avoid empty chat bubbl
   }]);
 
   assertEquals(result, []);
+});
+
+Deno.test("formatFullTimestamp returns human-readable date and time", () => {
+  assertMatch(
+    formatFullTimestamp(Date.UTC(2026, 0, 2, 3, 4)),
+    /2026|Jan|2|3|4/,
+  );
 });

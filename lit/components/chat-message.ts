@@ -38,6 +38,7 @@ import {
   copyToClipboard,
   editWindowMs,
   formatEditTime,
+  formatFullTimestamp,
   successorText,
   wordDiff,
 } from "./utils.ts";
@@ -879,7 +880,9 @@ export class ChatMessage extends LitElement {
                     </button>
                   </div>
                 `}
-              <span style="color:${textColor};opacity:0.7;font-size:10px"
+              <span
+                title="${formatFullTimestamp(timestamp)}"
+                style="color:${textColor};opacity:0.7;font-size:10px"
               >${this._timeAgo}</span>
             </div>
           </div>

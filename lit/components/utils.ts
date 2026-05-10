@@ -402,3 +402,9 @@ export const computeTimeAgo = (timestamp: number) => {
     ...(showYear ? { year: "numeric" } : {}),
   });
 };
+
+export const formatFullTimestamp = (timestamp: number) =>
+  new Date(timestamp).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
