@@ -18,6 +18,10 @@ import { Buffer } from "node:buffer";
 import qrcode from "qrcode-terminal";
 import clipboardy from "clipboardy";
 import { promptWasAcceptedDespiteError } from "./prompt.ts";
+import {
+  answersFromQuestionReplyText,
+  formatQuestionRequest,
+} from "./question.ts";
 import { reasoningStreamUpdate } from "./reasoning.ts";
 import { isWebhookEnvelope } from "./relay.ts";
 
@@ -47,6 +51,7 @@ const pendingPermissions = new Map<
   string,
   { requestId: string; sessionId: string; description: string }
 >();
+const pendingQuestions = new Map<string, any>();
 const sentReasoningParts = new Set<string>();
 const seenAliceMessageIds = new Set<string>();
 const sentCompletionKeys = new Set<string>();
@@ -196,6 +201,28 @@ const getSession = async ({ client, sessionId }: {
     () => method.call(client.session, { path: { id: sessionId } }),
     () => method.call(client.session, { sessionID: sessionId }),
   ]);
+};
+
+const questionsFromResult = (result: any) =>
+  result?.data?.questions || result?.data || result?.questions || result || [];
+
+const pendingQuestionForSession = async ({ client, sessionId }: {
+  client: any;
+  sessionId: string;
+}) => {
+  const existing = pendingQuestions.get(sessionId);
+  if (existing) return existing;
+  const method = client?.question?.list;
+  if (typeof method !== "function") return;
+  const result = await callFirstAvailable([
+    () => method.call(client.question, {}),
+    () => method.call(client.question),
+  ]).catch(() => undefined);
+  const request = questionsFromResult(result).find((question: any) =>
+    question?.sessionID === sessionId
+  );
+  if (request) pendingQuestions.set(sessionId, request);
+  return request;
 };
 
 const completionKey = ({ hookInput, currentOutput }: {
@@ -723,6 +750,38 @@ export default async function plugin(input: unknown) {
               return;
             }
 
+            const pendingQuestion = await pendingQuestionForSession({
+              client: (input as any).client,
+              sessionId: targetSessionId,
+            });
+            if (pendingQuestion) {
+              const answers = answersFromQuestionReplyText(
+                pendingQuestion,
+                commandText,
+              );
+              if (answers) {
+                await (input as any).client.question.reply({
+                  requestID: pendingQuestion.id,
+                  answers,
+                });
+                pendingQuestions.delete(targetSessionId);
+                await notifyPhone({
+                  conversation: convoId,
+                  conversationKey,
+                  credentials,
+                  text: "Choice submitted.",
+                }).catch(() => {});
+                return;
+              }
+              await (input as any).client.question.reject({
+                requestID: pendingQuestion.id,
+              }).catch(() => {});
+              pendingQuestions.delete(targetSessionId);
+              await logDebug(
+                `Rejected question ${pendingQuestion.id}; forwarding free text`,
+              );
+            }
+
             if (commandText === "/new") {
               try {
                 const result = await callFirstAvailable([
@@ -954,6 +1013,31 @@ export default async function plugin(input: unknown) {
           await logDebug(
             `Permission cleared by TUI: requestId=${requestID}`,
           );
+        }
+      }
+      if (event.type === "question.asked") {
+        const request = event.properties;
+        if (!request?.sessionID) return;
+        pendingQuestions.set(request.sessionID, request);
+        await logDebug(`Question asked: requestId=${request.id}`);
+        const convoInfo = sessionToConvoKey.get(request.sessionID);
+        if (convoInfo) {
+          await notifyPhone({
+            conversation: convoInfo.conversation,
+            conversationKey: convoInfo.conversationKey,
+            credentials,
+            text: formatQuestionRequest(request),
+          }).catch(() => {});
+        }
+      }
+      if (
+        event.type === "question.replied" || event.type === "question.rejected"
+      ) {
+        const { sessionID, requestID } = event.properties || {};
+        const pending = pendingQuestions.get(sessionID);
+        if (pending?.id === requestID) {
+          pendingQuestions.delete(sessionID);
+          await logDebug(`Question cleared: requestId=${requestID}`);
         }
       }
       if (event.type === "message.part.updated") {

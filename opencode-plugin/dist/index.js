@@ -24131,6 +24131,25 @@ var promptWasAcceptedDespiteError = (error38) => {
   return message.includes("JSON Parse error: Unexpected EOF") || message.includes("Unexpected end of JSON input");
 };
 
+// question.ts
+var formatOption = (option, index) => `${index + 1}. ${option.label}${option.description ? ` - ${option.description}` : ""}`;
+var formatQuestion = (question) => `${question.header}
+${question.question}
+${question.options.map(formatOption).join(`
+`)}`;
+var formatQuestionRequest = (request) => `${request.questions.map(formatQuestion).join(`
+
+`)}
+
+Reply with ${request.questions.some((question) => question.multiple) ? "a number or comma-separated numbers" : "a number"}, or send any other message to cancel this choice and continue with that message.`;
+var selectedLabels = (question, text) => text.split(",").map((part) => Number(part.trim())).filter((index) => Number.isInteger(index)).map((index) => question.options[index - 1]?.label).filter((label) => Boolean(label));
+var answersFromQuestionReplyText = (request, text) => {
+  const answers = request.questions.map((question) => selectedLabels(question, text));
+  if (answers.some((answer) => answer.length === 0))
+    return;
+  return answers;
+};
+
 // reasoning.ts
 var reasoningStreamUpdate = ({
   conversationId,
@@ -24177,6 +24196,7 @@ var tuiCommandAliases = {
 var sessionToConvoKey = new Map;
 var convoToSessionId = new Map;
 var pendingPermissions = new Map;
+var pendingQuestions = new Map;
 var sentReasoningParts = new Set;
 var seenAliceMessageIds = new Set;
 var sentCompletionKeys = new Set;
@@ -24281,6 +24301,25 @@ var getSession = async ({ client, sessionId }) => {
     () => method.call(client.session, { path: { id: sessionId } }),
     () => method.call(client.session, { sessionID: sessionId })
   ]);
+};
+var questionsFromResult = (result) => result?.data?.questions || result?.data || result?.questions || result || [];
+var pendingQuestionForSession = async ({ client, sessionId }) => {
+  const existing = pendingQuestions.get(sessionId);
+  if (existing)
+    return existing;
+  const method = client?.question?.list;
+  if (typeof method !== "function")
+    return;
+  const result = await callFirstAvailable([
+    () => method.call(client.question, {}),
+    () => method.call(client.question)
+  ]).catch(() => {
+    return;
+  });
+  const request = questionsFromResult(result).find((question) => question?.sessionID === sessionId);
+  if (request)
+    pendingQuestions.set(sessionId, request);
+  return request;
 };
 var completionKey = ({ hookInput, currentOutput }) => sessionToActiveMessageId.has(hookInput?.sessionID) ? `${hookInput?.sessionID}:${sessionToActiveMessageId.get(hookInput?.sessionID)}` : sessionToLastMessageId.has(hookInput?.sessionID) ? `${hookInput?.sessionID}:${sessionToLastMessageId.get(hookInput?.sessionID)}` : currentOutput?.id || currentOutput?.messageID || currentOutput?.messageId || hookInput?.messageID || hookInput?.messageId || `${hookInput?.sessionID ?? "unknown"}:${currentOutput?.text ?? ""}`;
 var markSessionMessageCompleted = (sessionId) => {
@@ -24673,6 +24712,32 @@ Reply /yes, /no, or /always`
               }).catch(() => {});
               return;
             }
+            const pendingQuestion = await pendingQuestionForSession({
+              client: input.client,
+              sessionId: targetSessionId
+            });
+            if (pendingQuestion) {
+              const answers = answersFromQuestionReplyText(pendingQuestion, commandText);
+              if (answers) {
+                await input.client.question.reply({
+                  requestID: pendingQuestion.id,
+                  answers
+                });
+                pendingQuestions.delete(targetSessionId);
+                await notifyPhone({
+                  conversation: convoId,
+                  conversationKey,
+                  credentials,
+                  text: "Choice submitted."
+                }).catch(() => {});
+                return;
+              }
+              await input.client.question.reject({
+                requestID: pendingQuestion.id
+              }).catch(() => {});
+              pendingQuestions.delete(targetSessionId);
+              await logDebug(`Rejected question ${pendingQuestion.id}; forwarding free text`);
+            }
             if (commandText === "/new") {
               try {
                 const result = await callFirstAvailable([
@@ -24862,6 +24927,30 @@ Reply /yes, /no, or /always`
         if (pending?.requestId === requestID) {
           pendingPermissions.delete(sessionID);
           await logDebug(`Permission cleared by TUI: requestId=${requestID}`);
+        }
+      }
+      if (event.type === "question.asked") {
+        const request = event.properties;
+        if (!request?.sessionID)
+          return;
+        pendingQuestions.set(request.sessionID, request);
+        await logDebug(`Question asked: requestId=${request.id}`);
+        const convoInfo = sessionToConvoKey.get(request.sessionID);
+        if (convoInfo) {
+          await notifyPhone({
+            conversation: convoInfo.conversation,
+            conversationKey: convoInfo.conversationKey,
+            credentials,
+            text: formatQuestionRequest(request)
+          }).catch(() => {});
+        }
+      }
+      if (event.type === "question.replied" || event.type === "question.rejected") {
+        const { sessionID, requestID } = event.properties || {};
+        const pending = pendingQuestions.get(sessionID);
+        if (pending?.id === requestID) {
+          pendingQuestions.delete(sessionID);
+          await logDebug(`Question cleared: requestId=${requestID}`);
         }
       }
       if (event.type === "message.part.updated") {
