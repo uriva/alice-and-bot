@@ -24125,6 +24125,54 @@ var clipboard7 = {
 };
 var clipboardy_default = clipboard7;
 
+// commands.ts
+var knownPluginCommands = new Set([
+  "/sessions",
+  "/switch",
+  "/models",
+  "/themes",
+  "/help",
+  "/abort",
+  "/new",
+  "/share",
+  "/interrupt",
+  "/compact",
+  "/clear"
+]);
+var permissionAndQuestionReplies = new Set([
+  "/yes",
+  "/y",
+  "/allow",
+  "/approve",
+  "/no",
+  "/n",
+  "/deny",
+  "/reject",
+  "/always"
+]);
+var isKnownPluginCommand = (text) => knownPluginCommands.has(text.toLowerCase().trim());
+
+// permissions.ts
+var permissionReplyForCommand = (command) => ({
+  "/yes": "once",
+  "/y": "once",
+  "/allow": "once",
+  "/approve": "once",
+  "/no": "reject",
+  "/n": "reject",
+  "/deny": "reject",
+  "/reject": "reject",
+  "/always": "always"
+})[command.toLowerCase().trim()];
+var findPendingPermissionForConvo = ({
+  pending,
+  conversationId,
+  sessionId
+}) => {
+  const all = [...pending].filter((p) => p.conversationId === conversationId);
+  return all.find((p) => p.sessionId === sessionId) ?? all[0];
+};
+
 // prompt.ts
 var promptWasAcceptedDespiteError = (error38) => {
   const message = error38 instanceof Error ? error38.message : String(error38);
@@ -24175,8 +24223,89 @@ var isWebhookEnvelope = (value) => {
   const record2 = value;
   return typeof record2.conversationId === "string" && typeof record2.payload === "string" && typeof record2.messageId === "string";
 };
+var recordFrom = (value) => value && typeof value === "object" ? value : {};
+var stringProperty = (value, key) => {
+  const property = recordFrom(value)[key];
+  return typeof property === "string" ? property : undefined;
+};
+var attachmentFingerprint = (value) => ({
+  mimeType: stringProperty(value, "mimeType"),
+  name: stringProperty(value, "name"),
+  url: stringProperty(value, "url")
+});
+var recentPromptFingerprint = ({ conversationId, message }) => {
+  const attachments = recordFrom(message).attachments;
+  return JSON.stringify({
+    conversationId,
+    text: stringProperty(message, "text")?.trim() ?? "",
+    attachments: Array.isArray(attachments) ? attachments.map(attachmentFingerprint) : []
+  });
+};
+var isRecentDuplicate = ({
+  now,
+  previousTimestamp,
+  windowMs
+}) => now - previousTimestamp < windowMs;
+
+// links.ts
+var markdownLink = ({ label, url: url2 }) => `[${label}](${url2})`;
+var newSessionMessage = ({ url: url2 }) => `New session started. ${markdownLink({ label: "Open chat", url: url2 })}`;
+var switchSessionMessage = ({ url: url2, code }) => `Open this link to start a chat tied to session ${code}: ${markdownLink({ label: "Open chat", url: url2 })}`;
+
+// tui.ts
+var callFirstAvailable = async (calls) => {
+  let lastError;
+  for (const call of calls) {
+    try {
+      return await call();
+    } catch (error38) {
+      lastError = error38;
+    }
+  }
+  throw lastError;
+};
+var tuiOf = ({ client }) => client?.tui;
+var hasTuiMethod = ({ client, name }) => typeof tuiOf({ client })?.[name] === "function";
+var executeTuiAction = async ({ client, action }) => {
+  if (!hasTuiMethod({ client, name: action }))
+    return false;
+  const tui = tuiOf({ client });
+  await callFirstAvailable([
+    () => tui[action](),
+    () => tui[action]({})
+  ]);
+  return true;
+};
+var executeTuiCommand = async ({ client, command }) => {
+  if (!hasTuiMethod({ client, name: "executeCommand" }))
+    return false;
+  const tui = tuiOf({ client });
+  await callFirstAvailable([
+    () => tui.executeCommand({ command }),
+    () => tui.executeCommand({ body: { command } })
+  ]);
+  return true;
+};
+var executeSessionCommand = async ({ client, sessionId, command, argumentsText }) => {
+  const session = client?.session;
+  if (typeof session?.command !== "function")
+    return false;
+  await callFirstAvailable([
+    () => session.command({
+      sessionID: sessionId,
+      command,
+      arguments: argumentsText
+    }),
+    () => session.command({
+      path: { id: sessionId },
+      body: { command, arguments: argumentsText }
+    })
+  ]);
+  return true;
+};
 
 // index.ts
+var __filename = "/home/uri/uriva/alice-and-bot/opencode-plugin/index.ts";
 var currentSessionId;
 var aliceCommands = new Set([
   "/alice",
@@ -24200,6 +24329,7 @@ var pendingQuestions = new Map;
 var sentReasoningParts = new Set;
 var seenAliceMessageIds = new Set;
 var sentCompletionKeys = new Set;
+var recentPromptFingerprints = new Map;
 var typingTimers = new Map;
 var typingSessions = new Set;
 var sessionToActiveMessageId = new Map;
@@ -24209,25 +24339,25 @@ var switchCodeToSessionId = new Map;
 var rememberedSetMax = 500;
 var typingFallbackMs = 60000;
 var completionDuplicateWindowMs = 1e4;
-var permissionReplyCommands = {
-  "/yes": "once",
-  "/y": "once",
-  "/allow": "once",
-  "/approve": "once",
-  "/no": "reject",
-  "/n": "reject",
-  "/deny": "reject",
-  "/reject": "reject",
-  "/always": "always"
-};
+var promptDuplicateWindowMs = 15000;
+var permissionReplyLabel = (reply) => reply === "reject" ? "denied" : `approved (${reply})`;
 var debugLogPath = path8.join(os2.homedir(), ".config", "opencode", "alice_plugin.log");
 var statePath = path8.join(os2.homedir(), ".config", "opencode", "alice_plugin_state.json");
 var seenMessageDir = path8.join(os2.homedir(), ".config", "opencode", "alice_seen_messages");
-async function logDebug(msg) {
+var pid = process.pid;
+var logDebug = async (msg) => {
   const timestamp = new Date().toISOString();
-  await fs7.appendFile(debugLogPath, `[${timestamp}] ${msg}
+  await fs7.appendFile(debugLogPath, `[${timestamp}] [pid=${pid}] ${msg}
 `).catch(() => {});
-}
+};
+var logProcessIdentity = () => logDebug(`process identity ppid=${process.ppid} argv0=${process.argv0} cwd=${process.cwd()} pluginPath=${__filename}`);
+var logInbound = ({ envelope, fingerprint, textLen }) => logDebug(`inbound envelopeMessageId=${envelope.messageId} conversationId=${envelope.conversationId} textLen=${textLen} fingerprint=${fingerprint}`);
+var logClaim = ({ messageId, taken }) => logDebug(`claim ${taken ? "take" : "skip"} messageId=${messageId} path=${path8.join(seenMessageDir, encodeURIComponent(messageId))}`);
+var logPromptDedupe = ({ fingerprint, accepted, ageMs }) => logDebug(`prompt ${accepted ? "accept" : "dup"} fingerprint=${fingerprint} ageMs=${ageMs ?? "n/a"} windowMs=${promptDuplicateWindowMs}`);
+var logSessionPromptStart = ({ sessionId, fingerprint, textLen }) => logDebug(`session.prompt start sessionId=${sessionId} fingerprint=${fingerprint} textLen=${textLen}`);
+var logSessionPromptDone = ({ sessionId, fingerprint, ok, error: error38 }) => logDebug(`session.prompt done sessionId=${sessionId} fingerprint=${fingerprint} ok=${ok} err=${error38 instanceof Error ? error38.message : ""}`);
+var logCompletion = ({ hookInput, currentOutput, key }) => logDebug(`complete sessionId=${hookInput.sessionID} messageId=${currentOutput.id ?? ""} completionKey=${key} textLen=${currentOutput.text?.length ?? 0}`);
+var logCompletionDup = (key) => logDebug(`complete dup completionKey=${key}`);
 var loadState = async () => {
   try {
     const raw = await fs7.readFile(statePath, "utf-8");
@@ -24269,6 +24399,24 @@ var rememberOnce = (set2, key) => {
   if (set2.size > rememberedSetMax && oldest)
     set2.delete(oldest);
   return true;
+};
+var rememberRecentPrompt = ({ key, now }) => {
+  const previousTimestamp = recentPromptFingerprints.get(key);
+  recentPromptFingerprints.set(key, now);
+  if (recentPromptFingerprints.size > rememberedSetMax) {
+    const oldest = recentPromptFingerprints.keys().next().value;
+    if (oldest)
+      recentPromptFingerprints.delete(oldest);
+  }
+  const accepted = previousTimestamp === undefined || !isRecentDuplicate({
+    now,
+    previousTimestamp,
+    windowMs: promptDuplicateWindowMs
+  });
+  return {
+    accepted,
+    ageMs: previousTimestamp === undefined ? undefined : now - previousTimestamp
+  };
 };
 var trimLine = (text, max = 60) => text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 var sessionCode = (sessionId) => {
@@ -24392,65 +24540,6 @@ var startTyping = async ({
     clearTyping({ conversation, publicSignKey, sessionId });
   }, typingFallbackMs));
 };
-var callFirstAvailable = async (calls) => {
-  let lastError;
-  for (const call of calls) {
-    try {
-      return await call();
-    } catch (error38) {
-      lastError = error38;
-    }
-  }
-  throw lastError;
-};
-var executeTuiAction = async ({
-  client,
-  action
-}) => {
-  const method = client?.tui?.[action];
-  if (typeof method !== "function")
-    return false;
-  await callFirstAvailable([
-    () => method(),
-    () => method({})
-  ]);
-  return true;
-};
-var executeTuiCommand = async ({
-  client,
-  command
-}) => {
-  const method = client?.tui?.executeCommand;
-  if (typeof method !== "function")
-    return false;
-  await callFirstAvailable([
-    () => method({ command }),
-    () => method({ body: { command } })
-  ]);
-  return true;
-};
-var executeSessionCommand = async ({
-  client,
-  sessionId,
-  command,
-  argumentsText
-}) => {
-  const method = client?.session?.command;
-  if (typeof method !== "function")
-    return false;
-  await callFirstAvailable([
-    () => method({
-      sessionID: sessionId,
-      command,
-      arguments: argumentsText
-    }),
-    () => method({
-      path: { id: sessionId },
-      body: { command, arguments: argumentsText }
-    })
-  ]);
-  return true;
-};
 var runPhoneCommand = async ({
   client,
   getLink,
@@ -24493,8 +24582,7 @@ Reply /switch <code> to switch.`
     await saveState();
     return {
       handled: true,
-      reply: `Open this link to start a chat tied to session ${parsed.arguments}:
-${link}`
+      reply: switchSessionMessage({ url: link, code: parsed.arguments })
     };
   }
   if (parsed.raw === "/models") {
@@ -24576,6 +24664,7 @@ var buildPromptParts = async (message) => {
 };
 async function plugin(input) {
   await logDebug("Plugin initialized.");
+  await logProcessIdentity();
   await loadState();
   const configDir = path8.join(os2.homedir(), ".config", "opencode");
   const credsFile = path8.join(configDir, "alice_creds.json");
@@ -24647,11 +24736,40 @@ async function plugin(input) {
         const { message, conversationId: convoId, conversationKey, messageId } = update;
         await logDebug(`Decrypted message: type=${message?.type}`);
         if (message?.type === "text" && message.publicSignKey !== credentials.publicSignKey) {
-          if (!rememberOnce(seenAliceMessageIds, messageId) || !await claimAliceMessage(messageId)) {
+          const promptFingerprint = recentPromptFingerprint({
+            conversationId: convoId,
+            message
+          });
+          await logInbound({
+            envelope: {
+              messageId,
+              conversationId: convoId,
+              sender: message.publicSignKey
+            },
+            fingerprint: promptFingerprint,
+            textLen: (message.text ?? "").length
+          });
+          const claimedSeen = rememberOnce(seenAliceMessageIds, messageId);
+          const claimedFile = claimedSeen ? await claimAliceMessage(messageId) : false;
+          await logClaim({ messageId, taken: claimedSeen && claimedFile });
+          if (!claimedSeen || !claimedFile) {
             await logDebug(`Ignoring duplicate Alice messageId=${messageId}`);
             return;
           }
           await logDebug(`[Phone]: ${message.text || "(attachment)"}`);
+          const promptDecision = rememberRecentPrompt({
+            key: promptFingerprint,
+            now: Date.now()
+          });
+          await logPromptDedupe({
+            fingerprint: promptFingerprint,
+            accepted: promptDecision.accepted,
+            ageMs: promptDecision.ageMs
+          });
+          if (!promptDecision.accepted) {
+            await logDebug(`Ignoring duplicate Alice prompt fingerprint=${promptFingerprint}`);
+            return;
+          }
           let targetSessionId = convoToSessionId.get(convoId);
           if (!targetSessionId && currentSessionId) {
             targetSessionId = currentSessionId;
@@ -24675,8 +24793,12 @@ async function plugin(input) {
               }).catch(() => {});
               return;
             }
-            const pending = pendingPermissions.get(targetSessionId);
-            const permissionReply = permissionReplyCommands[commandText.toLowerCase()];
+            const pending = findPendingPermissionForConvo({
+              pending: pendingPermissions.values(),
+              conversationId: convoId,
+              sessionId: targetSessionId
+            });
+            const permissionReply = permissionReplyForCommand(commandText);
             if (permissionReply && pending) {
               await callFirstAvailable([
                 () => input.client.permission.reply({
@@ -24691,8 +24813,8 @@ async function plugin(input) {
                   body: { response: permissionReply }
                 })
               ]);
-              pendingPermissions.delete(targetSessionId);
-              const label = permissionReply === "reject" ? "denied" : `approved (${permissionReply})`;
+              pendingPermissions.delete(pending.requestId);
+              const label = permissionReplyLabel(permissionReply);
               await notifyPhone({
                 conversation: convoId,
                 conversationKey,
@@ -24700,6 +24822,15 @@ async function plugin(input) {
                 text: `Permission ${label}.`
               }).catch(() => {});
               await logDebug(`Permission ${label} for ${pending.requestId}`);
+              return;
+            }
+            if (permissionReply && !pending) {
+              await notifyPhone({
+                conversation: convoId,
+                conversationKey,
+                credentials,
+                text: "No pending permission to reply to. Try the action again in OpenCode."
+              }).catch(() => {});
               return;
             }
             if (pending) {
@@ -24754,8 +24885,7 @@ Reply /yes, /no, or /always`
                   conversation: convoId,
                   conversationKey,
                   credentials,
-                  text: `New session started.
-${getLink()}`
+                  text: newSessionMessage({ url: getLink() })
                 });
                 await logDebug(`Created new session ${newSessionId} from /new command`);
               } catch (err) {
@@ -24769,7 +24899,7 @@ ${getLink()}`
               }
               return;
             }
-            if (!message.attachments?.length) {
+            if (!message.attachments?.length && isKnownPluginCommand(commandText)) {
               try {
                 const commandResult = await runPhoneCommand({
                   client: input.client,
@@ -24803,9 +24933,19 @@ ${getLink()}`
             const parts = await buildPromptParts(message);
             await logDebug(`Injecting prompt into opencode: ${message.text || "(attachment)"}`);
             try {
+              await logSessionPromptStart({
+                sessionId: targetSessionId,
+                fingerprint: promptFingerprint,
+                textLen: (message.text ?? "").length
+              });
               await input.client.session.prompt({
                 path: { id: targetSessionId },
                 body: { parts }
+              });
+              await logSessionPromptDone({
+                sessionId: targetSessionId,
+                fingerprint: promptFingerprint,
+                ok: true
               });
               sessionToActiveMessageId.set(targetSessionId, messageId);
               sessionToLastMessageId.set(targetSessionId, messageId);
@@ -24815,6 +24955,12 @@ ${getLink()}`
                 sessionId: targetSessionId
               });
             } catch (err) {
+              await logSessionPromptDone({
+                sessionId: targetSessionId,
+                fingerprint: promptFingerprint,
+                ok: false,
+                error: err
+              });
               await logDebug(`Failed to prompt session (it may have died): ${err?.message}`);
               if (promptWasAcceptedDespiteError(err)) {
                 sessionToActiveMessageId.set(targetSessionId, messageId);
@@ -24904,28 +25050,29 @@ ${getLink()}`
           permission,
           metadata
         });
-        pendingPermissions.set(sessionID, {
+        const convoInfo = sessionToConvoKey.get(sessionID);
+        if (!convoInfo) {
+          await logDebug(`Permission asked for session ${sessionID} with no convo binding; ignoring`);
+          return;
+        }
+        pendingPermissions.set(id, {
           requestId: id,
           sessionId: sessionID,
+          conversationId: convoInfo.conversation,
           description
         });
-        await logDebug(`Permission asked: ${description} (requestId=${id})`);
-        const convoInfo = sessionToConvoKey.get(sessionID);
-        if (convoInfo) {
-          await notifyPhone({
-            conversation: convoInfo.conversation,
-            conversationKey: convoInfo.conversationKey,
-            credentials,
-            text: `[Permission] ${description}
+        await logDebug(`Permission asked: ${description} (requestId=${id}, session=${sessionID}, convo=${convoInfo.conversation})`);
+        await notifyPhone({
+          conversation: convoInfo.conversation,
+          conversationKey: convoInfo.conversationKey,
+          credentials,
+          text: `[Permission] ${description}
 Reply /yes, /no, or /always`
-          }).catch(() => {});
-        }
+        }).catch(() => {});
       }
       if (event.type === "permission.replied") {
-        const { sessionID, requestID } = event.properties || {};
-        const pending = pendingPermissions.get(sessionID);
-        if (pending?.requestId === requestID) {
-          pendingPermissions.delete(sessionID);
+        const { requestID } = event.properties || {};
+        if (pendingPermissions.delete(requestID)) {
           await logDebug(`Permission cleared by TUI: requestId=${requestID}`);
         }
       }
@@ -25004,8 +25151,10 @@ Reply /yes, /no, or /always`
         const convoInfo = sessionToConvoKey.get(hookInput.sessionID);
         if (convoInfo) {
           const key = completionKey({ hookInput, currentOutput });
+          await logCompletion({ hookInput, currentOutput, key });
           try {
             if (!rememberOnce(sentCompletionKeys, key)) {
+              await logCompletionDup(key);
               await logDebug(`Ignoring duplicate completion key=${key}`);
               await clearTyping({
                 conversation: convoInfo.conversation,

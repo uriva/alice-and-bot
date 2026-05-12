@@ -17,13 +17,30 @@ import { Buffer } from "node:buffer";
 
 import qrcode from "qrcode-terminal";
 import clipboardy from "clipboardy";
+import { isKnownPluginCommand, isReplyCommand } from "./commands.ts";
+import {
+  findPendingPermissionForConvo,
+  PendingPermission,
+  permissionReplyForCommand,
+} from "./permissions.ts";
 import { promptWasAcceptedDespiteError } from "./prompt.ts";
 import {
   answersFromQuestionReplyText,
   formatQuestionRequest,
 } from "./question.ts";
 import { reasoningStreamUpdate } from "./reasoning.ts";
-import { isWebhookEnvelope } from "./relay.ts";
+import {
+  isRecentDuplicate,
+  isWebhookEnvelope,
+  recentPromptFingerprint,
+} from "./relay.ts";
+import { newSessionMessage, switchSessionMessage } from "./links.ts";
+import {
+  callFirstAvailable,
+  executeSessionCommand,
+  executeTuiAction,
+  executeTuiCommand,
+} from "./tui.ts";
 
 let currentSessionId: string | undefined;
 const aliceCommands = new Set([
@@ -47,14 +64,12 @@ const sessionToConvoKey = new Map<
   { conversation: string; conversationKey: string }
 >();
 const convoToSessionId = new Map<string, string>();
-const pendingPermissions = new Map<
-  string,
-  { requestId: string; sessionId: string; description: string }
->();
+const pendingPermissions = new Map<string, PendingPermission>();
 const pendingQuestions = new Map<string, any>();
 const sentReasoningParts = new Set<string>();
 const seenAliceMessageIds = new Set<string>();
 const sentCompletionKeys = new Set<string>();
+const recentPromptFingerprints = new Map<string, number>();
 const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const typingSessions = new Set<string>();
 const sessionToActiveMessageId = new Map<string, string>();
@@ -64,17 +79,9 @@ const switchCodeToSessionId = new Map<string, string>();
 const rememberedSetMax = 500;
 const typingFallbackMs = 60000;
 const completionDuplicateWindowMs = 10000;
-const permissionReplyCommands: Record<string, "once" | "always" | "reject"> = {
-  "/yes": "once",
-  "/y": "once",
-  "/allow": "once",
-  "/approve": "once",
-  "/no": "reject",
-  "/n": "reject",
-  "/deny": "reject",
-  "/reject": "reject",
-  "/always": "always",
-};
+const promptDuplicateWindowMs = 15000;
+const permissionReplyLabel = (reply: "once" | "always" | "reject") =>
+  reply === "reject" ? "denied" : `approved (${reply})`;
 const debugLogPath = path.join(
   os.homedir(),
   ".config",
@@ -94,10 +101,83 @@ const seenMessageDir = path.join(
   "alice_seen_messages",
 );
 
-async function logDebug(msg: string) {
+const pid = process.pid;
+
+const logDebug = async (msg: string) => {
   const timestamp = new Date().toISOString();
-  await fs.appendFile(debugLogPath, `[${timestamp}] ${msg}\n`).catch(() => {});
-}
+  await fs.appendFile(debugLogPath, `[${timestamp}] [pid=${pid}] ${msg}\n`)
+    .catch(() => {});
+};
+
+const logProcessIdentity = () =>
+  logDebug(
+    `process identity ppid=${process.ppid} argv0=${process.argv0} cwd=${process.cwd()} pluginPath=${__filename}`,
+  );
+
+const logInbound = ({ envelope, fingerprint, textLen }: {
+  envelope: { messageId: string; conversationId: string; sender?: unknown };
+  fingerprint: string;
+  textLen: number;
+}) =>
+  logDebug(
+    `inbound envelopeMessageId=${envelope.messageId} conversationId=${envelope.conversationId} textLen=${textLen} fingerprint=${fingerprint}`,
+  );
+
+const logClaim = ({ messageId, taken }: {
+  messageId: string;
+  taken: boolean;
+}) =>
+  logDebug(
+    `claim ${taken ? "take" : "skip"} messageId=${messageId} path=${
+      path.join(seenMessageDir, encodeURIComponent(messageId))
+    }`,
+  );
+
+const logPromptDedupe = ({ fingerprint, accepted, ageMs }: {
+  fingerprint: string;
+  accepted: boolean;
+  ageMs: number | undefined;
+}) =>
+  logDebug(
+    `prompt ${accepted ? "accept" : "dup"} fingerprint=${fingerprint} ageMs=${
+      ageMs ?? "n/a"
+    } windowMs=${promptDuplicateWindowMs}`,
+  );
+
+const logSessionPromptStart = ({ sessionId, fingerprint, textLen }: {
+  sessionId: string;
+  fingerprint: string;
+  textLen: number;
+}) =>
+  logDebug(
+    `session.prompt start sessionId=${sessionId} fingerprint=${fingerprint} textLen=${textLen}`,
+  );
+
+const logSessionPromptDone = ({ sessionId, fingerprint, ok, error }: {
+  sessionId: string;
+  fingerprint: string;
+  ok: boolean;
+  error?: unknown;
+}) =>
+  logDebug(
+    `session.prompt done sessionId=${sessionId} fingerprint=${fingerprint} ok=${ok} err=${
+      error instanceof Error ? error.message : ""
+    }`,
+  );
+
+const logCompletion = ({ hookInput, currentOutput, key }: {
+  hookInput: { sessionID?: string };
+  currentOutput: { text?: string; id?: string };
+  key: string;
+}) =>
+  logDebug(
+    `complete sessionId=${hookInput.sessionID} messageId=${
+      currentOutput.id ?? ""
+    } completionKey=${key} textLen=${currentOutput.text?.length ?? 0}`,
+  );
+
+const logCompletionDup = (key: string) =>
+  logDebug(`complete dup completionKey=${key}`);
 
 const loadState = async () => {
   try {
@@ -154,6 +234,27 @@ const rememberOnce = (set: Set<string>, key: string) => {
   const oldest = set.values().next().value;
   if (set.size > rememberedSetMax && oldest) set.delete(oldest);
   return true;
+};
+
+const rememberRecentPrompt = ({ key, now }: { key: string; now: number }) => {
+  const previousTimestamp = recentPromptFingerprints.get(key);
+  recentPromptFingerprints.set(key, now);
+  if (recentPromptFingerprints.size > rememberedSetMax) {
+    const oldest = recentPromptFingerprints.keys().next().value;
+    if (oldest) recentPromptFingerprints.delete(oldest);
+  }
+  const accepted = previousTimestamp === undefined ||
+    !isRecentDuplicate({
+      now,
+      previousTimestamp,
+      windowMs: promptDuplicateWindowMs,
+    });
+  return {
+    accepted,
+    ageMs: previousTimestamp === undefined
+      ? undefined
+      : now - previousTimestamp,
+  };
 };
 
 const trimLine = (text: string, max = 60) =>
@@ -343,81 +444,6 @@ const startTyping = async ({
   );
 };
 
-const callFirstAvailable = async (
-  calls: Array<() => Promise<unknown>>,
-) => {
-  let lastError: unknown;
-  for (const call of calls) {
-    try {
-      return await call();
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError;
-};
-
-const executeTuiAction = async ({
-  client,
-  action,
-}: {
-  client: any;
-  action: "openHelp" | "openSessions" | "openThemes" | "openModels";
-}) => {
-  const method = client?.tui?.[action];
-  if (typeof method !== "function") return false;
-  await callFirstAvailable([
-    () => method(),
-    () => method({}),
-  ]);
-  return true;
-};
-
-const executeTuiCommand = async ({
-  client,
-  command,
-}: {
-  client: any;
-  command: string;
-}) => {
-  const method = client?.tui?.executeCommand;
-  if (typeof method !== "function") return false;
-  await callFirstAvailable([
-    () => method({ command }),
-    () => method({ body: { command } }),
-  ]);
-  return true;
-};
-
-const executeSessionCommand = async ({
-  client,
-  sessionId,
-  command,
-  argumentsText,
-}: {
-  client: any;
-  sessionId: string;
-  command: string;
-  argumentsText: string;
-}) => {
-  const method = client?.session?.command;
-  if (typeof method !== "function") return false;
-  await callFirstAvailable([
-    () =>
-      method({
-        sessionID: sessionId,
-        command,
-        arguments: argumentsText,
-      }),
-    () =>
-      method({
-        path: { id: sessionId },
-        body: { command, arguments: argumentsText },
-      }),
-  ]);
-  return true;
-};
-
 const runPhoneCommand = async ({
   client,
   getLink,
@@ -464,8 +490,7 @@ const runPhoneCommand = async ({
     await saveState();
     return {
       handled: true,
-      reply:
-        `Open this link to start a chat tied to session ${parsed.arguments}:\n${link}`,
+      reply: switchSessionMessage({ url: link, code: parsed.arguments }),
     };
   }
 
@@ -573,6 +598,7 @@ const buildPromptParts = async (message: any) => {
 
 export default async function plugin(input: unknown) {
   await logDebug("Plugin initialized.");
+  await logProcessIdentity();
   await loadState();
   const configDir = path.join(os.homedir(), ".config", "opencode");
   const credsFile = path.join(configDir, "alice_creds.json");
@@ -667,14 +693,45 @@ export default async function plugin(input: unknown) {
           message?.type === "text" &&
           message.publicSignKey !== (credentials as any).publicSignKey
         ) {
-          if (
-            !rememberOnce(seenAliceMessageIds, messageId) ||
-            !await claimAliceMessage(messageId)
-          ) {
+          const promptFingerprint = recentPromptFingerprint({
+            conversationId: convoId,
+            message,
+          });
+          await logInbound({
+            envelope: {
+              messageId,
+              conversationId: convoId,
+              sender: message.publicSignKey,
+            },
+            fingerprint: promptFingerprint,
+            textLen: (message.text ?? "").length,
+          });
+          const claimedSeen = rememberOnce(seenAliceMessageIds, messageId);
+          const claimedFile = claimedSeen
+            ? await claimAliceMessage(messageId)
+            : false;
+          await logClaim({ messageId, taken: claimedSeen && claimedFile });
+          if (!claimedSeen || !claimedFile) {
             await logDebug(`Ignoring duplicate Alice messageId=${messageId}`);
             return;
           }
           await logDebug(`[Phone]: ${message.text || "(attachment)"}`);
+
+          const promptDecision = rememberRecentPrompt({
+            key: promptFingerprint,
+            now: Date.now(),
+          });
+          await logPromptDedupe({
+            fingerprint: promptFingerprint,
+            accepted: promptDecision.accepted,
+            ageMs: promptDecision.ageMs,
+          });
+          if (!promptDecision.accepted) {
+            await logDebug(
+              `Ignoring duplicate Alice prompt fingerprint=${promptFingerprint}`,
+            );
+            return;
+          }
 
           let targetSessionId = convoToSessionId.get(convoId);
           if (!targetSessionId && currentSessionId) {
@@ -702,9 +759,12 @@ export default async function plugin(input: unknown) {
               return;
             }
 
-            const pending = pendingPermissions.get(targetSessionId);
-            const permissionReply =
-              permissionReplyCommands[commandText.toLowerCase()];
+            const pending = findPendingPermissionForConvo({
+              pending: pendingPermissions.values(),
+              conversationId: convoId,
+              sessionId: targetSessionId,
+            });
+            const permissionReply = permissionReplyForCommand(commandText);
             if (permissionReply && pending) {
               await callFirstAvailable([
                 () =>
@@ -724,10 +784,8 @@ export default async function plugin(input: unknown) {
                       },
                     ),
               ]);
-              pendingPermissions.delete(targetSessionId);
-              const label = permissionReply === "reject"
-                ? "denied"
-                : `approved (${permissionReply})`;
+              pendingPermissions.delete(pending.requestId);
+              const label = permissionReplyLabel(permissionReply);
               await notifyPhone({
                 conversation: convoId,
                 conversationKey,
@@ -737,6 +795,16 @@ export default async function plugin(input: unknown) {
               await logDebug(
                 `Permission ${label} for ${pending.requestId}`,
               );
+              return;
+            }
+            if (permissionReply && !pending) {
+              await notifyPhone({
+                conversation: convoId,
+                conversationKey,
+                credentials,
+                text:
+                  "No pending permission to reply to. Try the action again in OpenCode.",
+              }).catch(() => {});
               return;
             }
             if (pending) {
@@ -798,7 +866,7 @@ export default async function plugin(input: unknown) {
                   conversation: convoId,
                   conversationKey,
                   credentials,
-                  text: `New session started.\n${getLink()}`,
+                  text: newSessionMessage({ url: getLink() }),
                 });
                 await logDebug(
                   `Created new session ${newSessionId} from /new command`,
@@ -819,7 +887,9 @@ export default async function plugin(input: unknown) {
               return;
             }
 
-            if (!message.attachments?.length) {
+            if (
+              !message.attachments?.length && isKnownPluginCommand(commandText)
+            ) {
               try {
                 const commandResult = await runPhoneCommand({
                   client: (input as any).client,
@@ -865,9 +935,19 @@ export default async function plugin(input: unknown) {
               }`,
             );
             try {
+              await logSessionPromptStart({
+                sessionId: targetSessionId,
+                fingerprint: promptFingerprint,
+                textLen: (message.text ?? "").length,
+              });
               await (input as any).client.session.prompt({
                 path: { id: targetSessionId },
                 body: { parts },
+              });
+              await logSessionPromptDone({
+                sessionId: targetSessionId,
+                fingerprint: promptFingerprint,
+                ok: true,
               });
               sessionToActiveMessageId.set(targetSessionId, messageId);
               sessionToLastMessageId.set(targetSessionId, messageId);
@@ -877,6 +957,12 @@ export default async function plugin(input: unknown) {
                 sessionId: targetSessionId,
               });
             } catch (err: any) {
+              await logSessionPromptDone({
+                sessionId: targetSessionId,
+                fingerprint: promptFingerprint,
+                ok: false,
+                error: err,
+              });
               await logDebug(
                 `Failed to prompt session (it may have died): ${err?.message}`,
               );
@@ -987,29 +1073,32 @@ export default async function plugin(input: unknown) {
           permission,
           metadata,
         });
-        pendingPermissions.set(sessionID, {
+        const convoInfo = sessionToConvoKey.get(sessionID);
+        if (!convoInfo) {
+          await logDebug(
+            `Permission asked for session ${sessionID} with no convo binding; ignoring`,
+          );
+          return;
+        }
+        pendingPermissions.set(id, {
           requestId: id,
           sessionId: sessionID,
+          conversationId: convoInfo.conversation,
           description,
         });
         await logDebug(
-          `Permission asked: ${description} (requestId=${id})`,
+          `Permission asked: ${description} (requestId=${id}, session=${sessionID}, convo=${convoInfo.conversation})`,
         );
-        const convoInfo = sessionToConvoKey.get(sessionID);
-        if (convoInfo) {
-          await notifyPhone({
-            conversation: convoInfo.conversation,
-            conversationKey: convoInfo.conversationKey,
-            credentials,
-            text: `[Permission] ${description}\nReply /yes, /no, or /always`,
-          }).catch(() => {});
-        }
+        await notifyPhone({
+          conversation: convoInfo.conversation,
+          conversationKey: convoInfo.conversationKey,
+          credentials,
+          text: `[Permission] ${description}\nReply /yes, /no, or /always`,
+        }).catch(() => {});
       }
       if (event.type === "permission.replied") {
-        const { sessionID, requestID } = event.properties || {};
-        const pending = pendingPermissions.get(sessionID);
-        if (pending?.requestId === requestID) {
-          pendingPermissions.delete(sessionID);
+        const { requestID } = event.properties || {};
+        if (pendingPermissions.delete(requestID)) {
           await logDebug(
             `Permission cleared by TUI: requestId=${requestID}`,
           );
@@ -1104,8 +1193,10 @@ export default async function plugin(input: unknown) {
         const convoInfo = sessionToConvoKey.get(hookInput.sessionID);
         if (convoInfo) {
           const key = completionKey({ hookInput, currentOutput });
+          await logCompletion({ hookInput, currentOutput, key });
           try {
             if (!rememberOnce(sentCompletionKeys, key)) {
+              await logCompletionDup(key);
               await logDebug(`Ignoring duplicate completion key=${key}`);
               await clearTyping({
                 conversation: convoInfo.conversation,
