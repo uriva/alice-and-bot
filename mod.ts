@@ -1,23 +1,27 @@
 import {
   getConversationInfo as backendGetConversationInfo,
   getConversations as backendGetConversations,
+  GetMessagesResult,
+  getMessagesSigned as backendGetMessages,
   getProfile as backendGetProfile,
 } from "./backend/src/api.ts";
 import {
   createConversation as createConversationNoDb,
   type Credentials,
+  decryptMessage,
+  type EncryptedMessage,
+  getConversationKey,
   publicSignKeyToAlias as publicSignKeyToAliasNoDb,
 } from "./protocol/src/clientApi.ts";
 import { accessAdminDb } from "./lit/core/instant-client.ts";
 import type { WidgetParams } from "./widget/src/widget.ts";
 export {
   aliasToPublicSignKey,
-  type GetMessagesResult,
-  getMessagesSigned,
   getUploadUrl,
   sendTyping,
   setWebhook,
 } from "./backend/src/api.ts";
+export type { GetMessagesResult } from "./backend/src/api.ts";
 export {
   type Attachment,
   type AudioAttachment,
@@ -25,9 +29,11 @@ export {
   chatWithMeLink,
   createIdentity,
   type Credentials,
+  decryptMessage,
   downloadAttachment,
   type FileAttachment,
   fileSizeLimits,
+  getConversationKey,
   handleWebhookUpdate,
   type ImageAttachment,
   type LocationAttachment,
@@ -123,6 +129,50 @@ export const getConversationInfo = (conversationId: string): Promise<
   }
   | { error: "not-found" }
 > => backendGetConversationInfo(conversationId);
+
+export const getMessages = ({
+  conversationId,
+  limit,
+  before,
+  credentials,
+}: {
+  conversationId: string;
+  limit?: number;
+  before?: number;
+  credentials: Credentials;
+}): Promise<GetMessagesResult> =>
+  backendGetMessages({ conversationId, limit, before, credentials });
+
+export const getDecryptedMessages = async ({
+  conversationId,
+  limit,
+  before,
+  credentials,
+}: {
+  conversationId: string;
+  limit?: number;
+  before?: number;
+  credentials: Credentials;
+}) => {
+  const convKey = await getConversationKey(credentials, conversationId);
+  const result = await backendGetMessages({
+    conversationId,
+    limit,
+    before,
+    credentials,
+  });
+  if ("error" in result) return result;
+  const decrypted = await Promise.all(
+    result.messages.map((m) =>
+      decryptMessage(convKey)({ ...m, payload: m.payload as EncryptedMessage })
+    ),
+  );
+  return {
+    messages: decrypted.filter((m): m is NonNullable<typeof m> => m !==
+      undefined),
+    hasMore: result.hasMore,
+  };
+};
 
 export const embedScript = (params: WidgetParams): string => `
 <script type="application/json" id="alice-and-bot-params">

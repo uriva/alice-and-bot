@@ -225,7 +225,7 @@ export const sendMessageWithKey = async ({
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
-const getConversationKey = async (creds: Credentials, convo: string) => {
+export const getConversationKey = async (creds: Credentials, convo: string) => {
   const result = await apiClient({
     endpoint: "conversationKey",
     payload: {
