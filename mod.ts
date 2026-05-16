@@ -153,7 +153,13 @@ export const getDecryptedMessages = async ({
   limit?: number;
   before?: number;
   credentials: Credentials;
-}) => {
+}): Promise<
+  | {
+    messages: DecipheredMessage[];
+    hasMore: boolean;
+  }
+  | { error: "not-participant" | "invalid-auth" }
+> => {
   const convKey = await getConversationKey(credentials, conversationId);
   const result = await backendGetMessages({
     conversationId,

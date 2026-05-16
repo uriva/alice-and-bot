@@ -225,7 +225,10 @@ export const sendMessageWithKey = async ({
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
-export const getConversationKey = async (creds: Credentials, convo: string) => {
+export const getConversationKey = async (
+  creds: Credentials,
+  convo: string,
+): Promise<string> => {
   const result = await apiClient({
     endpoint: "conversationKey",
     payload: {
@@ -409,7 +412,7 @@ async (
 export const decryptMessage = (conversationSymmetricKey: string) =>
 async (
   { id, payload, timestamp }: DbMessage,
-) => {
+): Promise<DecipheredMessage | undefined> => {
   const base = await decryptMessagePayload(conversationSymmetricKey)({
     payload,
     timestamp,
