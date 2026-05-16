@@ -606,6 +606,57 @@ const endpoints: BackendApiImpl = {
       );
       return { success: true };
     },
+    getMessages: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authOk = await verifyAuthToken<{
+        conversationId: string;
+        limit?: number;
+        before?: number;
+      }>({
+        action: "getMessages",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) return { error: "invalid-auth" };
+      const { conversationId, limit = 50, before } = payload;
+      const { conversations } = await query({
+        conversations: {
+          participants: {},
+          $: { where: { id: conversationId } },
+        },
+      });
+      if (!conversations.length) return { error: "not-participant" };
+      const isParticipant = conversations[0].participants.some(
+        (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+      );
+      if (!isParticipant) return { error: "not-participant" };
+      const fetchLimit = limit + 1;
+      const { messages } = await query({
+        messages: {
+          conversation: {},
+          $: {
+            where: before !== undefined
+              ? { conversation: conversationId, timestamp: { $lt: before } }
+              : { conversation: conversationId },
+            order: { timestamp: "desc" as const },
+            limit: fetchLimit,
+          },
+        },
+      });
+      const msgs = messages ?? [];
+      const sliced = msgs.slice(0, limit);
+      return {
+        messages: sliced.map(
+          (m: { id: string; payload: unknown; timestamp: number }) => ({
+            id: m.id,
+            payload: m.payload,
+            timestamp: m.timestamp,
+          }),
+        ),
+        hasMore: msgs.length > limit,
+      };
+    },
     getVapidPublicKey: () => Promise.resolve({ publicKey: vapidPublicKey }),
     registerPushSubscription: async (
       { payload, publicSignKey, nonce, authToken },

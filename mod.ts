@@ -12,6 +12,8 @@ import { accessAdminDb } from "./lit/core/instant-client.ts";
 import type { WidgetParams } from "./widget/src/widget.ts";
 export {
   aliasToPublicSignKey,
+  type GetMessagesResult,
+  getMessagesSigned,
   getUploadUrl,
   sendTyping,
   setWebhook,

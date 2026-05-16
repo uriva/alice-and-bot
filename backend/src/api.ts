@@ -359,6 +359,24 @@ export const backendApiSchema = {
       }),
     ]),
   ),
+  getMessages: authenticatedEndpoint(
+    z.object({
+      conversationId: z.string(),
+      limit: z.number().int().min(0).max(200).optional(),
+      before: z.number().optional(),
+    }),
+    z.union([
+      z.object({
+        messages: z.array(z.object({
+          id: z.string(),
+          payload: z.unknown(),
+          timestamp: z.number(),
+        })),
+        hasMore: z.boolean(),
+      }),
+      z.object({ error: z.enum(["not-participant", "invalid-auth"]) }),
+    ]),
+  ),
 } as const;
 
 export const apiClient = apiClientMaker(
@@ -717,5 +735,32 @@ export const renameConversationSigned = async (
     payload: await buildSignedRequest(credentials, "renameConversation", {
       conversationId,
       title,
+    }),
+  });
+
+export type GetMessagesResult =
+  | {
+    messages: Array<{ id: string; payload: unknown; timestamp: number }>;
+    hasMore: boolean;
+  }
+  | { error: "not-participant" | "invalid-auth" };
+
+export const getMessagesSigned = async ({
+  conversationId,
+  limit,
+  before,
+  credentials,
+}: {
+  conversationId: string;
+  limit?: number;
+  before?: number;
+  credentials: Credentials;
+}): Promise<GetMessagesResult> =>
+  apiClient({
+    endpoint: "getMessages",
+    payload: await buildSignedRequest(credentials, "getMessages", {
+      conversationId,
+      ...(limit !== undefined ? { limit } : {}),
+      ...(before !== undefined ? { before } : {}),
     }),
   });
