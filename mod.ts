@@ -8,6 +8,7 @@ import type { GetMessagesResult } from "./backend/src/api.ts";
 import {
   createConversation as createConversationNoDb,
   type Credentials,
+  type DecipheredMessage,
   decryptMessage,
   type EncryptedMessage,
   getConversationKey,
@@ -29,7 +30,7 @@ export {
   chatWithMeLink,
   createIdentity,
   type Credentials,
-  decryptMessage,
+  type DecipheredMessage,
   downloadAttachment,
   type FileAttachment,
   fileSizeLimits,
