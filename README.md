@@ -356,6 +356,24 @@ getConversationInfo(
 >
 ```
 
+```ts
+getDecryptedMessages({
+  conversationId: string
+  limit?: number        // default 50, max 200
+  before?: number       // timestamp cursor for pagination
+  credentials: Credentials
+}): Promise<
+  | {
+      messages: DecipheredMessage[]
+      hasMore: boolean
+    }
+  | { error: "not-participant" | "invalid-auth" }
+>
+```
+
+For raw encrypted payloads, use `getMessages` (same signature, returns
+`{ id, payload, timestamp }[]`).
+
 ### React component
 
 Embed a chat UI in your React app:

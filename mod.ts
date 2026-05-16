@@ -1,10 +1,10 @@
 import {
   getConversationInfo as backendGetConversationInfo,
   getConversations as backendGetConversations,
-  GetMessagesResult,
   getMessagesSigned as backendGetMessages,
   getProfile as backendGetProfile,
 } from "./backend/src/api.ts";
+import type { GetMessagesResult } from "./backend/src/api.ts";
 import {
   createConversation as createConversationNoDb,
   type Credentials,
@@ -168,8 +168,10 @@ export const getDecryptedMessages = async ({
     ),
   );
   return {
-    messages: decrypted.filter((m): m is NonNullable<typeof m> => m !==
-      undefined),
+    messages: decrypted.filter((m): m is NonNullable<typeof m> =>
+      m !==
+        undefined
+    ),
     hasMore: result.hasMore,
   };
 };

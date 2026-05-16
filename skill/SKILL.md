@@ -206,6 +206,31 @@ const info = await getConversationInfo(conversationId);
 // { conversationInfo: { participants: [{ publicSignKey, name?, avatar?, alias? }], isPartial } }
 ```
 
+#### `getDecryptedMessages({ conversationId, credentials, limit?, before? })`
+
+Fetch and auto-decrypt messages from a conversation. Convenience wrapper that
+fetches the conversation key and decrypts all messages automatically.
+
+```typescript
+import { getDecryptedMessages } from "@alice-and-bot/core";
+const result = await getDecryptedMessages({ conversationId, credentials });
+// { messages: DecipheredMessage[], hasMore: boolean }
+// or { error: "not-participant" | "invalid-auth" }
+```
+
+Supports pagination via `before` (timestamp cursor) and `limit` (default 50, max
+200).
+
+#### `getMessages({ conversationId, credentials, limit?, before? })`
+
+Lower-level version that returns raw encrypted payloads.
+
+```typescript
+import { getMessages } from "@alice-and-bot/core";
+const result = await getMessages({ conversationId, credentials });
+// { messages: [{ id, payload, timestamp }], hasMore: boolean }
+```
+
 ### Profiles
 
 #### `getProfile(publicSignKey)`

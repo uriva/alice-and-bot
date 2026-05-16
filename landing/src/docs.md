@@ -731,6 +731,23 @@ sendMessageWithKey({
 }): Promise<{ messageId: string }>
 ```
 
+```ts
+getDecryptedMessages({
+  conversationId: string,
+  credentials: Credentials,
+  limit?: number,      // default 50, max 200
+  before?: number,     // timestamp cursor for pagination
+}): Promise<
+  | {
+      messages: DecipheredMessage[]
+      hasMore: boolean
+    }
+  | { error: "not-participant" | "invalid-auth" }
+>
+```
+
+For raw encrypted payloads, use `getMessages` (same signature).
+
 ### Webhook functions
 
 ```ts
