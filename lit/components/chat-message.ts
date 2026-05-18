@@ -383,6 +383,7 @@ export class ChatMessage extends LitElement {
     customColors: { attribute: false },
     isDark: { type: Boolean },
     isMobile: { type: Boolean },
+    isGroupChat: { type: Boolean },
     streamActive: { type: Boolean },
     _isEditing: { state: true },
     _editText: { state: true },
@@ -410,6 +411,7 @@ export class ChatMessage extends LitElement {
   declare customColors: CustomColors | undefined;
   declare isDark: boolean;
   declare isMobile: boolean;
+  declare isGroupChat: boolean;
   declare streamActive: boolean;
 
   declare private _isEditing: boolean;
@@ -437,6 +439,7 @@ export class ChatMessage extends LitElement {
     this.sessionStart = 0;
     this.isDark = false;
     this.isMobile = false;
+    this.isGroupChat = false;
     this.streamActive = false;
     this.userId = "";
     this._isEditing = false;
@@ -644,10 +647,13 @@ export class ChatMessage extends LitElement {
     const { isDark, isOwn, customColors } = this;
     const isStartOfSequence = !this.prev ||
       this.prev.authorId !== authorId;
-    const baseColor = isOwn
-      ? (customColors?.primary ?? defaultPrimary(isDark))
+    const primary = customColors?.primary ?? defaultPrimary(isDark);
+    const baseColor = isOwn || !this.isGroupChat
+      ? primary
       : (customColors?.otherBubble ?? defaultOtherBubble(isDark));
-    const participantColor = avatarColor(authorId, isDark);
+    const participantColor = !this.isGroupChat
+      ? primary
+      : avatarColor(authorId, isDark);
     const noBubble = !isOwn && customColors?.hideOtherBubble;
     const showAvatar = isStartOfSequence && !isOwn;
     const textColor = noBubble

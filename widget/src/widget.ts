@@ -377,7 +377,8 @@ export const createWidget = (
       isDark: app.mode === "dark",
       isOpen,
       viewportHeight: isMobile && isOpen ? viewportHeight : undefined,
-    }) + ";pointer-events:auto";
+    }) + ";pointer-events:auto" +
+      (isOpen ? `;background:${app.colors.surface}` : "");
 
     containerEl.innerHTML = "";
 

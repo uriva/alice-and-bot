@@ -1596,6 +1596,7 @@ export class ChatBox extends LitElement {
         .onAvatarClick="${this.onAvatarClick}"
         .customColors="${customColors}"
         .isDark="${isDark}"
+        .isGroupChat="${this.isGroupChat}"
       ></chat-message>
     `;
   }
