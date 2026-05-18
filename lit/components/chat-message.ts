@@ -7,6 +7,9 @@ import {
   isLightColor,
   messageBubbleColor,
   messageParticipantColor,
+  quoteBarColor,
+  shouldShowAvatar,
+  shouldShowName,
 } from "./design.ts";
 import "./chat-attachment.ts";
 import "./chat-avatar.ts";
@@ -62,7 +65,7 @@ const dropdownItemStyle = (isDark: boolean) =>
   };white-space:nowrap`;
 
 const overlayStyle =
-  "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000";
+  "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000";
 
 const historyPopupStyle = (isDark: boolean) =>
   `background:${
@@ -182,7 +185,7 @@ const quickEmojiRowStyle = (isDark: boolean, isOwn: boolean) =>
     isDark ? "#2a2a2a" : "#e5e7eb"
   };border-radius:20px;padding:4px 6px;box-shadow:${
     isDark ? "0 2px 12px #0008" : "0 2px 12px #0003"
-  };z-index:100`;
+  };z-index:10000`;
 
 const reactionBtnStyle =
   "background:transparent;border:none;cursor:pointer;font-size:16px;padding:2px 3px;line-height:1;border-radius:4px";
@@ -262,29 +265,21 @@ const replyTriggerStyle = (isDark: boolean, isOwn: boolean) =>
     isDark ? "0 1px 4px #0006" : "0 1px 4px #0002"
   };color:${isDark ? "#aaa" : "#666"};font-size:13px;padding:0`;
 
-const quoteBarColor = (isDark: boolean, isOwn: boolean) =>
-  isOwn ? (isDark ? "#818cf8" : "#6366f1") : (isDark ? "#6366f1" : "#4f46e5");
-
 const renderQuotedMessage = (
   reply: ReplyQuote,
   isDark: boolean,
-  isOwn: boolean,
+  customColors: CustomColors | undefined,
   bubbleTextColor: string,
-) =>
-  html`
+) => {
+  const barColor = quoteBarColor(isDark, customColors);
+  return html`
     <div
-      style="margin-bottom:4px;padding:6px 8px;border-radius:6px;border-left:3px solid ${quoteBarColor(
-        isDark,
-        isOwn,
-      )};background:${isDark
+      style="margin-bottom:4px;padding:6px 8px;border-radius:6px;border-left:3px solid ${barColor};background:${isDark
         ? "rgba(255,255,255,0.06)"
         : "rgba(0,0,0,0.05)"};cursor:pointer"
     >
       <div
-        style="font-size:11px;font-weight:600;color:${quoteBarColor(
-          isDark,
-          isOwn,
-        )};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+        style="font-size:11px;font-weight:600;color:${barColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
       >
         ${reply.authorName}
       </div>
@@ -295,6 +290,7 @@ const renderQuotedMessage = (
       </div>
     </div>
   `;
+};
 
 type GroupedReaction = { emoji: string; count: number; hasOwn: boolean };
 
@@ -654,13 +650,17 @@ export class ChatMessage extends LitElement {
       authorId,
     });
     const noBubble = !isOwn && customColors?.hideOtherBubble;
-    const showAvatar = isStartOfSequence && !isOwn;
+    const showAvatar = shouldShowAvatar({
+      isStartOfSequence,
+      isOwn,
+      isGroupChat: this.isGroupChat,
+    });
     const textColor = noBubble
       ? (customColors?.text ?? (isDark ? "#f4f4f4" : "#222"))
       : isLightColor(baseColor)
       ? "#222"
       : "#fff";
-    const avatarSpace = isOwn ? 0 : 36;
+    const avatarSpace = isOwn ? 0 : (this.isGroupChat ? 36 : 0);
     const canEdit = !!(isOwn && this.onEdit &&
       Date.now() - timestamp < editWindowMs);
     const hasEdits = !empty(editHistory ?? []);
@@ -733,7 +733,12 @@ export class ChatMessage extends LitElement {
               ? ";animation:msg-highlight .3s ease forwards"
               : ""}"
           >
-            ${isStartOfSequence && !isOwn && !customColors?.hideNames
+            ${shouldShowName({
+                isStartOfSequence,
+                isOwn,
+                isGroupChat: this.isGroupChat,
+                hideNames: customColors?.hideNames,
+              })
               ? html`
                 <b data-testid="author-name" style="font-size:11px;color:${participantColor}"
                 >${authorName}</b>
@@ -742,7 +747,7 @@ export class ChatMessage extends LitElement {
               ? renderQuotedMessage(
                 this.msg.replyTo,
                 isDark,
-                isOwn,
+                customColors,
                 textColor,
               )
               : nothing} ${this._isEditing

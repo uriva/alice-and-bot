@@ -109,6 +109,28 @@ export const messageParticipantColor = (
   return !isGroupChat ? primary : avatarColor(authorId, isDark);
 };
 
+export const quoteBarColor = (
+  isDark: boolean,
+  customColors?: CustomColors,
+) => customColors?.primary ?? defaultPrimary(isDark);
+
+export const shouldShowAvatar = (
+  { isStartOfSequence, isOwn, isGroupChat }: {
+    isStartOfSequence: boolean;
+    isOwn: boolean;
+    isGroupChat: boolean;
+  },
+) => isStartOfSequence && !isOwn && isGroupChat;
+
+export const shouldShowName = (
+  { isStartOfSequence, isOwn, isGroupChat, hideNames }: {
+    isStartOfSequence: boolean;
+    isOwn: boolean;
+    isGroupChat: boolean;
+    hideNames: boolean | undefined;
+  },
+) => isStartOfSequence && !isOwn && !hideNames && isGroupChat;
+
 export const titleStyle = (isDark: boolean, custom?: CustomColors) => {
   const primary = custom?.primary ?? defaultPrimary(isDark);
   return `display:flex;align-items:center;justify-content:center;font-weight:bold;padding:12px 0;font-size:16px;background:${primary};color:${

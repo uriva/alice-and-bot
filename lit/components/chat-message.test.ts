@@ -1,10 +1,14 @@
-import { assertEquals, assertNotEquals } from "@std/assert";
+import { assertEquals, assertFalse, assertNotEquals } from "@std/assert";
 import {
   attachmentPrimaryColor,
   defaultOtherBubble,
   defaultPrimary,
+  isLightColor,
   messageBubbleColor,
   messageParticipantColor,
+  quoteBarColor,
+  shouldShowAvatar,
+  shouldShowName,
 } from "./design.ts";
 
 Deno.test("attachmentPrimaryColor uses custom primary when provided", () => {
@@ -67,3 +71,65 @@ Deno.test(
     assertNotEquals(bubble, participant);
   },
 );
+
+Deno.test("other message text color is dark in light mode", () => {
+  const bubble = messageBubbleColor({
+    isOwn: false,
+    isDark: false,
+    customColors: undefined,
+  });
+  const textColor = isLightColor(bubble) ? "#222" : "#fff";
+  assertEquals(textColor, "#222");
+});
+
+Deno.test("quote bar color uses primary not blue", () => {
+  const color = quoteBarColor(false);
+  assertFalse(
+    color.startsWith("#4f") || color.startsWith("#63") ||
+      color.startsWith("#81"),
+  );
+});
+
+Deno.test("avatar hidden in 1:1 chat", () => {
+  assertFalse(
+    shouldShowAvatar({
+      isStartOfSequence: true,
+      isOwn: false,
+      isGroupChat: false,
+    }),
+  );
+});
+
+Deno.test("avatar shown in group chat", () => {
+  assertEquals(
+    shouldShowAvatar({
+      isStartOfSequence: true,
+      isOwn: false,
+      isGroupChat: true,
+    }),
+    true,
+  );
+});
+
+Deno.test("name hidden in 1:1 chat", () => {
+  assertFalse(
+    shouldShowName({
+      isStartOfSequence: true,
+      isOwn: false,
+      isGroupChat: false,
+      hideNames: false,
+    }),
+  );
+});
+
+Deno.test("name shown in group chat", () => {
+  assertEquals(
+    shouldShowName({
+      isStartOfSequence: true,
+      isOwn: false,
+      isGroupChat: true,
+      hideNames: false,
+    }),
+    true,
+  );
+});
