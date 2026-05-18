@@ -676,7 +676,7 @@ export class ChatMessage extends LitElement {
       </style>
       <div
         data-testid="message"
-        style="display:flex;gap:6px;align-items:flex-start;flex-direction:${isOwn
+        style="display:flex;gap:4px;align-items:flex-start;flex-direction:${isOwn
           ? "row-reverse"
           : "row"};min-width:0"
       >

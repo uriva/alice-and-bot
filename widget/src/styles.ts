@@ -6,8 +6,12 @@ export type WidgetMode = "light" | "dark";
 
 export const closeButtonCss = (
   { colors }: { colors: WidgetModeColors },
-) =>
-  `position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:16px;border:1px solid ${colors.border};background:${colors.inputBackground};color:${colors.inputText};cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1`;
+) => {
+  const needsBorder = colors.inputBackground === colors.surface;
+  return `position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:16px;${
+    needsBorder ? `border:1px solid ${colors.border};` : ""
+  }background:${colors.inputBackground};color:${colors.inputText};cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1`;
+};
 
 export const dialogBoxCss = (
   { colors, mode }: { colors: WidgetModeColors; mode: WidgetMode },
