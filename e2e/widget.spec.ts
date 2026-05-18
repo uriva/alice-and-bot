@@ -218,6 +218,22 @@ test.describe("Widget", () => {
     });
   });
 
+  test("name dialog input has autocomplete disabled", async ({ page }) => {
+    await setupWidgetMocks(page, data);
+    await page.addInitScript(() =>
+      localStorage.removeItem("aliceAndBotCredentials")
+    );
+    await page.goto("/widget-harness.html");
+    await page.locator(tid("widget-start-button")).click({ timeout: 10_000 });
+    await expect(page.locator(tid("name-dialog-title"))).toBeVisible({
+      timeout: 5_000,
+    });
+    const input = page.getByPlaceholder("Your name");
+    await expect(input).toHaveAttribute("autocomplete", "off");
+    await expect(input).toHaveAttribute("autocorrect", "off");
+    await expect(input).toHaveAttribute("autocapitalize", "off");
+  });
+
   test("name dialog overlay click closes dialog", async ({ page }) => {
     await setupWidgetMocks(page, data);
     await page.addInitScript(() =>

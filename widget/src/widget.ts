@@ -271,6 +271,9 @@ const renderNameDialog = (
 
   const input = document.createElement("input");
   input.placeholder = "Your name";
+  input.setAttribute("autocomplete", "off");
+  input.setAttribute("autocorrect", "off");
+  input.setAttribute("autocapitalize", "off");
   input.style.cssText = fieldCss(colors) + ";text-align:center";
 
   const actions = document.createElement("div");
