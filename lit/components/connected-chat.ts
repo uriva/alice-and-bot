@@ -628,6 +628,11 @@ export class ConnectedChat extends LitElement {
       ({ messages, canLoadMore, loadMore }) => {
         if (!messages) return;
         if (messages.length === 0 && this._hadMessages) return;
+        const messagesChanged = !this._messages ||
+          this._messages.length !== messages.length ||
+          this._messages.some((m, i) => m.id !== messages[i].id);
+        const canLoadMoreChanged = this._canLoadMore !== canLoadMore;
+        if (!messagesChanged && !canLoadMoreChanged) return;
         if (messages.length > this._lastMessageCount) {
           const latestMessage = messages[0];
           if (latestMessage) {

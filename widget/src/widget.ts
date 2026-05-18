@@ -28,7 +28,7 @@ const fontStack = [
   "Segoe UI Emoji",
 ].join(", ");
 
-type WidgetMode = "light" | "dark";
+export type WidgetMode = "light" | "dark";
 
 export type ExportedWidgetModeColors = {
   primary: string;
@@ -37,7 +37,7 @@ export type ExportedWidgetModeColors = {
   startButtonText: string;
 };
 
-type WidgetModeColors = {
+export type WidgetModeColors = {
   background: string;
   text: string;
   surface: string;
@@ -130,15 +130,10 @@ const widgetBaseCss = (colorScheme: "light" | "dark" | "light dark") => `
 :host { color-scheme: ${colorScheme}; }
 `;
 
-const startButtonCss = (colors: WidgetModeColors) =>
-  `background:${colors.startButton};color:${colors.startButtonText};font-weight:bold;padding:12px 28px;border:none;border-radius:999px;box-shadow:${colors.startShadow};cursor:pointer;font-size:1rem;transition:background 0.2s,box-shadow 0.2s;outline:none;margin:8px;display:inline-block;white-space:nowrap`;
+import { closeButtonCss } from "./styles.ts";
 
-const closeButtonCss = (
-  { colors, mode }: { colors: WidgetModeColors; mode: WidgetMode },
-) =>
-  `position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:16px;border:none;background:${colors.inputBackground};color:${colors.inputText};cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:${
-    mode === "dark" ? "0 2px 6px rgba(0,0,0,0.4)" : "0 2px 6px rgba(0,0,0,0.15)"
-  };z-index:1`;
+const startButtonCss = (colors: WidgetModeColors) =>
+  `width:48px;height:48px;border-radius:50%;border:none;background:${colors.startButton};color:${colors.startButtonText};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px ${colors.startShadow}`;
 
 const containerCss = (
   { isMobile, isDark, isOpen, viewportHeight }: {
@@ -405,7 +400,6 @@ export const createWidget = (
       closeBtn.setAttribute("aria-label", "Close chat");
       closeBtn.style.cssText = closeButtonCss({
         colors: app.colors,
-        mode: app.mode,
       });
       closeBtn.textContent = "\u00d7";
       closeBtn.addEventListener("click", () => setChatOpen(false));
