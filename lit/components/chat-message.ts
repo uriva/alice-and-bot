@@ -178,7 +178,9 @@ const quickEmojiRowStyle = (isDark: boolean, isOwn: boolean) =>
   `position:absolute;top:50%;transform:translateY(calc(-100% - 24px));${
     isOwn ? "left:-36px" : "right:-36px"
   };display:flex;gap:2px;background:${
-    isDark ? "#1a1a1a" : "#fff"
+    isDark ? "#1e1e1e" : "#ffffff"
+  };border:1px solid ${
+    isDark ? "#2a2a2a" : "#e5e7eb"
   };border-radius:20px;padding:4px 6px;box-shadow:${
     isDark ? "0 2px 12px #0008" : "0 2px 12px #0003"
   };z-index:100`;
@@ -576,9 +578,9 @@ export class ChatMessage extends LitElement {
   };
 
   private _hoverIn = (e: Event) => {
-    (e.currentTarget as HTMLElement).style.background = this.isDark
-      ? "#2a2a2a"
-      : "#f3f4f6";
+    const bg = this.customColors?.inputBackground ??
+      (this.isDark ? "#1e1e1e" : "#ffffff");
+    (e.currentTarget as HTMLElement).style.background = bg;
   };
 
   private _hoverOut = (e: Event) => {

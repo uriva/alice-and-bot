@@ -1236,8 +1236,8 @@ export class ChatBox extends LitElement {
         >
           <div
             data-content-inner
-            style="display:flex;flex-direction:column;gap:8px;padding:4px 4px ${this
-              ._inputAreaHeight}px 4px;flex-grow:1;box-sizing:border-box;min-width:0;${contentMaxWidthStyle(
+            style="display:flex;flex-direction:column;gap:8px;padding:8px 8px ${this
+              ._inputAreaHeight}px 8px;flex-grow:1;box-sizing:border-box;min-width:0;${contentMaxWidthStyle(
                 customColors,
               )}"
           >

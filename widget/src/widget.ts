@@ -67,14 +67,14 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     surface: "#ffffff",
     border: "#d1d5db",
     overlay: "rgba(0,0,0,0.4)",
-    primary: "#2563eb",
+    primary: "hsl(170,55%,45%)",
     primaryText: "#ffffff",
     neutralBg: "#e5e7eb",
     neutralText: "#111827",
-    startButton: "#2563eb",
+    startButton: "hsl(170,55%,45%)",
     startButtonText: "#ffffff",
-    startShadow: "0 2px 8px rgba(80, 80, 120, 0.15)",
-    inputBackground: "#f9fafb",
+    startShadow: "0 2px 8px rgba(20, 80, 70, 0.2)",
+    inputBackground: "#ffffff",
     inputBorder: "#d1d5db",
     inputText: "#111827",
   },
@@ -84,14 +84,14 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     surface: "#2a2a2a",
     border: "#4b5563",
     overlay: "rgba(0,0,0,0.4)",
-    primary: "#2563eb",
+    primary: "hsl(170,42%,24%)",
     primaryText: "#ffffff",
     neutralBg: "#4b5563",
     neutralText: "#f9fafb",
-    startButton: "#2563eb",
+    startButton: "hsl(170,42%,24%)",
     startButtonText: "#ffffff",
-    startShadow: "0 2px 8px rgba(20, 20, 40, 0.35)",
-    inputBackground: "#374151",
+    startShadow: "0 2px 8px rgba(10, 30, 25, 0.4)",
+    inputBackground: "#1e1e1e",
     inputBorder: "#4b5563",
     inputText: "#f9fafb",
   },
@@ -421,8 +421,8 @@ export const createWidget = (
       startBtn.setAttribute("data-testid", "widget-start-button");
       startBtn.type = "button";
       startBtn.style.cssText = startButtonCss(app.colors);
-      startBtn.textContent = buttonText ??
-        (credentials ? "Chat" : "Start chat");
+      startBtn.innerHTML = buttonText ??
+        `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
       startBtn.addEventListener("click", () => {
         if (credentials) return setChatOpen(true);
         openNameDialog();
