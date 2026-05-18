@@ -8,6 +8,7 @@ import {
   defaultPrimary,
   isLightColor,
   loadingStyle,
+  quoteBarColor,
   titleStyle,
 } from "./design.ts";
 import {
@@ -215,9 +216,9 @@ const replyBarStyle = (isDark: boolean, custom?: CustomColors) =>
     custom?.inputBackground ?? (isDark ? "#1a1a1a" : "#ffffff")
   };border-top:1px solid ${isDark ? "#ffffff15" : "#00000015"}`;
 
-const replyBarQuoteStyle = (isDark: boolean) =>
+const replyBarQuoteStyle = (isDark: boolean, custom?: CustomColors) =>
   `flex:1;min-width:0;border-left:3px solid ${
-    isDark ? "#6366f1" : "#4f46e5"
+    quoteBarColor(isDark, custom)
   };padding:2px 8px;font-size:13px;overflow:hidden`;
 
 const renderReplyBar = (
@@ -232,11 +233,12 @@ const renderReplyBar = (
         ? "#9ca3af"
         : "#6b7280"};font-size:16px;display:flex;align-items:center"
       >${faReply}</span>
-      <div style="${replyBarQuoteStyle(isDark)}">
+      <div style="${replyBarQuoteStyle(isDark, custom)}">
         <div
-          style="font-weight:600;color:${isDark
-            ? "#a5b4fc"
-            : "#4f46e5"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+          style="font-weight:600;color:${quoteBarColor(
+            isDark,
+            custom,
+          )};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
         >
           ${reply.authorName}
         </div>
