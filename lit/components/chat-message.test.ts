@@ -3,6 +3,8 @@ import {
   attachmentPrimaryColor,
   defaultOtherBubble,
   defaultPrimary,
+  messageBubbleColor,
+  messageParticipantColor,
 } from "./design.ts";
 
 Deno.test("attachmentPrimaryColor uses custom primary when provided", () => {
@@ -28,3 +30,40 @@ Deno.test("attachmentPrimaryColor ignores otherBubble when primary not set", () 
     defaultPrimary(true),
   );
 });
+
+Deno.test(
+  "1:1 chat other message bubble and name have different colors",
+  () => {
+    const bubble = messageBubbleColor({
+      isOwn: false,
+      isDark: false,
+      customColors: undefined,
+    });
+    const participant = messageParticipantColor({
+      isGroupChat: false,
+      isDark: false,
+      customColors: undefined,
+      authorId: "x",
+    });
+    assertNotEquals(bubble, participant);
+  },
+);
+
+Deno.test(
+  "1:1 chat other message bubble and name differ with custom primary",
+  () => {
+    const customColors = { primary: "#ff0000" };
+    const bubble = messageBubbleColor({
+      isOwn: false,
+      isDark: false,
+      customColors,
+    });
+    const participant = messageParticipantColor({
+      isGroupChat: false,
+      isDark: false,
+      customColors,
+      authorId: "x",
+    });
+    assertNotEquals(bubble, participant);
+  },
+);

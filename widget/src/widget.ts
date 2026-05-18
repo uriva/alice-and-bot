@@ -383,10 +383,11 @@ export const createWidget = (
     containerEl.innerHTML = "";
 
     if (isOpen) {
-      const closeBtn = document.createElement("button");
+      const closeBtn = document.createElement("span");
       closeBtn.setAttribute("data-testid", "widget-close-button");
-      closeBtn.type = "button";
+      closeBtn.setAttribute("role", "button");
       closeBtn.setAttribute("aria-label", "Close chat");
+      closeBtn.style.cursor = "pointer";
       closeBtn.style.cssText = closeButtonCss({
         colors: app.colors,
       });

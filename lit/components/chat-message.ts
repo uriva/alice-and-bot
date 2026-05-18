@@ -4,10 +4,9 @@ import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import type { Attachment } from "../../protocol/src/clientApi.ts";
 import {
   attachmentPrimaryColor,
-  avatarColor,
-  defaultOtherBubble,
-  defaultPrimary,
   isLightColor,
+  messageBubbleColor,
+  messageParticipantColor,
 } from "./design.ts";
 import "./chat-attachment.ts";
 import "./chat-avatar.ts";
@@ -647,13 +646,13 @@ export class ChatMessage extends LitElement {
     const { isDark, isOwn, customColors } = this;
     const isStartOfSequence = !this.prev ||
       this.prev.authorId !== authorId;
-    const primary = customColors?.primary ?? defaultPrimary(isDark);
-    const baseColor = isOwn || !this.isGroupChat
-      ? primary
-      : (customColors?.otherBubble ?? defaultOtherBubble(isDark));
-    const participantColor = !this.isGroupChat
-      ? primary
-      : avatarColor(authorId, isDark);
+    const baseColor = messageBubbleColor({ isOwn, isDark, customColors });
+    const participantColor = messageParticipantColor({
+      isGroupChat: this.isGroupChat,
+      isDark,
+      customColors,
+      authorId,
+    });
     const noBubble = !isOwn && customColors?.hideOtherBubble;
     const showAvatar = isStartOfSequence && !isOwn;
     const textColor = noBubble

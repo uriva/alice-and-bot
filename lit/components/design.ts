@@ -86,6 +86,29 @@ export const attachmentPrimaryColor = (
   customColors?: CustomColors,
 ) => customColors?.primary ?? defaultPrimary(isDark);
 
+export const messageBubbleColor = (
+  { isOwn, isDark, customColors }: {
+    isOwn: boolean;
+    isDark: boolean;
+    customColors: CustomColors | undefined;
+  },
+) =>
+  isOwn
+    ? (customColors?.primary ?? defaultPrimary(isDark))
+    : (customColors?.otherBubble ?? defaultOtherBubble(isDark));
+
+export const messageParticipantColor = (
+  { isGroupChat, isDark, customColors, authorId }: {
+    isGroupChat: boolean;
+    isDark: boolean;
+    customColors: CustomColors | undefined;
+    authorId: string;
+  },
+) => {
+  const primary = customColors?.primary ?? defaultPrimary(isDark);
+  return !isGroupChat ? primary : avatarColor(authorId, isDark);
+};
+
 export const titleStyle = (isDark: boolean, custom?: CustomColors) => {
   const primary = custom?.primary ?? defaultPrimary(isDark);
   return `display:flex;align-items:center;justify-content:center;font-weight:bold;padding:12px 0;font-size:16px;background:${primary};color:${
