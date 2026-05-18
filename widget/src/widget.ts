@@ -138,8 +138,10 @@ import {
   fieldCss,
 } from "./styles.ts";
 
-const startButtonCss = (colors: WidgetModeColors) =>
-  `width:48px;height:48px;border-radius:50%;border:none;background:${colors.startButton};color:${colors.startButtonText};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px ${colors.startShadow}`;
+const startButtonCss = (colors: WidgetModeColors, hasText: boolean) =>
+  hasText
+    ? `padding:10px 20px;border-radius:8px;border:none;background:${colors.startButton};color:${colors.startButtonText};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-shadow:0 2px 8px ${colors.startShadow}`
+    : `width:48px;height:48px;border-radius:50%;border:none;background:${colors.startButton};color:${colors.startButtonText};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px ${colors.startShadow}`;
 
 const containerCss = (
   { isMobile, isDark, isOpen, viewportHeight }: {
@@ -422,7 +424,7 @@ export const createWidget = (
       const startBtn = document.createElement("button");
       startBtn.setAttribute("data-testid", "widget-start-button");
       startBtn.type = "button";
-      startBtn.style.cssText = startButtonCss(app.colors);
+      startBtn.style.cssText = startButtonCss(app.colors, !!buttonText);
       startBtn.innerHTML = buttonText ??
         `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
       startBtn.addEventListener("click", () => {
