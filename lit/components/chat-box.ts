@@ -8,6 +8,7 @@ import {
   defaultPrimary,
   isLightColor,
   loadingStyle,
+  titleStyle,
 } from "./design.ts";
 import {
   faCamera,
@@ -258,13 +259,6 @@ const renderReplyBar = (
       </button>
     </div>
   `;
-
-const titleStyle = (isDark: boolean, custom?: CustomColors) =>
-  `display:flex;align-items:center;justify-content:center;font-weight:bold;padding:12px 0;font-size:16px;border-bottom:1px solid ${
-    isDark ? "#ffffff15" : "#00000015"
-  };transition:border-color 0.2s;color:${
-    custom?.text ?? (isDark ? "#f4f4f4" : "#222")
-  }`;
 
 const headerButtonStyle =
   "background:transparent;border:none;cursor:pointer;color:inherit;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;padding:0";

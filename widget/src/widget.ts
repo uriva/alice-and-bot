@@ -130,7 +130,13 @@ const widgetBaseCss = (colorScheme: "light" | "dark" | "light dark") => `
 :host { color-scheme: ${colorScheme}; }
 `;
 
-import { closeButtonCss } from "./styles.ts";
+import {
+  buttonNeutralCss,
+  buttonPrimaryCss,
+  closeButtonCss,
+  dialogBoxCss,
+  fieldCss,
+} from "./styles.ts";
 
 const startButtonCss = (colors: WidgetModeColors) =>
   `width:48px;height:48px;border-radius:50%;border:none;background:${colors.startButton};color:${colors.startButtonText};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px ${colors.startShadow}`;
@@ -158,24 +164,6 @@ const chatWrapperCss =
 
 const overlayCss = (colors: WidgetModeColors) =>
   `position:fixed;inset:0;z-index:10002;background:${colors.overlay};display:flex;align-items:center;justify-content:center;padding:16px;font-family:${fontStack}`;
-
-const dialogBoxCss = (
-  { colors, mode }: { colors: WidgetModeColors; mode: WidgetMode },
-) =>
-  `background:${colors.surface};color:${colors.text};width:100%;max-width:420px;border-radius:12px;box-shadow:${
-    mode === "dark"
-      ? "0 10px 30px rgba(0,0,0,0.5)"
-      : "0 10px 30px rgba(0,0,0,0.12)"
-  };padding:20px`;
-
-const fieldCss = (colors: WidgetModeColors) =>
-  `width:100%;max-width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid ${colors.inputBorder};background:${colors.inputBackground};color:${colors.inputText};outline:none`;
-
-const buttonNeutralCss = (colors: WidgetModeColors) =>
-  `background:${colors.neutralBg};color:${colors.neutralText};border:none;border-radius:8px;padding:8px 12px;cursor:pointer`;
-
-const buttonPrimaryCss = (colors: WidgetModeColors) =>
-  `background:${colors.primary};color:${colors.primaryText};border:none;border-radius:8px;padding:8px 12px;cursor:pointer`;
 
 const toastCss =
   "position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:10003;background:#ef4444;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:none;transition:opacity 0.3s";
@@ -272,20 +260,20 @@ const renderNameDialog = (
 
   const title = document.createElement("div");
   title.setAttribute("data-testid", "name-dialog-title");
-  title.style.cssText = "font-size:18px;font-weight:700;margin-bottom:8px";
+  title.style.cssText = "font-size:18px;font-weight:700;text-align:center";
   title.textContent = "Enter your display name";
 
   const hint = document.createElement("div");
-  hint.style.cssText = "font-size:13px;opacity:0.9;margin-bottom:10px";
+  hint.style.cssText = "font-size:13px;opacity:0.9;text-align:center";
   hint.textContent = "This will be shown to others.";
 
   const input = document.createElement("input");
   input.placeholder = "Your name";
-  input.style.cssText = fieldCss(colors);
+  input.style.cssText = fieldCss(colors) + ";text-align:center";
 
   const actions = document.createElement("div");
   actions.style.cssText =
-    "display:flex;gap:8px;justify-content:flex-end;margin-top:12px";
+    "display:flex;gap:8px;justify-content:center;width:100%;margin-top:4px";
 
   const cancelBtn = document.createElement("button");
   cancelBtn.type = "button";

@@ -51,7 +51,7 @@ export const centerFillStyle = (isDarkMode: boolean) =>
 export const defaultOtherBubble = (isDark: boolean) =>
   isDark ? "#1e1e22" : "#ffffff";
 
-export const primaryHue = 195;
+export const primaryHue = 170;
 const avatarHues = [primaryHue, 105, 30, 300, 270, 0, 210, 150];
 
 export const avatarColor = (str: string, isDark: boolean) => {
@@ -79,9 +79,16 @@ export const isLightColor = (color: string) => {
 };
 
 export const defaultPrimary = (isDark: boolean) =>
-  isDark ? `hsl(${primaryHue}, 45%, 22%)` : "#dbeafe";
+  isDark ? `hsl(${primaryHue}, 42%, 24%)` : `hsl(${primaryHue}, 55%, 45%)`;
 
 export const attachmentPrimaryColor = (
   isDark: boolean,
   customColors?: CustomColors,
 ) => customColors?.primary ?? defaultPrimary(isDark);
+
+export const titleStyle = (isDark: boolean, custom?: CustomColors) => {
+  const primary = custom?.primary ?? defaultPrimary(isDark);
+  return `display:flex;align-items:center;justify-content:center;font-weight:bold;padding:12px 0;font-size:16px;background:${primary};color:${
+    isLightColor(primary) ? "#222" : "#fff"
+  };transition:background 0.2s,color 0.2s`;
+};
