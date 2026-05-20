@@ -10,6 +10,7 @@ import {
   shouldShowAvatar,
   shouldShowName,
 } from "./design.ts";
+import { renderMarkdown } from "./markdown.ts";
 
 Deno.test("attachmentPrimaryColor uses custom primary when provided", () => {
   assertEquals(attachmentPrimaryColor(true, { primary: "#ff0000" }), "#ff0000");
@@ -132,4 +133,9 @@ Deno.test("name shown in group chat", () => {
     }),
     true,
   );
+});
+
+Deno.test("fenced code block has fenced-code-wrap class for copy handler", () => {
+  const html = renderMarkdown("```ts\nconst x = 1;\n```", "#222", false);
+  assertEquals(html.includes('class="fenced-code-wrap'), true);
 });

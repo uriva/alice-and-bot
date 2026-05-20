@@ -481,7 +481,7 @@ export class ChatMessage extends LitElement {
       '[data-testid="copy-code-button"]',
     );
     if (!btn) return;
-    const codeEl = btn.parentElement?.querySelector("code");
+    const codeEl = btn.closest(".fenced-code-wrap")?.querySelector("code");
     if (codeEl) copyToClipboard(codeEl.textContent ?? "");
   };
 
