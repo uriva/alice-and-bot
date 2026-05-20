@@ -6,7 +6,8 @@
     "chatgpt-style": "cd example; deno run -A --node-modules-dir=auto npm:vite",
     "build": "deno run -A --node-modules-dir=auto npm:vite build",
     "check": "deno fmt --check && deno lint && deno check *.ts backend/**/*.ts example/**/*.ts landing/**/*.ts lit/**/*.ts protocol/**/*.ts widget/**/*.ts && cd e2e && deno check *.spec.ts helpers.ts mocks/*.ts",
-    "test:e2e": "cd e2e && deno run -A --node-modules-dir=auto npm:playwright test"
+    "test:e2e": "cd e2e && deno run -A --node-modules-dir=auto npm:playwright test",
+    "bump-widget": "deno run -A scripts/bump-widget.ts"
   },
   "githooks": {
     "$schema": "https://deno.land/x/githooks/schema.json",
