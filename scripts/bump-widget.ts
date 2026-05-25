@@ -31,7 +31,7 @@ const jsrVersion = ownDenoJson.version;
 for (const path of depRepos) {
   const text = await Deno.readTextFile(path);
   const updated = text.replace(
-    /"@alice-and-bot\/core(@\/components)?":\s*"jsr:@alice-and-bot\/core@\^[\d.]+(\/components)?"/g,
+    /"@alice-and-bot\/core(\/components)?":\s*"jsr:@alice-and-bot\/core@\^[\d.]+(\/components)?"/g,
     `"@alice-and-bot/core$1": "jsr:@alice-and-bot/core@^${jsrVersion}$2"`,
   );
   if (updated !== text) {

@@ -1,4 +1,5 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
+import { repeat } from "lit/directives/repeat.js";
 import { empty } from "@uri/gamla";
 import { maxTextLength } from "../../protocol/src/attachmentLimits.ts";
 import {
@@ -1266,13 +1267,22 @@ export class ChatBox extends LitElement {
                 </div>
               `
               : html`
-                ${timeline.map((entry) =>
-                  this._renderTimelineEntry(
-                    entry,
-                    allMsgs,
-                    customColors,
-                    isDark,
-                  )
+                ${repeat(
+                  timeline,
+                  (entry) => {
+                    if (entry.kind === "message") return entry.msg.id;
+                    if (entry.kind === "spinner") return entry.spinner.elementId;
+                    if (entry.kind === "progress") return entry.progress.elementId;
+                    if (entry.kind === "stream") return entry.stream.elementId;
+                    return "typing";
+                  },
+                  (entry) =>
+                    this._renderTimelineEntry(
+                      entry,
+                      allMsgs,
+                      customColors,
+                      isDark,
+                    ),
                 )} ${this._isSending
                   ? sendingAudioIndicator(
                     customColors?.primary ?? defaultPrimary(isDark),
