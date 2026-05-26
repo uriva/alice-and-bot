@@ -420,3 +420,15 @@ test.describe("AbstractChatBox mobile history load", () => {
     );
   });
 });
+
+
+test("clicking Document button opens file chooser", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('[data-testid="attach-button"]').click();
+  await expect(page.locator('[data-testid="attach-menu"]')).toBeVisible();
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.locator("text=Document").click();
+  const fileChooser = await fileChooserPromise;
+  expect(fileChooser).toBeDefined();
+});
