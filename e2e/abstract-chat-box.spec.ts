@@ -421,7 +421,6 @@ test.describe("AbstractChatBox mobile history load", () => {
   });
 });
 
-
 test("clicking Document button opens file chooser", async ({ page }) => {
   await page.goto("/");
   await page.locator('[data-testid="attach-button"]').click();

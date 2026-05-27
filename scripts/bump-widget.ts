@@ -1,7 +1,10 @@
 const repos = [
   { path: "/home/uri/uriva/homepage/index.html", pattern: /\?v=\d+/g },
   { path: "/home/uri/uriva/alice-and-bot/mod.ts", pattern: /\?v=\d+/g },
-  { path: "/home/uri/uriva/prompt2bot/server/src/channelHandlers.test.ts", pattern: /\?v=\d+/g },
+  {
+    path: "/home/uri/uriva/prompt2bot/server/src/channelHandlers.test.ts",
+    pattern: /\?v=\d+/g,
+  },
 ];
 
 const depRepos = [

@@ -1271,8 +1271,12 @@ export class ChatBox extends LitElement {
                   timeline,
                   (entry) => {
                     if (entry.kind === "message") return entry.msg.id;
-                    if (entry.kind === "spinner") return entry.spinner.elementId;
-                    if (entry.kind === "progress") return entry.progress.elementId;
+                    if (entry.kind === "spinner") {
+                      return entry.spinner.elementId;
+                    }
+                    if (entry.kind === "progress") {
+                      return entry.progress.elementId;
+                    }
                     if (entry.kind === "stream") return entry.stream.elementId;
                     return "typing";
                   },
