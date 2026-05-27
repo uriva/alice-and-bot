@@ -829,21 +829,21 @@ export class ChatBox extends LitElement {
   };
 
   private _onAttachCamera = () => {
+    this._cameraInputEl?.click();
     this._showAttachMenu = false;
     this._removeAttachOutside();
-    this._cameraInputEl?.click();
   };
 
   private _onAttachImage = () => {
+    this._imageInputEl?.click();
     this._showAttachMenu = false;
     this._removeAttachOutside();
-    this._imageInputEl?.click();
   };
 
   private _onAttachDocument = () => {
+    this._fileInputEl?.click();
     this._showAttachMenu = false;
     this._removeAttachOutside();
-    this._fileInputEl?.click();
   };
 
   private _onAttachLocation = () => {
@@ -1271,8 +1271,12 @@ export class ChatBox extends LitElement {
                   timeline,
                   (entry) => {
                     if (entry.kind === "message") return entry.msg.id;
-                    if (entry.kind === "spinner") return entry.spinner.elementId;
-                    if (entry.kind === "progress") return entry.progress.elementId;
+                    if (entry.kind === "spinner") {
+                      return entry.spinner.elementId;
+                    }
+                    if (entry.kind === "progress") {
+                      return entry.progress.elementId;
+                    }
                     if (entry.kind === "stream") return entry.stream.elementId;
                     return "typing";
                   },
