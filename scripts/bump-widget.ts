@@ -11,6 +11,7 @@ const depRepos = [
   "/home/uri/uriva/lurk/deno.json",
   "/home/uri/uriva/find-scene/deno.json",
   "/home/uri/uriva/prompt2bot/deno.json",
+  "/home/uri/uriva/sally/deno.json",
 ];
 
 const newCacheVersion = Deno.args[0];
