@@ -2,7 +2,11 @@ import type { InstantAdminDatabase } from "@instantdb/admin";
 import type { InstaQLEntity } from "@instantdb/core";
 import { map, pipe } from "@uri/gamla";
 import stringify from "safe-stable-stringify";
-import { apiClient, getUploadUrl } from "../../backend/src/api.ts";
+import {
+  apiClient,
+  getUploadUrl,
+  storeTransferPayload,
+} from "../../backend/src/api.ts";
 import type schema from "../../instant.schema.ts";
 import { chatPath } from "../../landing/src/paths.ts";
 import {
@@ -13,6 +17,7 @@ import {
 import { normalizeAlias } from "./alias.ts";
 import { buildSignedRequest } from "./authClient.ts";
 import {
+  base64ToBase64Url,
   decryptAsymmetric,
   decryptBinary,
   decryptSymmetric,
@@ -508,6 +513,20 @@ export const chatWithMeLink = (
     encodeURIComponent(publicSignKey)
   }`;
   return topic ? `${url}&topic=${encodeURIComponent(topic)}` : url;
+};
+
+export const generateTransferUrl = async (
+  creds: Credentials,
+  chatWithPubKey?: string,
+): Promise<string> => {
+  const aesKey = await generateSymmetricKey();
+  const encrypted = await encryptSymmetric(aesKey, creds);
+  const { relayId } = await storeTransferPayload(encrypted);
+  const fragment = `transfer=${relayId}:${base64ToBase64Url(aesKey)}`;
+  const url = `${baseUrl}${chatPath}`;
+  return chatWithPubKey
+    ? `${url}?chatWith=${encodeURIComponent(chatWithPubKey)}#${fragment}`
+    : `${url}#${fragment}`;
 };
 
 export const setAlias = async ({

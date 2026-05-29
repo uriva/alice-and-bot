@@ -34,6 +34,7 @@ export {
   downloadAttachment,
   type FileAttachment,
   fileSizeLimits,
+  generateTransferUrl,
   getConversationKey,
   handleWebhookUpdate,
   type ImageAttachment,
