@@ -246,3 +246,54 @@ Deno.test("switchSessionMessage renders markdown link with code", () => {
     "Open this link to start a chat tied to session a1: [Open chat](https://example.com/c)",
   );
 });
+
+Deno.test("chat.message hook does NOT abort the session on /aliceandbot command", async () => {
+  (globalThis as any).__filename = "index.ts";
+  const originalWebSocket = globalThis.WebSocket;
+  const originalFetch = globalThis.fetch;
+
+  globalThis.WebSocket = class MockWebSocket {
+    onopen: any;
+    onmessage: any;
+    onclose: any;
+    onerror: any;
+    readyState = 1;
+    constructor() {}
+    send() {}
+    close() {}
+  } as any;
+
+  globalThis.fetch = () => Promise.resolve(new Response(JSON.stringify({ ok: true })));
+
+  let abortCalled = false;
+  const mockClient = {
+    session: {
+      abort: () => {
+        abortCalled = true;
+        return Promise.resolve();
+      },
+      get: () => Promise.resolve({ data: { info: { title: "Test" } } }),
+    },
+    tui: {
+      showToast: () => Promise.resolve(),
+    },
+  };
+
+  try {
+    const { default: plugin } = await import("./index.ts");
+    const hooks = await plugin({ client: mockClient });
+    const hookInput = { sessionID: "test-session-id" };
+    const output = { parts: [{ type: "text", text: "/aliceandbot" }] };
+
+    try {
+      await hooks["chat.message"](hookInput, output);
+    } catch (err: any) {
+      assertEquals(err.name, "MessageAbortedError");
+    }
+
+    assertEquals(abortCalled, false);
+  } finally {
+    globalThis.WebSocket = originalWebSocket;
+    globalThis.fetch = originalFetch;
+  }
+});

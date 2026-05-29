@@ -25129,11 +25129,6 @@ Reply /yes, /no, or /always`
       if (aliceCommands.has(trimmed)) {
         await showAliceLink(hookInput.sessionID);
         output.parts.length = 0;
-        try {
-          await client.session.abort({ path: { id: hookInput.sessionID } });
-        } catch (e) {
-          await logDebug(`Failed to abort session: ${e?.message}`);
-        }
         throw {
           name: "MessageAbortedError",
           data: { message: "Command handled locally by Alice&Bot plugin" }

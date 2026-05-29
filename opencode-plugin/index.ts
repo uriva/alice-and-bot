@@ -1162,11 +1162,6 @@ export default async function plugin(input: unknown) {
       if (aliceCommands.has(trimmed)) {
         await showAliceLink(hookInput.sessionID);
         output.parts.length = 0;
-        try {
-          await client.session.abort({ path: { id: hookInput.sessionID } });
-        } catch (e: any) {
-          await logDebug(`Failed to abort session: ${e?.message}`);
-        }
         throw {
           name: "MessageAbortedError",
           data: { message: "Command handled locally by Alice&Bot plugin" },
