@@ -120,7 +120,22 @@ Deno.test("answersFromQuestionReplyText maps numeric replies to labels", () => {
   );
 });
 
-Deno.test("answersFromQuestionReplyText ignores free text replies", () => {
+Deno.test("answersFromQuestionReplyText ignores free text replies when custom is false", () => {
+  assertEquals(
+    answersFromQuestionReplyText({
+      id: "question-1",
+      questions: [{
+        header: "Pick One",
+        question: "What should I do?",
+        options: [{ label: "Continue" }, { label: "Stop" }],
+        custom: false,
+      }],
+    }, "do something else"),
+    undefined,
+  );
+});
+
+Deno.test("answersFromQuestionReplyText accepts free text as custom answer by default", () => {
   assertEquals(
     answersFromQuestionReplyText({
       id: "question-1",
@@ -130,6 +145,34 @@ Deno.test("answersFromQuestionReplyText ignores free text replies", () => {
         options: [{ label: "Continue" }, { label: "Stop" }],
       }],
     }, "do something else"),
+    [["do something else"]],
+  );
+});
+
+Deno.test("answersFromQuestionReplyText matches option labels case-insensitively", () => {
+  assertEquals(
+    answersFromQuestionReplyText({
+      id: "question-1",
+      questions: [{
+        header: "Pick One",
+        question: "What should I do?",
+        options: [{ label: "Continue" }, { label: "Stop" }],
+      }],
+    }, "continue"),
+    [["Continue"]],
+  );
+});
+
+Deno.test("answersFromQuestionReplyText ignores slash commands", () => {
+  assertEquals(
+    answersFromQuestionReplyText({
+      id: "question-1",
+      questions: [{
+        header: "Pick One",
+        question: "What should I do?",
+        options: [{ label: "Continue" }, { label: "Stop" }],
+      }],
+    }, "/sessions"),
     undefined,
   );
 });

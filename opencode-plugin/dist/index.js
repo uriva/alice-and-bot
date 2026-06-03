@@ -45,7 +45,7 @@ var __export = (target, all) => {
 };
 var __require = /* @__PURE__ */ createRequire(import.meta.url);
 
-// node_modules/safe-stable-stringify/index.js
+// node_modules/.deno/safe-stable-stringify@2.5.0/node_modules/safe-stable-stringify/index.js
 var require_safe_stable_stringify = __commonJS((exports, module) => {
   var { hasOwnProperty } = Object.prototype;
   var stringify = configure();
@@ -628,7 +628,7 @@ ${originalIndentation}`;
   }
 });
 
-// node_modules/isexe/windows.js
+// node_modules/.deno/isexe@2.0.0/node_modules/isexe/windows.js
 var require_windows = __commonJS((exports, module) => {
   module.exports = isexe;
   isexe.sync = sync;
@@ -666,7 +666,7 @@ var require_windows = __commonJS((exports, module) => {
   }
 });
 
-// node_modules/isexe/mode.js
+// node_modules/.deno/isexe@2.0.0/node_modules/isexe/mode.js
 var require_mode = __commonJS((exports, module) => {
   module.exports = isexe;
   isexe.sync = sync;
@@ -697,7 +697,7 @@ var require_mode = __commonJS((exports, module) => {
   }
 });
 
-// node_modules/isexe/index.js
+// node_modules/.deno/isexe@2.0.0/node_modules/isexe/index.js
 var require_isexe = __commonJS((exports, module) => {
   var fs4 = __require("fs");
   var core2;
@@ -750,7 +750,7 @@ var require_isexe = __commonJS((exports, module) => {
   }
 });
 
-// node_modules/which/which.js
+// node_modules/.deno/which@2.0.2/node_modules/which/which.js
 var require_which = __commonJS((exports, module) => {
   var isWindows = process.platform === "win32" || process.env.OSTYPE === "cygwin" || process.env.OSTYPE === "msys";
   var path = __require("path");
@@ -841,7 +841,7 @@ var require_which = __commonJS((exports, module) => {
   which.sync = whichSync;
 });
 
-// node_modules/path-key/index.js
+// node_modules/.deno/path-key@3.1.1/node_modules/path-key/index.js
 var require_path_key = __commonJS((exports, module) => {
   var pathKey = (options = {}) => {
     const environment = options.env || process.env;
@@ -855,7 +855,7 @@ var require_path_key = __commonJS((exports, module) => {
   module.exports.default = pathKey;
 });
 
-// node_modules/cross-spawn/lib/util/resolveCommand.js
+// node_modules/.deno/cross-spawn@7.0.6/node_modules/cross-spawn/lib/util/resolveCommand.js
 var require_resolveCommand = __commonJS((exports, module) => {
   var path = __require("path");
   var which = require_which();
@@ -892,7 +892,7 @@ var require_resolveCommand = __commonJS((exports, module) => {
   module.exports = resolveCommand;
 });
 
-// node_modules/cross-spawn/lib/util/escape.js
+// node_modules/.deno/cross-spawn@7.0.6/node_modules/cross-spawn/lib/util/escape.js
 var require_escape = __commonJS((exports, module) => {
   var metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
   function escapeCommand(arg) {
@@ -914,12 +914,12 @@ var require_escape = __commonJS((exports, module) => {
   exports.argument = escapeArgument;
 });
 
-// node_modules/shebang-regex/index.js
+// node_modules/.deno/shebang-regex@3.0.0/node_modules/shebang-regex/index.js
 var require_shebang_regex = __commonJS((exports, module) => {
   module.exports = /^#!(.*)/;
 });
 
-// node_modules/shebang-command/index.js
+// node_modules/.deno/shebang-command@2.0.0/node_modules/shebang-command/index.js
 var require_shebang_command = __commonJS((exports, module) => {
   var shebangRegex = require_shebang_regex();
   module.exports = (string5 = "") => {
@@ -936,7 +936,7 @@ var require_shebang_command = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/cross-spawn/lib/util/readShebang.js
+// node_modules/.deno/cross-spawn@7.0.6/node_modules/cross-spawn/lib/util/readShebang.js
 var require_readShebang = __commonJS((exports, module) => {
   var fs4 = __require("fs");
   var shebangCommand = require_shebang_command();
@@ -954,7 +954,7 @@ var require_readShebang = __commonJS((exports, module) => {
   module.exports = readShebang;
 });
 
-// node_modules/cross-spawn/lib/parse.js
+// node_modules/.deno/cross-spawn@7.0.6/node_modules/cross-spawn/lib/parse.js
 var require_parse = __commonJS((exports, module) => {
   var path = __require("path");
   var resolveCommand = require_resolveCommand();
@@ -1013,7 +1013,7 @@ var require_parse = __commonJS((exports, module) => {
   module.exports = parse5;
 });
 
-// node_modules/cross-spawn/lib/enoent.js
+// node_modules/.deno/cross-spawn@7.0.6/node_modules/cross-spawn/lib/enoent.js
 var require_enoent = __commonJS((exports, module) => {
   var isWin = process.platform === "win32";
   function notFoundError(original, syscall) {
@@ -1060,7 +1060,7 @@ var require_enoent = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/cross-spawn/index.js
+// node_modules/.deno/cross-spawn@7.0.6/node_modules/cross-spawn/index.js
 var require_cross_spawn = __commonJS((exports, module) => {
   var cp = __require("child_process");
   var parse5 = require_parse();
@@ -1084,7 +1084,7 @@ var require_cross_spawn = __commonJS((exports, module) => {
   module.exports._enoent = enoent;
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/strip-final-newline/index.js
+// node_modules/.deno/strip-final-newline@2.0.0/node_modules/strip-final-newline/index.js
 var require_strip_final_newline = __commonJS((exports, module) => {
   module.exports = (input) => {
     const LF = typeof input === "string" ? `
@@ -1101,7 +1101,7 @@ var require_strip_final_newline = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/npm-run-path/index.js
+// node_modules/.deno/npm-run-path@4.0.1/node_modules/npm-run-path/index.js
 var require_npm_run_path = __commonJS((exports, module) => {
   var path = __require("path");
   var pathKey = require_path_key();
@@ -1139,7 +1139,7 @@ var require_npm_run_path = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/mimic-fn/index.js
+// node_modules/.deno/mimic-fn@2.1.0/node_modules/mimic-fn/index.js
 var require_mimic_fn = __commonJS((exports, module) => {
   var mimicFn = (to, from) => {
     for (const prop2 of Reflect.ownKeys(from)) {
@@ -1151,7 +1151,7 @@ var require_mimic_fn = __commonJS((exports, module) => {
   module.exports.default = mimicFn;
 });
 
-// node_modules/onetime/index.js
+// node_modules/.deno/onetime@5.1.2/node_modules/onetime/index.js
 var require_onetime = __commonJS((exports, module) => {
   var mimicFn = require_mimic_fn();
   var calledFunctions = new WeakMap;
@@ -1186,7 +1186,7 @@ var require_onetime = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/human-signals/build/src/core.js
+// node_modules/.deno/human-signals@2.1.0/node_modules/human-signals/build/src/core.js
 var require_core = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.SIGNALS = undefined;
@@ -1464,7 +1464,7 @@ var require_core = __commonJS((exports) => {
   exports.SIGNALS = SIGNALS;
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/human-signals/build/src/realtime.js
+// node_modules/.deno/human-signals@2.1.0/node_modules/human-signals/build/src/realtime.js
 var require_realtime = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.SIGRTMAX = exports.getRealtimeSignals = undefined;
@@ -1487,7 +1487,7 @@ var require_realtime = __commonJS((exports) => {
   exports.SIGRTMAX = SIGRTMAX;
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/human-signals/build/src/signals.js
+// node_modules/.deno/human-signals@2.1.0/node_modules/human-signals/build/src/signals.js
 var require_signals = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.getSignals = undefined;
@@ -1517,7 +1517,7 @@ var require_signals = __commonJS((exports) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/human-signals/build/src/main.js
+// node_modules/.deno/human-signals@2.1.0/node_modules/human-signals/build/src/main.js
 var require_main = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.signalsByNumber = exports.signalsByName = undefined;
@@ -1571,7 +1571,7 @@ var require_main = __commonJS((exports) => {
   exports.signalsByNumber = signalsByNumber;
 });
 
-// node_modules/run-jxa/node_modules/execa/lib/error.js
+// node_modules/.deno/execa@5.1.1/node_modules/execa/lib/error.js
 var require_error = __commonJS((exports, module) => {
   var { signalsByName } = require_main();
   var getErrorPrefix = ({ timedOut, timeout: timeout2, errorCode, signal, signalDescription, exitCode, isCanceled }) => {
@@ -1646,7 +1646,7 @@ ${error38.message}` : execaMessage;
   module.exports = makeError;
 });
 
-// node_modules/run-jxa/node_modules/execa/lib/stdio.js
+// node_modules/.deno/execa@5.1.1/node_modules/execa/lib/stdio.js
 var require_stdio = __commonJS((exports, module) => {
   var aliases = ["stdin", "stdout", "stderr"];
   var hasAlias = (options) => aliases.some((alias) => options[alias] !== undefined);
@@ -1686,7 +1686,7 @@ var require_stdio = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/signal-exit/signals.js
+// node_modules/.deno/signal-exit@3.0.7/node_modules/signal-exit/signals.js
 var require_signals2 = __commonJS((exports, module) => {
   module.exports = [
     "SIGABRT",
@@ -1703,7 +1703,7 @@ var require_signals2 = __commonJS((exports, module) => {
   }
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/signal-exit/index.js
+// node_modules/.deno/signal-exit@3.0.7/node_modules/signal-exit/index.js
 var require_signal_exit = __commonJS((exports, module) => {
   var process4 = global.process;
   var processOk = function(process5) {
@@ -1856,7 +1856,7 @@ var require_signal_exit = __commonJS((exports, module) => {
   var processEmit;
 });
 
-// node_modules/run-jxa/node_modules/execa/lib/kill.js
+// node_modules/.deno/execa@5.1.1/node_modules/execa/lib/kill.js
 var require_kill = __commonJS((exports, module) => {
   var os2 = __require("os");
   var onExit = require_signal_exit();
@@ -1943,7 +1943,7 @@ var require_kill = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/is-stream/index.js
+// node_modules/.deno/is-stream@2.0.1/node_modules/is-stream/index.js
 var require_is_stream = __commonJS((exports, module) => {
   var isStream = (stream) => stream !== null && typeof stream === "object" && typeof stream.pipe === "function";
   isStream.writable = (stream) => isStream(stream) && stream.writable !== false && typeof stream._write === "function" && typeof stream._writableState === "object";
@@ -1953,7 +1953,7 @@ var require_is_stream = __commonJS((exports, module) => {
   module.exports = isStream;
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/get-stream/buffer-stream.js
+// node_modules/.deno/get-stream@6.0.1/node_modules/get-stream/buffer-stream.js
 var require_buffer_stream = __commonJS((exports, module) => {
   var { PassThrough: PassThroughStream } = __require("stream");
   module.exports = (options) => {
@@ -1995,7 +1995,7 @@ var require_buffer_stream = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/node_modules/get-stream/index.js
+// node_modules/.deno/get-stream@6.0.1/node_modules/get-stream/index.js
 var require_get_stream = __commonJS((exports, module) => {
   var { constants: BufferConstants } = __require("buffer");
   var stream = __require("stream");
@@ -2048,7 +2048,7 @@ var require_get_stream = __commonJS((exports, module) => {
   module.exports.MaxBufferError = MaxBufferError;
 });
 
-// node_modules/merge-stream/index.js
+// node_modules/.deno/merge-stream@2.0.0/node_modules/merge-stream/index.js
 var require_merge_stream = __commonJS((exports, module) => {
   var { PassThrough } = __require("stream");
   module.exports = function() {
@@ -2085,7 +2085,7 @@ var require_merge_stream = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/lib/stream.js
+// node_modules/.deno/execa@5.1.1/node_modules/execa/lib/stream.js
 var require_stream = __commonJS((exports, module) => {
   var isStream = require_is_stream();
   var getStream = require_get_stream();
@@ -2161,7 +2161,7 @@ var require_stream = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/lib/promise.js
+// node_modules/.deno/execa@5.1.1/node_modules/execa/lib/promise.js
 var require_promise = __commonJS((exports, module) => {
   var nativePromisePrototype = (async () => {})().constructor.prototype;
   var descriptors = ["then", "catch", "finally"].map((property) => [
@@ -2196,7 +2196,7 @@ var require_promise = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/lib/command.js
+// node_modules/.deno/execa@5.1.1/node_modules/execa/lib/command.js
 var require_command = __commonJS((exports, module) => {
   var normalizeArgs = (file2, args = []) => {
     if (!Array.isArray(args)) {
@@ -2238,7 +2238,7 @@ var require_command = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/run-jxa/node_modules/execa/index.js
+// node_modules/.deno/execa@5.1.1/node_modules/execa/index.js
 var require_execa = __commonJS((exports, module) => {
   var path = __require("path");
   var childProcess = __require("child_process");
@@ -2459,7 +2459,7 @@ var require_execa = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/semver/internal/constants.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/internal/constants.js
 var require_constants = __commonJS((exports, module) => {
   var SEMVER_SPEC_VERSION = "2.0.0";
   var MAX_LENGTH = 256;
@@ -2487,13 +2487,13 @@ var require_constants = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/semver/internal/debug.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/internal/debug.js
 var require_debug = __commonJS((exports, module) => {
   var debug2 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {};
   module.exports = debug2;
 });
 
-// node_modules/semver/internal/re.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/internal/re.js
 var require_re = __commonJS((exports, module) => {
   var {
     MAX_SAFE_COMPONENT_LENGTH,
@@ -2578,7 +2578,7 @@ var require_re = __commonJS((exports, module) => {
   createToken("GTE0PRE", "^\\s*>=\\s*0\\.0\\.0-0\\s*$");
 });
 
-// node_modules/semver/internal/parse-options.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS((exports, module) => {
   var looseOption = Object.freeze({ loose: true });
   var emptyOpts = Object.freeze({});
@@ -2594,7 +2594,7 @@ var require_parse_options = __commonJS((exports, module) => {
   module.exports = parseOptions;
 });
 
-// node_modules/semver/internal/identifiers.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS((exports, module) => {
   var numeric = /^[0-9]+$/;
   var compareIdentifiers = (a, b) => {
@@ -2616,7 +2616,7 @@ var require_identifiers = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/semver/classes/semver.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/classes/semver.js
 var require_semver = __commonJS((exports, module) => {
   var debug2 = require_debug();
   var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -2885,7 +2885,7 @@ var require_semver = __commonJS((exports, module) => {
   module.exports = SemVer;
 });
 
-// node_modules/semver/functions/parse.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/parse.js
 var require_parse2 = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var parse5 = (version2, options, throwErrors = false) => {
@@ -2904,7 +2904,7 @@ var require_parse2 = __commonJS((exports, module) => {
   module.exports = parse5;
 });
 
-// node_modules/semver/functions/valid.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/valid.js
 var require_valid = __commonJS((exports, module) => {
   var parse5 = require_parse2();
   var valid = (version2, options) => {
@@ -2914,7 +2914,7 @@ var require_valid = __commonJS((exports, module) => {
   module.exports = valid;
 });
 
-// node_modules/semver/functions/clean.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/clean.js
 var require_clean = __commonJS((exports, module) => {
   var parse5 = require_parse2();
   var clean2 = (version2, options) => {
@@ -2924,7 +2924,7 @@ var require_clean = __commonJS((exports, module) => {
   module.exports = clean2;
 });
 
-// node_modules/semver/functions/inc.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/inc.js
 var require_inc = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var inc = (version2, release, options, identifier, identifierBase) => {
@@ -2942,7 +2942,7 @@ var require_inc = __commonJS((exports, module) => {
   module.exports = inc;
 });
 
-// node_modules/semver/functions/diff.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/diff.js
 var require_diff = __commonJS((exports, module) => {
   var parse5 = require_parse2();
   var diff = (version1, version2) => {
@@ -2983,28 +2983,28 @@ var require_diff = __commonJS((exports, module) => {
   module.exports = diff;
 });
 
-// node_modules/semver/functions/major.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/major.js
 var require_major = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var major = (a, loose) => new SemVer(a, loose).major;
   module.exports = major;
 });
 
-// node_modules/semver/functions/minor.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/minor.js
 var require_minor = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var minor = (a, loose) => new SemVer(a, loose).minor;
   module.exports = minor;
 });
 
-// node_modules/semver/functions/patch.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/patch.js
 var require_patch = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var patch = (a, loose) => new SemVer(a, loose).patch;
   module.exports = patch;
 });
 
-// node_modules/semver/functions/prerelease.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS((exports, module) => {
   var parse5 = require_parse2();
   var prerelease = (version2, options) => {
@@ -3014,28 +3014,28 @@ var require_prerelease = __commonJS((exports, module) => {
   module.exports = prerelease;
 });
 
-// node_modules/semver/functions/compare.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/compare.js
 var require_compare = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
   module.exports = compare;
 });
 
-// node_modules/semver/functions/rcompare.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS((exports, module) => {
   var compare = require_compare();
   var rcompare = (a, b, loose) => compare(b, a, loose);
   module.exports = rcompare;
 });
 
-// node_modules/semver/functions/compare-loose.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS((exports, module) => {
   var compare = require_compare();
   var compareLoose = (a, b) => compare(a, b, true);
   module.exports = compareLoose;
 });
 
-// node_modules/semver/functions/compare-build.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var compareBuild = (a, b, loose) => {
@@ -3046,63 +3046,63 @@ var require_compare_build = __commonJS((exports, module) => {
   module.exports = compareBuild;
 });
 
-// node_modules/semver/functions/sort.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/sort.js
 var require_sort = __commonJS((exports, module) => {
   var compareBuild = require_compare_build();
   var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
   module.exports = sort;
 });
 
-// node_modules/semver/functions/rsort.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS((exports, module) => {
   var compareBuild = require_compare_build();
   var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
   module.exports = rsort;
 });
 
-// node_modules/semver/functions/gt.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/gt.js
 var require_gt = __commonJS((exports, module) => {
   var compare = require_compare();
   var gt = (a, b, loose) => compare(a, b, loose) > 0;
   module.exports = gt;
 });
 
-// node_modules/semver/functions/lt.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/lt.js
 var require_lt = __commonJS((exports, module) => {
   var compare = require_compare();
   var lt = (a, b, loose) => compare(a, b, loose) < 0;
   module.exports = lt;
 });
 
-// node_modules/semver/functions/eq.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/eq.js
 var require_eq = __commonJS((exports, module) => {
   var compare = require_compare();
   var eq = (a, b, loose) => compare(a, b, loose) === 0;
   module.exports = eq;
 });
 
-// node_modules/semver/functions/neq.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/neq.js
 var require_neq = __commonJS((exports, module) => {
   var compare = require_compare();
   var neq = (a, b, loose) => compare(a, b, loose) !== 0;
   module.exports = neq;
 });
 
-// node_modules/semver/functions/gte.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/gte.js
 var require_gte = __commonJS((exports, module) => {
   var compare = require_compare();
   var gte = (a, b, loose) => compare(a, b, loose) >= 0;
   module.exports = gte;
 });
 
-// node_modules/semver/functions/lte.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/lte.js
 var require_lte = __commonJS((exports, module) => {
   var compare = require_compare();
   var lte = (a, b, loose) => compare(a, b, loose) <= 0;
   module.exports = lte;
 });
 
-// node_modules/semver/functions/cmp.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS((exports, module) => {
   var eq = require_eq();
   var neq = require_neq();
@@ -3149,7 +3149,7 @@ var require_cmp = __commonJS((exports, module) => {
   module.exports = cmp;
 });
 
-// node_modules/semver/functions/coerce.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var parse5 = require_parse2();
@@ -3192,7 +3192,45 @@ var require_coerce = __commonJS((exports, module) => {
   module.exports = coerce2;
 });
 
-// node_modules/semver/internal/lrucache.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/truncate.js
+var require_truncate = __commonJS((exports, module) => {
+  var parse5 = require_parse2();
+  var constants = require_constants();
+  var SemVer = require_semver();
+  var truncate = (version2, truncation, options) => {
+    if (!constants.RELEASE_TYPES.includes(truncation)) {
+      return null;
+    }
+    const clonedVersion = cloneInputVersion(version2, options);
+    return clonedVersion && doTruncation(clonedVersion, truncation);
+  };
+  var cloneInputVersion = (version2, options) => {
+    const versionStringToParse = version2 instanceof SemVer ? version2.version : version2;
+    return parse5(versionStringToParse, options);
+  };
+  var doTruncation = (version2, truncation) => {
+    if (isPrerelease(truncation)) {
+      return version2.version;
+    }
+    version2.prerelease = [];
+    switch (truncation) {
+      case "major":
+        version2.minor = 0;
+        version2.patch = 0;
+        break;
+      case "minor":
+        version2.patch = 0;
+        break;
+    }
+    return version2.format();
+  };
+  var isPrerelease = (type) => {
+    return type.startsWith("pre");
+  };
+  module.exports = truncate;
+});
+
+// node_modules/.deno/semver@7.8.1/node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS((exports, module) => {
   class LRUCache {
     constructor() {
@@ -3227,7 +3265,7 @@ var require_lrucache = __commonJS((exports, module) => {
   module.exports = LRUCache;
 });
 
-// node_modules/semver/classes/range.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/classes/range.js
 var require_range = __commonJS((exports, module) => {
   var SPACE_CHARACTERS = /\s+/g;
 
@@ -3296,6 +3334,7 @@ var require_range = __commonJS((exports, module) => {
       return this.range;
     }
     parseRange(range) {
+      range = range.replace(BUILDSTRIPRE, "");
       const memoOpts = (this.options.includePrerelease && FLAG_INCLUDE_PRERELEASE) | (this.options.loose && FLAG_LOOSE);
       const memoKey = memoOpts + ":" + range;
       const cached2 = cache.get(memoKey);
@@ -3377,12 +3416,14 @@ var require_range = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var {
     safeRe: re,
+    src,
     t,
     comparatorTrimReplace,
     tildeTrimReplace,
     caretTrimReplace
   } = require_re();
   var { FLAG_INCLUDE_PRERELEASE, FLAG_LOOSE } = require_constants();
+  var BUILDSTRIPRE = new RegExp(src[t.BUILD], "g");
   var isNullSet = (c) => c.value === "<0.0.0-0";
   var isAny = (c) => c.value === "";
   var isSatisfiable = (comparators, options) => {
@@ -3601,7 +3642,7 @@ var require_range = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/semver/classes/comparator.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS((exports, module) => {
   var ANY = Symbol("SemVer ANY");
 
@@ -3712,7 +3753,7 @@ var require_comparator = __commonJS((exports, module) => {
   var Range = require_range();
 });
 
-// node_modules/semver/functions/satisfies.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS((exports, module) => {
   var Range = require_range();
   var satisfies = (version2, range, options) => {
@@ -3726,14 +3767,14 @@ var require_satisfies = __commonJS((exports, module) => {
   module.exports = satisfies;
 });
 
-// node_modules/semver/ranges/to-comparators.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS((exports, module) => {
   var Range = require_range();
   var toComparators = (range, options) => new Range(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
   module.exports = toComparators;
 });
 
-// node_modules/semver/ranges/max-satisfying.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var Range = require_range();
@@ -3759,7 +3800,7 @@ var require_max_satisfying = __commonJS((exports, module) => {
   module.exports = maxSatisfying;
 });
 
-// node_modules/semver/ranges/min-satisfying.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var Range = require_range();
@@ -3785,7 +3826,7 @@ var require_min_satisfying = __commonJS((exports, module) => {
   module.exports = minSatisfying;
 });
 
-// node_modules/semver/ranges/min-version.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var Range = require_range();
@@ -3839,7 +3880,7 @@ var require_min_version = __commonJS((exports, module) => {
   module.exports = minVersion;
 });
 
-// node_modules/semver/ranges/valid.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS((exports, module) => {
   var Range = require_range();
   var validRange = (range, options) => {
@@ -3852,7 +3893,7 @@ var require_valid2 = __commonJS((exports, module) => {
   module.exports = validRange;
 });
 
-// node_modules/semver/ranges/outside.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/outside.js
 var require_outside = __commonJS((exports, module) => {
   var SemVer = require_semver();
   var Comparator = require_comparator();
@@ -3918,21 +3959,21 @@ var require_outside = __commonJS((exports, module) => {
   module.exports = outside;
 });
 
-// node_modules/semver/ranges/gtr.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS((exports, module) => {
   var outside = require_outside();
   var gtr = (version2, range, options) => outside(version2, range, ">", options);
   module.exports = gtr;
 });
 
-// node_modules/semver/ranges/ltr.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS((exports, module) => {
   var outside = require_outside();
   var ltr = (version2, range, options) => outside(version2, range, "<", options);
   module.exports = ltr;
 });
 
-// node_modules/semver/ranges/intersects.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS((exports, module) => {
   var Range = require_range();
   var intersects = (r1, r2, options) => {
@@ -3943,7 +3984,7 @@ var require_intersects = __commonJS((exports, module) => {
   module.exports = intersects;
 });
 
-// node_modules/semver/ranges/simplify.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS((exports, module) => {
   var satisfies = require_satisfies();
   var compare = require_compare();
@@ -3990,7 +4031,7 @@ var require_simplify = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/semver/ranges/subset.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/ranges/subset.js
 var require_subset = __commonJS((exports, module) => {
   var Range = require_range();
   var Comparator = require_comparator();
@@ -4099,7 +4140,7 @@ var require_subset = __commonJS((exports, module) => {
           if (higher === c && higher !== gt) {
             return false;
           }
-        } else if (gt.operator === ">=" && !satisfies(gt.semver, String(c), options)) {
+        } else if (gt.operator === ">=" && !c.test(gt.semver)) {
           return false;
         }
       }
@@ -4114,7 +4155,7 @@ var require_subset = __commonJS((exports, module) => {
           if (lower === c && lower !== lt) {
             return false;
           }
-        } else if (lt.operator === "<=" && !satisfies(lt.semver, String(c), options)) {
+        } else if (lt.operator === "<=" && !c.test(lt.semver)) {
           return false;
         }
       }
@@ -4150,7 +4191,7 @@ var require_subset = __commonJS((exports, module) => {
   module.exports = subset;
 });
 
-// node_modules/semver/index.js
+// node_modules/.deno/semver@7.8.1/node_modules/semver/index.js
 var require_semver2 = __commonJS((exports, module) => {
   var internalRe = require_re();
   var constants = require_constants();
@@ -4179,6 +4220,7 @@ var require_semver2 = __commonJS((exports, module) => {
   var lte = require_lte();
   var cmp = require_cmp();
   var coerce2 = require_coerce();
+  var truncate = require_truncate();
   var Comparator = require_comparator();
   var Range = require_range();
   var satisfies = require_satisfies();
@@ -4217,6 +4259,7 @@ var require_semver2 = __commonJS((exports, module) => {
     lte,
     cmp,
     coerce: coerce2,
+    truncate,
     Comparator,
     Range,
     satisfies,
@@ -4242,7 +4285,7 @@ var require_semver2 = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/@jsr/uri__gamla/src/promise.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/promise.js
 var isPromise = (x) => {
   if (x == null)
     return false;
@@ -4250,13 +4293,13 @@ var isPromise = (x) => {
   return typeof obj.then === "function" && typeof obj.catch === "function" && typeof obj.finally === "function";
 };
 
-// node_modules/@jsr/uri__gamla/src/array.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/array.js
 var head = (x) => x[0];
 var second = (x) => x[1];
 var wrapArray = (x) => [
   x
 ];
-// node_modules/@jsr/uri__gamla/src/reduce.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/reduce.js
 var reduceHelper = (reducer, s, xs, firstIndex) => {
   let current = s;
   for (let i = firstIndex;i < xs.length; i++) {
@@ -4269,7 +4312,7 @@ var reduceHelper = (reducer, s, xs, firstIndex) => {
 };
 var reduce = (reducer, initial) => (xs) => reduceHelper(reducer, initial(), xs, 0);
 
-// node_modules/@jsr/uri__gamla/src/trace.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/trace.js
 var frameToString = ({ line, file, column }) => `${file}:${line}:${column}`;
 var parseStackLine = (stackLine) => {
   const matches = /\s+at\s+(.+\s)?\(?(.+):(\d+):(\d+)\)?/.exec(stackLine) || /(.+)@(.+):(\d+):(\d+)/g.exec(stackLine);
@@ -4289,7 +4332,7 @@ var currentLocation = (depth) => {
   return x ? frameToString(x) : "stack line could not be parsed";
 };
 
-// node_modules/@jsr/uri__gamla/src/composition.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/composition.js
 var pipeWithoutStack = (...fs) => (...x) => reduce((v, f) => f(v), () => fs[0](...x))(fs.slice(1));
 var augmentAndRethrowException = (location) => (e) => {
   if (e === undefined) {
@@ -4318,7 +4361,7 @@ var errorBoundry = (f) => {
 };
 var pipe = (...fs) => errorBoundry(pipeWithoutStack(...fs));
 var identity = (x) => x;
-// node_modules/@jsr/uri__gamla/src/map.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/map.js
 var mapWithoutStack = (f) => (xs) => {
   const results = [];
   for (const x of xs) {
@@ -4328,7 +4371,7 @@ var mapWithoutStack = (f) => (xs) => {
 };
 var map = (...fs) => errorBoundry(mapWithoutStack(...fs));
 
-// node_modules/@jsr/uri__gamla/src/juxt.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/juxt.js
 var juxt = (...fs) => (...x) => {
   const result = [];
   let anyAsync = false;
@@ -4340,9 +4383,9 @@ var juxt = (...fs) => (...x) => {
 };
 var pairRight = (f) => (a) => juxt(identity, f)(a);
 
-// node_modules/@jsr/uri__gamla/src/filter.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/filter.js
 var filter = (f) => pipe(map(pairRight(f)), (array) => array.filter(second), map(head));
-// node_modules/@jsr/noble__hashes/src/utils.js
+// node_modules/.deno/@jsr+noble__hashes@2.0.0/node_modules/@jsr/noble__hashes/src/utils.js
 /*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 function isBytes(a) {
   return a instanceof Uint8Array || ArrayBuffer.isView(a) && a.constructor.name === "Uint8Array";
@@ -4384,7 +4427,7 @@ function rotr(word, shift) {
   return word << 32 - shift | word >>> shift;
 }
 
-// node_modules/@jsr/noble__hashes/src/_md.js
+// node_modules/.deno/@jsr+noble__hashes@2.0.0/node_modules/@jsr/noble__hashes/src/_md.js
 function Chi(a, b, c) {
   return a & b ^ ~a & c;
 }
@@ -4543,7 +4586,7 @@ var SHA512_IV = /* @__PURE__ */ Uint32Array.from([
   327033209
 ]);
 
-// node_modules/@jsr/noble__hashes/src/_u64.js
+// node_modules/.deno/@jsr+noble__hashes@2.0.0/node_modules/@jsr/noble__hashes/src/_u64.js
 var U32_MASK64 = /* @__PURE__ */ BigInt(2 ** 32 - 1);
 var _32n = /* @__PURE__ */ BigInt(32);
 function fromBig(n, le = false) {
@@ -4593,7 +4636,7 @@ var add4H = (low, Ah, Bh, Ch, Dh) => Ah + Bh + Ch + Dh + (low / 2 ** 32 | 0) | 0
 var add5L = (Al, Bl, Cl, Dl, El) => (Al >>> 0) + (Bl >>> 0) + (Cl >>> 0) + (Dl >>> 0) + (El >>> 0);
 var add5H = (low, Ah, Bh, Ch, Dh, Eh) => Ah + Bh + Ch + Dh + Eh + (low / 2 ** 32 | 0) | 0;
 
-// node_modules/@jsr/noble__hashes/src/sha2.js
+// node_modules/.deno/@jsr+noble__hashes@2.0.0/node_modules/@jsr/noble__hashes/src/sha2.js
 var SHA256_K = /* @__PURE__ */ Uint32Array.from([
   1116352408,
   1899447441,
@@ -5082,15 +5125,15 @@ class _SHA512_256 extends SHA2_64B {
   }
 }
 
-// node_modules/@jsr/std__encoding/_util.js
+// node_modules/.deno/@jsr+std__encoding@0.224.0/node_modules/@jsr/std__encoding/_util.js
 var encoder = new TextEncoder;
 
-// node_modules/@jsr/std__encoding/hex.js
+// node_modules/.deno/@jsr+std__encoding@0.224.0/node_modules/@jsr/std__encoding/hex.js
 var hexTable = new TextEncoder().encode("0123456789abcdef");
 var textEncoder = new TextEncoder;
 var textDecoder = new TextDecoder;
 
-// node_modules/@jsr/uri__gamla/src/mapping.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/mapping.js
 var groupByManyReduce = (keys, reducer, initial) => (it) => {
   const result = {};
   for (const x of it) {
@@ -5113,7 +5156,7 @@ var onEntries = (transformation) => pipe(Object.entries, transformation, Object.
 var entryMap = pipe(map, onEntries);
 var entryFilter = pipe(filter, onEntries);
 
-// node_modules/@jsr/uri__gamla/src/io.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/io.js
 var timeoutHelper = (error) => (ms, f) => (...args) => new Promise((resolve, reject) => {
   let wasResolved = false;
   let rejected = false;
@@ -5133,7 +5176,7 @@ var timeoutHelper = (error) => (ms, f) => (...args) => new Promise((resolve, rej
 });
 var timeout = timeoutHelper(new Error("Timed out"));
 var table = new WeakMap;
-// node_modules/@jsr/uri__gamla/src/lock.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/lock.js
 var semaphore = (max) => {
   let counter = 0;
   const waiting = [];
@@ -5178,22 +5221,22 @@ var throttleKey = (key) => (max) => (f) => {
   };
 };
 var throttle = throttleKey(() => "");
-// node_modules/@jsr/uri__gamla/src/math.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/math.js
 var addition = (a, b) => a + b;
 var sum = reduce(addition, () => 0);
-// node_modules/@jsr/uri__gamla/src/matrix.js
+// node_modules/.deno/@jsr+uri__gamla@0.0.14/node_modules/@jsr/uri__gamla/src/matrix.js
 var product = reduce((a, b) => a.flatMap((x) => b.map((y) => [
   ...x,
   y
 ])), () => [
   []
 ]);
-// node_modules/safe-stable-stringify/esm/wrapper.js
+// node_modules/.deno/safe-stable-stringify@2.5.0/node_modules/safe-stable-stringify/esm/wrapper.js
 var import___ = __toESM(require_safe_stable_stringify(), 1);
 var configure = import___.default.configure;
 var wrapper_default = import___.default;
 
-// node_modules/@jsr/uri__typed-api/src/main.js
+// node_modules/.deno/@jsr+uri__typed-api@0.0.10/node_modules/@jsr/uri__typed-api/src/main.js
 var endpoint = (def) => def;
 var httpCommunication = (serverUrl) => async (params) => {
   const response = await fetch(serverUrl, {
@@ -5206,7 +5249,7 @@ var httpCommunication = (serverUrl) => async (params) => {
   return response.json();
 };
 var apiClient = (communicateWithServer, _apiDefinition) => (params) => communicateWithServer(params);
-// node_modules/zod/dist/esm/v4/classic/external.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/classic/external.js
 var exports_external = {};
 __export(exports_external, {
   xid: () => xid2,
@@ -5415,7 +5458,7 @@ __export(exports_external, {
   $brand: () => $brand
 });
 
-// node_modules/zod/dist/esm/v4/core/index.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/index.js
 var exports_core2 = {};
 __export(exports_core2, {
   version: () => version,
@@ -5655,7 +5698,7 @@ __export(exports_core2, {
   $ZodAny: () => $ZodAny
 });
 
-// node_modules/zod/dist/esm/v4/core/core.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/core.js
 function $constructor(name, initializer, params) {
   function init(inst, def) {
     var _a;
@@ -5712,7 +5755,7 @@ function config(newConfig) {
     Object.assign(globalConfig, newConfig);
   return globalConfig;
 }
-// node_modules/zod/dist/esm/v4/core/util.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/util.js
 var exports_util = {};
 __export(exports_util, {
   unwrapMessage: () => unwrapMessage,
@@ -6218,7 +6261,7 @@ class Class {
   constructor(..._args) {}
 }
 
-// node_modules/zod/dist/esm/v4/core/errors.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -6361,7 +6404,7 @@ function prettifyError(error) {
 `);
 }
 
-// node_modules/zod/dist/esm/v4/core/parse.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: false }) : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -6412,7 +6455,7 @@ var _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
   } : { success: true, data: result.value };
 };
 var safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
-// node_modules/zod/dist/esm/v4/core/regexes.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/regexes.js
 var exports_regexes = {};
 __export(exports_regexes, {
   xid: () => xid,
@@ -6528,7 +6571,7 @@ var _undefined = /undefined/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 
-// node_modules/zod/dist/esm/v4/core/checks.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a;
   inst._zod ?? (inst._zod = {});
@@ -7055,7 +7098,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// node_modules/zod/dist/esm/v4/core/doc.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/doc.js
 class Doc {
   constructor(args = []) {
     this.content = [];
@@ -7093,14 +7136,14 @@ class Doc {
   }
 }
 
-// node_modules/zod/dist/esm/v4/core/versions.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/versions.js
 var version = {
   major: 4,
   minor: 0,
   patch: 0
 };
 
-// node_modules/zod/dist/esm/v4/core/schemas.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a;
   inst ?? (inst = {});
@@ -8692,7 +8735,7 @@ function handleRefineResult(result, payload, input, inst) {
     payload.issues.push(issue(_iss));
   }
 }
-// node_modules/zod/dist/esm/v4/locales/index.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/index.js
 var exports_locales = {};
 __export(exports_locales, {
   zhTW: () => zh_TW_default,
@@ -8734,7 +8777,7 @@ __export(exports_locales, {
   ar: () => ar_default
 });
 
-// node_modules/zod/dist/esm/v4/locales/ar.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ar.js
 var error = () => {
   const Sizable = {
     string: { unit: "حرف", verb: "أن يحوي" },
@@ -8850,7 +8893,7 @@ function ar_default() {
     localeError: error()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/az.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/az.js
 var error2 = () => {
   const Sizable = {
     string: { unit: "simvol", verb: "olmalıdır" },
@@ -8965,7 +9008,7 @@ function az_default() {
     localeError: error2()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/be.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/be.js
 function getBelarusianPlural(count2, one, few, many) {
   const absCount = Math.abs(count2);
   const lastDigit = absCount % 10;
@@ -9129,7 +9172,7 @@ function be_default() {
     localeError: error3()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/ca.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ca.js
 var error4 = () => {
   const Sizable = {
     string: { unit: "caràcters", verb: "contenir" },
@@ -9246,7 +9289,7 @@ function ca_default() {
     localeError: error4()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/cs.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/cs.js
 var error5 = () => {
   const Sizable = {
     string: { unit: "znaků", verb: "mít" },
@@ -9381,7 +9424,7 @@ function cs_default() {
     localeError: error5()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/de.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/de.js
 var error6 = () => {
   const Sizable = {
     string: { unit: "Zeichen", verb: "zu haben" },
@@ -9497,7 +9540,7 @@ function de_default() {
     localeError: error6()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/en.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/en.js
 var parsedType = (data) => {
   const t = typeof data;
   switch (t) {
@@ -9614,7 +9657,7 @@ function en_default() {
     localeError: error7()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/es.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/es.js
 var error8 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "tener" },
@@ -9730,7 +9773,7 @@ function es_default() {
     localeError: error8()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/fa.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/fa.js
 var error9 = () => {
   const Sizable = {
     string: { unit: "کاراکتر", verb: "داشته باشد" },
@@ -9852,7 +9895,7 @@ function fa_default() {
     localeError: error9()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/fi.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/fi.js
 var error10 = () => {
   const Sizable = {
     string: { unit: "merkkiä", subject: "merkkijonon" },
@@ -9974,7 +10017,7 @@ function fi_default() {
     localeError: error10()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/fr.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/fr.js
 var error11 = () => {
   const Sizable = {
     string: { unit: "caractères", verb: "avoir" },
@@ -10090,7 +10133,7 @@ function fr_default() {
     localeError: error11()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/fr-CA.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/fr-CA.js
 var error12 = () => {
   const Sizable = {
     string: { unit: "caractères", verb: "avoir" },
@@ -10207,7 +10250,7 @@ function fr_CA_default() {
     localeError: error12()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/he.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/he.js
 var error13 = () => {
   const Sizable = {
     string: { unit: "אותיות", verb: "לכלול" },
@@ -10323,7 +10366,7 @@ function he_default() {
     localeError: error13()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/hu.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/hu.js
 var error14 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "legyen" },
@@ -10439,7 +10482,7 @@ function hu_default() {
     localeError: error14()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/id.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/id.js
 var error15 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "memiliki" },
@@ -10555,7 +10598,7 @@ function id_default() {
     localeError: error15()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/it.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/it.js
 var error16 = () => {
   const Sizable = {
     string: { unit: "caratteri", verb: "avere" },
@@ -10671,7 +10714,7 @@ function it_default() {
     localeError: error16()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/ja.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ja.js
 var error17 = () => {
   const Sizable = {
     string: { unit: "文字", verb: "である" },
@@ -10786,7 +10829,7 @@ function ja_default() {
     localeError: error17()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/kh.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/kh.js
 var error18 = () => {
   const Sizable = {
     string: { unit: "តួអក្សរ", verb: "គួរមាន" },
@@ -10903,7 +10946,7 @@ function kh_default() {
     localeError: error18()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/ko.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ko.js
 var error19 = () => {
   const Sizable = {
     string: { unit: "문자", verb: "to have" },
@@ -11024,7 +11067,7 @@ function ko_default() {
     localeError: error19()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/mk.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/mk.js
 var error20 = () => {
   const Sizable = {
     string: { unit: "знаци", verb: "да имаат" },
@@ -11141,7 +11184,7 @@ function mk_default() {
     localeError: error20()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/ms.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ms.js
 var error21 = () => {
   const Sizable = {
     string: { unit: "aksara", verb: "mempunyai" },
@@ -11257,7 +11300,7 @@ function ms_default() {
     localeError: error21()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/nl.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/nl.js
 var error22 = () => {
   const Sizable = {
     string: { unit: "tekens" },
@@ -11374,7 +11417,7 @@ function nl_default() {
     localeError: error22()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/no.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/no.js
 var error23 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "å ha" },
@@ -11490,7 +11533,7 @@ function no_default() {
     localeError: error23()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/ota.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ota.js
 var error24 = () => {
   const Sizable = {
     string: { unit: "harf", verb: "olmalıdır" },
@@ -11606,7 +11649,7 @@ function ota_default() {
     localeError: error24()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/pl.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/pl.js
 var error25 = () => {
   const Sizable = {
     string: { unit: "znaków", verb: "mieć" },
@@ -11723,7 +11766,7 @@ function pl_default() {
     localeError: error25()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/pt.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/pt.js
 var error26 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "ter" },
@@ -11839,7 +11882,7 @@ function pt_default() {
     localeError: error26()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/ru.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ru.js
 function getRussianPlural(count2, one, few, many) {
   const absCount = Math.abs(count2);
   const lastDigit = absCount % 10;
@@ -12003,7 +12046,7 @@ function ru_default() {
     localeError: error27()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/sl.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/sl.js
 var error28 = () => {
   const Sizable = {
     string: { unit: "znakov", verb: "imeti" },
@@ -12120,7 +12163,7 @@ function sl_default() {
     localeError: error28()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/sv.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/sv.js
 var error29 = () => {
   const Sizable = {
     string: { unit: "tecken", verb: "att ha" },
@@ -12238,7 +12281,7 @@ function sv_default() {
     localeError: error29()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/ta.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ta.js
 var error30 = () => {
   const Sizable = {
     string: { unit: "எழுத்துக்கள்", verb: "கொண்டிருக்க வேண்டும்" },
@@ -12355,7 +12398,7 @@ function ta_default() {
     localeError: error30()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/th.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/th.js
 var error31 = () => {
   const Sizable = {
     string: { unit: "ตัวอักษร", verb: "ควรมี" },
@@ -12472,7 +12515,7 @@ function th_default() {
     localeError: error31()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/tr.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/tr.js
 var parsedType2 = (data) => {
   const t = typeof data;
   switch (t) {
@@ -12587,7 +12630,7 @@ function tr_default() {
     localeError: error32()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/ua.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ua.js
 var error33 = () => {
   const Sizable = {
     string: { unit: "символів", verb: "матиме" },
@@ -12703,7 +12746,7 @@ function ua_default() {
     localeError: error33()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/ur.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/ur.js
 var error34 = () => {
   const Sizable = {
     string: { unit: "حروف", verb: "ہونا" },
@@ -12820,7 +12863,7 @@ function ur_default() {
     localeError: error34()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/vi.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/vi.js
 var error35 = () => {
   const Sizable = {
     string: { unit: "ký tự", verb: "có" },
@@ -12936,7 +12979,7 @@ function vi_default() {
     localeError: error35()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/zh-CN.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/zh-CN.js
 var error36 = () => {
   const Sizable = {
     string: { unit: "字符", verb: "包含" },
@@ -13052,7 +13095,7 @@ function zh_CN_default() {
     localeError: error36()
   };
 }
-// node_modules/zod/dist/esm/v4/locales/zh-TW.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/locales/zh-TW.js
 var error37 = () => {
   const Sizable = {
     string: { unit: "字元", verb: "擁有" },
@@ -13169,7 +13212,7 @@ function zh_TW_default() {
     localeError: error37()
   };
 }
-// node_modules/zod/dist/esm/v4/core/registries.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/registries.js
 var $output = Symbol("ZodOutput");
 var $input = Symbol("ZodInput");
 
@@ -13210,7 +13253,7 @@ function registry() {
   return new $ZodRegistry;
 }
 var globalRegistry = /* @__PURE__ */ registry();
-// node_modules/zod/dist/esm/v4/core/api.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/api.js
 function _string(Class2, params) {
   return new Class2({
     type: "string",
@@ -14042,7 +14085,7 @@ function _stringbool(Classes, _params) {
   return outerPipe;
 }
 
-// node_modules/zod/dist/esm/v4/core/function.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/function.js
 class $ZodFunction {
   constructor(def) {
     this._def = def;
@@ -14111,7 +14154,7 @@ function _function(params) {
     output: params?.output ?? _unknown($ZodUnknown)
   });
 }
-// node_modules/zod/dist/esm/v4/core/to-json-schema.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/to-json-schema.js
 class JSONSchemaGenerator {
   constructor(params) {
     this.counter = 0;
@@ -14845,9 +14888,9 @@ function isTransforming(_schema, _ctx) {
   }
   throw new Error(`Unknown schema type: ${def.type}`);
 }
-// node_modules/zod/dist/esm/v4/core/json-schema.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/core/json-schema.js
 var exports_json_schema = {};
-// node_modules/zod/dist/esm/v4/classic/iso.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/classic/iso.js
 var exports_iso = {};
 __export(exports_iso, {
   time: () => time3,
@@ -14888,7 +14931,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// node_modules/zod/dist/esm/v4/classic/errors.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -14917,13 +14960,13 @@ var ZodRealError = $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// node_modules/zod/dist/esm/v4/classic/parse.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/classic/parse.js
 var parse3 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync2 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
 
-// node_modules/zod/dist/esm/v4/classic/schemas.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/classic/schemas.js
 var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   $ZodType.init(inst, def);
   inst.def = def;
@@ -15850,7 +15893,7 @@ function json(params) {
 function preprocess(fn, schema) {
   return pipe2(transform(fn), schema);
 }
-// node_modules/zod/dist/esm/v4/classic/compat.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/classic/compat.js
 var ZodIssueCode = {
   invalid_type: "invalid_type",
   too_big: "too_big",
@@ -15876,7 +15919,7 @@ function setErrorMap(map4) {
 function getErrorMap() {
   return config().customError;
 }
-// node_modules/zod/dist/esm/v4/classic/coerce.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/classic/coerce.js
 var exports_coerce = {};
 __export(exports_coerce, {
   string: () => string4,
@@ -15901,9 +15944,9 @@ function date4(params) {
   return _coercedDate(ZodDate, params);
 }
 
-// node_modules/zod/dist/esm/v4/classic/external.js
+// node_modules/.deno/zod@3.25.57/node_modules/zod/dist/esm/v4/classic/external.js
 config(en_default());
-// node_modules/@alice-and-bot/core/protocol/src/crypto.js
+// node_modules/.deno/@jsr+alice-and-bot__core@0.0.237/node_modules/@jsr/alice-and-bot__core/protocol/src/crypto.js
 import { Buffer as Buffer2 } from "buffer";
 var encryptAlgo = {
   name: "RSA-OAEP",
@@ -15984,10 +16027,10 @@ var decryptSymmetric = async (key, data) => {
   return JSON.parse(new TextDecoder().decode(decrypted));
 };
 
-// node_modules/@alice-and-bot/core/protocol/src/serverUrl.js
+// node_modules/.deno/@jsr+alice-and-bot__core@0.0.237/node_modules/@jsr/alice-and-bot__core/protocol/src/serverUrl.js
 var serverBaseUrl = "https://api.aliceandbot.com";
 
-// node_modules/@alice-and-bot/core/backend/src/api.js
+// node_modules/.deno/@jsr+alice-and-bot__core@0.0.237/node_modules/@jsr/alice-and-bot__core/backend/src/api.js
 var maxEncryptedMessageLength = 50000;
 var authenticatedInput = (payloadSchema) => exports_external.object({
   payload: payloadSchema,
@@ -16334,7 +16377,7 @@ var sendTyping = (params) => apiClient2({
   payload: params
 });
 
-// node_modules/@alice-and-bot/core/protocol/src/attachmentLimits.js
+// node_modules/.deno/@jsr+alice-and-bot__core@0.0.237/node_modules/@jsr/alice-and-bot__core/protocol/src/attachmentLimits.js
 var MB = 1024 * 1024;
 var encryptionOverhead = 12 + 16;
 var maxTextLength = 1e4;
@@ -16345,7 +16388,7 @@ var fileSizeLimits = {
   file: 25 * MB
 };
 
-// node_modules/@alice-and-bot/core/protocol/src/clientApi.js
+// node_modules/.deno/@jsr+alice-and-bot__core@0.0.237/node_modules/@jsr/alice-and-bot__core/protocol/src/clientApi.js
 var msgToStr = wrapper_default;
 var encryptAndSign = async (conversationKey, { privateSignKey, publicSignKey }, message) => {
   const serialized = msgToStr(message);
@@ -16467,23 +16510,23 @@ var uiUpdateUrl = `${serverBaseUrl}/ui-update`;
 var buildUiUpdateUrl = (elementId) => `${uiUpdateUrl}?elementId=${encodeURIComponent(elementId)}`;
 
 // index.ts
-import fs7 from "fs/promises";
-import path8 from "path";
-import os2 from "os";
+import fs7 from "node:fs/promises";
+import path8 from "node:path";
+import os2 from "node:os";
 import { Buffer as Buffer7 } from "node:buffer";
 
-// node_modules/clipboardy/index.js
+// node_modules/.deno/clipboardy@5.3.1/node_modules/clipboardy/index.js
 import process16 from "node:process";
 
-// node_modules/is-wsl/index.js
+// node_modules/.deno/is-wsl@3.1.1/node_modules/is-wsl/index.js
 import process2 from "node:process";
 import os from "node:os";
 import fs3 from "node:fs";
 
-// node_modules/is-inside-container/index.js
+// node_modules/.deno/is-inside-container@1.0.0/node_modules/is-inside-container/index.js
 import fs2 from "node:fs";
 
-// node_modules/is-docker/index.js
+// node_modules/.deno/is-docker@3.0.0/node_modules/is-docker/index.js
 import fs from "node:fs";
 var isDockerCached;
 function hasDockerEnv() {
@@ -16508,7 +16551,7 @@ function isDocker() {
   return isDockerCached;
 }
 
-// node_modules/is-inside-container/index.js
+// node_modules/.deno/is-inside-container@1.0.0/node_modules/is-inside-container/index.js
 var cachedResult;
 var hasContainerEnv = () => {
   try {
@@ -16525,7 +16568,7 @@ function isInsideContainer() {
   return cachedResult;
 }
 
-// node_modules/is-wsl/index.js
+// node_modules/.deno/is-wsl@3.1.1/node_modules/is-wsl/index.js
 var isWsl = () => {
   if (process2.platform !== "linux") {
     return false;
@@ -16548,7 +16591,7 @@ var isWsl = () => {
 };
 var is_wsl_default = process2.env.__IS_WSL_TEST__ ? isWsl : isWsl();
 
-// node_modules/is-wayland/index.js
+// node_modules/.deno/is-wayland@0.1.0/node_modules/is-wayland/index.js
 import process3 from "node:process";
 function isWayland() {
   if (process3.platform !== "linux") {
@@ -16563,14 +16606,14 @@ function isWayland() {
   return false;
 }
 
-// node_modules/clipboard-image/index.js
+// node_modules/.deno/clipboard-image@0.1.0/node_modules/clipboard-image/index.js
 import process5 from "node:process";
 import { fileURLToPath } from "node:url";
 
-// node_modules/run-jxa/index.js
+// node_modules/.deno/run-jxa@3.0.0/node_modules/run-jxa/index.js
 var import_execa = __toESM(require_execa(), 1);
 
-// node_modules/crypto-random-string/index.js
+// node_modules/.deno/crypto-random-string@4.0.0/node_modules/crypto-random-string/index.js
 import { promisify } from "util";
 import crypto2 from "crypto";
 var randomBytesAsync = promisify(crypto2.randomBytes);
@@ -16685,12 +16728,12 @@ var cryptoRandomString = createGenerator(generateForCustomCharacters, generateRa
 cryptoRandomString.async = createGenerator(generateForCustomCharactersAsync, generateRandomBytesAsync);
 var crypto_random_string_default = cryptoRandomString;
 
-// node_modules/unique-string/index.js
+// node_modules/.deno/unique-string@3.0.0/node_modules/unique-string/index.js
 function uniqueString() {
   return crypto_random_string_default({ length: 32 });
 }
 
-// node_modules/escape-string-regexp/index.js
+// node_modules/.deno/escape-string-regexp@5.0.0/node_modules/escape-string-regexp/index.js
 function escapeStringRegexp(string5) {
   if (typeof string5 !== "string") {
     throw new TypeError("Expected a string");
@@ -16698,7 +16741,7 @@ function escapeStringRegexp(string5) {
   return string5.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&").replace(/-/g, "\\x2d");
 }
 
-// node_modules/subsume/index.js
+// node_modules/.deno/subsume@4.0.0/node_modules/subsume/index.js
 class Subsume {
   static parse(text, id) {
     return new Subsume(id).parse(text);
@@ -16802,7 +16845,7 @@ class Subsume {
   }
 }
 
-// node_modules/macos-version/index.js
+// node_modules/.deno/macos-version@6.0.0/node_modules/macos-version/index.js
 var import_semver = __toESM(require_semver2(), 1);
 import process4 from "node:process";
 import fs4 from "node:fs";
@@ -16856,7 +16899,7 @@ function assertMacOSVersionGreaterThanOrEqualTo(version3) {
   }
 }
 
-// node_modules/run-jxa/index.js
+// node_modules/.deno/run-jxa@3.0.0/node_modules/run-jxa/index.js
 var subsume = new Subsume;
 var commandArguments = ["-l", "JavaScript"];
 var prepareOptions = (input, arguments_) => {
@@ -16884,7 +16927,7 @@ async function runJxa(input, arguments_) {
   return handleOutput(stderr);
 }
 
-// node_modules/clipboard-image/index.js
+// node_modules/.deno/clipboard-image@0.1.0/node_modules/clipboard-image/index.js
 async function hasClipboardImages() {
   if (process5.platform !== "darwin") {
     return false;
@@ -17008,7 +17051,7 @@ async function writeClipboardImages(filePaths) {
   }, paths);
 }
 
-// node_modules/is-plain-obj/index.js
+// node_modules/.deno/is-plain-obj@4.1.0/node_modules/is-plain-obj/index.js
 function isPlainObject2(value) {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -17017,7 +17060,7 @@ function isPlainObject2(value) {
   return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(Symbol.toStringTag in value) && !(Symbol.iterator in value);
 }
 
-// node_modules/execa/lib/arguments/file-url.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/file-url.js
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 var safeNormalizeFileUrl = (file2, name) => {
   const fileString = normalizeFileUrl(normalizeDenoExecPath(file2));
@@ -17030,7 +17073,7 @@ var normalizeDenoExecPath = (file2) => isDenoExecPath(file2) ? file2.toString() 
 var isDenoExecPath = (file2) => typeof file2 !== "string" && file2 && Object.getPrototypeOf(file2) === String.prototype;
 var normalizeFileUrl = (file2) => file2 instanceof URL ? fileURLToPath2(file2) : file2;
 
-// node_modules/execa/lib/methods/parameters.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/parameters.js
 var normalizeParameters = (rawFile, rawArguments = [], rawOptions = {}) => {
   const filePath = safeNormalizeFileUrl(rawFile, "First argument");
   const [commandArguments2, options] = isPlainObject2(rawArguments) ? [[], rawArguments] : [rawArguments, rawOptions];
@@ -17051,10 +17094,10 @@ var normalizeParameters = (rawFile, rawArguments = [], rawOptions = {}) => {
   return [filePath, normalizedArguments, options];
 };
 
-// node_modules/execa/lib/methods/template.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/template.js
 import { ChildProcess } from "node:child_process";
 
-// node_modules/execa/lib/utils/uint-array.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/utils/uint-array.js
 import { StringDecoder } from "node:string_decoder";
 var { toString: objectToString } = Object.prototype;
 var isArrayBuffer = (value) => objectToString.call(value) === "[object ArrayBuffer]";
@@ -17101,7 +17144,7 @@ var getJoinLength = (uint8Arrays) => {
   return joinLength;
 };
 
-// node_modules/execa/lib/methods/template.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/template.js
 var isTemplateString = (templates) => Array.isArray(templates) && Array.isArray(templates.raw);
 var parseTemplates = (templates, expressions) => {
   let tokens = [];
@@ -17203,20 +17246,20 @@ var getSubprocessResult = ({ stdout }) => {
   throw new TypeError(`Unexpected "${typeof stdout}" stdout in template expression`);
 };
 
-// node_modules/execa/lib/methods/main-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/main-sync.js
 import { spawnSync } from "node:child_process";
 
-// node_modules/execa/lib/arguments/specific.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/specific.js
 import { debuglog } from "node:util";
 
-// node_modules/execa/lib/utils/standard-stream.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/utils/standard-stream.js
 import process6 from "node:process";
 var isStandardStream = (stream) => STANDARD_STREAMS.includes(stream);
 var STANDARD_STREAMS = [process6.stdin, process6.stdout, process6.stderr];
 var STANDARD_STREAMS_ALIASES = ["stdin", "stdout", "stderr"];
 var getStreamName = (fdNumber) => STANDARD_STREAMS_ALIASES[fdNumber] ?? `stdio[${fdNumber}]`;
 
-// node_modules/execa/lib/arguments/specific.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/specific.js
 var normalizeFdSpecificOptions = (options) => {
   const optionsCopy = { ...options };
   for (const optionName of FD_SPECIFIC_OPTIONS) {
@@ -17286,7 +17329,7 @@ var DEFAULT_OPTIONS = {
 var FD_SPECIFIC_OPTIONS = ["lines", "buffer", "maxBuffer", "verbose", "stripFinalNewline"];
 var getFdSpecificValue = (optionArray, fdNumber) => fdNumber === "ipc" ? optionArray.at(-1) : optionArray[fdNumber];
 
-// node_modules/execa/lib/verbose/values.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/values.js
 var isVerbose = ({ verbose }, fdNumber) => getFdVerbose(verbose, fdNumber) !== "none";
 var isFullVerbose = ({ verbose }, fdNumber) => !["none", "short"].includes(getFdVerbose(verbose, fdNumber));
 var getVerboseFunction = ({ verbose }, fdNumber) => {
@@ -17298,10 +17341,10 @@ var getFdGenericVerbose = (verbose) => verbose.find((fdVerbose) => isVerboseFunc
 var isVerboseFunction = (fdVerbose) => typeof fdVerbose === "function";
 var VERBOSE_VALUES = ["none", "short", "full"];
 
-// node_modules/execa/lib/verbose/log.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/log.js
 import { inspect } from "node:util";
 
-// node_modules/execa/lib/arguments/escape.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/escape.js
 import { platform } from "node:process";
 import { stripVTControlCharacters } from "node:util";
 var joinCommand = (filePath, rawArguments) => {
@@ -17348,7 +17391,7 @@ var quoteString = (escapedArgument) => {
 };
 var NO_ESCAPE_REGEXP = /^[\w./-]+$/;
 
-// node_modules/is-unicode-supported/index.js
+// node_modules/.deno/is-unicode-supported@2.1.0/node_modules/is-unicode-supported/index.js
 import process7 from "node:process";
 function isUnicodeSupported() {
   const { env } = process7;
@@ -17359,7 +17402,7 @@ function isUnicodeSupported() {
   return Boolean(env.WT_SESSION) || Boolean(env.TERMINUS_SUBLIME) || env.ConEmuTask === "{cmd::Cmder}" || TERM_PROGRAM === "Terminus-Sublime" || TERM_PROGRAM === "vscode" || TERM === "xterm-256color" || TERM === "alacritty" || TERM === "rxvt-unicode" || TERM === "rxvt-unicode-256color" || env.TERMINAL_EMULATOR === "JetBrains-JediTerm";
 }
 
-// node_modules/figures/index.js
+// node_modules/.deno/figures@6.1.0/node_modules/figures/index.js
 var common = {
   circleQuestionMark: "(?)",
   questionMarkPrefix: "(?)",
@@ -17635,7 +17678,7 @@ var figures = shouldUseMain ? mainSymbols : fallbackSymbols;
 var figures_default = figures;
 var replacements = Object.entries(specialMainSymbols);
 
-// node_modules/yoctocolors/base.js
+// node_modules/.deno/yoctocolors@2.1.2/node_modules/yoctocolors/base.js
 import tty from "node:tty";
 var hasColors = tty?.WriteStream?.prototype?.hasColors?.() ?? false;
 var format = (open, close) => {
@@ -17705,7 +17748,7 @@ var bgMagentaBright = format(105, 49);
 var bgCyanBright = format(106, 49);
 var bgWhiteBright = format(107, 49);
 
-// node_modules/execa/lib/verbose/default.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/default.js
 var defaultVerboseFunction = ({
   type,
   message,
@@ -17744,7 +17787,7 @@ var COLORS = {
   duration: () => gray
 };
 
-// node_modules/execa/lib/verbose/custom.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/custom.js
 var applyVerboseOnLines = (printedLines, verboseInfo, fdNumber) => {
   const verboseFunction = getVerboseFunction(verboseInfo, fdNumber);
   return printedLines.map(({ verboseLine, verboseObject }) => applyVerboseFunction(verboseLine, verboseObject, verboseFunction)).filter((printedLine) => printedLine !== undefined).map((printedLine) => appendNewline(printedLine)).join("");
@@ -17762,7 +17805,7 @@ var appendNewline = (printedLine) => printedLine.endsWith(`
 `) ? printedLine : `${printedLine}
 `;
 
-// node_modules/execa/lib/verbose/log.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/log.js
 var verboseLog = ({ type, verboseMessage, fdNumber, verboseInfo, result }) => {
   const verboseObject = getVerboseObject({ type, result, verboseInfo });
   const printedLines = getPrintedLines(verboseMessage, verboseObject);
@@ -17797,7 +17840,7 @@ var serializeVerboseMessage = (message) => {
 };
 var TAB_SIZE = 2;
 
-// node_modules/execa/lib/verbose/start.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/start.js
 var logCommand = (escapedCommand, verboseInfo) => {
   if (!isVerbose(verboseInfo)) {
     return;
@@ -17809,7 +17852,7 @@ var logCommand = (escapedCommand, verboseInfo) => {
   });
 };
 
-// node_modules/execa/lib/verbose/info.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/info.js
 var getVerboseInfo = (verbose, escapedCommand, rawOptions) => {
   validateVerbose(verbose);
   const commandId = getCommandId(verbose);
@@ -17837,12 +17880,12 @@ var validateVerbose = (verbose) => {
   }
 };
 
-// node_modules/execa/lib/return/duration.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/return/duration.js
 import { hrtime } from "node:process";
 var getStartTime = () => hrtime.bigint();
 var getDurationMs = (startTime) => Number(hrtime.bigint() - startTime) / 1e6;
 
-// node_modules/execa/lib/arguments/command.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/command.js
 var handleCommand = (filePath, rawArguments, rawOptions) => {
   const startTime = getStartTime();
   const { command, escapedCommand } = joinCommand(filePath, rawArguments);
@@ -17857,16 +17900,16 @@ var handleCommand = (filePath, rawArguments, rawOptions) => {
   };
 };
 
-// node_modules/execa/lib/arguments/options.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/options.js
 var import_cross_spawn = __toESM(require_cross_spawn(), 1);
 import path5 from "node:path";
 import process10 from "node:process";
 
-// node_modules/npm-run-path/index.js
+// node_modules/.deno/npm-run-path@6.0.0/node_modules/npm-run-path/index.js
 import process8 from "node:process";
 import path2 from "node:path";
 
-// node_modules/npm-run-path/node_modules/path-key/index.js
+// node_modules/.deno/path-key@4.0.0/node_modules/path-key/index.js
 function pathKey(options = {}) {
   const {
     env = process.env,
@@ -17878,7 +17921,7 @@ function pathKey(options = {}) {
   return Object.keys(env).reverse().find((key) => key.toUpperCase() === "PATH") || "Path";
 }
 
-// node_modules/unicorn-magic/node.js
+// node_modules/.deno/unicorn-magic@0.3.0/node_modules/unicorn-magic/node.js
 import { promisify as promisify2 } from "node:util";
 import { execFile as execFileCallback, execFileSync as execFileSyncOriginal } from "node:child_process";
 import path from "node:path";
@@ -17902,7 +17945,7 @@ function traversePathUp(startPath) {
 }
 var TEN_MEGABYTES_IN_BYTES = 10 * 1024 * 1024;
 
-// node_modules/npm-run-path/index.js
+// node_modules/.deno/npm-run-path@6.0.0/node_modules/npm-run-path/index.js
 var npmRunPath = ({
   cwd = process8.cwd(),
   path: pathOption = process8.env[pathKey()],
@@ -17943,10 +17986,10 @@ var npmRunPathEnv = ({ env = process8.env, ...options } = {}) => {
   return env;
 };
 
-// node_modules/execa/lib/terminate/kill.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/terminate/kill.js
 import { setTimeout as setTimeout2 } from "node:timers/promises";
 
-// node_modules/execa/lib/return/final-error.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/return/final-error.js
 var getFinalError = (originalError, message, isSync) => {
   const ErrorClass = isSync ? ExecaSyncError : ExecaError;
   const options = originalError instanceof DiscardedError ? {} : { cause: originalError };
@@ -17981,13 +18024,13 @@ class ExecaSyncError extends Error {
 }
 setErrorName(ExecaSyncError, ExecaSyncError.name);
 
-// node_modules/execa/lib/terminate/signal.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/terminate/signal.js
 import { constants as constants3 } from "node:os";
 
-// node_modules/human-signals/build/src/main.js
+// node_modules/.deno/human-signals@8.0.1/node_modules/human-signals/build/src/main.js
 import { constants as constants2 } from "node:os";
 
-// node_modules/human-signals/build/src/realtime.js
+// node_modules/.deno/human-signals@8.0.1/node_modules/human-signals/build/src/realtime.js
 var getRealtimeSignals = () => {
   const length2 = SIGRTMAX - SIGRTMIN + 1;
   return Array.from({ length: length2 }, getRealtimeSignal);
@@ -18002,10 +18045,10 @@ var getRealtimeSignal = (value, index) => ({
 var SIGRTMIN = 34;
 var SIGRTMAX = 64;
 
-// node_modules/human-signals/build/src/signals.js
+// node_modules/.deno/human-signals@8.0.1/node_modules/human-signals/build/src/signals.js
 import { constants } from "node:os";
 
-// node_modules/human-signals/build/src/core.js
+// node_modules/.deno/human-signals@8.0.1/node_modules/human-signals/build/src/core.js
 var SIGNALS = [
   {
     name: "SIGHUP",
@@ -18278,7 +18321,7 @@ var SIGNALS = [
   }
 ];
 
-// node_modules/human-signals/build/src/signals.js
+// node_modules/.deno/human-signals@8.0.1/node_modules/human-signals/build/src/signals.js
 var getSignals = () => {
   const realtimeSignals = getRealtimeSignals();
   const signals = [...SIGNALS, ...realtimeSignals].map(normalizeSignal);
@@ -18300,7 +18343,7 @@ var normalizeSignal = ({
   return { name, number: number4, description, supported, action, forced, standard };
 };
 
-// node_modules/human-signals/build/src/main.js
+// node_modules/.deno/human-signals@8.0.1/node_modules/human-signals/build/src/main.js
 var getSignalsByName = () => {
   const signals = getSignals();
   return Object.fromEntries(signals.map(getSignalByName));
@@ -18348,7 +18391,7 @@ var findSignalByNumber = (number4, signals) => {
 };
 var signalsByNumber = getSignalsByNumber();
 
-// node_modules/execa/lib/terminate/signal.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/terminate/signal.js
 var normalizeKillSignal = (killSignal) => {
   const optionName = "option `killSignal`";
   if (killSignal === 0) {
@@ -18392,7 +18435,7 @@ var getAvailableSignalNames = () => Object.keys(constants3.signals).sort().map((
 var getAvailableSignalIntegers = () => [...new Set(Object.values(constants3.signals).sort((signalInteger, signalIntegerTwo) => signalInteger - signalIntegerTwo))].join(", ");
 var getSignalDescription = (signal) => signalsByName[signal].description;
 
-// node_modules/execa/lib/terminate/kill.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/terminate/kill.js
 var normalizeForceKillAfterDelay = (forceKillAfterDelay) => {
   if (forceKillAfterDelay === false) {
     return forceKillAfterDelay;
@@ -18458,7 +18501,7 @@ var killOnTimeout = async ({ kill, forceKillAfterDelay, context, controllerSigna
   } catch {}
 };
 
-// node_modules/execa/lib/utils/abort-signal.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/utils/abort-signal.js
 import { once } from "node:events";
 var onAbortedSignal = async (mainSignal, stopSignal) => {
   if (!mainSignal.aborted) {
@@ -18466,7 +18509,7 @@ var onAbortedSignal = async (mainSignal, stopSignal) => {
   }
 };
 
-// node_modules/execa/lib/terminate/cancel.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/terminate/cancel.js
 var validateCancelSignal = ({ cancelSignal }) => {
   if (cancelSignal !== undefined && Object.prototype.toString.call(cancelSignal) !== "[object AbortSignal]") {
     throw new Error(`The \`cancelSignal\` option must be an AbortSignal: ${String(cancelSignal)}`);
@@ -18480,13 +18523,13 @@ var terminateOnCancel = async (subprocess, cancelSignal, context, { signal }) =>
   throw cancelSignal.reason;
 };
 
-// node_modules/execa/lib/ipc/graceful.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/graceful.js
 import { scheduler as scheduler2 } from "node:timers/promises";
 
-// node_modules/execa/lib/ipc/send.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/send.js
 import { promisify as promisify3 } from "node:util";
 
-// node_modules/execa/lib/ipc/validation.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/validation.js
 var validateIpcMethod = ({ methodName, isSubprocess, ipc, isConnected }) => {
   validateIpcOption(methodName, isSubprocess, ipc);
   validateConnection(methodName, isSubprocess, isConnected);
@@ -18553,7 +18596,7 @@ var disconnect = (anyProcess) => {
   }
 };
 
-// node_modules/execa/lib/utils/deferred.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/utils/deferred.js
 var createDeferred = () => {
   const methods = {};
   const promise3 = new Promise((resolve, reject) => {
@@ -18562,7 +18605,7 @@ var createDeferred = () => {
   return Object.assign(promise3, methods);
 };
 
-// node_modules/execa/lib/arguments/fd-options.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/fd-options.js
 var getToStream = (destination, to = "stdin") => {
   const isWritable = true;
   const { options, fileDescriptors } = SUBPROCESS_OPTIONS.get(destination);
@@ -18642,10 +18685,10 @@ var serializeOptionValue = (value) => {
   return typeof value === "number" ? `${value}` : "Stream";
 };
 
-// node_modules/execa/lib/ipc/strict.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/strict.js
 import { once as once3 } from "node:events";
 
-// node_modules/execa/lib/utils/max-listeners.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/utils/max-listeners.js
 import { addAbortListener } from "node:events";
 var incrementMaxListeners = (eventEmitter, maxListenersIncrement, signal) => {
   const maxListeners = eventEmitter.getMaxListeners();
@@ -18658,14 +18701,14 @@ var incrementMaxListeners = (eventEmitter, maxListenersIncrement, signal) => {
   });
 };
 
-// node_modules/execa/lib/ipc/forward.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/forward.js
 import { EventEmitter } from "node:events";
 
-// node_modules/execa/lib/ipc/incoming.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/incoming.js
 import { once as once2 } from "node:events";
 import { scheduler } from "node:timers/promises";
 
-// node_modules/execa/lib/ipc/reference.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/reference.js
 var addReference = (channel, reference) => {
   if (reference) {
     addReferenceCount(channel);
@@ -18695,7 +18738,7 @@ var redoAddedReferences = (channel, isSubprocess) => {
   }
 };
 
-// node_modules/execa/lib/ipc/incoming.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/incoming.js
 var onMessage = async ({ anyProcess, channel, isSubprocess, ipcEmitter }, wrappedMessage) => {
   if (handleStrictResponse(wrappedMessage) || handleAbort(wrappedMessage)) {
     return;
@@ -18736,7 +18779,7 @@ var onDisconnect = async ({ anyProcess, channel, isSubprocess, ipcEmitter, bound
 };
 var INCOMING_MESSAGES = new WeakMap;
 
-// node_modules/execa/lib/ipc/forward.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/forward.js
 var getIpcEmitter = (anyProcess, channel, isSubprocess) => {
   if (IPC_EMITTERS.has(anyProcess)) {
     return IPC_EMITTERS.get(anyProcess);
@@ -18775,7 +18818,7 @@ var isConnected = (anyProcess) => {
   return ipcEmitter === undefined ? anyProcess.channel !== null : ipcEmitter.connected;
 };
 
-// node_modules/execa/lib/ipc/strict.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/strict.js
 var handleSendStrict = ({ anyProcess, channel, isSubprocess, message, strict }) => {
   if (!strict) {
     return message;
@@ -18858,7 +18901,7 @@ var throwOnDisconnect = async (anyProcess, isSubprocess, { signal }) => {
 var REQUEST_TYPE = "execa:ipc:request";
 var RESPONSE_TYPE = "execa:ipc:response";
 
-// node_modules/execa/lib/ipc/outgoing.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/outgoing.js
 var startSendMessage = (anyProcess, wrappedMessage, strict) => {
   if (!OUTGOING_MESSAGES.has(anyProcess)) {
     OUTGOING_MESSAGES.set(anyProcess, new Set);
@@ -18885,7 +18928,7 @@ var OUTGOING_MESSAGES = new WeakMap;
 var hasMessageListeners = (anyProcess, ipcEmitter) => ipcEmitter.listenerCount("message") > getMinListenerCount(anyProcess);
 var getMinListenerCount = (anyProcess) => SUBPROCESS_OPTIONS.has(anyProcess) && !getFdSpecificValue(SUBPROCESS_OPTIONS.get(anyProcess).options.buffer, "ipc") ? 1 : 0;
 
-// node_modules/execa/lib/ipc/send.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/send.js
 var sendMessage = ({ anyProcess, channel, isSubprocess, ipc }, message, { strict = false } = {}) => {
   const methodName = "sendMessage";
   validateIpcMethod({
@@ -18955,7 +18998,7 @@ var getSendMethod = (anyProcess) => {
 };
 var PROCESS_SEND_METHODS = new WeakMap;
 
-// node_modules/execa/lib/ipc/graceful.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/graceful.js
 var sendAbort = (subprocess, message) => {
   const methodName = "cancelSignal";
   validateConnection(methodName, false, subprocess.connected);
@@ -19006,7 +19049,7 @@ var abortOnDisconnect = () => {
 };
 var cancelController = new AbortController;
 
-// node_modules/execa/lib/terminate/graceful.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/terminate/graceful.js
 var validateGracefulCancel = ({ gracefulCancel, cancelSignal, ipc, serialization }) => {
   if (!gracefulCancel) {
     return;
@@ -19062,7 +19105,7 @@ var getReason = ({ reason }) => {
   return error38;
 };
 
-// node_modules/execa/lib/terminate/timeout.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/terminate/timeout.js
 import { setTimeout as setTimeout3 } from "node:timers/promises";
 var validateTimeout = ({ timeout: timeout2 }) => {
   if (timeout2 !== undefined && (!Number.isFinite(timeout2) || timeout2 < 0)) {
@@ -19077,7 +19120,7 @@ var killAfterTimeout = async (subprocess, timeout2, context, { signal }) => {
   throw new DiscardedError;
 };
 
-// node_modules/execa/lib/methods/node.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/node.js
 import { execPath, execArgv } from "node:process";
 import path3 from "node:path";
 var mapNode = ({ options }) => {
@@ -19118,7 +19161,7 @@ var handleNodeOption = (file2, commandArguments2, {
   ];
 };
 
-// node_modules/execa/lib/ipc/ipc-input.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/ipc-input.js
 import { serialize } from "node:v8";
 var validateIpcInputOption = ({ ipcInput, ipc, serialization }) => {
   if (ipcInput === undefined) {
@@ -19154,7 +19197,7 @@ var sendIpcInput = async (subprocess, ipcInput) => {
   await subprocess.sendMessage(ipcInput);
 };
 
-// node_modules/execa/lib/arguments/encoding-option.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/encoding-option.js
 var validateEncoding = ({ encoding }) => {
   if (ENCODINGS.has(encoding)) {
     return;
@@ -19195,7 +19238,7 @@ var ENCODING_ALIASES = {
 };
 var serializeEncoding = (encoding) => typeof encoding === "string" ? `"${encoding}"` : String(encoding);
 
-// node_modules/execa/lib/arguments/cwd.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/cwd.js
 import { statSync } from "node:fs";
 import path4 from "node:path";
 import process9 from "node:process";
@@ -19231,7 +19274,7 @@ ${originalMessage}`;
   return originalMessage;
 };
 
-// node_modules/execa/lib/arguments/options.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/options.js
 var normalizeOptions = (filePath, rawArguments, rawOptions) => {
   rawOptions.cwd = normalizeCwd(rawOptions.cwd);
   const [processedFile, processedArguments, processedOptions] = handleNodeOption(filePath, rawArguments, rawOptions);
@@ -19302,13 +19345,13 @@ var getEnv = ({ env: envOption, extendEnv, preferLocal, node, localDirectory, no
   return env;
 };
 
-// node_modules/execa/lib/arguments/shell.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/arguments/shell.js
 var concatenateShell = (file2, commandArguments2, options) => options.shell && commandArguments2.length > 0 ? [[file2, ...commandArguments2].join(" "), [], options] : [file2, commandArguments2, options];
 
-// node_modules/execa/lib/return/message.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/return/message.js
 import { inspect as inspect2 } from "node:util";
 
-// node_modules/strip-final-newline/index.js
+// node_modules/.deno/strip-final-newline@4.0.0/node_modules/strip-final-newline/index.js
 function stripFinalNewline(input) {
   if (typeof input === "string") {
     return stripFinalNewlineString(input);
@@ -19326,11 +19369,11 @@ var LF_BINARY = LF.codePointAt(0);
 var CR = "\r";
 var CR_BINARY = CR.codePointAt(0);
 
-// node_modules/get-stream/source/index.js
+// node_modules/.deno/get-stream@9.0.1/node_modules/get-stream/source/index.js
 import { on } from "node:events";
 import { finished } from "node:stream/promises";
 
-// node_modules/is-stream/index.js
+// node_modules/.deno/is-stream@4.0.1/node_modules/is-stream/index.js
 function isStream(stream, { checkOpen = true } = {}) {
   return stream !== null && typeof stream === "object" && (stream.writable || stream.readable || !checkOpen || stream.writable === undefined && stream.readable === undefined) && typeof stream.pipe === "function";
 }
@@ -19344,7 +19387,7 @@ function isDuplexStream(stream, options) {
   return isWritableStream(stream, options) && isReadableStream(stream, options);
 }
 
-// node_modules/@sec-ant/readable-stream/dist/ponyfill/asyncIterator.js
+// node_modules/.deno/@sec-ant+readable-stream@0.4.1/node_modules/@sec-ant/readable-stream/dist/ponyfill/asyncIterator.js
 var a = Object.getPrototypeOf(Object.getPrototypeOf(async function* () {}).prototype);
 
 class c {
@@ -19424,7 +19467,7 @@ function h({ preventCancel: r = false } = {}) {
   return s[n] = t, s;
 }
 
-// node_modules/get-stream/source/stream.js
+// node_modules/.deno/get-stream@9.0.1/node_modules/get-stream/source/stream.js
 var getAsyncIterable = (stream) => {
   if (isReadableStream(stream, { checkOpen: false }) && nodeImports.on !== undefined) {
     return getStreamIterable(stream);
@@ -19472,7 +19515,7 @@ var handleStreamEnd = async (stream, controller, state) => {
 };
 var nodeImports = {};
 
-// node_modules/get-stream/source/contents.js
+// node_modules/.deno/get-stream@9.0.1/node_modules/get-stream/source/contents.js
 var getStreamContents = async (stream, { init, convertChunk, getSize, truncateChunk, addChunk, getFinalChunk, finalize }, { maxBuffer = Number.POSITIVE_INFINITY } = {}) => {
   const asyncIterable = getAsyncIterable(stream);
   const state = init();
@@ -19568,7 +19611,7 @@ class MaxBufferError extends Error {
   }
 }
 
-// node_modules/get-stream/source/utils.js
+// node_modules/.deno/get-stream@9.0.1/node_modules/get-stream/source/utils.js
 var identity3 = (value) => value;
 var noop = () => {
   return;
@@ -19579,7 +19622,7 @@ var throwObjectStream = (chunk) => {
 };
 var getLengthProperty = (convertedChunk) => convertedChunk.length;
 
-// node_modules/get-stream/source/array.js
+// node_modules/.deno/get-stream@9.0.1/node_modules/get-stream/source/array.js
 async function getStreamAsArray(stream, options) {
   return getStreamContents(stream, arrayMethods, options);
 }
@@ -19605,7 +19648,7 @@ var arrayMethods = {
   getFinalChunk: noop,
   finalize: getContentsProperty
 };
-// node_modules/get-stream/source/array-buffer.js
+// node_modules/.deno/get-stream@9.0.1/node_modules/get-stream/source/array-buffer.js
 async function getStreamAsArrayBuffer(stream, options) {
   return getStreamContents(stream, arrayBufferMethods, options);
 }
@@ -19657,7 +19700,7 @@ var arrayBufferMethods = {
   getFinalChunk: noop,
   finalize: finalizeArrayBuffer
 };
-// node_modules/get-stream/source/string.js
+// node_modules/.deno/get-stream@9.0.1/node_modules/get-stream/source/string.js
 async function getStreamAsString(stream, options) {
   return getStreamContents(stream, stringMethods, options);
 }
@@ -19685,10 +19728,10 @@ var stringMethods = {
   getFinalChunk: getFinalStringChunk,
   finalize: getContentsProperty
 };
-// node_modules/get-stream/source/index.js
+// node_modules/.deno/get-stream@9.0.1/node_modules/get-stream/source/index.js
 Object.assign(nodeImports, { on, finished });
 
-// node_modules/execa/lib/io/max-buffer.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/max-buffer.js
 var handleMaxBuffer = ({ error: error38, stream, readableObjectMode, lines, encoding, fdNumber }) => {
   if (!(error38 instanceof MaxBufferError)) {
     throw error38;
@@ -19747,7 +19790,7 @@ var truncateMaxBufferSync = (result, isMaxBuffer, maxBuffer) => {
 };
 var getMaxBufferSync = ([, stdoutMaxBuffer]) => stdoutMaxBuffer;
 
-// node_modules/execa/lib/return/message.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/return/message.js
 var createMessages = ({
   stdio,
   all,
@@ -19869,7 +19912,7 @@ var serializeMessageItem = (messageItem) => {
   return "";
 };
 
-// node_modules/execa/lib/return/result.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/return/result.js
 var makeSuccessResult = ({
   command,
   escapedCommand,
@@ -20042,7 +20085,7 @@ var normalizeExitPayload = (rawExitCode, rawSignal) => {
   return { exitCode, signal, signalDescription };
 };
 
-// node_modules/parse-ms/index.js
+// node_modules/.deno/parse-ms@4.0.0/node_modules/parse-ms/index.js
 var toZeroIfInfinity = (value) => Number.isFinite(value) ? value : 0;
 function parseNumber(milliseconds) {
   return {
@@ -20081,7 +20124,7 @@ function parseMilliseconds(milliseconds) {
   throw new TypeError("Expected a finite number or bigint");
 }
 
-// node_modules/pretty-ms/index.js
+// node_modules/.deno/pretty-ms@9.3.0/node_modules/pretty-ms/index.js
 var isZero = (value) => value === 0 || value === 0n;
 var pluralize = (word, count3) => count3 === 1 || count3 === 1n ? word : `${word}s`;
 var SECOND_ROUNDING_EPSILON = 0.0000001;
@@ -20175,7 +20218,7 @@ function prettyMilliseconds(milliseconds, options) {
   return sign2 + result.join(separator);
 }
 
-// node_modules/execa/lib/verbose/error.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/error.js
 var logError = (result, verboseInfo) => {
   if (result.failed) {
     verboseLog({
@@ -20187,7 +20230,7 @@ var logError = (result, verboseInfo) => {
   }
 };
 
-// node_modules/execa/lib/verbose/complete.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/complete.js
 var logResult = (result, verboseInfo) => {
   if (!isVerbose(verboseInfo)) {
     return;
@@ -20205,7 +20248,7 @@ var logDuration = (result, verboseInfo) => {
   });
 };
 
-// node_modules/execa/lib/return/reject.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/return/reject.js
 var handleResult = (result, verboseInfo, { reject }) => {
   logResult(result, verboseInfo);
   if (result.failed && reject) {
@@ -20214,10 +20257,10 @@ var handleResult = (result, verboseInfo, { reject }) => {
   return result;
 };
 
-// node_modules/execa/lib/stdio/handle-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/handle-sync.js
 import { readFileSync as readFileSync2 } from "node:fs";
 
-// node_modules/execa/lib/stdio/type.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/type.js
 var getStdioItemType = (value, optionName) => {
   if (isAsyncGenerator(value)) {
     return "asyncGenerator";
@@ -20343,7 +20386,7 @@ var TYPE_TO_MESSAGE = {
   uint8Array: "a Uint8Array"
 };
 
-// node_modules/execa/lib/transform/object-mode.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/transform/object-mode.js
 var getTransformObjectModes = (objectMode, index, newTransforms, direction) => direction === "output" ? getOutputObjectModes(objectMode, index, newTransforms) : getInputObjectModes(objectMode, index, newTransforms);
 var getOutputObjectModes = (objectMode, index, newTransforms) => {
   const writableObjectMode = index !== 0 && newTransforms[index - 1].value.readableObjectMode;
@@ -20363,7 +20406,7 @@ var getFdObjectMode = (stdioItems, direction) => {
   return direction === "input" ? lastTransform.value.writableObjectMode : lastTransform.value.readableObjectMode;
 };
 
-// node_modules/execa/lib/transform/normalize.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/transform/normalize.js
 var normalizeTransforms = (stdioItems, optionName, direction, options) => [
   ...stdioItems.filter(({ type }) => !TRANSFORM_TYPES.has(type)),
   ...getTransforms(stdioItems, optionName, direction, options)
@@ -20457,7 +20500,7 @@ var normalizeGenerator = ({ stdioItem, stdioItem: { value }, index, newTransform
 };
 var sortTransforms = (newTransforms, direction) => direction === "input" ? newTransforms.reverse() : newTransforms;
 
-// node_modules/execa/lib/stdio/direction.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/direction.js
 import process11 from "node:process";
 var getStreamDirection = (stdioItems, fdNumber, optionName) => {
   const directions = stdioItems.map((stdioItem) => getStdioItemDirection(stdioItem, fdNumber));
@@ -20509,10 +20552,10 @@ var getStandardStreamDirection = (value) => {
 };
 var DEFAULT_DIRECTION = "output";
 
-// node_modules/execa/lib/ipc/array.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/array.js
 var normalizeIpcStdioArray = (stdioArray, ipc) => ipc && !stdioArray.includes("ipc") ? [...stdioArray, "ipc"] : stdioArray;
 
-// node_modules/execa/lib/stdio/stdio-option.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/stdio-option.js
 var normalizeStdioOption = ({ stdio, ipc, buffer, ...options }, verboseInfo, isSync) => {
   const stdioArray = getStdioArray(stdio, options).map((stdioOption, fdNumber) => addDefaultValue2(stdioOption, fdNumber));
   return isSync ? normalizeStdioSync(stdioArray, buffer, verboseInfo) : normalizeIpcStdioArray(stdioArray, ipc);
@@ -20546,7 +20589,7 @@ var addDefaultValue2 = (stdioOption, fdNumber) => {
 var normalizeStdioSync = (stdioArray, buffer, verboseInfo) => stdioArray.map((stdioOption, fdNumber) => !buffer[fdNumber] && fdNumber !== 0 && !isFullVerbose(verboseInfo, fdNumber) && isOutputPipeOnly(stdioOption) ? "ignore" : stdioOption);
 var isOutputPipeOnly = (stdioOption) => stdioOption === "pipe" || Array.isArray(stdioOption) && stdioOption.every((item) => item === "pipe");
 
-// node_modules/execa/lib/stdio/native.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/native.js
 import { readFileSync } from "node:fs";
 import tty2 from "node:tty";
 var handleNativeStream = ({ stdioItem, stdioItem: { type }, isStdioArray, fdNumber, direction, isSync }) => {
@@ -20615,7 +20658,7 @@ var getStandardStream = (fdNumber, value, optionName) => {
   return standardStream;
 };
 
-// node_modules/execa/lib/stdio/input-option.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/input-option.js
 var handleInputOptions = ({ input, inputFile }, fdNumber) => fdNumber === 0 ? [
   ...handleInputOption(input),
   ...handleInputFileOption(inputFile)
@@ -20651,7 +20694,7 @@ var getInputFileType = (inputFile) => {
   throw new Error("The `inputFile` option must be a file path string or a file URL.");
 };
 
-// node_modules/execa/lib/stdio/duplicate.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/duplicate.js
 var filterDuplicates = (stdioItems) => stdioItems.filter((stdioItemOne, indexOne) => stdioItems.every((stdioItemTwo, indexTwo) => stdioItemOne.value !== stdioItemTwo.value || indexOne >= indexTwo || stdioItemOne.type === "generator" || stdioItemOne.type === "asyncGenerator"));
 var getDuplicateStream = ({ stdioItem: { type, value, optionName }, direction, fileDescriptors, isSync }) => {
   const otherStdioItems = getOtherStdioItems(fileDescriptors, type);
@@ -20726,7 +20769,7 @@ var throwOnDuplicateStream = (stdioItem, optionName, type) => {
   }
 };
 
-// node_modules/execa/lib/stdio/handle.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/handle.js
 var handleStdio = (addProperties, options, verboseInfo, isSync) => {
   const stdio = normalizeStdioOption(options, verboseInfo, isSync);
   const initialFileDescriptors = stdio.map((stdioOption, fdNumber) => getFileDescriptor({
@@ -20886,7 +20929,7 @@ var forwardStdio = (stdioItems) => {
   return type === "native" ? value : "pipe";
 };
 
-// node_modules/execa/lib/stdio/handle-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/handle-sync.js
 var handleStdioSync = (options, verboseInfo) => handleStdio(addPropertiesSync, options, verboseInfo, true);
 var forbiddenIfSync = ({ type, optionName }) => {
   throwInvalidSyncValue(optionName, TYPE_TO_MESSAGE[type]);
@@ -20931,14 +20974,14 @@ var addPropertiesSync = {
   }
 };
 
-// node_modules/execa/lib/io/strip-newline.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/strip-newline.js
 var stripNewline = (value, { stripFinalNewline: stripFinalNewline2 }, fdNumber) => getStripFinalNewline(stripFinalNewline2, fdNumber) && value !== undefined && !Array.isArray(value) ? stripFinalNewline(value) : value;
 var getStripFinalNewline = (stripFinalNewline2, fdNumber) => fdNumber === "all" ? stripFinalNewline2[1] || stripFinalNewline2[2] : stripFinalNewline2[fdNumber];
 
-// node_modules/execa/lib/transform/generator.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/transform/generator.js
 import { Transform, getDefaultHighWaterMark } from "node:stream";
 
-// node_modules/execa/lib/transform/split.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/transform/split.js
 var getSplitLinesGenerator = (binary, preserveNewlines, skipped, state) => binary || skipped ? undefined : initializeSplitLines(preserveNewlines, state);
 var splitLinesSync = (chunk, preserveNewlines, objectMode) => objectMode ? chunk.flatMap((item) => splitLinesItemSync(item, preserveNewlines)) : splitLinesItemSync(chunk, preserveNewlines);
 var splitLinesItemSync = (chunk, preserveNewlines) => {
@@ -21022,7 +21065,7 @@ var linesUint8ArrayInfo = {
   concatBytes: concatUint8Array
 };
 
-// node_modules/execa/lib/transform/validate.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/transform/validate.js
 import { Buffer as Buffer3 } from "node:buffer";
 var getValidateTransformInput = (writableObjectMode, optionName) => writableObjectMode ? undefined : validateStringTransformInput.bind(undefined, optionName);
 var validateStringTransformInput = function* (optionName, chunk) {
@@ -21051,7 +21094,7 @@ Instead, \`yield\` should either be called with a value, or not be called at all
   }
 };
 
-// node_modules/execa/lib/transform/encoding-transform.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/transform/encoding-transform.js
 import { Buffer as Buffer4 } from "node:buffer";
 import { StringDecoder as StringDecoder2 } from "node:string_decoder";
 var getEncodingTransformGenerator = (binary, encoding, skipped) => {
@@ -21086,7 +21129,7 @@ var encodingStringFinal = function* (stringDecoder) {
   }
 };
 
-// node_modules/execa/lib/transform/run-async.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/transform/run-async.js
 import { callbackify } from "node:util";
 var pushChunks = callbackify(async (getChunks, state, getChunksArguments, transformStream) => {
   state.currentIterable = getChunks(...getChunksArguments);
@@ -21134,7 +21177,7 @@ var identityGenerator = function* (chunk) {
   yield chunk;
 };
 
-// node_modules/execa/lib/transform/run-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/transform/run-sync.js
 var pushChunksSync = (getChunksSync, getChunksArguments, transformStream, done) => {
   try {
     for (const chunk of getChunksSync(...getChunksArguments)) {
@@ -21176,7 +21219,7 @@ var identityGenerator2 = function* (chunk) {
   yield chunk;
 };
 
-// node_modules/execa/lib/transform/generator.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/transform/generator.js
 var generatorToStream = ({
   value,
   value: { transform: transform2, final, writableObjectMode, readableObjectMode },
@@ -21230,7 +21273,7 @@ var addInternalGenerators = ({ transform: transform2, final, binary, writableObj
   ].filter(Boolean);
 };
 
-// node_modules/execa/lib/io/input-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/input-sync.js
 var addInputOptionsSync = (fileDescriptors, options) => {
   for (const fdNumber of getInputFdNumbers(fileDescriptors)) {
     addInputOptionSync(fileDescriptors, fdNumber, options);
@@ -21263,10 +21306,10 @@ var validateSerializable = (newContents) => {
   }
 };
 
-// node_modules/execa/lib/io/output-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/output-sync.js
 import { writeFileSync, appendFileSync } from "node:fs";
 
-// node_modules/execa/lib/verbose/output.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/output.js
 var shouldLogOutput = ({ stdioItems, encoding, verboseInfo, fdNumber }) => fdNumber !== "all" && isFullVerbose(verboseInfo, fdNumber) && !BINARY_ENCODINGS.has(encoding) && fdUsesVerbose(fdNumber) && (stdioItems.some(({ type, value }) => type === "native" && PIPED_STDIO_VALUES.has(value)) || stdioItems.every(({ type }) => TRANSFORM_TYPES.has(type)));
 var fdUsesVerbose = (fdNumber) => fdNumber === 1 || fdNumber === 2;
 var PIPED_STDIO_VALUES = new Set(["pipe", "overlapped"]);
@@ -21293,7 +21336,7 @@ var logLine = (line, fdNumber, verboseInfo) => {
   });
 };
 
-// node_modules/execa/lib/io/output-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/output-sync.js
 var transformOutputSync = ({ fileDescriptors, syncResult: { output }, options, isMaxBuffer, verboseInfo }) => {
   if (output === null) {
     return { output: Array.from({ length: 3 }) };
@@ -21396,7 +21439,7 @@ var writeToFiles = (serializedResult, stdioItems, outputFiles) => {
   }
 };
 
-// node_modules/execa/lib/resolve/all-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/resolve/all-sync.js
 var getAllSync = ([, stdout, stderr], options) => {
   if (!options.all) {
     return;
@@ -21419,7 +21462,7 @@ var getAllSync = ([, stdout, stderr], options) => {
   return `${stdout}${stderr}`;
 };
 
-// node_modules/execa/lib/resolve/exit-async.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/resolve/exit-async.js
 import { once as once4 } from "node:events";
 var waitForExit = async (subprocess, context) => {
   const [exitCode, signal] = await waitForExitOrError(subprocess);
@@ -21453,7 +21496,7 @@ var waitForSuccessfulExit = async (exitPromise) => {
 var isSubprocessErrorExit = (exitCode, signal) => exitCode === undefined && signal === undefined;
 var isFailedExit = (exitCode, signal) => exitCode !== 0 || signal !== null;
 
-// node_modules/execa/lib/resolve/exit-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/resolve/exit-sync.js
 var getExitResultSync = ({ error: error38, status: exitCode, signal, output }, { maxBuffer }) => {
   const resultError = getResultError(error38, exitCode, signal);
   const timedOut = resultError?.code === "ETIMEDOUT";
@@ -21473,7 +21516,7 @@ var getResultError = (error38, exitCode, signal) => {
   return isFailedExit(exitCode, signal) ? new DiscardedError : undefined;
 };
 
-// node_modules/execa/lib/methods/main-sync.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/main-sync.js
 var execaCoreSync = (rawFile, rawArguments, rawOptions) => {
   const { file: file2, commandArguments: commandArguments2, command, escapedCommand, startTime, verboseInfo, options, fileDescriptors } = handleSyncArguments(rawFile, rawArguments, rawOptions);
   const result = spawnSubprocessSync({
@@ -21605,14 +21648,14 @@ var getSyncResult = ({ error: error38, exitCode, signal, timedOut, isMaxBuffer, 
   isSync: true
 });
 
-// node_modules/execa/lib/methods/main-async.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/main-async.js
 import { setMaxListeners } from "node:events";
 import { spawn } from "node:child_process";
 
-// node_modules/execa/lib/ipc/methods.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/methods.js
 import process12 from "node:process";
 
-// node_modules/execa/lib/ipc/get-one.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/get-one.js
 import { once as once5, on as on2 } from "node:events";
 var getOneMessage = ({ anyProcess, channel, isSubprocess, ipc }, { reference = true, filter: filter3 } = {}) => {
   validateIpcMethod({
@@ -21667,7 +21710,7 @@ var throwOnStrictError = async (ipcEmitter, isSubprocess, { signal }) => {
   throw getStrictResponseError(error38, isSubprocess);
 };
 
-// node_modules/execa/lib/ipc/get-each.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/get-each.js
 import { once as once6, on as on3 } from "node:events";
 var getEachMessage = ({ anyProcess, channel, isSubprocess, ipc }, { reference = true } = {}) => loopOnMessages({
   anyProcess,
@@ -21744,7 +21787,7 @@ var throwIfStrictError = ({ error: error38 }) => {
   }
 };
 
-// node_modules/execa/lib/ipc/methods.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/methods.js
 var addIpcMethods = (subprocess, { ipc }) => {
   Object.assign(subprocess, getIpcMethods(subprocess, false, ipc));
 };
@@ -21783,7 +21826,7 @@ var getIpcMethods = (anyProcess, isSubprocess, ipc) => ({
   })
 });
 
-// node_modules/execa/lib/return/early-error.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/return/early-error.js
 import { ChildProcess as ChildProcess2 } from "node:child_process";
 import {
   PassThrough,
@@ -21833,7 +21876,7 @@ var writable = () => new Writable({ write() {} });
 var duplex = () => new Duplex({ read() {}, write() {} });
 var handleDummyPromise = async (error38, verboseInfo, options) => handleResult(error38, verboseInfo, options);
 
-// node_modules/execa/lib/stdio/handle-async.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/stdio/handle-async.js
 import { createReadStream, createWriteStream } from "node:fs";
 import { Buffer as Buffer5 } from "node:buffer";
 import { Readable as Readable2, Writable as Writable2, Duplex as Duplex2 } from "node:stream";
@@ -21877,7 +21920,7 @@ var addPropertiesAsync = {
   }
 };
 
-// node_modules/@sindresorhus/merge-streams/index.js
+// node_modules/.deno/@sindresorhus+merge-streams@4.0.0/node_modules/@sindresorhus/merge-streams/index.js
 import { on as on4, once as once7 } from "node:events";
 import { PassThrough as PassThroughStream, getDefaultHighWaterMark as getDefaultHighWaterMark2 } from "node:stream";
 import { finished as finished2 } from "node:stream/promises";
@@ -22094,7 +22137,7 @@ var updateMaxListeners = (passThroughStream, increment2) => {
 var PASSTHROUGH_LISTENERS_COUNT = 2;
 var PASSTHROUGH_LISTENERS_PER_STREAM = 1;
 
-// node_modules/execa/lib/io/pipeline.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/pipeline.js
 import { finished as finished3 } from "node:stream/promises";
 var pipeStreams = (source, destination) => {
   source.pipe(destination);
@@ -22130,7 +22173,7 @@ var abortSourceStream = (source) => {
   }
 };
 
-// node_modules/execa/lib/io/output-async.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/output-async.js
 var pipeOutputAsync = (subprocess, fileDescriptors, controller) => {
   const pipeGroups = new Map;
   for (const [fdNumber, { stdioItems, direction }] of Object.entries(fileDescriptors)) {
@@ -22182,10 +22225,10 @@ var setStandardStreamMaxListeners = (stream, { signal }) => {
 };
 var MAX_LISTENERS_INCREMENT = 2;
 
-// node_modules/execa/lib/terminate/cleanup.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/terminate/cleanup.js
 import { addAbortListener as addAbortListener2 } from "node:events";
 
-// node_modules/signal-exit/dist/mjs/signals.js
+// node_modules/.deno/signal-exit@4.1.0/node_modules/signal-exit/dist/mjs/signals.js
 var signals = [];
 signals.push("SIGHUP", "SIGINT", "SIGTERM");
 if (process.platform !== "win32") {
@@ -22195,7 +22238,7 @@ if (process.platform === "linux") {
   signals.push("SIGIO", "SIGPOLL", "SIGPWR", "SIGSTKFLT");
 }
 
-// node_modules/signal-exit/dist/mjs/index.js
+// node_modules/.deno/signal-exit@4.1.0/node_modules/signal-exit/dist/mjs/index.js
 var processOk = (process13) => !!process13 && typeof process13 === "object" && typeof process13.removeListener === "function" && typeof process13.emit === "function" && typeof process13.reallyExit === "function" && typeof process13.listeners === "function" && typeof process13.kill === "function" && typeof process13.pid === "number" && typeof process13.on === "function";
 var kExitEmitter = Symbol.for("signal-exit emitter");
 var global2 = globalThis;
@@ -22393,7 +22436,7 @@ var {
   unload
 } = signalExitWrap(processOk(process13) ? new SignalExit(process13) : new SignalExitFallback);
 
-// node_modules/execa/lib/terminate/cleanup.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/terminate/cleanup.js
 var cleanupOnExit = (subprocess, { cleanup, detached }, { signal }) => {
   if (!cleanup || detached) {
     return;
@@ -22406,7 +22449,7 @@ var cleanupOnExit = (subprocess, { cleanup, detached }, { signal }) => {
   });
 };
 
-// node_modules/execa/lib/pipe/pipe-arguments.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/pipe/pipe-arguments.js
 var normalizePipeArguments = ({ source, sourcePromise, boundOptions, createNested }, ...pipeArguments) => {
   const startTime = getStartTime();
   const {
@@ -22479,7 +22522,7 @@ var getSourceStream = (source, from) => {
   }
 };
 
-// node_modules/execa/lib/pipe/throw.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/pipe/throw.js
 var handlePipeArgumentsError = ({
   sourceStream,
   sourceError,
@@ -22528,7 +22571,7 @@ var createNonCommandError = ({ error: error38, fileDescriptors, sourceOptions, s
 });
 var PIPE_COMMAND_MESSAGE = "source.pipe(destination)";
 
-// node_modules/execa/lib/pipe/sequence.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/pipe/sequence.js
 var waitForBothSubprocesses = async (subprocessPromises) => {
   const [
     { status: sourceStatus, reason: sourceReason, value: sourceResult = sourceReason },
@@ -22546,7 +22589,7 @@ var waitForBothSubprocesses = async (subprocessPromises) => {
   return destinationResult;
 };
 
-// node_modules/execa/lib/pipe/streaming.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/pipe/streaming.js
 import { finished as finished4 } from "node:stream/promises";
 var pipeSubprocessStream = (sourceStream, destinationStream, maxListenersController) => {
   const mergedStream = MERGED_STREAMS.has(destinationStream) ? pipeMoreSubprocessStream(sourceStream, destinationStream) : pipeFirstSubprocessStream(sourceStream, destinationStream);
@@ -22576,7 +22619,7 @@ var MERGED_STREAMS = new WeakMap;
 var SOURCE_LISTENERS_PER_PIPE = 2;
 var DESTINATION_LISTENERS_PER_PIPE = 1;
 
-// node_modules/execa/lib/pipe/abort.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/pipe/abort.js
 import { aborted as aborted2 } from "node:util";
 var unpipeOnAbort = (unpipeSignal, unpipeContext) => unpipeSignal === undefined ? [] : [unpipeOnSignalAbort(unpipeSignal, unpipeContext)];
 var unpipeOnSignalAbort = async (unpipeSignal, { sourceStream, mergedStream, fileDescriptors, sourceOptions, startTime }) => {
@@ -22591,7 +22634,7 @@ var unpipeOnSignalAbort = async (unpipeSignal, { sourceStream, mergedStream, fil
   });
 };
 
-// node_modules/execa/lib/pipe/setup.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/pipe/setup.js
 var pipeToSubprocess = (sourceInfo, ...pipeArguments) => {
   if (isPlainObject2(pipeArguments[0])) {
     return pipeToSubprocess.bind(undefined, {
@@ -22650,10 +22693,10 @@ var handlePipePromise = async ({
 };
 var getSubprocessPromises = (sourcePromise, destination) => Promise.allSettled([sourcePromise, destination]);
 
-// node_modules/execa/lib/io/contents.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/contents.js
 import { setImmediate } from "node:timers/promises";
 
-// node_modules/execa/lib/io/iterate.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/iterate.js
 import { on as on5 } from "node:events";
 import { getDefaultHighWaterMark as getDefaultHighWaterMark3 } from "node:stream";
 var iterateOnSubprocessStream = ({ subprocessStdout, subprocess, binary, shouldEncode, encoding, preserveNewlines }) => {
@@ -22742,7 +22785,7 @@ var getGenerators = ({ binary, shouldEncode, encoding, shouldSplit, preserveNewl
   getSplitLinesGenerator(binary, preserveNewlines, !shouldSplit, {})
 ].filter(Boolean);
 
-// node_modules/execa/lib/io/contents.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/io/contents.js
 var getStreamOutput = async ({ stream, onStreamEnd, fdNumber, encoding, buffer, maxBuffer, lines, allMixed, stripFinalNewline: stripFinalNewline2, verboseInfo, streamInfo }) => {
   const logPromise = logOutputAsync({
     stream,
@@ -22833,7 +22876,7 @@ var getBufferedData = async (streamPromise) => {
 };
 var handleBufferedData = ({ bufferedData }) => isArrayBuffer(bufferedData) ? new Uint8Array(bufferedData) : bufferedData;
 
-// node_modules/execa/lib/resolve/wait-stream.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/resolve/wait-stream.js
 import { finished as finished5 } from "node:stream/promises";
 var waitForStream = async (stream, fdNumber, streamInfo, { isSameDirection, stopOnExit = false } = {}) => {
   const state = handleStdinDestroy(stream, streamInfo);
@@ -22886,7 +22929,7 @@ var isInputFileDescriptor = ({ fileDescriptors }, fdNumber) => fdNumber !== "all
 var isStreamAbort = (error38) => error38?.code === "ERR_STREAM_PREMATURE_CLOSE";
 var isStreamEpipe = (error38) => error38?.code === "EPIPE";
 
-// node_modules/execa/lib/resolve/stdio.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/resolve/stdio.js
 var waitForStdioStreams = ({ subprocess, encoding, buffer, maxBuffer, lines, stripFinalNewline: stripFinalNewline2, verboseInfo, streamInfo }) => subprocess.stdio.map((stream, fdNumber) => waitForSubprocessStream({
   stream,
   fdNumber,
@@ -22927,7 +22970,7 @@ var waitForSubprocessStream = async ({ stream, fdNumber, encoding, buffer, maxBu
   return output;
 };
 
-// node_modules/execa/lib/resolve/all-async.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/resolve/all-async.js
 var makeAllStream = ({ stdout, stderr }, { all }) => all && (stdout || stderr) ? mergeStreams([stdout, stderr].filter(Boolean)) : undefined;
 var waitForAllStream = ({ subprocess, encoding, buffer, maxBuffer, lines, stripFinalNewline: stripFinalNewline2, verboseInfo, streamInfo }) => waitForSubprocessStream({
   ...getAllStream(subprocess, buffer),
@@ -22955,10 +22998,10 @@ var getAllStream = ({ stdout, stderr, all }, [, bufferStdout, bufferStderr]) => 
 };
 var getAllMixed = ({ all, stdout, stderr }) => all && stdout && stderr && stdout.readableObjectMode !== stderr.readableObjectMode;
 
-// node_modules/execa/lib/resolve/wait-subprocess.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/resolve/wait-subprocess.js
 import { once as once8 } from "node:events";
 
-// node_modules/execa/lib/verbose/ipc.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/verbose/ipc.js
 var shouldLogIpc = (verboseInfo) => isFullVerbose(verboseInfo, "ipc");
 var logIpcOutput = (message, verboseInfo) => {
   const verboseMessage = serializeVerboseMessage(message);
@@ -22970,7 +23013,7 @@ var logIpcOutput = (message, verboseInfo) => {
   });
 };
 
-// node_modules/execa/lib/ipc/buffer-messages.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/ipc/buffer-messages.js
 var waitForIpcOutput = async ({
   subprocess,
   buffer: bufferArray,
@@ -23008,7 +23051,7 @@ var getBufferedIpcOutput = async (ipcOutputPromise, ipcOutput) => {
   return ipcOutput;
 };
 
-// node_modules/execa/lib/resolve/wait-subprocess.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/resolve/wait-subprocess.js
 var waitForSubprocessResult = async ({
   subprocess,
   options: {
@@ -23124,7 +23167,7 @@ var throwOnSubprocessError = async (subprocess, { signal }) => {
   throw error38;
 };
 
-// node_modules/execa/lib/convert/concurrent.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/convert/concurrent.js
 var initializeConcurrentStreams = () => ({
   readableDestroy: new WeakMap,
   writableFinal: new WeakMap,
@@ -23150,11 +23193,11 @@ var waitForConcurrentStreams = async ({ resolve, promises }, subprocess) => {
   return !isSubprocessExit;
 };
 
-// node_modules/execa/lib/convert/readable.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/convert/readable.js
 import { Readable as Readable3 } from "node:stream";
 import { callbackify as callbackify2 } from "node:util";
 
-// node_modules/execa/lib/convert/shared.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/convert/shared.js
 import { finished as finished6 } from "node:stream/promises";
 var safeWaitForSubprocessStdin = async (subprocessStdin) => {
   if (subprocessStdin === undefined) {
@@ -23192,7 +23235,7 @@ var destroyOtherStream = (stream, isOpen, error38) => {
   }
 };
 
-// node_modules/execa/lib/convert/readable.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/convert/readable.js
 var createReadable = ({ subprocess, concurrentStreams, encoding }, { from, binary: binaryOption = true, preserveNewlines = true } = {}) => {
   const binary = binaryOption || BINARY_ENCODINGS.has(encoding);
   const { subprocessStdout, waitReadableDestroy } = getSubprocessStdout(subprocess, from, concurrentStreams);
@@ -23276,7 +23319,7 @@ var destroyOtherReadable = (stream, error38) => {
   destroyOtherStream(stream, stream.readable, error38);
 };
 
-// node_modules/execa/lib/convert/writable.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/convert/writable.js
 import { Writable as Writable3 } from "node:stream";
 import { callbackify as callbackify3 } from "node:util";
 var createWritable = ({ subprocess, concurrentStreams }, { to } = {}) => {
@@ -23342,7 +23385,7 @@ var destroyOtherWritable = (stream, error38) => {
   destroyOtherStream(stream, stream.writable, error38);
 };
 
-// node_modules/execa/lib/convert/duplex.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/convert/duplex.js
 import { Duplex as Duplex3 } from "node:stream";
 import { callbackify as callbackify4 } from "node:util";
 var createDuplex = ({ subprocess, concurrentStreams, encoding }, { from, to, binary: binaryOption = true, preserveNewlines = true } = {}) => {
@@ -23396,7 +23439,7 @@ var onDuplexDestroy = async ({ subprocessStdout, subprocessStdin, subprocess, wa
   ]);
 };
 
-// node_modules/execa/lib/convert/iterable.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/convert/iterable.js
 var createIterable = (subprocess, encoding, {
   from,
   binary: binaryOption = false,
@@ -23425,7 +23468,7 @@ var iterateOnStdoutData = async function* (onStdoutData, subprocessStdout, subpr
   }
 };
 
-// node_modules/execa/lib/convert/add.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/convert/add.js
 var addConvertedStreams = (subprocess, { encoding }) => {
   const concurrentStreams = initializeConcurrentStreams();
   subprocess.readable = createReadable.bind(undefined, { subprocess, concurrentStreams, encoding });
@@ -23435,7 +23478,7 @@ var addConvertedStreams = (subprocess, { encoding }) => {
   subprocess[Symbol.asyncIterator] = createIterable.bind(undefined, subprocess, encoding, {});
 };
 
-// node_modules/execa/lib/methods/promise.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/promise.js
 var mergePromise = (subprocess, promise3) => {
   for (const [property, descriptor] of descriptors) {
     const value = descriptor.value.bind(promise3);
@@ -23448,7 +23491,7 @@ var descriptors = ["then", "catch", "finally"].map((property) => [
   Reflect.getOwnPropertyDescriptor(nativePromisePrototype, property)
 ]);
 
-// node_modules/execa/lib/methods/main-async.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/main-async.js
 var execaCoreAsync = (rawFile, rawArguments, rawOptions, createNested) => {
   const { file: file2, commandArguments: commandArguments2, command, escapedCommand, startTime, verboseInfo, options, fileDescriptors } = handleAsyncArguments(rawFile, rawArguments, rawOptions);
   const { subprocess, promise: promise3 } = spawnSubprocessAsync({
@@ -23603,7 +23646,7 @@ var getAsyncResult = ({ errorInfo, exitCode, signal, stdio, all, ipcOutput, cont
   startTime
 });
 
-// node_modules/execa/lib/methods/bind.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/bind.js
 var mergeOptions = (boundOptions, options) => {
   const newOptions = Object.fromEntries(Object.entries(options).map(([optionName, optionValue]) => [
     optionName,
@@ -23619,7 +23662,7 @@ var mergeOption = (optionName, boundOptionValue, optionValue) => {
 };
 var DEEP_OPTIONS = new Set(["env", ...FD_SPECIFIC_OPTIONS]);
 
-// node_modules/execa/lib/methods/create.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/create.js
 var createExeca = (mapArguments, boundOptions, deepOptions, setBoundExeca) => {
   const createNested = (mapArguments2, boundOptions2, setBoundExeca2) => createExeca(mapArguments2, boundOptions2, deepOptions, setBoundExeca2);
   const boundExeca = (...execaArguments) => callBoundExeca({
@@ -23665,7 +23708,7 @@ var parseArguments = ({ mapArguments, firstArgument, nextArguments, deepOptions,
   };
 };
 
-// node_modules/execa/lib/methods/command.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/command.js
 var mapCommandAsync = ({ file: file2, commandArguments: commandArguments2 }) => parseCommand(file2, commandArguments2);
 var mapCommandSync = ({ file: file2, commandArguments: commandArguments2 }) => ({ ...parseCommand(file2, commandArguments2), isSync: true });
 var parseCommand = (command, unusedArguments) => {
@@ -23696,7 +23739,7 @@ var parseCommandString = (command) => {
 };
 var SPACES_REGEXP = / +/g;
 
-// node_modules/execa/lib/methods/script.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/lib/methods/script.js
 var setScriptSync = (boundExeca, createNested, boundOptions) => {
   boundExeca.sync = createNested(mapScriptSync, boundOptions);
   boundExeca.s = boundExeca.sync;
@@ -23707,7 +23750,7 @@ var getScriptOptions = (options) => ({ options: { ...getScriptStdinOption(option
 var getScriptStdinOption = ({ input, inputFile, stdio }) => input === undefined && inputFile === undefined && stdio === undefined ? { stdin: "inherit" } : {};
 var deepScriptOptions = { preferLocal: true };
 
-// node_modules/execa/index.js
+// node_modules/.deno/execa@9.6.1/node_modules/execa/index.js
 var execa2 = createExeca(() => ({}));
 var execaSync = createExeca(() => ({ isSync: true }));
 var execaCommand = createExeca(mapCommandAsync);
@@ -23721,7 +23764,7 @@ var {
   getCancelSignal: getCancelSignal2
 } = getIpcExport();
 
-// node_modules/clipboardy/lib/termux.js
+// node_modules/.deno/clipboardy@5.3.1/node_modules/clipboardy/lib/termux.js
 var handler = (error38) => {
   if (error38.code === "ENOENT") {
     throw new Error("Couldn't find the `termux-api` scripts. You can install them with: apt install termux-api");
@@ -23761,7 +23804,7 @@ var clipboard = {
 };
 var termux_default = clipboard;
 
-// node_modules/clipboardy/lib/linux.js
+// node_modules/.deno/clipboardy@5.3.1/node_modules/clipboardy/lib/linux.js
 import fs5 from "node:fs";
 import path6 from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
@@ -23835,7 +23878,7 @@ var clipboard2 = {
 };
 var linux_default = clipboard2;
 
-// node_modules/clipboardy/lib/wayland.js
+// node_modules/.deno/clipboardy@5.3.1/node_modules/clipboardy/lib/wayland.js
 var textArgs = ["--type", "text/plain"];
 var makeError3 = (command, error38) => {
   if (error38.code === "ENOENT") {
@@ -23887,7 +23930,7 @@ var clipboard3 = {
 };
 var wayland_default = clipboard3;
 
-// node_modules/clipboardy/lib/macos.js
+// node_modules/.deno/clipboardy@5.3.1/node_modules/clipboardy/lib/macos.js
 var env = {
   LC_CTYPE: "UTF-8"
 };
@@ -23902,12 +23945,12 @@ var clipboard4 = {
 };
 var macos_default = clipboard4;
 
-// node_modules/clipboardy/lib/windows.js
+// node_modules/.deno/clipboardy@5.3.1/node_modules/clipboardy/lib/windows.js
 import fs6 from "node:fs";
 import path7 from "node:path";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 
-// node_modules/system-architecture/index.js
+// node_modules/.deno/system-architecture@0.1.0/node_modules/system-architecture/index.js
 import { promisify as promisify4 } from "node:util";
 import process14 from "node:process";
 import childProcess from "node:child_process";
@@ -23933,7 +23976,7 @@ function systemArchitectureSync() {
   return arch;
 }
 
-// node_modules/is64bit/index.js
+// node_modules/.deno/is64bit@2.0.0/node_modules/is64bit/index.js
 var archtectures64bit = new Set([
   "arm64",
   "x64",
@@ -23944,7 +23987,7 @@ function is64bitSync() {
   return archtectures64bit.has(systemArchitectureSync());
 }
 
-// node_modules/powershell-utils/index.js
+// node_modules/.deno/powershell-utils@0.2.0/node_modules/powershell-utils/index.js
 import process15 from "node:process";
 import { Buffer as Buffer6 } from "node:buffer";
 import { promisify as promisify5 } from "node:util";
@@ -23976,7 +24019,7 @@ executePowerShell.encodeCommand = encodeCommand;
 executePowerShell.escapeArgument = escapeArgument;
 executePowerShell.createArguments = createArguments;
 
-// node_modules/clipboardy/lib/windows.js
+// node_modules/.deno/clipboardy@5.3.1/node_modules/clipboardy/lib/windows.js
 var __dirname3 = path7.dirname(fileURLToPath5(import.meta.url));
 var binarySuffix = process.arch === "arm64" ? "aarch64" : is64bitSync() ? "x86_64" : "i686";
 var windowBinaryPath = path7.join(__dirname3, `../fallbacks/windows/clipboard_${binarySuffix}.exe`);
@@ -24052,7 +24095,7 @@ var clipboard5 = {
 };
 var windows_default = clipboard5;
 
-// node_modules/clipboardy/lib/wsl.js
+// node_modules/.deno/clipboardy@5.3.1/node_modules/clipboardy/lib/wsl.js
 var clipboard6 = {
   async copy(options) {
     await execa2("clip.exe", [], options);
@@ -24065,7 +24108,7 @@ var clipboard6 = {
 };
 var wsl_default = clipboard6;
 
-// node_modules/clipboardy/index.js
+// node_modules/.deno/clipboardy@5.3.1/node_modules/clipboardy/index.js
 var platformLib = (() => {
   switch (process16.platform) {
     case "darwin": {
@@ -24190,7 +24233,30 @@ var formatQuestionRequest = (request) => `${request.questions.map(formatQuestion
 `)}
 
 Reply with ${request.questions.some((question) => question.multiple) ? "a number or comma-separated numbers" : "a number"}, or send any other message to cancel this choice and continue with that message.`;
-var selectedLabels = (question, text) => text.split(",").map((part) => Number(part.trim())).filter((index) => Number.isInteger(index)).map((index) => question.options[index - 1]?.label).filter((label) => Boolean(label));
+var selectedLabels = (question, text) => {
+  if (text.startsWith("/"))
+    return [];
+  const optionsMatched = text.split(",").map((part) => {
+    const trimmed = part.trim();
+    const index = Number(trimmed);
+    if (Number.isInteger(index)) {
+      return question.options[index - 1]?.label;
+    }
+    const lower = trimmed.toLowerCase();
+    const matched = question.options.find((opt) => opt.label.toLowerCase() === lower);
+    if (matched)
+      return matched.label;
+    return;
+  }).filter((label) => Boolean(label));
+  if (optionsMatched.length > 0)
+    return optionsMatched;
+  if (question.custom !== false) {
+    const trimmed = text.trim();
+    if (trimmed)
+      return [trimmed];
+  }
+  return [];
+};
 var answersFromQuestionReplyText = (request, text) => {
   const answers = request.questions.map((question) => selectedLabels(question, text));
   if (answers.some((answer) => answer.length === 0))

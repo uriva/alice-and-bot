@@ -10,9 +10,9 @@ import {
   sendTyping,
   setWebhook,
 } from "./node_modules/@alice-and-bot/core/backend/src/api.js";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import fs from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
 import { Buffer } from "node:buffer";
 
 import qrcode from "qrcode-terminal";
