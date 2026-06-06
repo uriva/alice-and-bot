@@ -551,18 +551,16 @@ export class ConnectedChat extends LitElement {
     this._unsubs.push(
       accessDb().subscribeQuery(
         {
-          keys: {
-            $: {
-              where: {
-                "owner.publicSignKey": publicSignKey,
-                conversation: this.conversationId,
-              },
+          identities: {
+            $: { where: { publicSignKey } },
+            keys: {
+              $: { where: { conversation: this.conversationId } },
             },
           },
         },
         ({ data }) => {
           if (!data) return;
-          this._hasAccess = (data.keys.length ?? 0) > 0;
+          this._hasAccess = (data.identities?.[0]?.keys?.length ?? 0) > 0;
           this.requestUpdate();
         },
       ),

@@ -49,18 +49,16 @@ export const subscribeConversationKey = (
 ): () => void =>
   accessDb().subscribeQuery(
     {
-      keys: {
-        $: {
-          where: {
-            "owner.publicSignKey": publicSignKey,
-            conversation: conversationId,
-          },
+      identities: {
+        $: { where: { publicSignKey } },
+        keys: {
+          $: { where: { conversation: conversationId } },
         },
       },
     },
     ({ data, error }) => {
       if (error) console.error("Failed to fetch conversation key", error);
-      const encryptedKey = data?.keys[0]?.key;
+      const encryptedKey = data?.identities?.[0]?.keys?.[0]?.key;
       if (!encryptedKey) return onChange(null);
       decryptAsymmetric<string>(privateEncryptKey, encryptedKey).then(onChange);
     },

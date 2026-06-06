@@ -46,16 +46,15 @@ const endpoints: BackendApiImpl = {
   authenticate: (token: string) => auth.verifyToken(token),
   handlers: {
     conversationKey: async ({ conversationId, publicSignKey }) => {
-      const { keys } = await query({
-        keys: {
-          $: {
-            where: {
-              conversation: conversationId,
-              "owner.publicSignKey": publicSignKey,
-            },
+      const { identities } = await query({
+        identities: {
+          $: { where: { publicSignKey } },
+          keys: {
+            $: { where: { conversation: conversationId } },
           },
         },
       });
+      const keys = identities[0]?.keys ?? [];
       return (keys.length === 0)
         ? { error: "no-such-key" }
         : { conversationKey: keys[0].key };
