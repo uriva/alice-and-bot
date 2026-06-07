@@ -39,6 +39,7 @@ import {
   computeTimeAgo,
   copyToClipboard,
   editWindowMs,
+  eventOutside,
   formatEditTime,
   formatFullTimestamp,
   successorText,
@@ -541,8 +542,8 @@ export class ChatMessage extends LitElement {
     if (this._menuOpen) {
       this._outsideClickHandler = (e: MouseEvent) => {
         if (
-          this._menuEl && !this._menuEl.contains(e.target as Node) &&
-          this._btnEl && !this._btnEl.contains(e.target as Node)
+          this._menuEl && this._btnEl &&
+          eventOutside(e, this._menuEl, this._btnEl)
         ) {
           this._menuOpen = false;
           this._removeOutsideClick();

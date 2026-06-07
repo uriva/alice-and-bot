@@ -431,3 +431,16 @@ test("clicking Document button opens file chooser", async ({ page }) => {
   const fileChooser = await fileChooserPromise;
   expect(fileChooser).toBeDefined();
 });
+
+test("attach menu works when chat-box is mounted inside a shadow root", async ({ page }) => {
+  await page.goto("/?shadow=1");
+  await page.locator('[data-testid="attach-button"]').click();
+  await expect(page.locator('[data-testid="attach-menu"]')).toBeVisible();
+
+  const fileChooserPromise = page.waitForEvent("filechooser", {
+    timeout: 5_000,
+  });
+  await page.locator('[data-testid="attach-menu"]').getByText("Document")
+    .click();
+  expect(await fileChooserPromise).toBeDefined();
+});

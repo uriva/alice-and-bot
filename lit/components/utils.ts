@@ -26,6 +26,14 @@ export const isAudioUrl = (href?: string) =>
 
 export const isHttpUrl = (src: string) => /^https?:\/\//i.test(src);
 
+export const eventOutside = (
+  e: Event,
+  ...nodes: (Node | null | undefined)[]
+) => {
+  const path = e.composedPath();
+  return nodes.every((node) => !node || !path.includes(node));
+};
+
 const extractMediaSrc = (tag: string) =>
   /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
 

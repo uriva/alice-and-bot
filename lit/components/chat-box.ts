@@ -39,6 +39,7 @@ import {
   buildTimeline,
   charCountThreshold,
   estimateSerializedLength,
+  eventOutside,
   formatDuration,
   playNotificationSound,
   recordingExtension,
@@ -814,10 +815,7 @@ export class ChatBox extends LitElement {
     this._showAttachMenu = !this._showAttachMenu;
     if (this._showAttachMenu) {
       this._attachOutsideHandler = (e: MouseEvent) => {
-        if (
-          this._attachMenuEl &&
-          !this._attachMenuEl.contains(e.target as Node)
-        ) {
+        if (this._attachMenuEl && eventOutside(e, this._attachMenuEl)) {
           this._showAttachMenu = false;
           this._removeAttachOutside();
         }

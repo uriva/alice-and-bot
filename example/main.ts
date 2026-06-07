@@ -118,6 +118,10 @@ const loadMoreEnabled = new URLSearchParams(globalThis.location.search).has(
   "loadMore",
 );
 
+const shadowEnabled = new URLSearchParams(globalThis.location.search).has(
+  "shadow",
+);
+
 const wideCodeLine = "x".repeat(500);
 const wideTextLine = "y".repeat(500);
 const makeHistoryBatch = (batchIndex: number): AbstracChatMessage[] =>
@@ -287,4 +291,12 @@ chatBox.onSendLocation = (
   chatBox.messages = messages;
 };
 
-chatParent.appendChild(chatBox);
+if (shadowEnabled) {
+  const shadowHost = document.createElement("div");
+  shadowHost.style.cssText =
+    "flex:1;min-height:0;display:flex;flex-direction:column";
+  chatParent.appendChild(shadowHost);
+  shadowHost.attachShadow({ mode: "open" }).appendChild(chatBox);
+} else {
+  chatParent.appendChild(chatBox);
+}
