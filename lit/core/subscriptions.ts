@@ -1,3 +1,4 @@
+import type { InstaQLEntity } from "@instantdb/core";
 import { sort, unique } from "@uri/gamla";
 import { sendTyping } from "../../backend/src/api.ts";
 import {
@@ -8,6 +9,7 @@ import {
   sendMessageWithKey,
 } from "../../protocol/src/clientApi.ts";
 import { decryptAsymmetric } from "../../protocol/src/crypto.ts";
+import type schema from "../../instant.schema.ts";
 import { accessAdminDb, accessDb } from "./instant-client.ts";
 
 export const compactPublicKey = (k: string): string =>
@@ -70,47 +72,76 @@ export type DecryptedMessagesResult = {
   loadMore: () => void;
 };
 
-export const subscribeDecryptedMessages = (
-  conversationId: string,
-  conversationKey: string | null,
-  onChange: (result: DecryptedMessagesResult) => void,
-) => {
-  const { unsubscribe, loadNextPage } = accessDb().subscribeInfiniteQuery(
-    {
-      messages: {
-        conversation: {},
-        $: {
-          where: { conversation: conversationId },
-          order: { timestamp: "desc" },
-          limit: 100,
-        },
-      },
-    },
-    (resp) => {
-      if (resp.error) {
-        console.error("error fetching alice and bot messages", resp.error);
-      }
-      const encrypted = resp.data?.messages;
-      if (!conversationKey || !encrypted) {
-        return onChange({
-          messages: null,
-          canLoadMore: resp.canLoadNextPage ?? false,
-          loadMore: loadNextPage,
-        });
-      }
-      const sorted = [...encrypted].sort((a, b) => b.timestamp - a.timestamp);
-      Promise.all(sorted.map(decryptMessage(conversationKey))).then(
-        (msgs) =>
-          onChange({
-            messages: msgs.filter((m) => m !== undefined),
-            canLoadMore: resp.canLoadNextPage ?? false,
-            loadMore: loadNextPage,
-          }),
-      );
-    },
-  );
-  return unsubscribe;
+type DbMessage = InstaQLEntity<typeof schema, "messages">;
+
+type MessagesInfiniteQuery = {
+  messages: {
+    $: {
+      where: { conversation: string };
+      order: { timestamp: "desc" };
+      limit: number;
+    };
+  };
 };
+
+type MessagesInfiniteResponse = {
+  error?: { message: string };
+  data?: { messages?: DbMessage[] };
+  canLoadNextPage?: boolean;
+};
+
+type SubscribeMessagesInfinite = (
+  query: MessagesInfiniteQuery,
+  cb: (resp: MessagesInfiniteResponse) => void,
+) => { unsubscribe: () => void; loadNextPage: () => void };
+
+export const messagesInfiniteQuery = (
+  conversationId: string,
+): MessagesInfiniteQuery => ({
+  messages: {
+    $: {
+      where: { conversation: conversationId },
+      order: { timestamp: "desc" },
+      limit: 100,
+    },
+  },
+});
+
+export const makeSubscribeDecryptedMessages =
+  (subscribeInfiniteQuery: SubscribeMessagesInfinite) =>
+  (
+    conversationId: string,
+    conversationKey: string | null,
+    onChange: (result: DecryptedMessagesResult) => void,
+  ) => {
+    const { unsubscribe, loadNextPage } = subscribeInfiniteQuery(
+      messagesInfiniteQuery(conversationId),
+      (resp) => {
+        if (resp.error) {
+          console.error("error fetching alice and bot messages", resp.error);
+        }
+        const emit = (messages: DecipheredMessage[] | null) =>
+          onChange({
+            messages,
+            canLoadMore: resp.canLoadNextPage ?? false,
+            loadMore: () => loadNextPage(),
+          });
+        const encrypted = resp.data?.messages;
+        if (!conversationKey || !encrypted) return emit(null);
+        const sorted = [...encrypted].sort((a, b) => b.timestamp - a.timestamp);
+        Promise.all(sorted.map(decryptMessage(conversationKey))).then((msgs) =>
+          emit(msgs.filter((m) => m !== undefined))
+        );
+      },
+    );
+    return unsubscribe;
+  };
+
+export const subscribeDecryptedMessages: ReturnType<
+  typeof makeSubscribeDecryptedMessages
+> = makeSubscribeDecryptedMessages(
+  (query, cb) => accessDb().subscribeInfiniteQuery(query, cb),
+);
 
 export const subscribeIdentityDetailsMap = (
   publicKeys: string[],

@@ -1,8 +1,11 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertFalse } from "@std/assert";
 import { FakeTime } from "@std/testing/time";
 import {
+  type DecryptedMessagesResult,
   makeCreateTypingNotifier,
+  makeSubscribeDecryptedMessages,
   makeSubscribeTypingStates,
+  messagesInfiniteQuery,
   typingTtl,
 } from "./subscriptions.ts";
 
@@ -359,4 +362,36 @@ Deno.test("onInput after onBlurOrSend does not re-send isTyping: true", () => {
   } finally {
     time.restore();
   }
+});
+
+Deno.test("messages query does not join the conversation entity", () => {
+  const query = messagesInfiniteQuery("convo1");
+  assertFalse(
+    "conversation" in query.messages,
+    "joining conversation re-fires the query on every updatedAt bump and times out handle-receive",
+  );
+  assertEquals(query.messages.$.where, { conversation: "convo1" });
+  assertEquals(query.messages.$.order, { timestamp: "desc" });
+  assertEquals(query.messages.$.limit, 100);
+});
+
+Deno.test("subscribeDecryptedMessages subscribes without a conversation join", () => {
+  let joinedConversation = true;
+  const subscribe = makeSubscribeDecryptedMessages((query, _cb) => {
+    joinedConversation = "conversation" in query.messages;
+    return { unsubscribe: () => {}, loadNextPage: () => {} };
+  });
+  subscribe("convo1", null, () => {});
+  assertFalse(joinedConversation);
+});
+
+Deno.test("subscribeDecryptedMessages forwards canLoadMore with null messages when key missing", () => {
+  const received: DecryptedMessagesResult[] = [];
+  const subscribe = makeSubscribeDecryptedMessages((_query, cb) => {
+    cb({ data: { messages: [] }, canLoadNextPage: true });
+    return { unsubscribe: () => {}, loadNextPage: () => {} };
+  });
+  subscribe("convo1", null, (result) => received.push(result));
+  assertEquals(received.at(-1)?.messages, null);
+  assertEquals(received.at(-1)?.canLoadMore, true);
 });
