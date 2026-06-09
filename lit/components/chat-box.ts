@@ -1275,7 +1275,7 @@ export class ChatBox extends LitElement {
               <div
                 style="${contentMaxWidthStyle(customColors)
                   ? contentMaxWidthStyle(customColors) + ";"
-                  : ""}width:100%;display:flex;align-items:center;padding:0 16px"
+                  : ""}width:100%;display:flex;align-items:center;padding:0 48px 0 16px"
               >
                 <div data-testid="title-text" style="flex:1;text-align:center">
                   ${this.title}
