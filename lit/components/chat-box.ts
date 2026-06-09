@@ -638,6 +638,111 @@ export class ChatBox extends LitElement {
     );
   }
 
+  private _renderMenuContent() {
+    return html`
+      ${this.enableVoiceCall && this.voiceCallState === "idle"
+        ? html`
+          <div
+            class="menu-item"
+            @click="${this._handleMenuCall}"
+          >
+            Voice Call
+          </div>
+        `
+        : nothing}
+      ${this.credentials
+        ? html`
+          <div
+            class="menu-item"
+            @click="${this._handleMenuSecretIdentity}"
+          >
+            Secret Identity
+          </div>
+        `
+        : nothing}
+    `;
+  }
+
+  private _renderHeaderMenu() {
+    const isDark = this.isDark;
+    return html`
+      <div style="position:relative;display:flex;align-items:center">
+        <button
+          data-testid="menu-button"
+          type="button"
+          @mousedown="${(e: Event) => e.preventDefault()}"
+          @click="${(e: Event) => {
+            e.stopPropagation();
+            this._showMenu = !this._showMenu;
+          }}"
+          style="${headerButtonStyle}"
+          title="Menu"
+          @mouseover="${this._hoverBtnIn}"
+          @mouseout="${this._hoverBtnOut}"
+        >
+          ${faEllipsisV}
+        </button>
+        ${this._showMenu
+          ? html`
+            <div
+              data-testid="menu-container"
+              style="position:absolute;top:calc(100% + 8px);right:0;background:${isDark
+                ? "#2a2a2a"
+                : "#ffffff"};color:${isDark
+                ? "#ffffff"
+                : "#000000"};border:1px solid ${isDark
+                ? "#4b5563"
+                : "#d1d5db"};border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:4px 0;z-index:100000;font-size:14px;min-width:160px;display:flex;flex-direction:column"
+            >
+              ${this._renderMenuContent()}
+            </div>
+          `
+          : nothing}
+      </div>
+    `;
+  }
+
+  private _renderBottomMenu() {
+    const isDark = this.isDark;
+    const customColors = this.customColors;
+    return html`
+      <div style="position:relative;display:flex">
+        <button
+          data-testid="menu-button"
+          type="button"
+          @mousedown="${(e: Event) => e.preventDefault()}"
+          @click="${(e: Event) => {
+            e.stopPropagation();
+            this._showMenu = !this._showMenu;
+          }}"
+          style="${sendButtonStyle(
+            isDark,
+            customColors,
+          )};touch-action:none;position:relative;overflow:hidden"
+          title="Menu"
+        >
+          ${faEllipsisV}
+        </button>
+        ${this._showMenu
+          ? html`
+            <div
+              data-testid="menu-container"
+              style="position:absolute;bottom:calc(100% + 8px);right:0;background:${isDark
+                ? "#2a2a2a"
+                : "#ffffff"};color:${isDark
+                ? "#ffffff"
+                : "#000000"};border:1px solid ${isDark
+                ? "#4b5563"
+                : "#d1d5db"};border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:4px 0;z-index:100000;font-size:14px;min-width:160px;display:flex;flex-direction:column"
+            >
+              ${this._renderMenuContent()}
+            </div>
+          `
+          : nothing}
+      </div>
+    `;
+  }
+
   private _removeAttachOutside() {
     if (this._attachOutsideHandler) {
       document.removeEventListener("mousedown", this._attachOutsideHandler);
@@ -1175,6 +1280,7 @@ export class ChatBox extends LitElement {
                 <div data-testid="title-text" style="flex:1;text-align:center">
                   ${this.title}
                 </div>
+                ${this._renderHeaderMenu()}
                 ${this.onClose
                   ? html`
                     <button
@@ -1602,58 +1708,7 @@ export class ChatBox extends LitElement {
                   showSendBtn,
                 )}">${faPaperPlane}</span>
               </button>
-              <div style="position:relative;display:flex">
-                <button
-                  data-testid="menu-button"
-                  type="button"
-                  @mousedown="${(e: Event) => e.preventDefault()}"
-                  @click="${(e: Event) => {
-                    e.stopPropagation();
-                    this._showMenu = !this._showMenu;
-                  }}"
-                  style="${sendButtonStyle(
-                    isDark,
-                    customColors,
-                  )};touch-action:none;position:relative;overflow:hidden"
-                  title="Menu"
-                >
-                  ${faEllipsisV}
-                </button>
-                ${this._showMenu
-                  ? html`
-                    <div
-                      data-testid="menu-container"
-                      style="position:absolute;bottom:calc(100% + 8px);right:0;background:${isDark
-                        ? "#2a2a2a"
-                        : "#ffffff"};color:${isDark
-                        ? "#ffffff"
-                        : "#000000"};border:1px solid ${isDark
-                        ? "#4b5563"
-                        : "#d1d5db"};border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:4px 0;z-index:100000;font-size:14px;min-width:160px;display:flex;flex-direction:column"
-                    >
-                      ${this.enableVoiceCall && this.voiceCallState === "idle"
-                        ? html`
-                          <div
-                            class="menu-item"
-                            @click="${this._handleMenuCall}"
-                          >
-                            Voice Call
-                          </div>
-                        `
-                        : nothing} ${this.credentials
-                        ? html`
-                          <div
-                            class="menu-item"
-                            @click="${this._handleMenuSecretIdentity}"
-                          >
-                            Secret Identity
-                          </div>
-                        `
-                        : nothing}
-                    </div>
-                  `
-                  : nothing}
-              </div>
+              ${customColors?.hideTitle ? this._renderBottomMenu() : nothing}
             </div>
             ${remaining < charCountThreshold
               ? html`
