@@ -520,6 +520,9 @@ export const createWidget = (
         ) as HTMLElement & Record<string, unknown>;
         chat.credentials = credentials;
         chat.conversationId = conversationId;
+        chat.addEventListener("secret-identity", () => {
+          openSecretIdentityDialog();
+        });
         chat.darkModeOverride = app.mode === "dark";
         chat.isDark = app.mode === "dark";
         chat.enableVoiceCall = params.enableVoiceCall ?? false;

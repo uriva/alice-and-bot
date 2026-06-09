@@ -25,7 +25,6 @@ import {
   faReply,
   faStop,
 } from "./icons.ts";
-import { renderSecretIdentityDialog } from "../../widget/src/widget.ts";
 import "./chat-message.ts";
 import "./chat-typing-indicator.ts";
 import type {
@@ -634,41 +633,9 @@ export class ChatBox extends LitElement {
   private _handleMenuSecretIdentity(e: Event) {
     e.stopPropagation();
     this._showMenu = false;
-    const mode = this.isDark ? "dark" : "light";
-    const colors = {
-      background: this.customColors?.background ||
-        (this.isDark ? "#2a2a2a" : "#ffffff"),
-      text: this.customColors?.text || (this.isDark ? "#f3f4f6" : "#111827"),
-      surface: this.customColors?.background ||
-        (this.isDark ? "#2a2a2a" : "#ffffff"),
-      border: this.isDark ? "#4b5563" : "#d1d5db",
-      overlay: "rgba(0,0,0,0.4)",
-      primary: this.customColors?.primary ||
-        (this.isDark ? "hsl(170,42%,24%)" : "hsl(170,55%,45%)"),
-      primaryText: "#ffffff",
-      neutralBg: this.isDark ? "#4b5563" : "#e5e7eb",
-      neutralText: this.isDark ? "#f9fafb" : "#111827",
-      startButton: this.customColors?.primary ||
-        (this.isDark ? "hsl(170,42%,24%)" : "hsl(170,55%,45%)"),
-      startButtonText: "#ffffff",
-      startShadow: "0 2px 8px rgba(0,0,0,0.15)",
-      inputBackground: this.customColors?.inputBackground ||
-        (this.isDark ? "#1e1e1e" : "#ffffff"),
-      inputBorder: this.isDark ? "#4b5563" : "#d1d5db",
-      inputText: this.isDark ? "#f9fafb" : "#111827",
-    };
-    let cleanup: (() => void) | null = null;
-    cleanup = renderSecretIdentityDialog({
-      colors,
-      mode,
-      credentials: this.credentials!,
-      onClose: () => {
-        if (cleanup) {
-          cleanup();
-          cleanup = null;
-        }
-      },
-    });
+    this.dispatchEvent(
+      new CustomEvent("secret-identity", { bubbles: true, composed: true }),
+    );
   }
 
   private _removeAttachOutside() {
