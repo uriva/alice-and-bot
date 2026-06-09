@@ -121,7 +121,12 @@ const resolveAppearance = (
     : prefersDark
     ? "dark"
     : "light";
-  const colors = { ...defaultColors[mode], ...(colorScheme?.[mode] ?? {}) };
+  const modeColorScheme = colorScheme?.[mode];
+  const colors = {
+    ...defaultColors[mode],
+    ...modeColorScheme,
+    ...(modeColorScheme?.primary && !modeColorScheme.startButton && { startButton: modeColorScheme.primary }),
+  };
   const colorSchemeValue: "light" | "dark" | "light dark" = hasLight && hasDark
     ? "light dark"
     : mode;
