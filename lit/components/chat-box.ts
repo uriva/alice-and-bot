@@ -1793,4 +1793,6 @@ export class ChatBox extends LitElement {
   }
 }
 
-customElements.define("chat-box", ChatBox);
+if (!customElements.get("chat-box")) {
+  customElements.define("chat-box", ChatBox);
+}

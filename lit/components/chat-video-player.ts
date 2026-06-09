@@ -88,4 +88,6 @@ export class ChatVideoPlayer extends LitElement {
   }
 }
 
-customElements.define("chat-video-player", ChatVideoPlayer);
+if (!customElements.get("chat-video-player")) {
+  customElements.define("chat-video-player", ChatVideoPlayer);
+}

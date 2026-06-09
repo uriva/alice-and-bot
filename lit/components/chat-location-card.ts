@@ -81,4 +81,6 @@ export class ChatLocationCard extends LitElement {
   }
 }
 
-customElements.define("chat-location-card", ChatLocationCard);
+if (!customElements.get("chat-location-card")) {
+  customElements.define("chat-location-card", ChatLocationCard);
+}

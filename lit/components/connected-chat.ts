@@ -900,4 +900,6 @@ export class ConnectedChat extends LitElement {
   }
 }
 
-customElements.define("alice-connected-chat", ConnectedChat);
+if (!customElements.get("alice-connected-chat")) {
+  customElements.define("alice-connected-chat", ConnectedChat);
+}

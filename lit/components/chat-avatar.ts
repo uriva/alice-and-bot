@@ -73,4 +73,6 @@ export class ChatAvatar extends LitElement {
   }
 }
 
-customElements.define("chat-avatar", ChatAvatar);
+if (!customElements.get("chat-avatar")) {
+  customElements.define("chat-avatar", ChatAvatar);
+}

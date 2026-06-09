@@ -243,4 +243,6 @@ export class ChatAttachment extends LitElement {
   }
 }
 
-customElements.define("chat-attachment", ChatAttachment);
+if (!customElements.get("chat-attachment")) {
+  customElements.define("chat-attachment", ChatAttachment);
+}

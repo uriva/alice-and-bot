@@ -59,4 +59,6 @@ export class ChatTypingIndicator extends LitElement {
   }
 }
 
-customElements.define("chat-typing-indicator", ChatTypingIndicator);
+if (!customElements.get("chat-typing-indicator")) {
+  customElements.define("chat-typing-indicator", ChatTypingIndicator);
+}

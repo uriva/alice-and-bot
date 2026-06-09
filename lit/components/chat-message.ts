@@ -1100,4 +1100,6 @@ export class ChatMessage extends LitElement {
   }
 }
 
-customElements.define("chat-message", ChatMessage);
+if (!customElements.get("chat-message")) {
+  customElements.define("chat-message", ChatMessage);
+}

@@ -185,4 +185,6 @@ export class UserProfilePopup extends LitElement {
   }
 }
 
-customElements.define("user-profile-popup", UserProfilePopup);
+if (!customElements.get("user-profile-popup")) {
+  customElements.define("user-profile-popup", UserProfilePopup);
+}

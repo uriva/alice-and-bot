@@ -142,4 +142,6 @@ export class ChatAudioPlayer extends LitElement {
   }
 }
 
-customElements.define("chat-audio-player", ChatAudioPlayer);
+if (!customElements.get("chat-audio-player")) {
+  customElements.define("chat-audio-player", ChatAudioPlayer);
+}
