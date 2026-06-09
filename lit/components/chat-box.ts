@@ -638,6 +638,14 @@ export class ChatBox extends LitElement {
     );
   }
 
+  private _handleMenuImportIdentity(e: Event) {
+    e.stopPropagation();
+    this._showMenu = false;
+    this.dispatchEvent(
+      new CustomEvent("import-identity", { bubbles: true, composed: true }),
+    );
+  }
+
   private _renderMenuContent() {
     return html`
       ${this.enableVoiceCall && this.voiceCallState === "idle"
@@ -659,6 +667,12 @@ export class ChatBox extends LitElement {
           </div>
         `
         : nothing}
+      <div
+        class="menu-item"
+        @click="${this._handleMenuImportIdentity}"
+      >
+        Import Identity
+      </div>
     `;
   }
 

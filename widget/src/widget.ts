@@ -5,6 +5,7 @@ import {
 import {
   loadCredentials,
   loadOrCreateCredentials,
+  saveCredentials,
 } from "../../lit/core/credentials.ts";
 import {
   type DarkModeOverride,
@@ -13,6 +14,12 @@ import {
 } from "../../lit/core/dark-mode.ts";
 import { subscribeIsMobile } from "../../lit/core/responsive.ts";
 import { getOrCreateConversation } from "../../lit/core/subscriptions.ts";
+import {
+  base64UrlToBase64,
+  decryptSymmetric,
+  type EncryptedSymmetric,
+} from "../../protocol/src/crypto.ts";
+import { retrieveTransferPayload } from "../../backend/src/api.ts";
 import "../../lit/components/connected-chat.ts";
 
 const fontStack = [
@@ -125,7 +132,8 @@ const resolveAppearance = (
   const colors = {
     ...defaultColors[mode],
     ...modeColorScheme,
-    ...(modeColorScheme?.primary && !modeColorScheme.startButton && { startButton: modeColorScheme.primary }),
+    ...(modeColorScheme?.primary && !modeColorScheme.startButton &&
+      { startButton: modeColorScheme.primary }),
   };
   const colorSchemeValue: "light" | "dark" | "light dark" = hasLight && hasDark
     ? "light dark"
@@ -250,12 +258,58 @@ const darkModeOverrideForScheme = (
   return null;
 };
 
+const parseTransferFragment = (hash: string) => {
+  const match = hash.match(/^#?transfer=([^:]+):(.+)$/);
+  if (!match) return null;
+  return { relayId: match[1], aesKey: base64UrlToBase64(match[2]) };
+};
+
+const importIdentity = async (
+  inputStr: string,
+): Promise<Credentials | null> => {
+  const trimmed = inputStr.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    try {
+      const url = new URL(trimmed);
+      const parsed = parseTransferFragment(url.hash);
+      if (parsed) {
+        const result = await retrieveTransferPayload(parsed.relayId);
+        if ("error" in result) {
+          throw new Error("Transfer payload not found or expired");
+        }
+        const creds = await decryptSymmetric<Credentials>(
+          parsed.aesKey,
+          result.encryptedPayload as EncryptedSymmetric<Credentials>,
+        );
+        return creds;
+      }
+    } catch (e) {
+      console.error("Failed to import from URL", e);
+    }
+  }
+
+  try {
+    const creds = JSON.parse(trimmed);
+    if (
+      creds && typeof creds === "object" && creds.privateSignKey &&
+      creds.privateEncryptKey
+    ) {
+      return creds as Credentials;
+    }
+  } catch (e) {
+    console.error("Failed to parse credentials JSON", e);
+  }
+
+  return null;
+};
+
 const renderNameDialog = (
-  { colors, mode, onClose, onSubmit }: {
+  { colors, mode, onClose, onSubmit, onImportRequested }: {
     colors: WidgetModeColors;
     mode: WidgetMode;
     onClose: () => void;
     onSubmit: (name: string) => void;
+    onImportRequested: () => void;
   },
 ) => {
   const overlay = document.createElement("div");
@@ -320,7 +374,115 @@ const renderNameDialog = (
   };
   globalThis.addEventListener("keydown", onKey);
 
+  const importLink = document.createElement("a");
+  importLink.href = "#";
+  importLink.style.cssText =
+    `font-size:12px;color:${colors.primary};text-decoration:underline;cursor:pointer;margin-top:8px`;
+  importLink.textContent = "Import an existing identity";
+  importLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    onImportRequested();
+  });
+
   actions.append(cancelBtn, continueBtn);
+  dialog.append(title, hint, input, actions, importLink);
+  overlay.append(dialog);
+  document.body.appendChild(overlay);
+  input.focus();
+
+  return () => {
+    globalThis.removeEventListener("keydown", onKey);
+    overlay.remove();
+  };
+};
+
+export const renderImportIdentityDialog = (
+  { colors, mode, onClose, onSubmit }: {
+    colors: WidgetModeColors;
+    mode: WidgetMode;
+    onClose: () => void;
+    onSubmit: (credentials: Credentials) => void;
+  },
+) => {
+  const overlay = document.createElement("div");
+  overlay.style.cssText = overlayCss(colors);
+  overlay.addEventListener("click", onClose);
+
+  const dialog = document.createElement("div");
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  dialog.style.cssText = dialogBoxCss({ colors, mode });
+  dialog.addEventListener("click", (e) => e.stopPropagation());
+
+  const title = document.createElement("div");
+  title.style.cssText = "font-size:18px;font-weight:700;text-align:center";
+  title.textContent = "Import Identity";
+
+  const hint = document.createElement("div");
+  hint.style.cssText =
+    "font-size:13px;opacity:0.9;text-align:center;max-width:240px;line-height:1.4";
+  hint.textContent =
+    "Paste your secret key, credentials JSON, or transfer URL to import your identity.";
+
+  const input = document.createElement("input");
+  input.placeholder = "Paste secret key or URL here";
+  input.setAttribute("autocomplete", "off");
+  input.setAttribute("autocorrect", "off");
+  input.setAttribute("autocapitalize", "off");
+  input.style.cssText = fieldCss(colors);
+
+  const actions = document.createElement("div");
+  actions.style.cssText =
+    "display:flex;gap:8px;justify-content:center;width:100%;margin-top:4px";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.style.cssText = buttonNeutralCss(colors) + ";flex:1";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", onClose);
+
+  const importBtn = document.createElement("button");
+  importBtn.type = "button";
+  importBtn.style.cssText = buttonPrimaryCss(colors) + ";flex:1";
+  importBtn.textContent = "Import";
+
+  const submit = async () => {
+    const v = input.value.trim();
+    if (!v) {
+      showToast("Please paste your secret key or transfer URL");
+      return;
+    }
+    importBtn.disabled = true;
+    importBtn.textContent = "Importing...";
+    try {
+      const creds = await importIdentity(v);
+      if (creds) {
+        onSubmit(creds);
+      } else {
+        showToast("Invalid secret key or transfer URL");
+        importBtn.disabled = false;
+        importBtn.textContent = "Import";
+      }
+    } catch (_err) {
+      showToast("Failed to import identity");
+      importBtn.disabled = false;
+      importBtn.textContent = "Import";
+    }
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    submit();
+  });
+  importBtn.addEventListener("click", submit);
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  };
+  globalThis.addEventListener("keydown", onKey);
+
+  actions.append(cancelBtn, importBtn);
   dialog.append(title, hint, input, actions);
   overlay.append(dialog);
   document.body.appendChild(overlay);
@@ -377,7 +539,7 @@ export const renderSecretIdentityDialog = (
   const copyBtn = document.createElement("button");
   copyBtn.type = "button";
   copyBtn.style.cssText = buttonPrimaryCss(colors) + ";width:100%";
-  copyBtn.textContent = "Copy Link";
+  copyBtn.textContent = "Continue on another device";
   copyBtn.disabled = true;
 
   const closeBtn = document.createElement("button");
@@ -416,7 +578,7 @@ export const renderSecretIdentityDialog = (
     navigator.clipboard.writeText(transferUrl).then(() => {
       copyBtn.textContent = "Copied!";
       setTimeout(() => {
-        copyBtn.textContent = "Copy Link";
+        copyBtn.textContent = "Continue on another device";
       }, 2000);
     });
   };
@@ -465,6 +627,7 @@ export const createWidget = (
   let viewportHeight: number | undefined;
   let nameDialogCleanup: (() => void) | null = null;
   let secretIdentityCleanup: (() => void) | null = null;
+  let importIdentityCleanup: (() => void) | null = null;
   let contextMenuCleanup: (() => void) | null = null;
   let bodyScrollUnlock: (() => void) | null = null;
   let conversationUnsub: (() => void) | null = null;
@@ -522,6 +685,9 @@ export const createWidget = (
         chat.conversationId = conversationId;
         chat.addEventListener("secret-identity", () => {
           openSecretIdentityDialog();
+        });
+        chat.addEventListener("import-identity", () => {
+          openImportIdentityDialog();
         });
         chat.darkModeOverride = app.mode === "dark";
         chat.isDark = app.mode === "dark";
@@ -594,10 +760,36 @@ export const createWidget = (
     contextMenuCleanup = null;
   };
 
+  const onCredentialsImported = (creds: Credentials) => {
+    closeImportIdentityDialog();
+    saveCredentials("aliceAndBotCredentials", creds);
+    credentials = creds;
+    subscribeConversation();
+    setChatOpen(true);
+    showToast("Identity imported successfully");
+  };
+
   const onNameSubmitted = (name: string) => {
     closeNameDialog();
     loadCredentialsForName(name);
     setChatOpen(true);
+  };
+
+  const closeImportIdentityDialog = () => {
+    if (!importIdentityCleanup) return;
+    importIdentityCleanup();
+    importIdentityCleanup = null;
+  };
+
+  const openImportIdentityDialog = () => {
+    if (importIdentityCleanup) return;
+    const app = appearance();
+    importIdentityCleanup = renderImportIdentityDialog({
+      colors: app.colors,
+      mode: app.mode,
+      onClose: closeImportIdentityDialog,
+      onSubmit: onCredentialsImported,
+    });
   };
 
   const openNameDialog = () => {
@@ -608,6 +800,10 @@ export const createWidget = (
       mode: app.mode,
       onClose: closeNameDialog,
       onSubmit: onNameSubmitted,
+      onImportRequested: () => {
+        closeNameDialog();
+        openImportIdentityDialog();
+      },
     });
   };
 
@@ -727,6 +923,7 @@ export const createWidget = (
       conversationUnsub?.();
       closeNameDialog();
       closeSecretIdentityDialog();
+      closeImportIdentityDialog();
       closeContextMenu();
       if (bodyScrollUnlock) bodyScrollUnlock();
       setDarkModeOverride(null);
