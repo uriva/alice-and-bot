@@ -306,7 +306,8 @@ Deno.test("chat.message hook does NOT abort the session on /aliceandbot command"
     close() {}
   } as any;
 
-  globalThis.fetch = () => Promise.resolve(new Response(JSON.stringify({ ok: true })));
+  globalThis.fetch = () =>
+    Promise.resolve(new Response(JSON.stringify({ ok: true })));
 
   let abortCalled = false;
   const mockClient = {

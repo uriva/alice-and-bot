@@ -45,7 +45,7 @@ const selectedLabels = (question: QuestionInfo, text: string) => {
       }
       const lower = trimmed.toLowerCase();
       const matched = question.options.find(
-        (opt) => opt.label.toLowerCase() === lower
+        (opt) => opt.label.toLowerCase() === lower,
       );
       if (matched) return matched.label;
       return undefined;
