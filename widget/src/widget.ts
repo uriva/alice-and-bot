@@ -1,4 +1,7 @@
-import type { Credentials } from "../../protocol/src/clientApi.ts";
+import {
+  type Credentials,
+  generateTransferUrl,
+} from "../../protocol/src/clientApi.ts";
 import {
   loadCredentials,
   loadOrCreateCredentials,
@@ -324,6 +327,108 @@ const renderNameDialog = (
   };
 };
 
+const renderSecretIdentityDialog = (
+  { colors, mode, credentials, onClose }: {
+    colors: WidgetModeColors;
+    mode: WidgetMode;
+    credentials: Credentials;
+    onClose: () => void;
+  },
+) => {
+  const overlay = document.createElement("div");
+  overlay.style.cssText = overlayCss(colors);
+  overlay.addEventListener("click", onClose);
+
+  const dialog = document.createElement("div");
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  dialog.style.cssText = dialogBoxCss({ colors, mode });
+  dialog.addEventListener("click", (e) => e.stopPropagation());
+
+  const title = document.createElement("div");
+  title.style.cssText = "font-size:18px;font-weight:700;text-align:center";
+  title.textContent = "Secret Identity";
+
+  const hint = document.createElement("div");
+  hint.style.cssText =
+    "font-size:13px;opacity:0.9;text-align:center;max-width:240px;line-height:1.4";
+  hint.textContent =
+    "Scan this QR code with your mobile device to open Alice&Bot with your secret identity.";
+
+  const qrContainer = document.createElement("div");
+  qrContainer.style.cssText =
+    "display:flex;justify-content:center;align-items:center;width:200px;height:200px;background:#ffffff;border-radius:8px;padding:8px";
+
+  const style = document.createElement("style");
+  style.textContent = spinnerKeyframes;
+  const spinner = document.createElement("div");
+  spinner.style.cssText = spinnerCss;
+  qrContainer.append(style, spinner);
+
+  const actions = document.createElement("div");
+  actions.style.cssText =
+    "display:flex;flex-direction:column;gap:8px;width:100%;align-items:center";
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.style.cssText = buttonPrimaryCss(colors) + ";width:100%";
+  copyBtn.textContent = "Copy Link";
+  copyBtn.disabled = true;
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.style.cssText = buttonNeutralCss(colors) + ";width:100%";
+  closeBtn.textContent = "Close";
+  closeBtn.addEventListener("click", onClose);
+
+  actions.append(copyBtn, closeBtn);
+  dialog.append(title, hint, qrContainer, actions);
+  overlay.append(dialog);
+  document.body.appendChild(overlay);
+
+  let transferUrl = "";
+
+  generateTransferUrl(credentials).then(async (url) => {
+    transferUrl = url;
+    try {
+      const QRCode = (await import("qrcode")).default;
+      const dataUrl = await QRCode.toDataURL(url, { width: 184, margin: 1 });
+      qrContainer.innerHTML = "";
+      const img = document.createElement("img");
+      img.src = dataUrl;
+      img.alt = "Secret Identity QR Code";
+      img.style.width = "100%";
+      img.style.height = "100%";
+      qrContainer.append(img);
+      copyBtn.disabled = false;
+    } catch (_err) {
+      qrContainer.textContent = "Failed to generate QR code";
+    }
+  });
+
+  const handleCopy = () => {
+    if (!transferUrl) return;
+    navigator.clipboard.writeText(transferUrl).then(() => {
+      copyBtn.textContent = "Copied!";
+      setTimeout(() => {
+        copyBtn.textContent = "Copy Link";
+      }, 2000);
+    });
+  };
+
+  copyBtn.addEventListener("click", handleCopy);
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  };
+  globalThis.addEventListener("keydown", onKey);
+
+  return () => {
+    globalThis.removeEventListener("keydown", onKey);
+    overlay.remove();
+  };
+};
+
 const renderLoading = (_shadow: ShadowRoot) => {
   const wrapper = document.createElement("div");
   wrapper.style.cssText =
@@ -354,6 +459,8 @@ export const createWidget = (
   let conversationId: string | null = null;
   let viewportHeight: number | undefined;
   let nameDialogCleanup: (() => void) | null = null;
+  let secretIdentityCleanup: (() => void) | null = null;
+  let contextMenuCleanup: (() => void) | null = null;
   let bodyScrollUnlock: (() => void) | null = null;
   let conversationUnsub: (() => void) | null = null;
 
@@ -455,6 +562,30 @@ export const createWidget = (
     nameDialogCleanup = null;
   };
 
+  const closeSecretIdentityDialog = () => {
+    if (!secretIdentityCleanup) return;
+    secretIdentityCleanup();
+    secretIdentityCleanup = null;
+  };
+
+  const openSecretIdentityDialog = () => {
+    if (secretIdentityCleanup) return;
+    const app = appearance();
+    if (!credentials) return;
+    secretIdentityCleanup = renderSecretIdentityDialog({
+      colors: app.colors,
+      mode: app.mode,
+      credentials,
+      onClose: closeSecretIdentityDialog,
+    });
+  };
+
+  const closeContextMenu = () => {
+    if (!contextMenuCleanup) return;
+    contextMenuCleanup();
+    contextMenuCleanup = null;
+  };
+
   const onNameSubmitted = (name: string) => {
     closeNameDialog();
     loadCredentialsForName(name);
@@ -500,6 +631,73 @@ export const createWidget = (
     if (isOpen) setChatOpen(false);
   };
   globalThis.addEventListener("keydown", escapeHandler);
+
+  containerEl.addEventListener("contextmenu", (e) => {
+    if (!credentials) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeContextMenu();
+
+    const app = appearance();
+    const menu = document.createElement("div");
+    menu.style.cssText = `
+      position:fixed;
+      background:${app.colors.surface};
+      color:${app.colors.text};
+      border:1px solid ${app.colors.border};
+      border-radius:8px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+      padding:4px 0;
+      z-index:100000;
+      font-size:14px;
+      min-width:160px;
+      pointer-events:auto;
+      font-family:${fontStack};
+    `;
+
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
+
+    const item = document.createElement("div");
+    item.style.cssText = `
+      padding:8px 12px;
+      cursor:pointer;
+      transition:background 0.2s;
+    `;
+    item.textContent = "Copy Secret Identity";
+
+    item.addEventListener("mouseenter", () => {
+      item.style.background = app.colors.neutralBg;
+      item.style.color = app.colors.neutralText;
+    });
+    item.addEventListener("mouseleave", () => {
+      item.style.background = "";
+      item.style.color = "";
+    });
+
+    item.addEventListener("click", () => {
+      closeContextMenu();
+      openSecretIdentityDialog();
+    });
+
+    menu.appendChild(item);
+    document.body.appendChild(menu);
+
+    const onOutsideClick = (event: MouseEvent) => {
+      if (!menu.contains(event.target as Node)) {
+        closeContextMenu();
+      }
+    };
+
+    setTimeout(() => {
+      globalThis.addEventListener("click", onOutsideClick);
+    }, 0);
+
+    contextMenuCleanup = () => {
+      globalThis.removeEventListener("click", onOutsideClick);
+      menu.remove();
+    };
+  });
 
   setDarkModeOverride(darkModeOverrideForScheme(colorScheme));
   const unsubDark = subscribeDarkMode((dark) => {
@@ -587,6 +785,8 @@ export const createWidget = (
       unsubViewport();
       conversationUnsub?.();
       closeNameDialog();
+      closeSecretIdentityDialog();
+      closeContextMenu();
       if (bodyScrollUnlock) bodyScrollUnlock();
       setDarkModeOverride(null);
     },
