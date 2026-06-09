@@ -32,3 +32,15 @@ Deno.test("widget name dialog uses rounded centered popup style", () => {
   assertMatch(css, /align-items:center/);
   assertMatch(css, /padding:24px/);
 });
+
+Deno.test("chat-box title-bar inner padding-right is at least 56px to avoid overlap with absolute close button", () => {
+  const code = Deno.readTextFileSync(new URL("../../lit/components/chat-box.ts", import.meta.url));
+  const match = code.match(/padding:0\s+(\d+)px\s+0\s+16px/);
+  if (!match) {
+    throw new Error("Could not find title-bar padding in chat-box.ts");
+  }
+  const paddingRight = parseInt(match[1], 10);
+  if (paddingRight < 56) {
+    throw new Error(`title-bar padding-right is ${paddingRight}px, which overlaps with the 32px absolute close button at right: 8px (needs to be at least 56px to maintain a safe 16px gap)`);
+  }
+});

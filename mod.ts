@@ -191,7 +191,7 @@ export const embedScript = (params: WidgetParams): string => `
 <script>
   const widgetParams = JSON.parse(document.getElementById('alice-and-bot-params').textContent);
   const s = document.createElement('script');
-  s.src = "https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js?v=320";
+  s.src = "https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js?v=322";
   s.async = true;
   s.onload = () => aliceAndBot.loadChatWidget(widgetParams);
   document.head.appendChild(s);

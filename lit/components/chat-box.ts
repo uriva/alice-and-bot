@@ -649,8 +649,7 @@ export class ChatBox extends LitElement {
             Voice Call
           </div>
         `
-        : nothing}
-      ${this.credentials
+        : nothing} ${this.credentials
         ? html`
           <div
             class="menu-item"
@@ -1275,13 +1274,12 @@ export class ChatBox extends LitElement {
               <div
                 style="${contentMaxWidthStyle(customColors)
                   ? contentMaxWidthStyle(customColors) + ";"
-                  : ""}width:100%;display:flex;align-items:center;padding:0 48px 0 16px"
+                  : ""}width:100%;display:flex;align-items:center;padding:0 56px 0 16px"
               >
                 <div data-testid="title-text" style="flex:1;text-align:center">
                   ${this.title}
                 </div>
-                ${this._renderHeaderMenu()}
-                ${this.onClose
+                ${this._renderHeaderMenu()} ${this.onClose
                   ? html`
                     <button
                       type="button"
