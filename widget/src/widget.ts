@@ -332,7 +332,7 @@ const renderNameDialog = (
   };
 };
 
-const renderSecretIdentityDialog = (
+export const renderSecretIdentityDialog = (
   { colors, mode, credentials, onClose }: {
     colors: WidgetModeColors;
     mode: WidgetMode;

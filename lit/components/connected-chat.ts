@@ -847,6 +847,7 @@ export class ConnectedChat extends LitElement {
         .canLoadMore="${this._canLoadMore}"
         .loadMore="${this._loadMore}"
         .userId="${this.credentials.publicSignKey}"
+        .credentials="${this.credentials}"
         .onSend="${this._handleSend}"
         .onSendWithAttachments="${this._handleSendWithAttachments}"
         .onClose="${this.onClose}"

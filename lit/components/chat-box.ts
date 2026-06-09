@@ -14,6 +14,7 @@ import {
 } from "./design.ts";
 import {
   faCamera,
+  faEllipsisV,
   faFile,
   faImage,
   faMapMarkerAlt,
@@ -21,10 +22,10 @@ import {
   faMicrophoneSlash,
   faPaperclip,
   faPaperPlane,
-  faPhoneAlt,
   faReply,
   faStop,
 } from "./icons.ts";
+import { renderSecretIdentityDialog } from "../../widget/src/widget.ts";
 import "./chat-message.ts";
 import "./chat-typing-indicator.ts";
 import type {
@@ -369,6 +370,8 @@ const pruneOptimistic = (
 export class ChatBox extends LitElement {
   static override properties = {
     messages: { attribute: false },
+    credentials: { attribute: false },
+    _showMenu: { type: Boolean, state: true },
     canLoadMore: { type: Boolean },
     loadMore: { attribute: false },
     userId: { attribute: false },
@@ -422,6 +425,10 @@ export class ChatBox extends LitElement {
   };
 
   declare messages: AbstracChatMessage[];
+  declare credentials:
+    | import("../../protocol/src/clientApi.ts").Credentials
+    | null;
+  declare _showMenu: boolean;
   declare canLoadMore: boolean;
   declare loadMore: () => void;
   declare userId: string;
@@ -493,6 +500,8 @@ export class ChatBox extends LitElement {
 
   constructor() {
     super();
+    this.credentials = null;
+    this._showMenu = false;
     this.messages = [];
     this.canLoadMore = false;
     this.loadMore = () => {};
@@ -577,6 +586,7 @@ export class ChatBox extends LitElement {
       };
       globalThis.addEventListener("keydown", this._escHandler);
     }
+    globalThis.addEventListener("click", this._outsideClickHandler);
   }
 
   override disconnectedCallback() {
@@ -585,6 +595,7 @@ export class ChatBox extends LitElement {
       globalThis.removeEventListener("keydown", this._escHandler);
       this._escHandler = null;
     }
+    globalThis.removeEventListener("click", this._outsideClickHandler);
     if (this._resizeObserver) {
       this._resizeObserver.disconnect();
       this._resizeObserver = null;
@@ -595,6 +606,69 @@ export class ChatBox extends LitElement {
     }
     this._removeAttachOutside();
     if (this._recordingInterval) clearInterval(this._recordingInterval);
+  }
+
+  private _outsideClickHandler = (e: MouseEvent) => {
+    if (this._showMenu) {
+      const path = e.composedPath();
+      const isClickInside = path.some((el) => {
+        if (el instanceof HTMLElement) {
+          return el.hasAttribute("data-testid") &&
+            (el.getAttribute("data-testid") === "menu-container" ||
+              el.getAttribute("data-testid") === "menu-button");
+        }
+        return false;
+      });
+      if (!isClickInside) {
+        this._showMenu = false;
+      }
+    }
+  };
+
+  private _handleMenuCall(e: Event) {
+    e.stopPropagation();
+    this._showMenu = false;
+    this.onStartCall?.();
+  }
+
+  private _handleMenuSecretIdentity(e: Event) {
+    e.stopPropagation();
+    this._showMenu = false;
+    const mode = this.isDark ? "dark" : "light";
+    const colors = {
+      background: this.customColors?.background ||
+        (this.isDark ? "#2a2a2a" : "#ffffff"),
+      text: this.customColors?.text || (this.isDark ? "#f3f4f6" : "#111827"),
+      surface: this.customColors?.background ||
+        (this.isDark ? "#2a2a2a" : "#ffffff"),
+      border: this.isDark ? "#4b5563" : "#d1d5db",
+      overlay: "rgba(0,0,0,0.4)",
+      primary: this.customColors?.primary ||
+        (this.isDark ? "hsl(170,42%,24%)" : "hsl(170,55%,45%)"),
+      primaryText: "#ffffff",
+      neutralBg: this.isDark ? "#4b5563" : "#e5e7eb",
+      neutralText: this.isDark ? "#f9fafb" : "#111827",
+      startButton: this.customColors?.primary ||
+        (this.isDark ? "hsl(170,42%,24%)" : "hsl(170,55%,45%)"),
+      startButtonText: "#ffffff",
+      startShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      inputBackground: this.customColors?.inputBackground ||
+        (this.isDark ? "#1e1e1e" : "#ffffff"),
+      inputBorder: this.isDark ? "#4b5563" : "#d1d5db",
+      inputText: this.isDark ? "#f9fafb" : "#111827",
+    };
+    let cleanup: (() => void) | null = null;
+    cleanup = renderSecretIdentityDialog({
+      colors,
+      mode,
+      credentials: this.credentials!,
+      onClose: () => {
+        if (cleanup) {
+          cleanup();
+          cleanup = null;
+        }
+      },
+    });
   }
 
   private _removeAttachOutside() {
@@ -1104,6 +1178,17 @@ export class ChatBox extends LitElement {
     return html`
       <style>
       ${kebabHoverCss}${indeterminateKeyframes}${pulseKeyframes}
+      .menu-item {
+        padding: 10px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.15s;
+      }
+      .menu-item:hover {
+        background: ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)"};
+      }
       </style>
       <div
         data-testid="chat-container"
@@ -1123,21 +1208,7 @@ export class ChatBox extends LitElement {
                 <div data-testid="title-text" style="flex:1;text-align:center">
                   ${this.title}
                 </div>
-                ${this.enableVoiceCall && this.voiceCallState === "idle"
-                  ? html`
-                    <button
-                      type="button"
-                      data-testid="voice-call-button"
-                      @click="${this.onStartCall}"
-                      title="Start voice call"
-                      style="${headerButtonStyle}"
-                      @mouseover="${this._hoverBtnIn}"
-                      @mouseout="${this._hoverBtnOut}"
-                    >
-                      ${faPhoneAlt}
-                    </button>
-                  `
-                  : nothing} ${this.onClose
+                ${this.onClose
                   ? html`
                     <button
                       type="button"
@@ -1564,6 +1635,58 @@ export class ChatBox extends LitElement {
                   showSendBtn,
                 )}">${faPaperPlane}</span>
               </button>
+              <div style="position:relative;display:flex">
+                <button
+                  data-testid="menu-button"
+                  type="button"
+                  @mousedown="${(e: Event) => e.preventDefault()}"
+                  @click="${(e: Event) => {
+                    e.stopPropagation();
+                    this._showMenu = !this._showMenu;
+                  }}"
+                  style="${sendButtonStyle(
+                    isDark,
+                    customColors,
+                  )};touch-action:none;position:relative;overflow:hidden"
+                  title="Menu"
+                >
+                  ${faEllipsisV}
+                </button>
+                ${this._showMenu
+                  ? html`
+                    <div
+                      data-testid="menu-container"
+                      style="position:absolute;bottom:calc(100% + 8px);right:0;background:${isDark
+                        ? "#2a2a2a"
+                        : "#ffffff"};color:${isDark
+                        ? "#ffffff"
+                        : "#000000"};border:1px solid ${isDark
+                        ? "#4b5563"
+                        : "#d1d5db"};border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:4px 0;z-index:100000;font-size:14px;min-width:160px;display:flex;flex-direction:column"
+                    >
+                      ${this.enableVoiceCall && this.voiceCallState === "idle"
+                        ? html`
+                          <div
+                            class="menu-item"
+                            @click="${this._handleMenuCall}"
+                          >
+                            Voice Call
+                          </div>
+                        `
+                        : nothing} ${this.credentials
+                        ? html`
+                          <div
+                            class="menu-item"
+                            @click="${this._handleMenuSecretIdentity}"
+                          >
+                            Secret Identity
+                          </div>
+                        `
+                        : nothing}
+                    </div>
+                  `
+                  : nothing}
+              </div>
             </div>
             ${remaining < charCountThreshold
               ? html`
