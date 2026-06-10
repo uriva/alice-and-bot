@@ -64,6 +64,8 @@ export class ChatAttachment extends LitElement {
     messageTimestamp: { type: Number },
     sessionStart: { type: Number },
     onDecrypt: { attribute: false },
+    selectedImageSrc: {},
+    longPressActive: { type: Boolean },
     _decryptedUrl: { state: true },
     _loading: { state: true },
   };
@@ -76,6 +78,8 @@ export class ChatAttachment extends LitElement {
   declare messageTimestamp: number;
   declare sessionStart: number;
   declare onDecrypt: ((url: string) => Promise<string>) | undefined;
+  declare selectedImageSrc: string | undefined;
+  declare longPressActive: boolean;
   declare private _decryptedUrl: string | null;
   declare private _loading: boolean;
 
@@ -87,6 +91,8 @@ export class ChatAttachment extends LitElement {
     this.isOwn = false;
     this.messageTimestamp = 0;
     this.sessionStart = 0;
+    this.selectedImageSrc = undefined;
+    this.longPressActive = false;
     this._decryptedUrl = null;
     this._loading = false;
   }
@@ -189,12 +195,18 @@ export class ChatAttachment extends LitElement {
     }
 
     if (attachment.type === "image") {
+      const isSelected = this._decryptedUrl &&
+        this._decryptedUrl === this.selectedImageSrc;
       return this._decryptedUrl
         ? html`
           <img
             src="${this._decryptedUrl}"
             alt="${attachment.name}"
-            style="max-width:100%;border-radius:8px;cursor:pointer"
+            style="max-width:100%;border-radius:8px;cursor:pointer;transition:transform .15s,box-shadow .15s${isSelected
+              ? ";transform:scale(1.02);box-shadow:0 0 16px rgba(100,100,255,0.4)"
+              : ""}${this.longPressActive && isSelected
+              ? ";animation:msg-highlight .3s ease forwards"
+              : ""}"
           />
         `
         : html`

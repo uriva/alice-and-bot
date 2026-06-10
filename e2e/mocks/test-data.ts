@@ -130,8 +130,15 @@ export const makeEncryptedMessage = async (
   conversationKey: string,
   sender: TestCredentials,
   text: string,
+  // deno-lint-ignore no-explicit-any
+  attachments?: any[],
 ): Promise<string> => {
-  const message: { type: "text"; text: string } = { type: "text", text };
+  // deno-lint-ignore no-explicit-any
+  const message: { type: "text"; text: string; attachments?: any[] } = {
+    type: "text",
+    text,
+    attachments,
+  };
   const serialized = stringify(message)!;
   const signature = await signData(sender.privateSignKey, serialized);
   return encryptSymmetric(conversationKey, {

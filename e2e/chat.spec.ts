@@ -453,4 +453,97 @@ test.describe("Chat (full encryption pipeline)", () => {
     });
     expect(hasHandler).toBe(true);
   });
+
+  test("mobile: select and share image from bubble with text and image", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "canShare", {
+        value: () => true,
+        writable: true,
+        configurable: true,
+      });
+      let sharedPayload: unknown = null;
+      Object.defineProperty(navigator, "share", {
+        value: (payload: unknown) => {
+          sharedPayload = payload;
+          return Promise.resolve();
+        },
+        writable: true,
+        configurable: true,
+      });
+      // deno-lint-ignore no-explicit-any
+      (globalThis as any).getSharedPayload = () => sharedPayload;
+    });
+
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const { makeEncryptedMessage } = await import("./mocks/test-data.ts");
+    const testText = "Check out this amazing photo!";
+    const testAttachments = [
+      {
+        id: "img-1",
+        type: "image",
+        url:
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        name: "tiny-red.png",
+        size: 100,
+      },
+    ];
+    const testPayload = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      testText,
+      testAttachments,
+    );
+
+    const imageMessage = {
+      ...data.messages[0],
+      id: crypto.randomUUID(),
+      payload: testPayload,
+      text: testText,
+      timestamp: Date.now(),
+      senderPublicSignKey: data.bob.publicSignKey,
+      attachments: testAttachments,
+    };
+
+    await setupChatMocks(page, data, {
+      dataOverride: { messages: [...data.messages, imageMessage] },
+    });
+
+    await page.goto("/");
+    await waitForChat(page);
+
+    await page.evaluate(() => {
+      const chatBox = document.querySelector("chat-box");
+      if (chatBox) {
+        // deno-lint-ignore no-explicit-any
+        (chatBox as any).isMobile = true;
+      }
+    });
+
+    const lastMessage = page.locator(tid("message")).last();
+    const image = lastMessage.locator("img").first();
+    await expect(image).toBeVisible({ timeout: 15_000 });
+
+    await image.dispatchEvent("touchstart", {
+      touches: [{ clientX: 100, clientY: 200 }],
+    });
+
+    await page.waitForTimeout(600);
+
+    await image.dispatchEvent("touchend");
+
+    const shareButton = page.getByText("Share Image");
+    await expect(shareButton).toBeVisible({ timeout: 5_000 });
+
+    await shareButton.click();
+
+    const shared = await page.evaluate(() =>
+      // deno-lint-ignore no-explicit-any
+      (globalThis as any).getSharedPayload()
+    );
+    expect(shared).toBeTruthy();
+    expect(shared.files).toBeTruthy();
+    expect(shared.files.length).toBe(1);
+    expect(shared.files[0].name).toBe("tiny-red.png");
+  });
 });

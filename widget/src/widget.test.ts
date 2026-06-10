@@ -42,8 +42,12 @@ Deno.test("chat-box title-bar inner padding-right is beautiful and dynamic to av
   const code = Deno.readTextFileSync(
     new URL("../../lit/components/chat-box.ts", import.meta.url),
   );
-  const match = code.match(/padding:0\s+\$\{\s*this\.onClose\s+\?\s*"16px"\s*:\s*"44px"\s*\}\s+0\s+16px/);
+  const match = code.match(
+    /padding:0\s+\$\{\s*this\.onClose\s+\?\s*"16px"\s*:\s*"44px"\s*\}\s+0\s+16px/,
+  );
   if (!match) {
-    throw new Error("Could not find beautiful dynamic title-bar padding in chat-box.ts");
+    throw new Error(
+      "Could not find beautiful dynamic title-bar padding in chat-box.ts",
+    );
   }
 });

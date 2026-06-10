@@ -17,6 +17,7 @@ import {
   faCopy,
   faEllipsisV,
   faHistory,
+  faImage,
   faPen,
   faPhoneAlt,
   faReply,
@@ -390,6 +391,7 @@ export class ChatMessage extends LitElement {
     _showQuickEmojis: { state: true },
     _showMobileContext: { state: true },
     _longPressActive: { state: true },
+    _selectedImage: { state: true },
     _touchY: { state: true },
     _touchX: { state: true },
   };
@@ -419,6 +421,7 @@ export class ChatMessage extends LitElement {
   declare private _showQuickEmojis: boolean;
   declare private _showMobileContext: boolean;
   declare private _longPressActive: boolean;
+  declare private _selectedImage: { src: string; alt: string } | null;
   declare private _touchY: number;
   declare private _touchX: number;
   declare private _visibleText: string;
@@ -447,6 +450,7 @@ export class ChatMessage extends LitElement {
     this._showQuickEmojis = false;
     this._showMobileContext = false;
     this._longPressActive = false;
+    this._selectedImage = null;
     this._touchY = 0;
     this._touchX = 0;
     this._visibleText = "";
@@ -601,6 +605,15 @@ export class ChatMessage extends LitElement {
     this._longPressActive = true;
     this._touchY = e.touches[0]?.clientY ?? 0;
     this._touchX = e.touches[0]?.clientX ?? 0;
+
+    const target = e.target;
+    const imgEl = target instanceof HTMLElement ? target.closest("img") : null;
+    if (imgEl && imgEl.src) {
+      this._selectedImage = { src: imgEl.src, alt: imgEl.alt || "image.png" };
+    } else {
+      this._selectedImage = null;
+    }
+
     this._longPressTimer = globalThis.setTimeout(() => {
       this._longPressActive = false;
       this._showMobileContext = true;
@@ -610,6 +623,9 @@ export class ChatMessage extends LitElement {
   private _longPressEnd = () => {
     clearTimeout(this._longPressTimer);
     this._longPressActive = false;
+    if (!this._showMobileContext) {
+      this._selectedImage = null;
+    }
   };
 
   private _dismissQuickEmojis = (e: MouseEvent) => {
@@ -622,6 +638,31 @@ export class ChatMessage extends LitElement {
 
   private _closeMobileContext = () => {
     this._showMobileContext = false;
+    this._selectedImage = null;
+  };
+
+  private _shareSelectedImage = async () => {
+    if (!this._selectedImage) return;
+    const { src, alt } = this._selectedImage;
+    this._closeMobileContext();
+    try {
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const file = new File([blob], alt || "image.png", { type: blob.type });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: alt || "Image",
+        });
+      } else if (navigator.share) {
+        await navigator.share({
+          url: src,
+          title: alt || "Image",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to share image", err);
+    }
   };
 
   private _copyText = () => {
@@ -730,7 +771,7 @@ export class ChatMessage extends LitElement {
               : avatarSpace + "px"};margin-right:${isOwn
               ? (showAvatar ? "0" : avatarSpace + "px")
               : "0"};overflow-x:hidden;overflow-y:hidden;word-break:break-word;overflow-wrap:anywhere${this
-                ._longPressActive
+                ._longPressActive && !this._selectedImage
               ? ";animation:msg-highlight .3s ease forwards"
               : ""}"
           >
@@ -814,6 +855,8 @@ export class ChatMessage extends LitElement {
                           .messageTimestamp="${timestamp}"
                           .sessionStart="${this.sessionStart}"
                           .onDecrypt="${this.onDecryptAttachment}"
+                          .selectedImageSrc="${this._selectedImage?.src}"
+                          .longPressActive="${this._longPressActive}"
                         ></chat-attachment>
                       `,
                   )}
@@ -1027,6 +1070,16 @@ export class ChatMessage extends LitElement {
                       style="${mobileContextActionStyle(isDark)}"
                     >
                       ${faReply} Reply
+                    </button>
+                  `
+                  : nothing} ${this._selectedImage
+                  ? html`
+                    <button
+                      type="button"
+                      @click="${this._shareSelectedImage}"
+                      style="${mobileContextActionStyle(isDark)}"
+                    >
+                      ${faImage} Share Image
                     </button>
                   `
                   : nothing}
