@@ -416,3 +416,40 @@ export const formatFullTimestamp = (timestamp: number) =>
     dateStyle: "medium",
     timeStyle: "short",
   });
+
+export const getAutocompleteState = (text: string, cursorIndex: number) => {
+  const textBeforeCursor = text.slice(0, cursorIndex);
+  const lastAtSymbolIndex = textBeforeCursor.lastIndexOf("@");
+  if (lastAtSymbolIndex === -1) return null;
+  if (
+    lastAtSymbolIndex > 0 && !/\s/.test(textBeforeCursor[lastAtSymbolIndex - 1])
+  ) return null;
+  const searchQuery = textBeforeCursor.slice(lastAtSymbolIndex + 1);
+  if (/\s/.test(searchQuery)) return null;
+  return { triggerIndex: lastAtSymbolIndex, filter: searchQuery };
+};
+
+export const filterParticipants = (
+  participants: { publicSignKey: string; name: string; avatar: string }[],
+  filter: string,
+) => {
+  const query = filter.toLowerCase();
+  return participants.filter(
+    ({ name, publicSignKey }) =>
+      name.toLowerCase().includes(query) ||
+      publicSignKey.toLowerCase().includes(query),
+  );
+};
+
+export const insertMention = (
+  text: string,
+  triggerIndex: number,
+  cursorIndex: number,
+  participantName: string,
+) => {
+  const mention = `@${participantName} `;
+  return {
+    newText: text.slice(0, triggerIndex) + mention + text.slice(cursorIndex),
+    newCursorIndex: triggerIndex + mention.length,
+  };
+};

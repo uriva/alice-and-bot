@@ -3,6 +3,7 @@ import { repeat } from "lit/directives/repeat.js";
 import { empty } from "@uri/gamla";
 import { maxTextLength } from "../../protocol/src/attachmentLimits.ts";
 import {
+  avatarColor,
   centerFillStyle,
   chatContainerStyle,
   contentMaxWidthStyle,
@@ -27,6 +28,8 @@ import {
 } from "./icons.ts";
 import "./chat-message.ts";
 import "./chat-typing-indicator.ts";
+import "./chat-avatar.ts";
+import { compactPublicKey } from "../core/subscriptions.ts";
 import type {
   AbstracChatMessage,
   ActiveProgress,
@@ -40,7 +43,10 @@ import {
   charCountThreshold,
   estimateSerializedLength,
   eventOutside,
+  filterParticipants,
   formatDuration,
+  getAutocompleteState,
+  insertMention,
   playNotificationSound,
   recordingExtension,
   recordingMimeType,
@@ -305,6 +311,30 @@ const charCountStyle = (isDark: boolean, isOver: boolean) =>
     isOver ? "#ef4444" : (isDark ? "#9ca3af" : "#6b7280")
   }`;
 
+const autocompleteDropdownStyle = (isDark: boolean, custom?: CustomColors) =>
+  `position:absolute;bottom:calc(100% + 8px);left:0;right:0;background:${
+    custom?.inputBackground ?? (isDark ? "#1a1a1a" : "#ffffff")
+  };border:1px solid ${
+    isDark ? "#ffffff15" : "#00000015"
+  };border-radius:12px;box-shadow:0 8px 24px ${
+    isDark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.15)"
+  };z-index:200;max-height:220px;overflow-y:auto;scrollbar-width:thin;display:flex;flex-direction:column;padding:4px 0`;
+
+const autocompleteItemStyle = (isSelected: boolean, isDark: boolean) =>
+  `display:flex;align-items:center;gap:12px;padding:8px 16px;cursor:pointer;background:${
+    isSelected
+      ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)")
+      : "transparent"
+  };transition:background 0.1s ease`;
+
+const autocompleteItemNameStyle = (isDark: boolean) =>
+  `font-size:14px;font-weight:500;color:${isDark ? "#f3f4f6" : "#1e293b"}`;
+
+const autocompleteItemKeyStyle = (isDark: boolean) =>
+  `font-size:11px;font-family:monospace;color:${
+    isDark ? "#9ca3af" : "#64748b"
+  }`;
+
 const textareaStyle = (
   isDark: boolean,
   custom?: CustomColors,
@@ -411,6 +441,7 @@ export class ChatBox extends LitElement {
     isGroupChat: { type: Boolean },
     disableAutoFocus: { type: Boolean },
     isDark: { type: Boolean },
+    participants: { type: Array },
     _input: { state: true },
     _pendingFiles: { state: true },
     _showAttachMenu: { state: true },
@@ -425,6 +456,7 @@ export class ChatBox extends LitElement {
     _textareaOverflow: { state: true },
     _inputAreaHeight: { state: true },
     _replyingTo: { state: true },
+    _autocompleteState: { state: true },
   };
 
   declare messages: AbstracChatMessage[];
@@ -483,6 +515,11 @@ export class ChatBox extends LitElement {
   declare isGroupChat: boolean;
   declare disableAutoFocus: boolean;
   declare isDark: boolean;
+  declare participants: {
+    publicSignKey: string;
+    name: string;
+    avatar: string;
+  }[];
 
   declare private _input: string;
   declare private _pendingFiles: File[];
@@ -500,6 +537,12 @@ export class ChatBox extends LitElement {
   declare private _replyingTo:
     | { id: string; authorName: string; text: string }
     | null;
+  declare private _autocompleteState: {
+    triggerIndex: number;
+    filter: string;
+    filtered: { publicSignKey: string; name: string; avatar: string }[];
+    selectedIndex: number;
+  } | null;
 
   constructor() {
     super();
@@ -525,6 +568,7 @@ export class ChatBox extends LitElement {
     this.isGroupChat = false;
     this.disableAutoFocus = false;
     this.isDark = false;
+    this.participants = [];
     this._input = "";
     this._pendingFiles = [];
     this._showAttachMenu = false;
@@ -539,6 +583,7 @@ export class ChatBox extends LitElement {
     this._textareaOverflow = "hidden";
     this._inputAreaHeight = 72;
     this._replyingTo = null;
+    this._autocompleteState = null;
   }
 
   private _messagesContainerEl: HTMLDivElement | null = null;
@@ -624,6 +669,19 @@ export class ChatBox extends LitElement {
       });
       if (!isClickInside) {
         this._showMenu = false;
+      }
+    }
+    if (this._autocompleteState) {
+      const path = e.composedPath();
+      const isClickInside = path.some((el) => {
+        if (el instanceof HTMLElement) {
+          return el === this._inputEl ||
+            el.closest(".autocomplete-dropdown") !== null;
+        }
+        return false;
+      });
+      if (!isClickInside) {
+        this._autocompleteState = null;
       }
     }
   };
@@ -940,10 +998,63 @@ export class ChatBox extends LitElement {
     setTimeout(() => this._inputEl?.focus(), 0);
   };
 
+  private _updateAutocomplete() {
+    const textarea = this._inputEl;
+    if (!textarea) {
+      this._autocompleteState = null;
+      return;
+    }
+    const state = getAutocompleteState(textarea.value, textarea.selectionStart);
+    if (!state) {
+      this._autocompleteState = null;
+      return;
+    }
+    const filtered = filterParticipants(this.participants, state.filter);
+    if (empty(filtered)) {
+      this._autocompleteState = null;
+      return;
+    }
+    this._autocompleteState = {
+      ...state,
+      filtered,
+      selectedIndex: Math.min(
+        this._autocompleteState?.selectedIndex ?? 0,
+        filtered.length - 1,
+      ),
+    };
+  }
+
+  private _onTextareaClickOrKeyup = () => {
+    this._updateAutocomplete();
+  };
+
+  private _selectAutocompleteItem(participant: { name: string }) {
+    const textarea = this._inputEl;
+    if (!textarea || !this._autocompleteState) return;
+    const { triggerIndex } = this._autocompleteState;
+    const { newText, newCursorIndex } = insertMention(
+      textarea.value,
+      triggerIndex,
+      textarea.selectionStart,
+      participant.name,
+    );
+    this._input = newText;
+    this._autocompleteState = null;
+    this.updateComplete.then(() => {
+      if (this._inputEl) {
+        this._inputEl.selectionStart = newCursorIndex;
+        this._inputEl.selectionEnd = newCursorIndex;
+        this._inputEl.focus();
+        this._resizeTextarea(this._inputEl);
+      }
+    });
+  }
+
   private _onTextareaInput = (e: InputEvent) => {
     this._input = (e.target as HTMLTextAreaElement).value;
     this._resizeTextarea(e.target as HTMLTextAreaElement);
     this.onInputActivity?.();
+    this._updateAutocomplete();
   };
 
   private _onTextareaPaste = (e: ClipboardEvent) => {
@@ -960,6 +1071,33 @@ export class ChatBox extends LitElement {
 
   private _onTextareaKeydown = (e: KeyboardEvent) => {
     e.stopPropagation();
+    if (this._autocompleteState) {
+      const state = this._autocompleteState;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        state.selectedIndex = (state.selectedIndex + 1) % state.filtered.length;
+        this.requestUpdate();
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        state.selectedIndex =
+          (state.selectedIndex - 1 + state.filtered.length) %
+          state.filtered.length;
+        this.requestUpdate();
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        this._selectAutocompleteItem(state.filtered[state.selectedIndex]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        this._autocompleteState = null;
+        return;
+      }
+    }
     if (
       (e.key === "PageUp" || e.key === "PageDown") && e.target
     ) {
@@ -1618,7 +1756,54 @@ export class ChatBox extends LitElement {
               <div
                 style="position:relative;flex-grow:1;display:flex;align-items:flex-end"
               >
-                ${this.enableAttachments
+                ${this._autocompleteState
+                  ? html`
+                    <div class="autocomplete-dropdown" style="${autocompleteDropdownStyle(
+                      isDark,
+                      customColors,
+                    )}">
+                      ${repeat(
+                        this._autocompleteState.filtered,
+                        (p) => p.publicSignKey,
+                        (p, index) => {
+                          const isSelected =
+                            this._autocompleteState!.selectedIndex === index;
+                          return html`
+                            <div
+                              style="${autocompleteItemStyle(
+                                isSelected,
+                                isDark,
+                              )}"
+                              @click="${() => this._selectAutocompleteItem(p)}"
+                              @mouseenter="${() => {
+                                this._autocompleteState!.selectedIndex = index;
+                                this.requestUpdate();
+                              }}"
+                            >
+                              <chat-avatar
+                                .image="${p.avatar}"
+                                .name="${p.name}"
+                                .baseColor="${avatarColor(
+                                  p.publicSignKey,
+                                  isDark,
+                                )}"
+                                .isDark="${isDark}"
+                              ></chat-avatar>
+                              <div style="display:flex;flex-direction:column;min-width:0;flex:1">
+                                <div style="${autocompleteItemNameStyle(
+                                  isDark,
+                                )}">${p.name}</div>
+                                <div style="${autocompleteItemKeyStyle(
+                                  isDark,
+                                )}">${compactPublicKey(p.publicSignKey)}</div>
+                              </div>
+                            </div>
+                          `;
+                        },
+                      )}
+                    </div>
+                  `
+                  : nothing} ${this.enableAttachments
                   ? html`
                     <div
                       data-attach-wrapper
@@ -1694,6 +1879,8 @@ export class ChatBox extends LitElement {
                   .value="${this._input}"
                   @input="${this._onTextareaInput}"
                   @paste="${this._onTextareaPaste}"
+                  @click="${this._onTextareaClickOrKeyup}"
+                  @keyup="${this._onTextareaClickOrKeyup}"
                   @blur="${() => this.onInputActivity?.()}"
                   @keydown="${this._onTextareaKeydown}"
                   style="${textareaStyle(

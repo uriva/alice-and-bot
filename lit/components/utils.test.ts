@@ -1,5 +1,12 @@
 import { assertEquals, assertMatch } from "@std/assert";
-import { buildTimeline, formatFullTimestamp, preprocessText } from "./utils.ts";
+import {
+  buildTimeline,
+  filterParticipants,
+  formatFullTimestamp,
+  getAutocompleteState,
+  insertMention,
+  preprocessText,
+} from "./utils.ts";
 
 Deno.test("preprocessText converts multiline html code blocks to fenced markdown", () => {
   const input = [
@@ -36,4 +43,34 @@ Deno.test("formatFullTimestamp returns human-readable date and time", () => {
     formatFullTimestamp(Date.UTC(2026, 0, 2, 3, 4)),
     /2026|Jan|2|3|4/,
   );
+});
+
+Deno.test("getAutocompleteState triggers correctly", () => {
+  assertEquals(getAutocompleteState("hello @jo", 9), {
+    triggerIndex: 6,
+    filter: "jo",
+  });
+  assertEquals(getAutocompleteState("@", 1), { triggerIndex: 0, filter: "" });
+  assertEquals(getAutocompleteState("hello @john doe", 15), null);
+  assertEquals(getAutocompleteState("foo@bar.com", 11), null);
+});
+
+Deno.test("filterParticipants filters correctly", () => {
+  const participants = [
+    { publicSignKey: "pk1", name: "Alice", avatar: "" },
+    { publicSignKey: "pk2", name: "Bob", avatar: "" },
+  ];
+  assertEquals(filterParticipants(participants, "al"), [
+    { publicSignKey: "pk1", name: "Alice", avatar: "" },
+  ]);
+  assertEquals(filterParticipants(participants, "pk2"), [
+    { publicSignKey: "pk2", name: "Bob", avatar: "" },
+  ]);
+});
+
+Deno.test("insertMention inserts name with trailing space", () => {
+  assertEquals(insertMention("hello @jo", 6, 9, "John"), {
+    newText: "hello @John ",
+    newCursorIndex: 12,
+  });
 });

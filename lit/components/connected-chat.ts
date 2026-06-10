@@ -949,6 +949,11 @@ export class ConnectedChat extends LitElement {
     return html`
       <chat-box
         .messages="${chatMessages}"
+        .participants="${this._participants.map((p) => ({
+          publicSignKey: p.publicSignKey,
+          name: resolveParticipantName(p, this._identityDetails),
+          avatar: resolveParticipantAvatar(p, this._identityDetails),
+        }))}"
         .canLoadMore="${this._canLoadMore}"
         .loadMore="${this._loadMore}"
         .userId="${this.credentials.publicSignKey}"
