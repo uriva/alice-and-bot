@@ -650,6 +650,14 @@ export class ChatBox extends LitElement {
     );
   }
 
+  private _handleMenuParticipants(e: Event) {
+    e.stopPropagation();
+    this._showMenu = false;
+    this.dispatchEvent(
+      new CustomEvent("show-participants", { bubbles: true, composed: true }),
+    );
+  }
+
   private _renderMenuContent() {
     return html`
       ${this.enableVoiceCall && this.voiceCallState === "idle"
@@ -676,6 +684,12 @@ export class ChatBox extends LitElement {
         @click="${this._handleMenuImportIdentity}"
       >
         Import Identity
+      </div>
+      <div
+        class="menu-item"
+        @click="${this._handleMenuParticipants}"
+      >
+        Participants
       </div>
     `;
   }

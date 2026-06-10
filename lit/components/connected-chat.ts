@@ -29,6 +29,9 @@ import {
 } from "../core/voice-call.ts";
 import "./chat-box.ts";
 import "./user-profile-popup.ts";
+import "./chat-avatar.ts";
+import { avatarColor } from "./design.ts";
+import { copyToClipboard } from "./utils.ts";
 import type {
   AbstracChatMessage,
   ActiveProgress,
@@ -101,8 +104,76 @@ const foldEdits = (messages: DecipheredMessage[]) => {
 
 type IdentityDetails = Record<string, { name: string; avatar?: string }>;
 
+type Participant = {
+  publicSignKey: string;
+  name?: string;
+  avatar?: string;
+  alias?: string;
+};
+
 const resolveName = (details: IdentityDetails) => (key: string): string =>
   details[key]?.name ?? compactPublicKey(key);
+
+const resolveParticipantName = (p: Participant, details: IdentityDetails) =>
+  p.name || details[p.publicSignKey]?.name || compactPublicKey(p.publicSignKey);
+
+const resolveParticipantAvatar = (p: Participant, details: IdentityDetails) =>
+  p.avatar || details[p.publicSignKey]?.avatar || "";
+
+const participantsOverlayStyle =
+  "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000";
+
+const participantsPopupStyle = (isDark: boolean) =>
+  `background:${
+    isDark ? "#1a1a1a" : "#fff"
+  };border-radius:16px;padding:24px;min-width:300px;max-width:400px;width:90%;max-height:80vh;border:1px solid ${
+    isDark ? "#2a2a2a" : "#e5e7eb"
+  };box-shadow:${
+    isDark ? "0 8px 24px #0008" : "0 8px 24px #0002"
+  };display:flex;flex-direction:column;gap:16px;box-sizing:border-box`;
+
+const participantsListStyle =
+  "display:flex;flex-direction:column;gap:12px;overflow-y:auto;width:100%";
+
+const participantRowStyle = (isDark: boolean) =>
+  `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border-radius:12px;cursor:pointer;transition:background 0.2s;background:${
+    isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)"
+  }`;
+
+const participantInfoStyle =
+  "display:flex;align-items:center;gap:12px;flex:1;min-width:0";
+
+const participantMetaStyle =
+  "display:flex;flex-direction:column;min-width:0;flex:1";
+
+const participantNameStyle = (isDark: boolean) =>
+  `font-size:14px;font-weight:600;color:${
+    isDark ? "#f4f4f4" : "#222"
+  };white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
+
+const participantIdStyle = (isDark: boolean) =>
+  `font-size:11px;font-family:monospace;color:${
+    isDark ? "#9ca3af" : "#6b7280"
+  };white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
+
+const copyButtonStyle = (isDark: boolean) =>
+  `background:${
+    isDark ? "#2a2a2a" : "#e5e7eb"
+  };border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;color:${
+    isDark ? "#f4f4f4" : "#222"
+  };transition:background 0.15s;flex-shrink:0`;
+
+const popupTitleStyle = (isDark: boolean) =>
+  `font-size:18px;font-weight:700;color:${
+    isDark ? "#f4f4f4" : "#222"
+  };margin:0;text-align:center`;
+
+const closeButtonStyle = (isDark: boolean) =>
+  `padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:500;background:${
+    isDark ? "#2a2a2a" : "#e5e7eb"
+  };color:${
+    isDark ? "#f4f4f4" : "#222"
+  };transition:background 0.15s;align-self:center;margin-top:8px`;
 
 const sameCredentials = (
   a: Credentials | null,
@@ -446,6 +517,9 @@ export class ConnectedChat extends LitElement {
   private _isGroupChat = false;
   private _progressMax = new Map<string, number>();
   private _profileAuthorId: string | null = null;
+  private _participants: Participant[] = [];
+  private _showParticipantsPopup = false;
+  private _copiedParticipantId: string | null = null;
 
   private _unsubs: (() => void)[] = [];
   private _typingNotifier: ReturnType<typeof createTypingNotifier> | null =
@@ -509,6 +583,9 @@ export class ConnectedChat extends LitElement {
     this._hadMessages = false;
     this._lastMessageSubscriptionKey = undefined;
     this._lastMessageCount = 0;
+    this._participants = [];
+    this._showParticipantsPopup = false;
+    this._copiedParticipantId = null;
   }
 
   private _setupSubscriptions() {
@@ -543,6 +620,7 @@ export class ConnectedChat extends LitElement {
           this._convNotFound = !conv;
           this._conversationTitle = conv?.title || "Chat";
           this._isGroupChat = (conv?.participants.length ?? 0) > 2;
+          this._participants = conv?.participants ?? [];
           this.requestUpdate();
         },
       ),
@@ -807,6 +885,33 @@ export class ConnectedChat extends LitElement {
     this.requestUpdate();
   };
 
+  private _handleShowParticipants = () => {
+    this._showParticipantsPopup = true;
+    this.requestUpdate();
+  };
+
+  private _handleCloseParticipants = () => {
+    this._showParticipantsPopup = false;
+    this.requestUpdate();
+  };
+
+  private _handleParticipantClick = (authorId: string) => {
+    this._showParticipantsPopup = false;
+    this._profileAuthorId = authorId;
+    this.requestUpdate();
+  };
+
+  private _handleCopyParticipant = async (e: Event, key: string) => {
+    e.stopPropagation();
+    await copyToClipboard(key);
+    this._copiedParticipantId = key;
+    this.requestUpdate();
+    setTimeout(() => {
+      this._copiedParticipantId = null;
+      this.requestUpdate();
+    }, 1500);
+  };
+
   private _handleStartCall = () => {
     this._voiceCall?.startCall();
   };
@@ -880,6 +985,7 @@ export class ConnectedChat extends LitElement {
         .isGroupChat="${this._isGroupChat}"
         .isDark="${isDark}"
         .emptyMessage="${this.emptyMessage}"
+        @show-participants="${this._handleShowParticipants}"
       ></chat-box>
       ${this._profileAuthorId
         ? html`
@@ -894,6 +1000,80 @@ export class ConnectedChat extends LitElement {
             .onClose="${this._closeProfile}"
             .onChatWith="${this.onChatWith}"
           ></user-profile-popup>
+        `
+        : nothing} ${this._showParticipantsPopup
+        ? html`
+          <div style="${participantsOverlayStyle}" @click="${this
+            ._handleCloseParticipants}">
+            <div style="${participantsPopupStyle(isDark)}" @click="${(
+              e: Event,
+            ) => e.stopPropagation()}">
+              <h3 style="${popupTitleStyle(isDark)}">Participants</h3>
+              <div style="${participantsListStyle}">
+                ${this._participants.map((p) => {
+                  const name = resolveParticipantName(p, this._identityDetails);
+                  const avatar = resolveParticipantAvatar(
+                    p,
+                    this._identityDetails,
+                  );
+                  const baseColor = avatarColor(p.publicSignKey, isDark);
+                  const isCopied =
+                    this._copiedParticipantId === p.publicSignKey;
+                  return html`
+                    <div
+                      style="${participantRowStyle(isDark)}"
+                      @click="${() =>
+                        this._handleParticipantClick(p.publicSignKey)}"
+                      @mouseover="${(e: MouseEvent) => {
+                        const target = e.currentTarget as HTMLElement;
+                        target.style.background = isDark
+                          ? "rgba(255,255,255,0.06)"
+                          : "rgba(0,0,0,0.05)";
+                      }}"
+                      @mouseout="${(e: MouseEvent) => {
+                        const target = e.currentTarget as HTMLElement;
+                        target.style.background = isDark
+                          ? "rgba(255,255,255,0.02)"
+                          : "rgba(0,0,0,0.02)";
+                      }}"
+                    >
+                      <div style="${participantInfoStyle}">
+                        <chat-avatar
+                          .image="${avatar}"
+                          .name="${name}"
+                          .baseColor="${baseColor}"
+                          .isDark="${isDark}"
+                        ></chat-avatar>
+                        <div style="${participantMetaStyle}">
+                          <div style="${participantNameStyle(
+                            isDark,
+                          )}">${name}</div>
+                          <div style="${participantIdStyle(
+                            isDark,
+                          )}">${compactPublicKey(p.publicSignKey)}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        style="${copyButtonStyle(isDark)}"
+                        @click="${(e: Event) =>
+                          this._handleCopyParticipant(e, p.publicSignKey)}"
+                      >
+                        ${isCopied ? "Copied!" : "Copy ID"}
+                      </button>
+                    </div>
+                  `;
+                })}
+              </div>
+              <button
+                type="button"
+                style="${closeButtonStyle(isDark)}"
+                @click="${this._handleCloseParticipants}"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         `
         : nothing}
     `;
