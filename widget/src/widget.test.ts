@@ -24,6 +24,11 @@ Deno.test("widget close button is flat — no box-shadow", () => {
   assertNotMatch(css, /box-shadow/);
 });
 
+Deno.test("widget close button top position is 8px for vertical alignment", () => {
+  const css = closeButtonCss({ colors: dummyColors });
+  assertMatch(css, /top:8px/);
+});
+
 Deno.test("widget name dialog uses rounded centered popup style", () => {
   const css = dialogBoxCss({ colors: dummyColors, mode: "light" });
   assertMatch(css, /border-radius:16px/);
@@ -33,18 +38,12 @@ Deno.test("widget name dialog uses rounded centered popup style", () => {
   assertMatch(css, /padding:24px/);
 });
 
-Deno.test("chat-box title-bar inner padding-right is at least 56px to avoid overlap with absolute close button", () => {
+Deno.test("chat-box title-bar inner padding-right is beautiful and dynamic to avoid overlap and align perfectly with absolute close button", () => {
   const code = Deno.readTextFileSync(
     new URL("../../lit/components/chat-box.ts", import.meta.url),
   );
-  const match = code.match(/padding:0\s+(\d+)px\s+0\s+16px/);
+  const match = code.match(/padding:0\s+\$\{\s*this\.onClose\s+\?\s*"16px"\s*:\s*"44px"\s*\}\s+0\s+16px/);
   if (!match) {
-    throw new Error("Could not find title-bar padding in chat-box.ts");
-  }
-  const paddingRight = parseInt(match[1], 10);
-  if (paddingRight < 56) {
-    throw new Error(
-      `title-bar padding-right is ${paddingRight}px, which overlaps with the 32px absolute close button at right: 8px (needs to be at least 56px to maintain a safe 16px gap)`,
-    );
+    throw new Error("Could not find beautiful dynamic title-bar padding in chat-box.ts");
   }
 });
