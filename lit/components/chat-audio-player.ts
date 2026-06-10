@@ -8,9 +8,9 @@ const playerStyle = (isDark: boolean) =>
     isDark ? "#ffffff15" : "#00000008"
   };min-width:200px`;
 
-const playBtnStyle = (primaryColor: string) =>
+const playBtnStyle = (primaryColor: string, isDark?: boolean) =>
   `width:36px;height:36px;border-radius:50%;border:none;background:${primaryColor};color:${
-    isLightColor(primaryColor) ? "#222" : "#fff"
+    isLightColor(primaryColor, isDark) ? "#222" : "#fff"
   };cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0`;
 
 const barColor = (isPlayed: boolean, primaryColor: string, isDark: boolean) =>
@@ -106,7 +106,10 @@ export class ChatAudioPlayer extends LitElement {
         >
         </audio>
         <button type="button" @click="${this
-          ._togglePlay}" style="${playBtnStyle(this.primaryColor)}">
+          ._togglePlay}" style="${playBtnStyle(
+            this.primaryColor,
+            this.isDark,
+          )}">
           ${this._playing ? faPause : faPlay}
         </button>
         <div style="flex:1;display:flex;flex-direction:column;gap:4px">

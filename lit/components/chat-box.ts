@@ -187,7 +187,7 @@ const spinnerEl = (isDark: boolean, color?: string) =>
     </div>
   `;
 
-const sendingAudioIndicator = (primaryColor: string) =>
+const sendingAudioIndicator = (primaryColor: string, isDark?: boolean) =>
   html`
     <div style="display:flex;flex-direction:row-reverse;gap:6px">
       <div
@@ -199,14 +199,18 @@ const sendingAudioIndicator = (primaryColor: string) =>
         <div
           style="width:20px;height:20px;border:3px solid ${isLightColor(
               primaryColor,
+              isDark,
             )
             ? "#00000010"
-            : "#ffffff1a"};border-top:3px solid ${isLightColor(primaryColor)
+            : "#ffffff1a"};border-top:3px solid ${isLightColor(
+              primaryColor,
+              isDark,
+            )
             ? "#00000040"
             : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
         >
         </div>
-        <span style="color:${isLightColor(primaryColor)
+        <span style="color:${isLightColor(primaryColor, isDark)
           ? "#222"
           : "#fff"};font-size:13px">Sending audio...</span>
       </div>
@@ -1444,6 +1448,7 @@ export class ChatBox extends LitElement {
                 )} ${this._isSending
                   ? sendingAudioIndicator(
                     customColors?.primary ?? defaultPrimary(isDark),
+                    isDark,
                   )
                   : nothing}
               `}

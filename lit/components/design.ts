@@ -71,7 +71,8 @@ const hexLightness = (hex: string) => {
   return (Math.max(r, g, b) + Math.min(r, g, b)) / 510;
 };
 
-export const isLightColor = (color: string) => {
+export const isLightColor = (color: string, isDark?: boolean) => {
+  if (color === "var(--widget-start-button-bg)") return isDark === true;
   const hslMatch = color.match(/hsl\(\d+, *\d+%, *(\d+)%\)/);
   if (hslMatch) return parseInt(hslMatch[1], 10) > 60;
   if (color.startsWith("#")) return hexLightness(color) > 0.6;
@@ -134,6 +135,6 @@ export const shouldShowName = (
 export const titleStyle = (isDark: boolean, custom?: CustomColors) => {
   const primary = custom?.primary ?? defaultPrimary(isDark);
   return `display:flex;align-items:center;justify-content:center;font-weight:bold;padding:12px 0;font-size:16px;background:${primary};color:${
-    isLightColor(primary) ? "#222" : "#fff"
+    isLightColor(primary, isDark) ? "#222" : "#fff"
   };transition:background 0.2s,color 0.2s`;
 };

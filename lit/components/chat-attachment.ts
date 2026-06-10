@@ -29,9 +29,9 @@ const audioPlaceholderStyle = (isDark: boolean) =>
     isDark ? "#ffffff15" : "#00000008"
   };min-width:200px`;
 
-const audioBtnStyle = (primaryColor: string) =>
+const audioBtnStyle = (primaryColor: string, isDark?: boolean) =>
   `width:36px;height:36px;border-radius:50%;border:none;background:${primaryColor};color:${
-    isLightColor(primaryColor) ? "#222" : "#fff"
+    isLightColor(primaryColor, isDark) ? "#222" : "#fff"
   };cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0`;
 
 const audioBars = Array.from({ length: 30 }, (_, i) => ({
@@ -159,7 +159,7 @@ export class ChatAttachment extends LitElement {
               type="button"
               @click="${this._handleDecrypt}"
               ?disabled="${this._loading}"
-              style="${audioBtnStyle(primaryColor)}"
+              style="${audioBtnStyle(primaryColor, isDark)}"
             >
               ${this._loading ? spinnerHtml(isDark) : faDownload}
             </button>

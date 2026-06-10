@@ -658,7 +658,7 @@ export class ChatMessage extends LitElement {
     });
     const textColor = noBubble
       ? (customColors?.text ?? (isDark ? "#f4f4f4" : "#222"))
-      : isLightColor(baseColor)
+      : isLightColor(baseColor, isDark)
       ? "#222"
       : "#fff";
     const avatarSpace = isOwn ? 0 : (this.isGroupChat ? 36 : 0);
