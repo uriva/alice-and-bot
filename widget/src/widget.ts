@@ -21,6 +21,7 @@ import {
 } from "../../protocol/src/crypto.ts";
 import { retrieveTransferPayload } from "../../backend/src/api.ts";
 import "../../lit/components/connected-chat.ts";
+import { isLightColor } from "../../lit/components/design.ts";
 
 const fontStack = [
   "Inter",
@@ -141,9 +142,29 @@ const resolveAppearance = (
   return { mode, colors, colorSchemeValue };
 };
 
-const widgetBaseCss = (colorScheme: "light" | "dark" | "light dark") => `
+const widgetBaseCss = ({
+  colorScheme,
+  headerColor,
+  hoverBg,
+}: {
+  colorScheme: "light" | "dark" | "light dark";
+  headerColor: string;
+  hoverBg: string;
+}) => `
 :host, *, *::before, *::after { font-family: ${fontStack}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 :host { color-scheme: ${colorScheme}; }
+
+[data-testid="widget-close-button"] {
+  color: ${headerColor} !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  transition: background 0.2s, color 0.2s !important;
+}
+
+[data-testid="widget-close-button"]:hover {
+  background: ${hoverBg} !important;
+}
 `;
 
 import {
@@ -651,7 +672,14 @@ export const createWidget = (
 
   const updateShadowContent = () => {
     const app = appearance();
-    styleEl.textContent = widgetBaseCss(app.colorSchemeValue);
+    const isLight = isLightColor(app.colors.primary, app.mode === "dark");
+    const headerColor = isLight ? "#222" : "#fff";
+    const hoverBg = isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.15)";
+    styleEl.textContent = widgetBaseCss({
+      colorScheme: app.colorSchemeValue,
+      headerColor,
+      hoverBg,
+    });
     containerEl.style.cssText = containerCss({
       isMobile,
       isDark: app.mode === "dark",
