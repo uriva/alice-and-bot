@@ -22,3 +22,13 @@ export const loadOrCreateCredentials = async (
   saveCredentials(key, credentials);
   return credentials;
 };
+
+export const getCredentialsToCopy = (
+  key: string,
+  inMemory: Credentials | null,
+): string | null => {
+  const stored = localStorage.getItem(key);
+  if (stored) return stored;
+  if (inMemory) return JSON.stringify(inMemory);
+  return null;
+};

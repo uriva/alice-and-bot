@@ -38,6 +38,7 @@ import { registerPush, reportActive } from "../../protocol/src/pushClient.ts";
 import { chatPath, homePath } from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
+import { getCredentialsToCopy } from "../../lit/core/credentials.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { subscribeIsMobile } from "../../lit/core/responsive.ts";
 import { accessAdminDb, accessDb } from "../../lit/core/instant-client.ts";
@@ -390,6 +391,26 @@ const parseTransferFragment = (hash: string) => {
 
 const handleTransferImport = async () => {
   if (typeof globalThis.location === "undefined") return;
+  if (globalThis.document) {
+    const state: unknown = globalThis.document.visibilityState;
+    if (state === "prerender") {
+      const onVisibilityChange = () => {
+        const currentState: unknown = globalThis.document.visibilityState;
+        if (currentState !== "prerender") {
+          globalThis.document.removeEventListener(
+            "visibilitychange",
+            onVisibilityChange,
+          );
+          handleTransferImport();
+        }
+      };
+      globalThis.document.addEventListener(
+        "visibilitychange",
+        onVisibilityChange,
+      );
+      return;
+    }
+  }
   const parsed = parseTransferFragment(globalThis.location.hash);
   if (!parsed) return;
   globalThis.location.hash = "";
@@ -937,7 +958,7 @@ const copyInviteLinkButton = (publicSignKey: string) => {
 
 const copyCredentialsButton = () => {
   const onClick = () => {
-    const creds = localStorage.getItem("alicebot_credentials");
+    const creds = getCredentialsToCopy("alicebot_credentials", credentials);
     if (creds) {
       navigator.clipboard.writeText(creds);
       copiedCredentials = true;

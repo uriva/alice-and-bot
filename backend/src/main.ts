@@ -42,7 +42,7 @@ const TRANSFER_TTL_MS = 5 * 60 * 1000;
 
 const transferKey = (relayId: string) => ["transfer", relayId];
 
-const endpoints: BackendApiImpl = {
+export const endpoints: BackendApiImpl = {
   authenticate: (token: string) => auth.verifyToken(token),
   handlers: {
     conversationKey: async ({ conversationId, publicSignKey }) => {
@@ -784,7 +784,6 @@ const endpoints: BackendApiImpl = {
       const k = transferKey(relayId);
       const { value } = await kv.get<string>(k);
       if (!value) return { error: "not-found" };
-      await kv.delete(k);
       return { encryptedPayload: value };
     },
     getUploadUrl: async ({ payload, publicSignKey, nonce, authToken }) => {
