@@ -5,6 +5,19 @@ const listeners = new Set<(isDark: boolean) => void>();
 
 const getPref = () => {
   if (override !== null) return override === "dark";
+  if (
+    typeof globalThis !== "undefined" && globalThis.document?.documentElement
+  ) {
+    const colorScheme = globalThis.document.documentElement.style.colorScheme;
+    if (colorScheme === "dark") return true;
+    if (colorScheme === "light") return false;
+    if (globalThis.document.documentElement.classList.contains("dark")) {
+      return true;
+    }
+    if (globalThis.document.documentElement.classList.contains("light")) {
+      return false;
+    }
+  }
   return typeof globalThis !== "undefined" &&
     "matchMedia" in globalThis &&
     globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -29,8 +42,25 @@ export const subscribeDarkMode = (
   };
   mql.addEventListener("change", mediaHandler);
 
+  let observer: MutationObserver | null = null;
+  if (
+    typeof globalThis !== "undefined" && "MutationObserver" in globalThis &&
+    globalThis.document?.documentElement
+  ) {
+    observer = new MutationObserver(() => {
+      if (override === null) {
+        onChange(getPref());
+      }
+    });
+    observer.observe(globalThis.document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+    });
+  }
+
   return () => {
     listeners.delete(listener);
     mql.removeEventListener("change", mediaHandler);
+    observer?.disconnect();
   };
 };
