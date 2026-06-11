@@ -1,10 +1,13 @@
 import { assertEquals, assertMatch } from "@std/assert";
 import {
   buildTimeline,
+  computeTextareaResize,
   filterParticipants,
   formatFullTimestamp,
   getAutocompleteState,
   insertMention,
+  maxTextareaHeight,
+  minTextareaHeight,
   preprocessText,
 } from "./utils.ts";
 
@@ -72,5 +75,25 @@ Deno.test("insertMention inserts name with trailing space", () => {
   assertEquals(insertMention("hello @jo", 6, 9, "John"), {
     newText: "hello @John ",
     newCursorIndex: 12,
+  });
+});
+
+Deno.test("computeTextareaResize lets a long wrapped single line scroll instead of clipping", () => {
+  const result = computeTextareaResize(284);
+  assertEquals(result.overflow, "auto");
+  assertEquals(result.height, maxTextareaHeight);
+});
+
+Deno.test("computeTextareaResize keeps short input at min height with no scrollbar", () => {
+  assertEquals(computeTextareaResize(30), {
+    height: minTextareaHeight,
+    overflow: "hidden",
+  });
+});
+
+Deno.test("computeTextareaResize grows with content until the cap", () => {
+  assertEquals(computeTextareaResize(120), {
+    height: 120,
+    overflow: "hidden",
   });
 });

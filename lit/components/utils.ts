@@ -196,6 +196,17 @@ export const estimateSerializedLength = (text: string) =>
 
 export const charCountThreshold = 500;
 
+export const minTextareaHeight = 44;
+export const maxTextareaHeight = 200;
+
+export const computeTextareaResize = (scrollHeight: number) => ({
+  height: Math.min(
+    Math.max(scrollHeight, minTextareaHeight),
+    maxTextareaHeight,
+  ),
+  overflow: scrollHeight > maxTextareaHeight ? "auto" : "hidden",
+});
+
 const locationZoom = 15;
 const tileSize = 256;
 export const locationCardWidth = 256;

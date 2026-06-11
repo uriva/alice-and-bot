@@ -41,12 +41,15 @@ import type {
 import {
   buildTimeline,
   charCountThreshold,
+  computeTextareaResize,
   estimateSerializedLength,
   eventOutside,
   filterParticipants,
   formatDuration,
   getAutocompleteState,
   insertMention,
+  maxTextareaHeight,
+  minTextareaHeight,
   playNotificationSound,
   recordingExtension,
   recordingMimeType,
@@ -339,7 +342,7 @@ const textareaStyle = (
   isDark: boolean,
   custom?: CustomColors,
   enableAttachments?: boolean,
-  height = 44,
+  height = minTextareaHeight,
   overflow: string = "hidden",
 ) =>
   `width:100%;box-sizing:border-box;padding:${
@@ -348,7 +351,7 @@ const textareaStyle = (
     custom?.inputBackground ?? (isDark ? "#111" : "#ffffff")
   };color:${
     isDark ? "#f3f4f6" : "#1e293b"
-  };font-size:16px;outline:none;resize:none;box-sizing:border-box;height:${height}px;min-height:44px;margin:0;overflow-y:${overflow};overflow-x:hidden;max-height:200px;line-height:1.5;transition:background 0.2s,color 0.2s;font-family:inherit;letter-spacing:0.1px;scrollbar-color:${
+  };font-size:16px;outline:none;resize:none;box-sizing:border-box;height:${height}px;min-height:${minTextareaHeight}px;margin:0;overflow-y:${overflow};overflow-x:hidden;max-height:${maxTextareaHeight}px;line-height:1.5;transition:background 0.2s,color 0.2s;font-family:inherit;letter-spacing:0.1px;scrollbar-color:${
     custom?.scrollbarColor ?? (isDark ? "#2a2a2a #111" : "#cbd5e1 #e2e8f0")
   };scrollbar-width:thin`;
 
@@ -579,7 +582,7 @@ export class ChatBox extends LitElement {
     this._optimisticMessages = [];
     this._isSending = false;
     this._fetchingMore = false;
-    this._textareaHeight = 44;
+    this._textareaHeight = minTextareaHeight;
     this._textareaOverflow = "hidden";
     this._inputAreaHeight = 72;
     this._replyingTo = null;
@@ -934,12 +937,10 @@ export class ChatBox extends LitElement {
 
   private _resizeTextarea(textarea: HTMLTextAreaElement) {
     textarea.style.height = "auto";
-    const scrollHeight = textarea.scrollHeight;
-    const singleLine = textarea.value.indexOf("\n") === -1;
-    const h = singleLine ? Math.max(scrollHeight, 44) : scrollHeight;
-    textarea.style.height = `${h}px`;
-    this._textareaHeight = h;
-    this._textareaOverflow = singleLine ? "hidden" : "auto";
+    const { height, overflow } = computeTextareaResize(textarea.scrollHeight);
+    textarea.style.height = `${height}px`;
+    this._textareaHeight = height;
+    this._textareaOverflow = overflow;
   }
 
   private async _handleSend() {
@@ -951,7 +952,7 @@ export class ChatBox extends LitElement {
     }
     const replyTo = this._replyingTo?.id;
     this._input = "";
-    this._textareaHeight = 44;
+    this._textareaHeight = minTextareaHeight;
     this._textareaOverflow = "hidden";
     this._pendingFiles = [];
     this._replyingTo = null;
@@ -980,7 +981,7 @@ export class ChatBox extends LitElement {
     setTimeout(() => {
       if (this._inputEl) {
         this._inputEl.focus();
-        this._inputEl.style.height = "44px";
+        this._inputEl.style.height = `${minTextareaHeight}px`;
       }
       this._scrollToBottom();
       requestAnimationFrame(() => this._scrollToBottom());

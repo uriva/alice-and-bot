@@ -95,6 +95,21 @@ test.describe("AbstractChatBox (example app)", () => {
     expect(newHeight).toBeGreaterThan(initialHeight);
   });
 
+  test("long single-line input becomes scrollable instead of clipping text", async ({ page }) => {
+    const input = page.locator(tid("message-input"));
+    await input.fill(
+      "This is a really long single line message with no newlines at all "
+        .repeat(12),
+    );
+    await expect.poll(() =>
+      input.evaluate((el) => getComputedStyle(el).overflowY)
+    ).not.toBe("hidden");
+    const contentExceedsBox = await input.evaluate((el) =>
+      el.scrollHeight > el.clientHeight
+    );
+    expect(contentExceedsBox).toBe(true);
+  });
+
   test("table renders in markdown", async ({ page }) => {
     const table = page.locator("table").first();
     await expect(table).toBeVisible();
