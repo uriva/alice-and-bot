@@ -13,4 +13,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Publish package
-        run: npx jsr publish --allow-slow-types --no-provenance
+        run: |
+          # Run with a 90-second timeout. If it hangs on post-upload CDN verification, timeout will terminate it.
+          timeout 90s npx jsr publish --allow-slow-types --no-provenance || echo "Publish command completed or timed out"
+
+      - name: Verify publish success
+        run: |
+          VERSION=$(jq -r .version deno.json)
+          echo "Verifying JSR version ${VERSION} is live..."
+          for i in {1..30}; do
+            # Use cache-busting parameter to ensure we see the true origin state
+            if curl -sI "https://jsr.io/@alice-and-bot/core/${VERSION}_meta.json?cb=$RANDOM" | grep -E "HTTP/.* 200" > /dev/null; then
+              echo "Success: JSR version ${VERSION} is resolvable!"
+              exit 0
+            fi
+            echo "Waiting for JSR CDN..."
+            sleep 10
+          done
+          echo "Error: JSR version ${VERSION} is not resolvable after 5 minutes."
+          exit 1
