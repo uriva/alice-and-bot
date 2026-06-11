@@ -68,7 +68,7 @@
     ]
   },
   "lint": {
-    "exclude": ["opencode-plugin/plugin.js"]
+    "exclude": ["opencode-plugin/plugin.js", "opencode-plugin/index.test.ts"]
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",

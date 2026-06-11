@@ -39,7 +39,7 @@ export class ChatTypingIndicator extends LitElement {
     super.connectedCallback();
     this._interval = globalThis.setInterval(() => {
       this._dots = (this._dots + 1) % 4;
-    }, 400);
+    }, 400) as unknown as number;
   }
 
   override disconnectedCallback() {

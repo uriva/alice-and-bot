@@ -466,7 +466,7 @@ export class ChatMessage extends LitElement {
     this._timeInterval = globalThis.setInterval(
       () => this._updateTimeAgo(),
       30000,
-    );
+    ) as unknown as number;
     this.addEventListener("click", this._handleCopyCode);
     this._syncVisibleText();
   }
@@ -505,7 +505,7 @@ export class ChatMessage extends LitElement {
         this.requestUpdate();
       }
       this._scheduleStreamTick();
-    }, streamTickMs);
+    }, streamTickMs) as unknown as number;
   };
 
   private _syncVisibleText = () => {
@@ -617,7 +617,7 @@ export class ChatMessage extends LitElement {
     this._longPressTimer = globalThis.setTimeout(() => {
       this._longPressActive = false;
       this._showMobileContext = true;
-    }, 500);
+    }, 500) as unknown as number;
   };
 
   private _longPressEnd = () => {

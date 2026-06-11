@@ -929,7 +929,7 @@ export class ChatBox extends LitElement {
       this._recordingStartTime = Date.now();
       this._recordingInterval = globalThis.setInterval(() => {
         this._recordingDuration = this._recordingDuration + 1;
-      }, 1000);
+      }, 1000) as unknown as number;
     } catch {
       console.error("Could not access microphone");
     }
