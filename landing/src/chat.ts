@@ -89,6 +89,7 @@ let searchQuery = "";
 let initializedFromQuery = false;
 let handledChatWith: string | null = null;
 let chatWithInFlight = false;
+let transferImportInFlight = false;
 
 let chatContainer: HTMLElement | null = null;
 let viewportCleanup: (() => void) | null = null;
@@ -413,10 +414,13 @@ const handleTransferImport = async () => {
   }
   const parsed = parseTransferFragment(globalThis.location.hash);
   if (!parsed) return;
+  if (transferImportInFlight) return;
+  transferImportInFlight = true;
   globalThis.location.hash = "";
   const result = await retrieveTransferPayload(parsed.relayId);
   if ("error" in result) {
     showToast("Transfer link expired or already used", "error");
+    transferImportInFlight = false;
     return;
   }
   const creds = await decryptSymmetric<Credentials>(
