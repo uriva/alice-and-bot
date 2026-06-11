@@ -691,18 +691,6 @@ export const createWidget = (
     containerEl.innerHTML = "";
 
     if (isOpen) {
-      const closeBtn = document.createElement("span");
-      closeBtn.setAttribute("data-testid", "widget-close-button");
-      closeBtn.setAttribute("role", "button");
-      closeBtn.setAttribute("aria-label", "Close chat");
-      closeBtn.style.cursor = "pointer";
-      closeBtn.style.cssText = closeButtonCss({
-        colors: app.colors,
-      });
-      closeBtn.textContent = "\u00d7";
-      closeBtn.addEventListener("click", () => setChatOpen(false));
-      containerEl.appendChild(closeBtn);
-
       if (credentials && conversationId) {
         const chatWrapper = document.createElement("div");
         chatWrapper.style.cssText = chatWrapperCss;
@@ -711,6 +699,7 @@ export const createWidget = (
         ) as HTMLElement & Record<string, unknown>;
         chat.credentials = credentials;
         chat.conversationId = conversationId;
+        chat.onClose = () => setChatOpen(false);
         chat.addEventListener("secret-identity", () => {
           openSecretIdentityDialog();
         });
@@ -730,6 +719,18 @@ export const createWidget = (
         chatWrapper.appendChild(chat);
         containerEl.appendChild(chatWrapper);
       } else {
+        const closeBtn = document.createElement("span");
+        closeBtn.setAttribute("data-testid", "widget-close-button");
+        closeBtn.setAttribute("role", "button");
+        closeBtn.setAttribute("aria-label", "Close chat");
+        closeBtn.style.cursor = "pointer";
+        closeBtn.style.cssText = closeButtonCss({
+          colors: app.colors,
+        });
+        closeBtn.textContent = "\u00d7";
+        closeBtn.addEventListener("click", () => setChatOpen(false));
+        containerEl.appendChild(closeBtn);
+
         containerEl.appendChild(renderLoading(shadow));
       }
     } else {

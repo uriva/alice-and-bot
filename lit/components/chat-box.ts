@@ -1457,7 +1457,7 @@ export class ChatBox extends LitElement {
                   ? html`
                     <button
                       type="button"
-                      data-testid="close-chat"
+                      data-testid="widget-close-button"
                       @click="${this.onClose}"
                       title="Close chat"
                       style="${headerButtonStyle};font-size:22px;font-weight:700"

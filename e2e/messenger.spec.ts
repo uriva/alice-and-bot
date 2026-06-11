@@ -299,7 +299,7 @@ test.describe("Messenger (landing /chat)", () => {
     await expect(page.getByText(data.messages[0].text)).toBeVisible({
       timeout: 15_000,
     });
-    const closeBtn = page.getByTestId("close-chat");
+    const closeBtn = page.getByTestId("widget-close-button");
     await expect(closeBtn).toBeVisible({ timeout: 5_000 });
     await closeBtn.click();
     await expect(page.getByText("Test Conversation").first()).toBeVisible({
