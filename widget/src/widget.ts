@@ -688,52 +688,76 @@ export const createWidget = (
     }) + ";pointer-events:auto" +
       (isOpen ? `;background:${app.colors.surface}` : "");
 
-    containerEl.innerHTML = "";
-
     if (isOpen) {
       if (credentials && conversationId) {
-        const chatWrapper = document.createElement("div");
-        chatWrapper.style.cssText = chatWrapperCss;
-        const chat = document.createElement(
+        let chat = containerEl.querySelector(
           "alice-connected-chat",
-        ) as HTMLElement & Record<string, unknown>;
-        chat.credentials = credentials;
-        chat.conversationId = conversationId;
-        chat.onClose = () => setChatOpen(false);
-        chat.addEventListener("secret-identity", () => {
-          openSecretIdentityDialog();
-        });
-        chat.addEventListener("import-identity", () => {
-          openImportIdentityDialog();
-        });
-        chat.darkModeOverride = app.mode === "dark";
-        chat.isDark = app.mode === "dark";
-        chat.enableVoiceCall = params.enableVoiceCall ?? false;
-        chat.customColors = {
-          background: app.colors.background,
-          text: app.colors.text,
-          primary: app.colors.primary,
-          otherBubble: app.colors.surface,
-          inputBackground: app.colors.inputBackground,
-        };
-        chatWrapper.appendChild(chat);
-        containerEl.appendChild(chatWrapper);
+        ) as HTMLElement & Record<string, unknown> | null;
+        if (chat) {
+          chat.credentials = credentials;
+          chat.conversationId = conversationId;
+          chat.darkModeOverride = app.mode === "dark";
+          chat.isDark = app.mode === "dark";
+          chat.enableVoiceCall = params.enableVoiceCall ?? false;
+          chat.customColors = {
+            background: app.colors.background,
+            text: app.colors.text,
+            primary: app.colors.primary,
+            otherBubble: app.colors.surface,
+            inputBackground: app.colors.inputBackground,
+          };
+        } else {
+          containerEl.innerHTML = "";
+          const chatWrapper = document.createElement("div");
+          chatWrapper.style.cssText = chatWrapperCss;
+          chat = document.createElement(
+            "alice-connected-chat",
+          ) as HTMLElement & Record<string, unknown>;
+          chat.credentials = credentials;
+          chat.conversationId = conversationId;
+          chat.onClose = () => setChatOpen(false);
+          chat.addEventListener("secret-identity", () => {
+            openSecretIdentityDialog();
+          });
+          chat.addEventListener("import-identity", () => {
+            openImportIdentityDialog();
+          });
+          chat.darkModeOverride = app.mode === "dark";
+          chat.isDark = app.mode === "dark";
+          chat.enableVoiceCall = params.enableVoiceCall ?? false;
+          chat.customColors = {
+            background: app.colors.background,
+            text: app.colors.text,
+            primary: app.colors.primary,
+            otherBubble: app.colors.surface,
+            inputBackground: app.colors.inputBackground,
+          };
+          chatWrapper.appendChild(chat);
+          containerEl.appendChild(chatWrapper);
+        }
       } else {
-        const closeBtn = document.createElement("span");
-        closeBtn.setAttribute("data-testid", "widget-close-button");
-        closeBtn.setAttribute("role", "button");
-        closeBtn.setAttribute("aria-label", "Close chat");
-        closeBtn.style.cursor = "pointer";
-        closeBtn.style.cssText = closeButtonCss({
-          colors: app.colors,
-        });
-        closeBtn.textContent = "\u00d7";
-        closeBtn.addEventListener("click", () => setChatOpen(false));
-        containerEl.appendChild(closeBtn);
+        const isLoading =
+          containerEl.querySelector("[data-testid='widget-close-button']") !==
+            null && containerEl.querySelector("alice-connected-chat") === null;
+        if (!isLoading) {
+          containerEl.innerHTML = "";
+          const closeBtn = document.createElement("span");
+          closeBtn.setAttribute("data-testid", "widget-close-button");
+          closeBtn.setAttribute("role", "button");
+          closeBtn.setAttribute("aria-label", "Close chat");
+          closeBtn.style.cursor = "pointer";
+          closeBtn.style.cssText = closeButtonCss({
+            colors: app.colors,
+          });
+          closeBtn.textContent = "\u00d7";
+          closeBtn.addEventListener("click", () => setChatOpen(false));
+          containerEl.appendChild(closeBtn);
 
-        containerEl.appendChild(renderLoading(shadow));
+          containerEl.appendChild(renderLoading(shadow));
+        }
       }
     } else {
+      containerEl.innerHTML = "";
       const startBtn = document.createElement("button");
       startBtn.setAttribute("data-testid", "widget-start-button");
       startBtn.type = "button";
