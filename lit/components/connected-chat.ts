@@ -586,6 +586,8 @@ export class ConnectedChat extends LitElement {
     this._participants = [];
     this._showParticipantsPopup = false;
     this._copiedParticipantId = null;
+    this._messages = null;
+    this._conversationKey = null;
   }
 
   private _setupSubscriptions() {

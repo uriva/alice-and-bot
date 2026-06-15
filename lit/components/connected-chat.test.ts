@@ -31,6 +31,12 @@ class FixedSubscriptionHandler {
     this._canLoadMore = canLoadMore;
     this.requestUpdateCount++;
   }
+
+  teardown() {
+    this._hadMessages = false;
+    this._lastMessageCount = 0;
+    this._messages = null;
+  }
 }
 
 Deno.test(
@@ -61,5 +67,23 @@ Deno.test(
     handler.handleMessages(sameMessages, false);
 
     assertEquals(handler.requestUpdateCount, 2);
+  },
+);
+
+Deno.test(
+  "teardown should clear messages and reset state",
+  () => {
+    const handler = new FixedSubscriptionHandler();
+    const sameMessages: DecipheredMessage[] = [
+      { id: "m1", text: "hello", timestamp: 1000, publicSignKey: "pk1" },
+    ];
+
+    handler.handleMessages(sameMessages, false);
+    assertEquals(handler._messages, sameMessages);
+
+    handler.teardown();
+    assertEquals(handler._messages, null);
+    assertEquals(handler._hadMessages, false);
+    assertEquals(handler._lastMessageCount, 0);
   },
 );
