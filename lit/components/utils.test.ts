@@ -9,6 +9,7 @@ import {
   maxTextareaHeight,
   minTextareaHeight,
   preprocessText,
+  shouldShowScrollDownButton,
 } from "./utils.ts";
 
 Deno.test("preprocessText converts multiline html code blocks to fenced markdown", () => {
@@ -96,4 +97,10 @@ Deno.test("computeTextareaResize grows with content until the cap", () => {
     height: 120,
     overflow: "hidden",
   });
+});
+
+Deno.test("shouldShowScrollDownButton returns true if user has scrolled up a bunch (more than 400px from bottom)", () => {
+  assertEquals(shouldShowScrollDownButton(1000, 500, 50), true); // 1000 - 500 - 50 = 450 > 400
+  assertEquals(shouldShowScrollDownButton(1000, 599, 1), false); // 1000 - 599 - 1 = 400 not > 400 (false)
+  assertEquals(shouldShowScrollDownButton(1000, 600, 50), false); // 1000 - 600 - 50 = 350 <= 400
 });

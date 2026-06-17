@@ -15,6 +15,7 @@ import {
 } from "./design.ts";
 import {
   faCamera,
+  faChevronDown,
   faEllipsisV,
   faFile,
   faImage,
@@ -53,6 +54,7 @@ import {
   playNotificationSound,
   recordingExtension,
   recordingMimeType,
+  shouldShowScrollDownButton,
   showAuthorName,
 } from "./utils.ts";
 
@@ -460,6 +462,7 @@ export class ChatBox extends LitElement {
     _inputAreaHeight: { state: true },
     _replyingTo: { state: true },
     _autocompleteState: { state: true },
+    _showScrollDownButton: { state: true },
   };
 
   declare messages: AbstracChatMessage[];
@@ -546,6 +549,7 @@ export class ChatBox extends LitElement {
     filtered: { publicSignKey: string; name: string; avatar: string }[];
     selectedIndex: number;
   } | null;
+  declare private _showScrollDownButton: boolean;
 
   constructor() {
     super();
@@ -587,6 +591,7 @@ export class ChatBox extends LitElement {
     this._inputAreaHeight = 72;
     this._replyingTo = null;
     this._autocompleteState = null;
+    this._showScrollDownButton = false;
   }
 
   private _messagesContainerEl: HTMLDivElement | null = null;
@@ -846,6 +851,7 @@ export class ChatBox extends LitElement {
     const el = this._messagesContainerEl;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
+    this._showScrollDownButton = false;
   }
 
   private _handleScroll = () => {
@@ -853,6 +859,11 @@ export class ChatBox extends LitElement {
     if (!el) return;
     this._stuckToBottom =
       el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    this._showScrollDownButton = shouldShowScrollDownButton(
+      el.scrollHeight,
+      el.scrollTop,
+      el.clientHeight,
+    );
     if (!this._loadingMore && el.scrollTop === 0 && this.canLoadMore) {
       this._loadingMore = true;
       this._prevScrollHeight = el.scrollHeight;
@@ -1431,6 +1442,43 @@ export class ChatBox extends LitElement {
       .menu-item:hover {
         background: ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)"};
       }
+      .scroll-down-btn {
+        position: absolute;
+        right: 20px;
+        z-index: 30;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s, transform 0.2s, opacity 0.2s;
+        border: 1px solid ${isDark ? "#3e3e3e" : "#e2e8f0"};
+        background: ${isDark ? "#2a2a2a" : "#ffffff"};
+        color: ${isDark ? "#cbd5e1" : "#475569"};
+        box-shadow: 0 4px 12px rgba(0, 0, 0, ${isDark ? "0.4" : "0.15"});
+        animation: fadeInUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .scroll-down-btn:hover {
+        background: ${isDark ? "#3a3a3a" : "#f8fafc"};
+        color: ${isDark ? "#ffffff" : "#1e293b"};
+        transform: translateY(-2px);
+      }
+      .scroll-down-btn:active {
+        transform: translateY(0);
+      }
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
       </style>
       <div
         data-testid="chat-container"
@@ -1610,6 +1658,19 @@ export class ChatBox extends LitElement {
               `}
           </div>
         </div>
+
+        ${this._showScrollDownButton
+          ? html`
+            <button
+              class="scroll-down-btn"
+              style="bottom:${this._inputAreaHeight + 16}px"
+              @click="${() => this._scrollToBottom()}"
+              title="Scroll to bottom"
+            >
+              ${faChevronDown}
+            </button>
+          `
+          : nothing}
 
         <div
           data-input-area
