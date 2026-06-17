@@ -1,5 +1,6 @@
 import { assertEquals, assertFalse } from "@std/assert";
 import { FakeTime } from "@std/testing/time";
+import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import {
   type DecryptedMessagesResult,
   makeCreateTypingNotifier,
@@ -394,4 +395,37 @@ Deno.test("subscribeDecryptedMessages forwards canLoadMore with null messages wh
   subscribe("convo1", null, (result) => received.push(result));
   assertEquals(received.at(-1)?.messages, null);
   assertEquals(received.at(-1)?.canLoadMore, true);
+});
+
+Deno.test("subscribeDecryptedMessages handles decryption failure gracefully", async () => {
+  const received: DecryptedMessagesResult[] = [];
+  const subscribe = makeSubscribeDecryptedMessages((_query, cb) => {
+    cb({
+      data: {
+        messages: [
+          {
+            id: "msg-bad",
+            payload: "invalid-ciphertext-base64-garbage" as EncryptedMessage,
+            timestamp: Date.now(),
+          } as unknown as {
+            id: string;
+            payload: EncryptedMessage;
+            timestamp: number;
+          },
+        ],
+      },
+      canLoadNextPage: false,
+    });
+    return { unsubscribe: () => {}, loadNextPage: () => {} };
+  });
+
+  const promise = new Promise<void>((resolve) => {
+    subscribe("convo1", "someSymmetricKeyBase64=", (result) => {
+      received.push(result);
+      resolve();
+    });
+  });
+
+  await promise;
+  assertEquals(received.at(-1)?.messages, []);
 });

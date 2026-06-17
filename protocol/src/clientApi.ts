@@ -399,19 +399,23 @@ const decryptMessagePayload = (conversationSymmetricKey: string) =>
 async (
   { payload, timestamp }: Omit<DbMessage, "id">,
 ) => {
-  const { signature, payload: decryptedPayload, publicSignKey } =
-    await decryptSymmetric<SignedPayload<InternalMessage>>(
-      conversationSymmetricKey,
-      payload,
+  try {
+    const { signature, payload: decryptedPayload, publicSignKey } =
+      await decryptSymmetric<SignedPayload<InternalMessage>>(
+        conversationSymmetricKey,
+        payload,
+      );
+    if (!(await verify(signature, publicSignKey, msgToStr(decryptedPayload)))) {
+      return undefined;
+    }
+    return decryptedPayloadToMessage(
+      publicSignKey,
+      timestamp,
+      decryptedPayload,
     );
-  if (!(await verify(signature, publicSignKey, msgToStr(decryptedPayload)))) {
+  } catch {
     return undefined;
   }
-  return decryptedPayloadToMessage(
-    publicSignKey,
-    timestamp,
-    decryptedPayload,
-  );
 };
 
 export const decryptMessage = (conversationSymmetricKey: string) =>
