@@ -113,6 +113,8 @@ export class ChatAttachment extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
+    this.style.display = "block";
+    this.style.maxWidth = "100%";
     this._maybeAutoDecrypt();
   }
 

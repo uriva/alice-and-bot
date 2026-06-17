@@ -462,6 +462,9 @@ export class ChatMessage extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
+    this.style.display = "block";
+    this.style.width = "100%";
+    this.style.minWidth = "0";
     this._updateTimeAgo();
     this._timeInterval = globalThis.setInterval(
       () => this._updateTimeAgo(),
