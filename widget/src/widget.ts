@@ -3,6 +3,7 @@ import {
   generateTransferUrl,
 } from "../../protocol/src/clientApi.ts";
 import {
+  importIdentity,
   loadCredentials,
   loadOrCreateCredentials,
   saveCredentials,
@@ -14,12 +15,6 @@ import {
 } from "../../lit/core/dark-mode.ts";
 import { subscribeIsMobile } from "../../lit/core/responsive.ts";
 import { getOrCreateConversation } from "../../lit/core/subscriptions.ts";
-import {
-  base64UrlToBase64,
-  decryptSymmetric,
-  type EncryptedSymmetric,
-} from "../../protocol/src/crypto.ts";
-import { retrieveTransferPayload } from "../../backend/src/api.ts";
 import "../../lit/components/connected-chat.ts";
 import { isLightColor } from "../../lit/components/design.ts";
 
@@ -279,51 +274,6 @@ const darkModeOverrideForScheme = (
   return null;
 };
 
-const parseTransferFragment = (hash: string) => {
-  const match = hash.match(/^#?transfer=([^:]+):(.+)$/);
-  if (!match) return null;
-  return { relayId: match[1], aesKey: base64UrlToBase64(match[2]) };
-};
-
-const importIdentity = async (
-  inputStr: string,
-): Promise<Credentials | null> => {
-  const trimmed = inputStr.trim();
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    try {
-      const url = new URL(trimmed);
-      const parsed = parseTransferFragment(url.hash);
-      if (parsed) {
-        const result = await retrieveTransferPayload(parsed.relayId);
-        if ("error" in result) {
-          throw new Error("Transfer payload not found or expired");
-        }
-        const creds = await decryptSymmetric<Credentials>(
-          parsed.aesKey,
-          result.encryptedPayload as EncryptedSymmetric<Credentials>,
-        );
-        return creds;
-      }
-    } catch (e) {
-      console.error("Failed to import from URL", e);
-    }
-  }
-
-  try {
-    const creds = JSON.parse(trimmed);
-    if (
-      creds && typeof creds === "object" && creds.privateSignKey &&
-      creds.privateEncryptKey
-    ) {
-      return creds as Credentials;
-    }
-  } catch (e) {
-    console.error("Failed to parse credentials JSON", e);
-  }
-
-  return null;
-};
-
 const renderNameDialog = (
   { colors, mode, onClose, onSubmit, onImportRequested }: {
     colors: WidgetModeColors;
@@ -535,13 +485,13 @@ export const renderSecretIdentityDialog = (
 
   const title = document.createElement("div");
   title.style.cssText = "font-size:18px;font-weight:700;text-align:center";
-  title.textContent = "Secret Identity";
+  title.textContent = "Export Identity";
 
   const hint = document.createElement("div");
   hint.style.cssText =
     "font-size:13px;opacity:0.9;text-align:center;max-width:240px;line-height:1.4";
   hint.textContent =
-    "Scan this QR code with your mobile device to open Alice&Bot with your secret identity.";
+    "Scan this QR code with your mobile device to open Alice&Bot with your export identity.";
 
   const qrContainer = document.createElement("div");
   qrContainer.style.cssText =
@@ -584,7 +534,7 @@ export const renderSecretIdentityDialog = (
       qrContainer.innerHTML = "";
       const img = document.createElement("img");
       img.src = dataUrl;
-      img.alt = "Secret Identity QR Code";
+      img.alt = "Export Identity QR Code";
       img.style.width = "100%";
       img.style.height = "100%";
       qrContainer.append(img);

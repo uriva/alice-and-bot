@@ -7,9 +7,11 @@ import type {
 } from "../../protocol/src/clientApi.ts";
 import {
   downloadAttachment,
+  generateTransferUrl,
   sendMessageWithKey,
   uploadAttachment,
 } from "../../protocol/src/clientApi.ts";
+import { importIdentity, saveCredentials } from "../core/credentials.ts";
 import { accessDb } from "../core/instant-client.ts";
 import {
   compactPublicKey,
@@ -520,6 +522,12 @@ export class ConnectedChat extends LitElement {
   private _participants: Participant[] = [];
   private _showParticipantsPopup = false;
   private _copiedParticipantId: string | null = null;
+  private _showSecretIdentityPopup = false;
+  private _showImportIdentityPopup = false;
+  private _qrCodeDataUrl = "";
+  private _transferUrl = "";
+  private _copiedTransferUrl = false;
+  private _importing = false;
 
   private _unsubs: (() => void)[] = [];
   private _typingNotifier: ReturnType<typeof createTypingNotifier> | null =
@@ -897,6 +905,92 @@ export class ConnectedChat extends LitElement {
     this.requestUpdate();
   };
 
+  private _handleSecretIdentity = () => {
+    if (!this.credentials) return;
+    this._showSecretIdentityPopup = true;
+    this._qrCodeDataUrl = "";
+    this._transferUrl = "";
+    this._copiedTransferUrl = false;
+    this.requestUpdate();
+
+    generateTransferUrl(this.credentials).then(async (url) => {
+      this._transferUrl = url;
+      try {
+        const QRCode = (await import("qrcode")).default;
+        this._qrCodeDataUrl = await QRCode.toDataURL(url, {
+          width: 184,
+          margin: 1,
+        });
+      } catch (err) {
+        console.error("Failed to generate QR code", err);
+      }
+      this.requestUpdate();
+    });
+  };
+
+  private _handleImportIdentity = () => {
+    this._showImportIdentityPopup = true;
+    this._importing = false;
+    this.requestUpdate();
+  };
+
+  private _handleCopyTransferUrl = () => {
+    if (!this._transferUrl) return;
+    navigator.clipboard.writeText(this._transferUrl).then(() => {
+      this._copiedTransferUrl = true;
+      this.requestUpdate();
+      setTimeout(() => {
+        this._copiedTransferUrl = false;
+        this.requestUpdate();
+      }, 2000);
+    });
+  };
+
+  private _handleImportKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      this._handleImportSubmit();
+    }
+  };
+
+  private _handleImportSubmit = async () => {
+    const input = this.querySelector("#import-identity-input") as
+      | HTMLInputElement
+      | null;
+    const v = input?.value?.trim();
+    if (!v) {
+      alert("Please paste your secret key or transfer URL");
+      return;
+    }
+    this._importing = true;
+    this.requestUpdate();
+    try {
+      const creds = await importIdentity(v);
+      if (creds) {
+        saveCredentials("aliceAndBotCredentials", creds);
+        this.credentials = creds;
+        this._showImportIdentityPopup = false;
+        this.dispatchEvent(
+          new CustomEvent("import-identity-success", {
+            bubbles: true,
+            composed: true,
+            detail: { credentials: creds },
+          }),
+        );
+        this._teardown();
+        this._setupSubscriptions();
+      } else {
+        alert("Invalid secret key or transfer URL");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to import identity");
+    } finally {
+      this._importing = false;
+      this.requestUpdate();
+    }
+  };
+
   private _handleParticipantClick = (authorId: string) => {
     this._showParticipantsPopup = false;
     this._profileAuthorId = authorId;
@@ -993,6 +1087,8 @@ export class ConnectedChat extends LitElement {
         .isDark="${isDark}"
         .emptyMessage="${this.emptyMessage}"
         @show-participants="${this._handleShowParticipants}"
+        @secret-identity="${this._handleSecretIdentity}"
+        @import-identity="${this._handleImportIdentity}"
       ></chat-box>
       ${this._profileAuthorId
         ? html`
@@ -1079,6 +1175,123 @@ export class ConnectedChat extends LitElement {
               >
                 Close
               </button>
+            </div>
+          </div>
+        `
+        : nothing} ${this._showSecretIdentityPopup && this.credentials
+        ? html`
+          <div style="${participantsOverlayStyle}" @click="${() => {
+            this._showSecretIdentityPopup = false;
+            this.requestUpdate();
+          }}">
+            <div style="${participantsPopupStyle(isDark)}" @click="${(
+              e: Event,
+            ) => e.stopPropagation()}">
+              <h3 style="${popupTitleStyle(isDark)}">Export Identity</h3>
+              <p style="font-size:13px;opacity:0.9;text-align:center;line-height:1.4">
+                Scan this QR code with your mobile device to open Alice&Bot with your
+                export identity.
+              </p>
+              <div
+                style="display:flex;justify-content:center;align-items:center;width:200px;height:200px;background:#ffffff;border-radius:8px;padding:8px;margin: 0 auto;"
+              >
+                ${this._qrCodeDataUrl
+                  ? html`
+                    <img
+                      src="${this._qrCodeDataUrl}"
+                      alt="Export Identity QR Code"
+                      style="width:100%;height:100%"
+                    />
+                  `
+                  : html`
+                    <div style="color:#000000;font-size:14px">Generating...</div>
+                  `}
+              </div>
+              <div
+                style="display:flex;flex-direction:column;gap:8px;width:100%;align-items:center"
+              >
+                <button
+                  type="button"
+                  style="${copyButtonStyle(
+                    isDark,
+                  )};width:100%;padding:10px;border-radius:8px;cursor:pointer"
+                  ?disabled="${!this._transferUrl}"
+                  @click="${this._handleCopyTransferUrl}"
+                >
+                  ${this._copiedTransferUrl
+                    ? "Copied!"
+                    : "Continue on another device"}
+                </button>
+                <button
+                  type="button"
+                  style="${closeButtonStyle(
+                    isDark,
+                  )};width:100%;padding:10px;border-radius:8px;cursor:pointer"
+                  @click="${() => {
+                    this._showSecretIdentityPopup = false;
+                    this.requestUpdate();
+                  }}"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        `
+        : nothing} ${this._showImportIdentityPopup
+        ? html`
+          <div style="${participantsOverlayStyle}" @click="${() => {
+            this._showImportIdentityPopup = false;
+            this.requestUpdate();
+          }}">
+            <div style="${participantsPopupStyle(isDark)}" @click="${(
+              e: Event,
+            ) => e.stopPropagation()}">
+              <h3 style="${popupTitleStyle(isDark)}">Import Identity</h3>
+              <p style="font-size:13px;opacity:0.9;text-align:center;line-height:1.4">
+                Paste your secret key, credentials JSON, or transfer URL to import your
+                identity.
+              </p>
+              <input
+                type="text"
+                id="import-identity-input"
+                placeholder="Paste secret key or URL here"
+                style="width:100%;padding:10px;border-radius:8px;border:1px solid ${isDark
+                  ? "#4b5563"
+                  : "#d1d5db"};background:${isDark
+                  ? "#2a2a2a"
+                  : "#ffffff"};color:${isDark
+                  ? "#ffffff"
+                  : "#000000"};font-size:14px"
+                @keydown="${this._handleImportKeyDown}"
+              />
+              <div style="display:flex;gap:8px;justify-content:center;width:100%">
+                <button
+                  type="button"
+                  style="${closeButtonStyle(
+                    isDark,
+                  )};flex:1;padding:10px;border-radius:8px;cursor:pointer"
+                  @click="${() => {
+                    this._showImportIdentityPopup = false;
+                    this.requestUpdate();
+                  }}"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  id="import-identity-submit-btn"
+                  style="${copyButtonStyle(
+                    isDark,
+                  )};flex:1;padding:10px;border-radius:8px;background:${isDark
+                    ? "#3b82f6"
+                    : "#2563eb"};color:#ffffff;cursor:pointer"
+                  ?disabled="${this._importing}"
+                  @click="${this._handleImportSubmit}"
+                >
+                  ${this._importing ? "Importing..." : "Import"}
+                </button>
+              </div>
             </div>
           </div>
         `

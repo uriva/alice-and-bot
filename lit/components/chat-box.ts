@@ -741,7 +741,7 @@ export class ChatBox extends LitElement {
             class="menu-item"
             @click="${this._handleMenuSecretIdentity}"
           >
-            Secret Identity
+            Export Identity
           </div>
         `
         : nothing}

@@ -2,6 +2,62 @@ import {
   createIdentity,
   type Credentials,
 } from "../../protocol/src/clientApi.ts";
+import {
+  decryptSymmetric,
+  type EncryptedSymmetric,
+} from "../../protocol/src/crypto.ts";
+import { retrieveTransferPayload } from "../../backend/src/api.ts";
+
+export const base64UrlToBase64 = (str: string): string => {
+  let s = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (s.length % 4) s += "=";
+  return s;
+};
+
+export const parseTransferFragment = (hash: string) => {
+  const match = hash.match(/^#?transfer=([^:]+):(.+)$/);
+  if (!match) return null;
+  return { relayId: match[1], aesKey: base64UrlToBase64(match[2]) };
+};
+
+export const importIdentity = async (
+  inputStr: string,
+): Promise<Credentials | null> => {
+  const trimmed = inputStr.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    try {
+      const url = new URL(trimmed);
+      const parsed = parseTransferFragment(url.hash);
+      if (parsed) {
+        const result = await retrieveTransferPayload(parsed.relayId);
+        if ("error" in result) {
+          throw new Error("Transfer payload not found or expired");
+        }
+        const creds = await decryptSymmetric<Credentials>(
+          parsed.aesKey,
+          result.encryptedPayload as EncryptedSymmetric<Credentials>,
+        );
+        return creds;
+      }
+    } catch (e) {
+      console.error("Failed to import from URL", e);
+    }
+  }
+
+  try {
+    const creds = JSON.parse(trimmed);
+    if (
+      creds && typeof creds === "object" && creds.privateSignKey &&
+      creds.privateEncryptKey
+    ) {
+      return creds as Credentials;
+    }
+  } catch (e) {
+    console.error("Failed to parse credentials JSON", e);
+  }
+
+  return null;
+};
 
 export const loadCredentials = (key: string): Credentials | null => {
   const stored = localStorage.getItem(key);
