@@ -101,7 +101,7 @@ const renderSpinnerIndicator = (
   isGroupChat?: boolean,
   color?: string,
 ) => {
-  const stale = isStale(spinner.timestamp);
+  const stale = spinner.active && isStale(spinner.timestamp);
   const active = spinner.active && !stale;
   return html`
     <div style="${indicatorTextStyle(isDark, color, stale)}">
@@ -142,7 +142,7 @@ const renderProgressIndicator = (
   isGroupChat?: boolean,
   color?: string,
 ) => {
-  const stale = isStale(progress.timestamp);
+  const stale = progress.percentage < 1 && isStale(progress.timestamp);
   return html`
     <div style="${indicatorTextStyle(isDark, color, stale)}">
       <span>${showAuthorName(hideNames, isGroupChat)
