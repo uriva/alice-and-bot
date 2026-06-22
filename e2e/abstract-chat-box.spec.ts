@@ -434,6 +434,35 @@ test.describe("AbstractChatBox mobile history load", () => {
       expect(w).toBeLessThanOrEqual(viewport.width)
     );
   });
+
+  test("wide image does not cause horizontal overflow or layout break", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+    const input = page.locator(tid("message-input"));
+    const wideImgMarkdown =
+      `![wide](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjEwMCI+PHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iMTAwIiBmaWxsPSJyZWQiLz48L3N2Zz4=)`;
+    await input.fill(wideImgMarkdown);
+    const sendBtn = page.locator(tid("send-button"));
+    await sendBtn.dispatchEvent("touchstart");
+    await sendBtn.dispatchEvent("touchend");
+    await page.waitForSelector(`${tid("message")} img[alt="wide"]`, {
+      timeout: 10_000,
+    });
+
+    const viewport = page.viewportSize()!;
+    const docScrollW = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    expect(docScrollW).toBeLessThanOrEqual(viewport.width);
+
+    const containerBox = await page.locator(tid("chat-container"))
+      .boundingBox();
+    expect(containerBox!.width).toBeLessThanOrEqual(viewport.width);
+
+    const imgBox = await page.locator(`${tid("message")} img[alt="wide"]`)
+      .boundingBox();
+    expect(imgBox!.width).toBeLessThanOrEqual(containerBox!.width);
+  });
 });
 
 test("clicking Document button opens file chooser", async ({ page }) => {

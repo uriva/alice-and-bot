@@ -207,6 +207,12 @@ export const computeTextareaResize = (scrollHeight: number) => ({
   overflow: scrollHeight > maxTextareaHeight ? "auto" : "hidden",
 });
 
+export const shouldShowScrollDownButton = (
+  scrollHeight: number,
+  scrollTop: number,
+  clientHeight: number,
+) => scrollHeight - scrollTop - clientHeight > 400;
+
 const locationZoom = 15;
 const tileSize = 256;
 export const locationCardWidth = 256;
