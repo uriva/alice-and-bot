@@ -6,6 +6,7 @@ import {
   formatFullTimestamp,
   getAutocompleteState,
   insertMention,
+  isStale,
   maxTextareaHeight,
   minTextareaHeight,
   preprocessText,
@@ -96,4 +97,14 @@ Deno.test("computeTextareaResize grows with content until the cap", () => {
     height: 120,
     overflow: "hidden",
   });
+});
+
+Deno.test("isStale returns true for timestamps older than 1 hour", () => {
+  const oneHourAndAMinuteAgo = Date.now() - (60 * 60 * 1000 + 60_000);
+  assertEquals(isStale(oneHourAndAMinuteAgo), true);
+});
+
+Deno.test("isStale returns false for timestamps newer than 1 hour", () => {
+  const fiftyNineMinutesAgo = Date.now() - (59 * 60 * 1000);
+  assertEquals(isStale(fiftyNineMinutesAgo), false);
 });

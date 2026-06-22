@@ -464,3 +464,8 @@ export const insertMention = (
     newCursorIndex: triggerIndex + mention.length,
   };
 };
+
+const staleTimeoutMs = 3600000;
+
+export const isStale = (timestamp: number) =>
+  Date.now() - timestamp > staleTimeoutMs;
