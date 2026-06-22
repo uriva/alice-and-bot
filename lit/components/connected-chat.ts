@@ -44,6 +44,7 @@ import type {
   Reaction,
 } from "./types.ts";
 import {
+  isPast,
   latestTimestamp,
   standaloneSpinnerEntries,
 } from "./transient-elements.ts";
@@ -307,7 +308,7 @@ const latestSpinners = (
         text: m.text,
         elementId: m.elementId,
         timestamp: m.timestamp,
-        active: override?.active ?? m.active,
+        active: isPast(m.timestamp, messages) ? false : (override?.active ?? m.active),
       };
     });
 };
@@ -331,7 +332,7 @@ const latestProgress = (
       return {
         authorName: resolveName(details)(m.publicSignKey),
         text: m.text,
-        percentage: override?.percentage ?? m.percentage,
+        percentage: isPast(m.timestamp, messages) ? 1 : (override?.percentage ?? m.percentage),
         elementId: m.elementId,
         timestamp: m.timestamp,
       };
