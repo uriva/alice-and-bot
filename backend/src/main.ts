@@ -775,28 +775,16 @@ export const endpoints: BackendApiImpl = {
     },
     storeTransferPayload: async ({ encryptedPayload }) => {
       const relayId = crypto.randomUUID();
-      await transact(
-        tx.transfers[relayId].update({
-          encryptedPayload,
-          createdAt: Date.now(),
-        }),
-      );
+      await kv.set(transferKey(relayId), encryptedPayload, {
+        expireIn: TRANSFER_TTL_MS,
+      });
       return { relayId };
     },
     retrieveTransferPayload: async ({ relayId }) => {
-      const { transfers } = await query({
-        transfers: {
-          $: { where: { id: relayId } },
-        },
-      });
-      const transfer = transfers[0];
-      if (!transfer) return { error: "not-found" };
-      if (Date.now() - transfer.createdAt > TRANSFER_TTL_MS) {
-        await transact(tx.transfers[relayId].delete());
-        return { error: "not-found" };
-      }
-      await transact(tx.transfers[relayId].delete());
-      return { encryptedPayload: transfer.encryptedPayload };
+      const k = transferKey(relayId);
+      const { value } = await kv.get<string>(k, { consistency: "strong" });
+      if (!value) return { error: "not-found" };
+      return { encryptedPayload: value };
     },
     getUploadUrl: async ({ payload, publicSignKey, nonce, authToken }) => {
       const authed = await verifyAuthToken<{
