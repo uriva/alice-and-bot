@@ -782,7 +782,7 @@ export const endpoints: BackendApiImpl = {
     },
     retrieveTransferPayload: async ({ relayId }) => {
       const k = transferKey(relayId);
-      const { value } = await kv.get<string>(k);
+      const { value } = await kv.get<string>(k, { consistency: "strong" });
       if (!value) return { error: "not-found" };
       return { encryptedPayload: value };
     },
