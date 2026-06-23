@@ -12,6 +12,10 @@ export type PushSubscriptionJSON = {
 
 const _schema = i.schema({
   entities: {
+    transfers: i.entity({
+      encryptedPayload: i.string(),
+      createdAt: i.number(),
+    }),
     $files: i.entity({
       path: i.string().unique().indexed(),
       url: i.any(),

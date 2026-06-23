@@ -42,22 +42,6 @@ const TRANSFER_TTL_MS = 5 * 60 * 1000;
 
 const transferKey = (relayId: string) => ["transfer", relayId];
 
-const logDebug = async (msg: string) => {
-  const logId = crypto.randomUUID();
-  const region = Deno.env.get("DENO_REGION") || "unknown";
-  const time = new Date().toISOString();
-  console.log(`[debug] [${region}] ${msg}`);
-  try {
-    await kv.set(["debug_log", Date.now(), logId], {
-      msg,
-      region,
-      time,
-    }, { expireIn: 10 * 60 * 1000 });
-  } catch (e) {
-    console.error("Failed to write to debug_log KV:", e);
-  }
-};
-
 export const endpoints: BackendApiImpl = {
   authenticate: (token: string) => auth.verifyToken(token),
   handlers: {
@@ -791,49 +775,28 @@ export const endpoints: BackendApiImpl = {
     },
     storeTransferPayload: async ({ encryptedPayload }) => {
       const relayId = crypto.randomUUID();
-      await logDebug(
-        `[store] Called for relayId: ${relayId}, payload length: ${encryptedPayload?.length}`,
+      await transact(
+        tx.transfers[relayId].update({
+          encryptedPayload,
+          createdAt: Date.now(),
+        }),
       );
-      try {
-        await kv.set(transferKey(relayId), encryptedPayload, {
-          expireIn: TRANSFER_TTL_MS,
-        });
-        await logDebug(
-          `[store] Successfully wrote key to Deno KV for relayId: ${relayId}`,
-        );
-      } catch (e) {
-        await logDebug(
-          `[store] FAILED to write key to Deno KV: ${
-            e instanceof Error ? e.message : String(e)
-          }`,
-        );
-        throw e;
-      }
       return { relayId };
     },
     retrieveTransferPayload: async ({ relayId }) => {
-      const k = transferKey(relayId);
-      await logDebug(`[retrieve] Called for relayId: ${relayId}`);
-      try {
-        const { value } = await kv.get<string>(k, { consistency: "strong" });
-        if (!value) {
-          await logDebug(
-            `[retrieve] Key NOT found in Deno KV (strong) for relayId: ${relayId}`,
-          );
-          return { error: "not-found" };
-        }
-        await logDebug(
-          `[retrieve] Successfully retrieved payload of length ${value?.length} for relayId: ${relayId}`,
-        );
-        return { encryptedPayload: value };
-      } catch (e) {
-        await logDebug(
-          `[retrieve] FAILED to read from Deno KV: ${
-            e instanceof Error ? e.message : String(e)
-          }`,
-        );
-        throw e;
+      const { transfers } = await query({
+        transfers: {
+          $: { where: { id: relayId } },
+        },
+      });
+      const transfer = transfers[0];
+      if (!transfer) return { error: "not-found" };
+      if (Date.now() - transfer.createdAt > TRANSFER_TTL_MS) {
+        await transact(tx.transfers[relayId].delete());
+        return { error: "not-found" };
       }
+      await transact(tx.transfers[relayId].delete());
+      return { encryptedPayload: transfer.encryptedPayload };
     },
     getUploadUrl: async ({ payload, publicSignKey, nonce, authToken }) => {
       const authed = await verifyAuthToken<{
@@ -1000,22 +963,6 @@ Deno.serve(async (req: Request) => {
         status: 200,
         headers: { "content-type": "text/plain; charset=utf-8" },
       });
-    }
-    if (url.pathname === "/debug-kv") {
-      const keys: unknown[] = [];
-      const prefixParam = url.searchParams.get("prefix");
-      const prefix = prefixParam ? [prefixParam] : [];
-      for await (const entry of kv.list({ prefix })) {
-        keys.push({ key: entry.key, value: entry.value });
-      }
-      return jsonCorsResponse({ keys });
-    }
-    if (url.pathname === "/debug-logs") {
-      const logs: unknown[] = [];
-      for await (const entry of kv.list({ prefix: ["debug_log"] })) {
-        logs.push({ key: entry.key, value: entry.value });
-      }
-      return jsonCorsResponse({ logs: logs.reverse() });
     }
     if (url.pathname === "/ui-update") {
       const body = await req.json();
