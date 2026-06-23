@@ -57,14 +57,20 @@ export const callWebhooks = async (
 type Participant = { publicSignKey: string; webhook?: string };
 type Conversation = { id: string; title: string; participants: Participant[] };
 
-export const vapidPublicKey = coerce(Deno.env.get("VAPID_PUBLIC_KEY"));
+export const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
 
-const vapidPrivateKey = coerce(Deno.env.get("VAPID_PRIVATE_KEY"));
-webpush.setVapidDetails(
-  "mailto:support@aliceandbot.com",
-  vapidPublicKey,
-  vapidPrivateKey,
-);
+const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
+try {
+  if (vapidPublicKey && vapidPrivateKey) {
+    webpush.setVapidDetails(
+      "mailto:support@aliceandbot.com",
+      vapidPublicKey,
+      vapidPrivateKey,
+    );
+  }
+} catch (e: any) {
+  console.warn("VAPID details registration skipped:", e.message);
+}
 
 export const sendPushToParticipants = async (
   { messageId: _messageId, conversationId, timestamp }: {

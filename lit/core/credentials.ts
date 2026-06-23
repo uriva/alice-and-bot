@@ -29,7 +29,15 @@ export const importIdentity = async (
       const url = new URL(trimmed);
       const parsed = parseTransferFragment(url.hash);
       if (parsed) {
-        const result = await retrieveTransferPayload(parsed.relayId);
+        let result = await retrieveTransferPayload(parsed.relayId);
+        if ("error" in result) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          result = await retrieveTransferPayload(parsed.relayId);
+        }
+        if ("error" in result) {
+          await new Promise((resolve) => setTimeout(resolve, 700));
+          result = await retrieveTransferPayload(parsed.relayId);
+        }
         if ("error" in result) {
           throw new Error("Transfer payload not found or expired");
         }

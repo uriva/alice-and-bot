@@ -417,7 +417,15 @@ const handleTransferImport = async () => {
   if (transferImportInFlight) return;
   transferImportInFlight = true;
   globalThis.location.hash = "";
-  const result = await retrieveTransferPayload(parsed.relayId);
+  let result = await retrieveTransferPayload(parsed.relayId);
+  if ("error" in result) {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    result = await retrieveTransferPayload(parsed.relayId);
+  }
+  if ("error" in result) {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    result = await retrieveTransferPayload(parsed.relayId);
+  }
   if ("error" in result) {
     showToast("Transfer link expired or already used", "error");
     transferImportInFlight = false;
