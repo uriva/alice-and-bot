@@ -15,7 +15,8 @@ export const base64UrlToBase64 = (str: string): string => {
 };
 
 export const parseTransferFragment = (hash: string) => {
-  const match = hash.match(/^#?transfer=([^:]+):(.+)$/);
+  const decoded = decodeURIComponent(hash);
+  const match = decoded.match(/^#?transfer=([^:]+):(.+)$/);
   if (!match) return null;
   return { relayId: match[1], aesKey: base64UrlToBase64(match[2]) };
 };
