@@ -10,7 +10,9 @@ type UiElement = {
 };
 
 export const isPast = (timestamp: number, messages: DecipheredMessage[]) =>
-  messages.some((m) => m.timestamp > timestamp && (m.type === "text" || m.type === "edit"));
+  messages.some((m) =>
+    m.timestamp > timestamp && (m.type === "text" || m.type === "edit")
+  );
 
 export const standaloneSpinnerEntries = (
   uiElements: UiElement[],

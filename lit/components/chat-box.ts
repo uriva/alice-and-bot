@@ -62,7 +62,9 @@ import {
 const oneMinuteMs = 60_000;
 
 const indicatorColor = (isDark: boolean, color?: string, stale?: boolean) =>
-  stale ? (isDark ? "#f87171" : "#b91c1c") : (color ?? (isDark ? "#cbd5e1" : "#475569"));
+  stale
+    ? (isDark ? "#f87171" : "#b91c1c")
+    : (color ?? (isDark ? "#cbd5e1" : "#475569"));
 
 const indicatorTextStyle = (isDark: boolean, color?: string, stale?: boolean) =>
   `padding:6px 12px 6px 44px;color:${
@@ -72,7 +74,11 @@ const indicatorTextStyle = (isDark: boolean, color?: string, stale?: boolean) =>
 const nextFrame = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-const linearBarTrackStyle = (isDark: boolean, color?: string, stale?: boolean) =>
+const linearBarTrackStyle = (
+  isDark: boolean,
+  color?: string,
+  stale?: boolean,
+) =>
   `width:200px;height:8px;border:1px solid ${
     indicatorColor(isDark, color, stale)
   };border-radius:4px;margin-top:4px;overflow:hidden`;
@@ -147,7 +153,9 @@ const renderProgressIndicator = (
     <div style="${indicatorTextStyle(isDark, color, stale)}">
       <span>${showAuthorName(hideNames, isGroupChat)
         ? `${progress.authorName}: ${progress.text}`
-        : progress.text} (${Math.round(progress.percentage * 100)}%)${stale ? " (failed)" : nothing}</span>
+        : progress.text} (${Math.round(progress.percentage * 100)}%)${stale
+        ? " (failed)"
+        : nothing}</span>
       <div style="${linearBarTrackStyle(
         isDark,
         color,
@@ -1312,21 +1320,24 @@ export class ChatBox extends LitElement {
     }
 
     const currentActive = new Set([
-      ...this.activeSpinners.filter((s) => s.active && !isStale(s.timestamp)).map((s) => s.elementId),
-      ...this.activeProgress.filter((p) => p.percentage < 1 && !isStale(p.timestamp)).map((p) =>
-        p.elementId
-      ),
+      ...this.activeSpinners.filter((s) => s.active && !isStale(s.timestamp))
+        .map((s) => s.elementId),
+      ...this.activeProgress.filter((p) =>
+        p.percentage < 1 && !isStale(p.timestamp)
+      ).map((p) => p.elementId),
     ]);
     const now = Date.now();
     const justCompleted = [
       ...this.activeSpinners.filter(
         (s) =>
-          !s.active && !isStale(s.timestamp) && this._prevActiveSpinnerIds.has(s.elementId) &&
+          !s.active && !isStale(s.timestamp) &&
+          this._prevActiveSpinnerIds.has(s.elementId) &&
           now - s.timestamp > oneMinuteMs,
       ),
       ...this.activeProgress.filter(
         (p) =>
-          p.percentage >= 1 && !isStale(p.timestamp) && this._prevActiveSpinnerIds.has(p.elementId) &&
+          p.percentage >= 1 && !isStale(p.timestamp) &&
+          this._prevActiveSpinnerIds.has(p.elementId) &&
           now - p.timestamp > oneMinuteMs,
       ),
     ];

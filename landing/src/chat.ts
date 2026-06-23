@@ -385,14 +385,31 @@ const startConversation = async (
 // --- Transfer ---
 
 const parseTransferFragment = (hash: string) => {
+  console.log("[parseTransferFragment] Parsing hash:", hash);
   const decoded = decodeURIComponent(hash);
+  console.log("[parseTransferFragment] Decoded hash:", decoded);
   const match = decoded.match(/^#?transfer=([^:]+):(.+)$/);
-  if (!match) return null;
-  return { relayId: match[1], aesKey: base64UrlToBase64(match[2]) };
+  if (!match) {
+    console.log(
+      "[parseTransferFragment] Match failed (does not match /^#?transfer=([^:]+):(.+)$/)",
+    );
+    return null;
+  }
+  const res = { relayId: match[1], aesKey: base64UrlToBase64(match[2]) };
+  console.log("[parseTransferFragment] Success:", res);
+  return res;
 };
 
 const handleTransferImport = async () => {
-  if (typeof globalThis.location === "undefined") return;
+  console.log("[handleTransferImport] Triggered.");
+  if (typeof globalThis.location === "undefined") {
+    console.log("[handleTransferImport] globalThis.location is undefined.");
+    return;
+  }
+  console.log(
+    "[handleTransferImport] Hash at trigger time:",
+    globalThis.location.hash,
+  );
   if (globalThis.document) {
     const state: unknown = globalThis.document.visibilityState;
     if (state === "prerender") {
@@ -414,31 +431,72 @@ const handleTransferImport = async () => {
     }
   }
   const parsed = parseTransferFragment(globalThis.location.hash);
-  if (!parsed) return;
-  if (transferImportInFlight) return;
+  if (!parsed) {
+    console.log(
+      "[handleTransferImport] parseTransferFragment returned null (no valid transfer payload detected in hash).",
+    );
+    return;
+  }
+  if (transferImportInFlight) {
+    console.log(
+      "[handleTransferImport] Import already in flight. Ignoring trigger.",
+    );
+    return;
+  }
   transferImportInFlight = true;
+  console.log(
+    "[handleTransferImport] Success! Clearing location hash and retrieving payload for relayId:",
+    parsed.relayId,
+  );
   globalThis.location.hash = "";
   let result = await retrieveTransferPayload(parsed.relayId);
+  console.log("[handleTransferImport] Retrieval try #1 result:", result);
   if ("error" in result) {
+    console.log(
+      "[handleTransferImport] Retrieval try #1 failed. Retrying in 300ms...",
+    );
     await new Promise((resolve) => setTimeout(resolve, 300));
     result = await retrieveTransferPayload(parsed.relayId);
+    console.log("[handleTransferImport] Retrieval try #2 result:", result);
   }
   if ("error" in result) {
+    console.log(
+      "[handleTransferImport] Retrieval try #2 failed. Retrying in 700ms...",
+    );
     await new Promise((resolve) => setTimeout(resolve, 700));
     result = await retrieveTransferPayload(parsed.relayId);
+    console.log("[handleTransferImport] Retrieval try #3 result:", result);
   }
   if ("error" in result) {
+    console.error(
+      "[handleTransferImport] All retrieval attempts failed with error:",
+      result.error,
+    );
     showToast("Transfer link expired or already used", "error");
     transferImportInFlight = false;
     return;
   }
-  const creds = await decryptSymmetric<Credentials>(
-    parsed.aesKey,
-    result.encryptedPayload as EncryptedSymmetric<Credentials>,
-  );
-  localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
-  showToast("Credentials imported \u2014 reloading\u2026", "success");
-  setTimeout(() => globalThis.location.reload(), 500);
+  try {
+    console.log(
+      "[handleTransferImport] Decrypting payload with aesKey:",
+      parsed.aesKey,
+    );
+    const creds = await decryptSymmetric<Credentials>(
+      parsed.aesKey,
+      result.encryptedPayload as EncryptedSymmetric<Credentials>,
+    );
+    console.log(
+      "[handleTransferImport] Decrypted credentials successfully:",
+      creds,
+    );
+    localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
+    showToast("Credentials imported \u2014 reloading\u2026", "success");
+    setTimeout(() => globalThis.location.reload(), 500);
+  } catch (e) {
+    console.error("[handleTransferImport] Decryption failed:", e);
+    showToast("Failed to decrypt transfer payload", "error");
+    transferImportInFlight = false;
+  }
 };
 
 const generateTransferUrl = async (creds: Credentials) => {
@@ -2233,6 +2291,15 @@ export const chat = (): TemplateResult => {
 
     // URL popstate
     globalThis.addEventListener("popstate", onPopstate);
+
+    // URL hashchange
+    globalThis.addEventListener("hashchange", () => {
+      console.log(
+        "[hashchange] Event fired. Hash changed to:",
+        globalThis.location.hash,
+      );
+      handleTransferImport();
+    });
 
     // Init logged-in state if we have credentials
     if (credentials) {

@@ -39,7 +39,7 @@ Deno.test("isPast returns true if there is any subsequent text/edit message", ()
     { id: "m3", text: "world", timestamp: 1100, type: "text" },
   ] as any[];
 
-  assertEquals(isPast(1000, messages), true);  // Succeeded by "world" at 1100
-  assertEquals(isPast(1050, messages), true);  // Succeeded by "world" at 1100
+  assertEquals(isPast(1000, messages), true); // Succeeded by "world" at 1100
+  assertEquals(isPast(1050, messages), true); // Succeeded by "world" at 1100
   assertEquals(isPast(1100, messages), false); // No subsequent text/edit message
 });
