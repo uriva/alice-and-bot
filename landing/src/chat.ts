@@ -444,32 +444,41 @@ const handleTransferImport = async () => {
     return;
   }
   transferImportInFlight = true;
+  const currentRelayId = parsed.relayId;
   console.log(
-    "[handleTransferImport] Success! Clearing location hash and retrieving payload for relayId:",
-    parsed.relayId,
+    `[handleTransferImport for ${currentRelayId}] Success! Clearing location hash and retrieving payload...`,
   );
   globalThis.location.hash = "";
-  let result = await retrieveTransferPayload(parsed.relayId);
-  console.log("[handleTransferImport] Retrieval try #1 result:", result);
+  let result = await retrieveTransferPayload(currentRelayId);
+  console.log(
+    `[handleTransferImport for ${currentRelayId}] Retrieval try #1 result:`,
+    result,
+  );
   if ("error" in result) {
     console.log(
-      "[handleTransferImport] Retrieval try #1 failed. Retrying in 300ms...",
+      `[handleTransferImport for ${currentRelayId}] Retrieval try #1 failed. Retrying in 300ms...`,
     );
     await new Promise((resolve) => setTimeout(resolve, 300));
-    result = await retrieveTransferPayload(parsed.relayId);
-    console.log("[handleTransferImport] Retrieval try #2 result:", result);
+    result = await retrieveTransferPayload(currentRelayId);
+    console.log(
+      `[handleTransferImport for ${currentRelayId}] Retrieval try #2 result:`,
+      result,
+    );
   }
   if ("error" in result) {
     console.log(
-      "[handleTransferImport] Retrieval try #2 failed. Retrying in 700ms...",
+      `[handleTransferImport for ${currentRelayId}] Retrieval try #2 failed. Retrying in 700ms...`,
     );
     await new Promise((resolve) => setTimeout(resolve, 700));
-    result = await retrieveTransferPayload(parsed.relayId);
-    console.log("[handleTransferImport] Retrieval try #3 result:", result);
+    result = await retrieveTransferPayload(currentRelayId);
+    console.log(
+      `[handleTransferImport for ${currentRelayId}] Retrieval try #3 result:`,
+      result,
+    );
   }
   if ("error" in result) {
     console.error(
-      "[handleTransferImport] All retrieval attempts failed with error:",
+      `[handleTransferImport for ${currentRelayId}] All retrieval attempts failed with error:`,
       result.error,
     );
     showToast("Transfer link expired or already used", "error");
@@ -478,7 +487,7 @@ const handleTransferImport = async () => {
   }
   try {
     console.log(
-      "[handleTransferImport] Decrypting payload with aesKey:",
+      `[handleTransferImport for ${currentRelayId}] Decrypting payload with aesKey:`,
       parsed.aesKey,
     );
     const creds = await decryptSymmetric<Credentials>(
@@ -486,14 +495,17 @@ const handleTransferImport = async () => {
       result.encryptedPayload as EncryptedSymmetric<Credentials>,
     );
     console.log(
-      "[handleTransferImport] Decrypted credentials successfully:",
+      `[handleTransferImport for ${currentRelayId}] Decrypted credentials successfully:`,
       creds,
     );
     localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
     showToast("Credentials imported \u2014 reloading\u2026", "success");
     setTimeout(() => globalThis.location.reload(), 500);
   } catch (e) {
-    console.error("[handleTransferImport] Decryption failed:", e);
+    console.error(
+      `[handleTransferImport for ${currentRelayId}] Decryption failed:`,
+      e,
+    );
     showToast("Failed to decrypt transfer payload", "error");
     transferImportInFlight = false;
   }
