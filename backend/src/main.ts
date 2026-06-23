@@ -952,6 +952,15 @@ Deno.serve(async (req: Request) => {
         headers: { "content-type": "text/plain; charset=utf-8" },
       });
     }
+    if (url.pathname === "/debug-kv") {
+      const keys: unknown[] = [];
+      const prefixParam = url.searchParams.get("prefix");
+      const prefix = prefixParam ? [prefixParam] : [];
+      for await (const entry of kv.list({ prefix })) {
+        keys.push({ key: entry.key, value: entry.value });
+      }
+      return jsonCorsResponse({ keys });
+    }
     if (url.pathname === "/ui-update") {
       const body = await req.json();
       const elementId = body.elementId ||
