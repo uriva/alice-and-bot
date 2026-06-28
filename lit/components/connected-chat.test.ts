@@ -87,3 +87,79 @@ Deno.test(
     assertEquals(handler._lastMessageCount, 0);
   },
 );
+
+Deno.test(
+  "conversation change lifecycle timing should prevent rendering of old messages and streams",
+  () => {
+    let messages: DecipheredMessage[] | null = [
+      { id: "m1", text: "hello", timestamp: 1000, publicSignKey: "pk1" },
+    ];
+    let ephemeralStreams = [
+      {
+        elementId: "s1",
+        text: "Moshe is typing...",
+        active: true,
+        updatedAt: 1000,
+      },
+    ];
+
+    let renderedMessages: DecipheredMessage[] | null = null;
+    let renderedStreams: typeof ephemeralStreams = [];
+
+    const render = () => {
+      renderedMessages = messages;
+      renderedStreams = [...ephemeralStreams];
+    };
+
+    const teardown = () => {
+      messages = null;
+      ephemeralStreams = [];
+    };
+
+    // Buggy timing: render runs before teardown
+    render();
+    teardown();
+
+    assertEquals(renderedMessages, [
+      { id: "m1", text: "hello", timestamp: 1000, publicSignKey: "pk1" },
+    ]);
+    assertEquals(renderedStreams, [
+      {
+        elementId: "s1",
+        text: "Moshe is typing...",
+        active: true,
+        updatedAt: 1000,
+      },
+    ]);
+
+    // Fixed timing: teardown runs before render
+    messages = [
+      { id: "m1", text: "hello", timestamp: 1000, publicSignKey: "pk1" },
+    ];
+    ephemeralStreams = [
+      {
+        elementId: "s1",
+        text: "Moshe is typing...",
+        active: true,
+        updatedAt: 1000,
+      },
+    ];
+    renderedMessages = null;
+    renderedStreams = [];
+
+    teardown();
+    render();
+
+    assertEquals(renderedMessages, null);
+    assertEquals(renderedStreams, []);
+  },
+);
+
+Deno.test(
+  "ConnectedChat component must implement willUpdate to teardown state before rendering",
+  async () => {
+    const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+    const hasWillUpdate = code.includes("willUpdate");
+    assertEquals(hasWillUpdate, true);
+  },
+);

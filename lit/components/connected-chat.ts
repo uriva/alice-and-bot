@@ -567,7 +567,7 @@ export class ConnectedChat extends LitElement {
       : this.isDark;
   }
 
-  override updated(changed: Map<string, unknown>) {
+  override willUpdate(changed: Map<PropertyKey, unknown>) {
     const credentialsChanged = changed.has("credentials") &&
       !sameCredentials(
         credentialsOrNull(changed.get("credentials")),
@@ -575,6 +575,16 @@ export class ConnectedChat extends LitElement {
       );
     if (credentialsChanged || changed.has("conversationId")) {
       this._teardown();
+    }
+  }
+
+  override updated(changed: Map<string, unknown>) {
+    const credentialsChanged = changed.has("credentials") &&
+      !sameCredentials(
+        credentialsOrNull(changed.get("credentials")),
+        this.credentials,
+      );
+    if (credentialsChanged || changed.has("conversationId")) {
       this._setupSubscriptions();
     }
   }

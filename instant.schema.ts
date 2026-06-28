@@ -154,6 +154,14 @@ const _schema = i.schema({
       forward: { on: "identities", label: "receivedTransactions", has: "many" },
       reverse: { on: "transactions", label: "receiver", has: "one" },
     },
+    identityArchivedConversations: {
+      forward: {
+        on: "identities",
+        label: "archivedConversations",
+        has: "many",
+      },
+      reverse: { on: "conversations", label: "archivedBy", has: "many" },
+    },
   },
   rooms: {
     conversations: {

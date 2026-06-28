@@ -20,6 +20,7 @@ export type Conversation = {
   title: string;
   participants: { publicSignKey: string }[];
   updatedAt?: number;
+  archivedBy?: { publicSignKey: string }[];
 };
 
 export const subscribeConversations = (
@@ -30,6 +31,9 @@ export const subscribeConversations = (
     {
       conversations: {
         participants: {},
+        archivedBy: {
+          $: { where: { publicSignKey } },
+        },
         $: { where: { "participants.publicSignKey": publicSignKey } },
       },
     },
@@ -171,6 +175,7 @@ export const subscribeIdentityProfile = (
   publicSignKey: string,
   onChange: (
     profile: {
+      id: string;
       name?: string;
       avatar?: string;
       alias?: string;
@@ -184,8 +189,8 @@ export const subscribeIdentityProfile = (
       if (error) console.error("Error fetching identity profile", error);
       const identity = data?.identities?.[0];
       if (!identity) return onChange(null);
-      const { name, avatar, alias, priceTag } = identity;
-      onChange({ name, avatar, alias, priceTag });
+      const { id, name, avatar, alias, priceTag } = identity;
+      onChange({ id, name, avatar, alias, priceTag });
     },
   );
 

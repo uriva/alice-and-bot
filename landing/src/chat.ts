@@ -1,4 +1,4 @@
-import { html, render, type TemplateResult } from "lit";
+import { html, nothing, render, type TemplateResult } from "lit";
 import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import "../../lit/components/connected-chat.ts";
 import { buttonClass, copyableString } from "./components.ts";
@@ -42,6 +42,7 @@ import { getCredentialsToCopy } from "../../lit/core/credentials.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { subscribeIsMobile } from "../../lit/core/responsive.ts";
 import { accessAdminDb, accessDb } from "../../lit/core/instant-client.ts";
+import { tx } from "@instantdb/core";
 import {
   type Conversation,
   subscribeConversations,
@@ -108,6 +109,35 @@ let loginExistingInput = "";
 
 let newChatInput = "";
 
+let showArchived = false;
+
+const isArchived = (conv: Conversation) => {
+  return conv.archivedBy !== undefined && conv.archivedBy.length > 0;
+};
+
+const archiveConversation = (conversationId: string) => {
+  if (!yourKeyProfile?.id) return;
+  db.transact(
+    tx.identities[yourKeyProfile.id].link({
+      archivedConversations: conversationId,
+    }),
+  );
+  if (selectedConversation === conversationId) {
+    selectedConversation = null;
+  }
+  rerenderChat();
+};
+
+const unarchiveConversation = (conversationId: string) => {
+  if (!yourKeyProfile?.id) return;
+  db.transact(
+    tx.identities[yourKeyProfile.id].unlink({
+      archivedConversations: conversationId,
+    }),
+  );
+  rerenderChat();
+};
+
 // Name cache for conversation list items
 const nameCache = new Map<string, string | null>();
 const nameUnsubs = new Map<string, () => void>();
@@ -123,6 +153,7 @@ const subscribeName = (publicSignKey: string) => {
 
 // Profile cache for YourKey section
 let yourKeyProfile: {
+  id?: string;
   name?: string;
   avatar?: string;
   alias?: string;
@@ -780,6 +811,40 @@ const moonSvg = html`
   </svg>
 `;
 
+const archiveSvg = html`
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-4 h-4"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+    />
+  </svg>
+`;
+
+const unarchiveSvg = html`
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-4 h-4"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3-3m0 0l3 3m-3-3V15"
+    />
+  </svg>
+`;
+
 // --- Sub-templates ---
 
 const setView_ = (v: View) => {
@@ -825,8 +890,9 @@ const conversationListItem = (conv: Conversation) => {
   const participantName = nameCache.get(otherKey) ?? null;
   const displayName = conv.title || participantName;
   const isSelected = selectedConversation === conv.id;
+  const isCurrentlyArchived = isArchived(conv);
   return html`
-    <li>
+    <li class="group relative">
       <button type="button" class="${`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-300 dark:border-gray-700 transition-colors ${
         isSelected
           ? "bg-gray-100 dark:bg-black/50 border-l-4 border-l-gray-500"
@@ -836,12 +902,31 @@ const conversationListItem = (conv: Conversation) => {
           name: displayName,
           baseColor: avatarColor(otherKey, currentDark),
         })}
-        <div class="flex-grow overflow-hidden min-w-0">
+        <div class="flex-grow overflow-hidden min-w-0 pr-8">
           <div class="${`font-medium ${textColorStyle} truncate`}">
             ${displayName === null ? shimmerText() : displayName}
           </div>
         </div>
       </button>
+      ${displayName !== null
+        ? html`
+          <button
+            type="button"
+            class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] hover:text-gray-800 dark:hover:text-gray-200"
+            title="${isCurrentlyArchived ? "Unarchive Chat" : "Archive Chat"}"
+            @click="${(e: Event) => {
+              e.stopPropagation();
+              if (isCurrentlyArchived) {
+                unarchiveConversation(conv.id);
+              } else {
+                archiveConversation(conv.id);
+              }
+            }}"
+          >
+            ${isCurrentlyArchived ? unarchiveSvg : archiveSvg}
+          </button>
+        `
+        : nothing}
     </li>
   `;
 };
@@ -889,10 +974,15 @@ const openChats = (sq?: string, onNewChat?: () => void) => {
       conv.title.toLowerCase().includes(sq.toLowerCase())
     )
     : conversations;
+
+  const displayList = filtered.filter((conv) =>
+    showArchived ? isArchived(conv) : !isArchived(conv)
+  );
+
   return html`
     <div style="display:flex;flex-direction:column;flex-grow:1">
-      ${filtered.length === 0 ? emptyChatsView(sq, onNewChat) : html`
-        <ul class="flex flex-col">${filtered.map(conversationListItem)}</ul>
+      ${displayList.length === 0 ? emptyChatsView(sq, onNewChat) : html`
+        <ul class="flex flex-col">${displayList.map(conversationListItem)}</ul>
       `}
     </div>
   `;
@@ -1954,7 +2044,24 @@ const mobileChatsListView = () => {
 
           `}
       </div>
-      ${mobileBottomNav()}
+      ${view === "chats"
+        ? html`
+          <div
+            class="p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-black flex justify-center"
+          >
+            <button
+              type="button"
+              class="text-xs font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors flex items-center gap-1.5"
+              @click="${() => {
+                showArchived = !showArchived;
+                rerenderChat();
+              }}"
+            >
+              ${showArchived ? "← Show Active Chats" : "Show Archived Chats"}
+            </button>
+          </div>
+        `
+        : nothing} ${mobileBottomNav()}
     </div>
   `;
 };
@@ -2016,6 +2123,20 @@ const desktopChatsView = () =>
         style="display:flex;flex-grow:1;flex-direction:column;overflow-y:auto;${scrollbarStyle()}"
       >
         ${openChats(searchQuery, () => setView_("new_chat"))}
+      </div>
+      <div
+        class="p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-black flex justify-center"
+      >
+        <button
+          type="button"
+          class="text-xs font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors flex items-center gap-1.5"
+          @click="${() => {
+            showArchived = !showArchived;
+            rerenderChat();
+          }}"
+        >
+          ${showArchived ? "← Show Active Chats" : "Show Archived Chats"}
+        </button>
       </div>
     </div>
   `;
