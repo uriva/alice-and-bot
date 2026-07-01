@@ -28,7 +28,7 @@ export default defineConfig({
     {
       command: "cd .. && deno task landing",
       port: 3000,
-      reuseExistingServer: false,
+      reuseExistingServer: true,
       timeout: 60_000,
     },
   ],

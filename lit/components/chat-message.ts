@@ -471,6 +471,7 @@ export class ChatMessage extends LitElement {
       30000,
     ) as unknown as number;
     this.addEventListener("click", this._handleCopyCode);
+    this.addEventListener("copy", this._handleCopy);
     this._syncVisibleText();
   }
 
@@ -482,6 +483,7 @@ export class ChatMessage extends LitElement {
     document.removeEventListener("mousedown", this._dismissQuickEmojis);
     this._removeOutsideClick();
     this.removeEventListener("click", this._handleCopyCode);
+    this.removeEventListener("copy", this._handleCopy);
   }
 
   private _handleCopyCode = (e: Event) => {
@@ -491,6 +493,18 @@ export class ChatMessage extends LitElement {
     if (!btn) return;
     const codeEl = btn.closest(".fenced-code-wrap")?.querySelector("code");
     if (codeEl) copyToClipboard(codeEl.textContent ?? "");
+  };
+
+  private _handleCopy = (e: ClipboardEvent) => {
+    const selection = globalThis.getSelection();
+    if (!selection) return;
+    const text = selection.toString();
+    const cleaned = text
+      .replace(/\r\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/^\n+|\n+$/g, "");
+    e.clipboardData?.setData("text/plain", cleaned);
+    e.preventDefault();
   };
 
   private _updateTimeAgo() {
