@@ -112,9 +112,9 @@ const createMarked = (textColor: string, isDark: boolean) => {
         this: { parser: { parseInline(t: Token[]): string } },
         { tokens }: Tokens.Paragraph,
       ) {
-        return `<div dir="auto" style="margin:0 0 8px 0">${
+        return `<p dir="auto" style="margin:0 0 8px 0">${
           this.parser.parseInline(tokens)
-        }</div>`;
+        }</p>`;
       },
       code({ text, lang }: Tokens.Code) {
         return fencedCodeBlockHtml(text, lang ?? "", isDark);

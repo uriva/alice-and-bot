@@ -139,3 +139,9 @@ Deno.test("fenced code block has fenced-code-wrap class for copy handler", () =>
   const html = renderMarkdown("```ts\nconst x = 1;\n```", "#222", false);
   assertEquals(html.includes('class="fenced-code-wrap'), true);
 });
+
+Deno.test("renderMarkdown renders paragraphs as semantic p tags without nested block divs", () => {
+  const html = renderMarkdown("Hello World", "#222", false);
+  assertEquals(html.startsWith('<p dir="auto"'), true);
+  assertEquals(html.endsWith('</p>'), true);
+});
