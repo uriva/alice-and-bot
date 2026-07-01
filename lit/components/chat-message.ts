@@ -868,7 +868,7 @@ export class ChatMessage extends LitElement {
               `
               : nothing}
              <div
-              style="display:flex;justify-content:flex-end;align-items:center;gap:4px;user-select:none;-webkit-user-select:none"
+              style="display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:4px;user-select:none;-webkit-user-select:none"
             >
               ${showMenu
                 ? html`
