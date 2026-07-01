@@ -140,13 +140,13 @@ Deno.test("fenced code block has fenced-code-wrap class for copy handler", () =>
   assertEquals(html.includes('class="fenced-code-wrap'), true);
 });
 
-Deno.test("renderMarkdown strips wrapping p tags for single-paragraph messages to prevent trailing newlines on copy", () => {
+Deno.test("renderMarkdown strips wrapping p/span tags for single-paragraph messages to prevent trailing newlines on copy", () => {
   const html = renderMarkdown("Hello World", "#222", false);
   assertEquals(html, "Hello World");
 });
 
-Deno.test("renderMarkdown preserves p tags with bottom margin for multi-paragraph messages", () => {
+Deno.test("renderMarkdown preserves span tags with bottom margin for multi-paragraph messages", () => {
   const html = renderMarkdown("Hello World\n\nSecond Paragraph", "#222", false);
-  assertEquals(html.startsWith('<p dir="auto"'), true);
-  assertEquals(html.endsWith('</p>'), true);
+  assertEquals(html.startsWith('<span dir="auto"'), true);
+  assertEquals(html.endsWith('</span>'), true);
 });

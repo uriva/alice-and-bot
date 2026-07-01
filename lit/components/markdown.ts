@@ -112,9 +112,9 @@ const createMarked = (textColor: string, isDark: boolean) => {
         this: { parser: { parseInline(t: Token[]): string } },
         { tokens }: Tokens.Paragraph,
       ) {
-        return `<p dir="auto" style="margin:0;margin-bottom:8px">${
+        return `<span dir="auto">${
           this.parser.parseInline(tokens)
-        }</p>`;
+        }</span><br><br>`;
       },
       code({ text, lang }: Tokens.Code) {
         return fencedCodeBlockHtml(text, lang ?? "", isDark);
@@ -192,14 +192,16 @@ export const renderMarkdown = (
     { async: false },
   ).trim();
 
-  const pCount = (html.match(/<p\b/g) || []).length;
-  const hasOtherBlocks = /<(div|pre|blockquote|ul|ol|table|h[1-6])\b/i.test(html);
+  const trimmedHtml = html.replace(/(?:<br\s*\/?>)+$/gi, "");
+
+  const spanCount = (trimmedHtml.match(/<span\b/g) || []).length;
+  const hasOtherBlocks = /<(div|pre|blockquote|ul|ol|table|h[1-6])\b/i.test(trimmedHtml);
   
-  if (pCount === 1 && !hasOtherBlocks && html.startsWith("<p") && html.endsWith("</p>")) {
-    return html.replace(/^<p\b[^>]*>/i, "").replace(/<\/p>$/i, "");
+  if (spanCount === 1 && !hasOtherBlocks && trimmedHtml.startsWith("<span") && trimmedHtml.endsWith("</span>")) {
+    return trimmedHtml.replace(/^<span\b[^>]*>/i, "").replace(/<\/span>$/i, "");
   }
   
-  return html;
+  return trimmedHtml;
 };
 
 export const fencedCodeHoverCss =

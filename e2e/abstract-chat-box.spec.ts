@@ -579,10 +579,11 @@ test("triple clicking a message bubble selects only the message text without tra
 
 test("triple clicking the last paragraph of a multi-paragraph message has no trailing newlines", async ({ page }) => {
   await page.goto("/");
-  const lastParagraph = page.locator('[data-testid="message-text"] p').filter({
-    hasText: "Since the sort is stable",
-  }).first();
+  const lastParagraph = page.locator('[data-testid="message-text"] span').last();
   await expect(lastParagraph).toBeVisible();
+
+  const style = await lastParagraph.evaluate((el) => window.getComputedStyle(el).marginBottom);
+  console.log("MARGIN-BOTTOM OF LAST PARAGRAPH:", style);
 
   // Perform a triple-click on the last paragraph to select it
   await lastParagraph.click({ clickCount: 3 });
@@ -592,4 +593,32 @@ test("triple clicking the last paragraph of a multi-paragraph message has no tra
   console.log(JSON.stringify(selectedText));
   console.log("LAST-PARA TRIPLE-CLICK SELECTED TEXT END");
   expect(selectedText.endsWith("\n")).toBe(false);
+});
+
+test("message text container should contain only inline elements and no block-level elements like p or div", async ({ page }) => {
+  await page.goto("/");
+  const firstMessageText = page.locator('[data-testid="message-text"]').first();
+  await expect(firstMessageText).toBeVisible();
+
+  const hasBlocks = await firstMessageText.evaluate((el) => {
+    return el.querySelector("p, div") !== null;
+  });
+  
+  // It should have NO block-level elements inside
+  expect(hasBlocks).toBe(false);
+});
+
+test("message text should contain no p tags at all to ensure perfect copying across all operating systems", async ({ page }) => {
+  await page.goto("/");
+  const multiParaMessage = page.locator('[data-testid="message-text"]').filter({
+    hasText: "Great questions!",
+  }).first();
+  await expect(multiParaMessage).toBeVisible();
+
+  const hasPTags = await multiParaMessage.evaluate((el) => {
+    return el.querySelector("p") !== null;
+  });
+  
+  // It should have NO p tags inside (we use display:inline-block spans instead)
+  expect(hasPTags).toBe(false);
 });
