@@ -778,8 +778,7 @@ export class ChatMessage extends LitElement {
                 ._longPressActive && !this._selectedImage
               ? ";animation:msg-highlight .3s ease forwards"
               : ""}"
-          >
-            ${shouldShowName({
+          >${shouldShowName({
                 isStartOfSequence,
                 isOwn,
                 isGroupChat: this.isGroupChat,
@@ -789,14 +788,14 @@ export class ChatMessage extends LitElement {
                 <b data-testid="author-name" style="font-size:11px;color:${participantColor};user-select:none;-webkit-user-select:none"
                 >${authorName}</b>
               `
-              : nothing} ${this.msg.replyTo
+              : nothing}${this.msg.replyTo
               ? renderQuotedMessage(
                 this.msg.replyTo,
                 isDark,
                 customColors,
                 textColor,
               )
-              : nothing} ${this._isEditing
+              : nothing}${this._isEditing
               ? html`
                 <div style="margin-top:4px">
                   <textarea
@@ -839,7 +838,7 @@ export class ChatMessage extends LitElement {
                       : markdownHtml,
                   )}</span>
               `
-              : nothing} ${attachments && attachments.length > 0
+              : nothing}${attachments && attachments.length > 0
               ? html`
                 <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
                   ${attachments.map(
@@ -864,8 +863,7 @@ export class ChatMessage extends LitElement {
                   )}
                 </div>
               `
-              : nothing}
-             <div
+              : nothing}<div
               style="display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:4px;user-select:none;-webkit-user-select:none"
             >
               ${showMenu
