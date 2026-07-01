@@ -833,13 +833,11 @@ export class ChatMessage extends LitElement {
                   style="overflow-wrap:anywhere;word-break:break-word;min-width:0;${callDetails
                     ? "display:flex;align-items:center;gap:8px"
                     : ""}"
-                >
-                  ${callDetails ? faPhoneAlt : nothing} ${unsafeHTML(
+                >${callDetails ? faPhoneAlt : nothing}${unsafeHTML(
                     (this.streamActive || isRevealing) && displayedText.trim()
                       ? injectCursorAtEnd(markdownHtml, liveCursorHtml(isDark))
                       : markdownHtml,
-                  )}
-                </span>
+                  )}</span>
               `
               : nothing} ${attachments && attachments.length > 0
               ? html`

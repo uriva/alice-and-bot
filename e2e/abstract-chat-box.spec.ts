@@ -533,3 +533,31 @@ test("copying the entire msg-bubble via selection has no trailing newlines", asy
   console.log("SELECTED TEXT END");
   expect(selectedText.endsWith("\n")).toBe(false);
 });
+
+test("copying a multi-paragraph message text has no trailing newlines", async ({ page }) => {
+  await page.goto("/");
+  const multiParaMessage = page.locator('[data-testid="message-text"]').filter({
+    hasText: "Great questions!",
+  }).first();
+  await expect(multiParaMessage).toBeVisible();
+
+  // Select the text inside this multi-paragraph message-text element
+  await page.evaluate(() => {
+    const el = Array.from(document.querySelectorAll('[data-testid="message-text"]')).find(
+      (node) => node.textContent?.includes("Great questions!"),
+    );
+    if (el) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  });
+
+  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  console.log("MULTI-PARA SELECTED TEXT START:");
+  console.log(JSON.stringify(selectedText));
+  console.log("MULTI-PARA SELECTED TEXT END");
+  expect(selectedText.endsWith("\n")).toBe(false);
+});
