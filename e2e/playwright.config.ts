@@ -15,20 +15,20 @@ export default defineConfig({
     {
       command: "cd .. && deno task chatgpt-style",
       port: 3001,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 60_000,
     },
     {
       command:
         "cd fixtures && deno run -A --node-modules-dir=auto npm:vite --port 3003",
       port: 3003,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 60_000,
     },
     {
       command: "cd .. && deno task landing",
       port: 3000,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 60_000,
     },
   ],

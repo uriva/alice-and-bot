@@ -186,11 +186,21 @@ export const renderMarkdown = (
   text: string,
   textColor: string,
   isDark: boolean,
-): string =>
-  createMarked(textColor, isDark).parse(
+): string => {
+  const html = createMarked(textColor, isDark).parse(
     escapeHtmlTags(preprocessText(text)),
     { async: false },
-  );
+  ).trim();
+
+  const pCount = (html.match(/<p\b/g) || []).length;
+  const hasOtherBlocks = /<(div|pre|blockquote|ul|ol|table|h[1-6])\b/i.test(html);
+  
+  if (pCount === 1 && !hasOtherBlocks && html.startsWith("<p") && html.endsWith("</p>")) {
+    return html.replace(/^<p\b[^>]*>/i, "").replace(/<\/p>$/i, "");
+  }
+  
+  return html;
+};
 
 export const fencedCodeHoverCss =
   `.fenced-code-wrap:hover [data-testid="copy-code-button"]{opacity:1!important;background:#ffffff1a!important}`;
