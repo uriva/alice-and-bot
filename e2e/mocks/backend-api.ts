@@ -119,6 +119,13 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
       await delay(50);
       return route.fulfill(json({ alias: "alice" }));
     }
+    if (endpoint === "retrieveTransferPayload") {
+      const relayId = str(payload.relayId);
+      if (relayId === "delayed-relay") {
+        await delay(1000);
+      }
+      return route.fulfill(json({ error: "not-found" }));
+    }
 
     return route.fulfill(json({ error: "unknown-endpoint" }, 404));
   });

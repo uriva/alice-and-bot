@@ -306,4 +306,20 @@ test.describe("Messenger (landing /chat)", () => {
       timeout: 10_000,
     });
   });
+
+  test("loading credentials from transfer URL does not show unauthenticated screen during fetch", async ({ page }) => {
+    await setupMessengerMocks(page, data);
+    await clearStorage(page, credKey);
+    await page.goto("/chat#transfer=delayed-relay:some-aes-key");
+    
+    // The name input / "We don't know you yet" should NOT be visible initially while transfer is in flight
+    const nameInput = page.locator("input").first();
+    await expect(nameInput).not.toBeVisible();
+    
+    // The login/unauthenticated text should NOT be visible
+    await expect(page.getByText("We don't know you yet")).not.toBeVisible();
+
+    // Eventually, it should time out / fail and recover to the name input screen
+    await expect(nameInput).toBeVisible({ timeout: 15_000 });
+  });
 });
