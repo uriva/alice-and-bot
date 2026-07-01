@@ -140,8 +140,8 @@ Deno.test("fenced code block has fenced-code-wrap class for copy handler", () =>
   assertEquals(html.includes('class="fenced-code-wrap'), true);
 });
 
-Deno.test("renderMarkdown renders paragraphs as inline span tags with collapsed br line breaks to prevent trailing newlines on copy", () => {
+Deno.test("renderMarkdown renders paragraphs as semantic p tags with bottom margin for copy boundary correctness", () => {
   const html = renderMarkdown("Hello World", "#222", false);
-  assertEquals(html.startsWith('<span dir="auto"'), true);
-  assertEquals(html.endsWith('</span>'), true);
+  assertEquals(html.startsWith('<p dir="auto"'), true);
+  assertEquals(html.endsWith('</p>'), true);
 });

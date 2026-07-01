@@ -561,3 +561,35 @@ test("copying a multi-paragraph message text has no trailing newlines", async ({
   console.log("MULTI-PARA SELECTED TEXT END");
   expect(selectedText.endsWith("\n")).toBe(false);
 });
+
+test("triple clicking a message bubble selects only the message text without trailing newlines", async ({ page }) => {
+  await page.goto("/");
+  const firstMessageText = page.locator('[data-testid="message-text"]').first();
+  await expect(firstMessageText).toBeVisible();
+
+  // Perform a triple-click on the first message text to select it
+  await firstMessageText.click({ clickCount: 3 });
+
+  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  console.log("TRIPLE-CLICK SELECTED TEXT START:");
+  console.log(JSON.stringify(selectedText));
+  console.log("TRIPLE-CLICK SELECTED TEXT END");
+  expect(selectedText.endsWith("\n")).toBe(false);
+});
+
+test("triple clicking the last paragraph of a multi-paragraph message has no trailing newlines", async ({ page }) => {
+  await page.goto("/");
+  const lastParagraph = page.locator('[data-testid="message-text"] p').filter({
+    hasText: "Since the sort is stable",
+  }).first();
+  await expect(lastParagraph).toBeVisible();
+
+  // Perform a triple-click on the last paragraph to select it
+  await lastParagraph.click({ clickCount: 3 });
+
+  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  console.log("LAST-PARA TRIPLE-CLICK SELECTED TEXT START:");
+  console.log(JSON.stringify(selectedText));
+  console.log("LAST-PARA TRIPLE-CLICK SELECTED TEXT END");
+  expect(selectedText.endsWith("\n")).toBe(false);
+});

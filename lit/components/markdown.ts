@@ -112,9 +112,9 @@ const createMarked = (textColor: string, isDark: boolean) => {
         this: { parser: { parseInline(t: Token[]): string } },
         { tokens }: Tokens.Paragraph,
       ) {
-        return `<span dir="auto">${
+        return `<p dir="auto" style="margin:0;margin-bottom:8px">${
           this.parser.parseInline(tokens)
-        }</span><br><br>`;
+        }</p>`;
       },
       code({ text, lang }: Tokens.Code) {
         return fencedCodeBlockHtml(text, lang ?? "", isDark);
@@ -186,13 +186,11 @@ export const renderMarkdown = (
   text: string,
   textColor: string,
   isDark: boolean,
-): string => {
-  const html = createMarked(textColor, isDark).parse(
+): string =>
+  createMarked(textColor, isDark).parse(
     escapeHtmlTags(preprocessText(text)),
     { async: false },
   );
-  return html.replace(/(?:<br\s*\/?>)+$/gi, "");
-};
 
 export const fencedCodeHoverCss =
   `.fenced-code-wrap:hover [data-testid="copy-code-button"]{opacity:1!important;background:#ffffff1a!important}`;

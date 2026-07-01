@@ -760,7 +760,7 @@ export class ChatMessage extends LitElement {
         >
           <div
             class="msg-bubble"
-            style="display:inline-block;min-width:0;max-width:100%;background:${noBubble
+            style="user-select:none;-webkit-user-select:none;display:inline-block;min-width:0;max-width:100%;background:${noBubble
               ? "transparent"
               : baseColor};color:${textColor};align-self:${isOwn
               ? "flex-end"
@@ -829,7 +829,7 @@ export class ChatMessage extends LitElement {
                 <span
                   data-testid="message-text"
                   dir="auto"
-                  style="overflow-wrap:anywhere;word-break:break-word;min-width:0;${callDetails
+                  style="display:inline;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;word-break:break-word;min-width:0;${callDetails
                     ? "display:flex;align-items:center;gap:8px"
                     : ""}"
                 >${callDetails ? faPhoneAlt : nothing}${unsafeHTML(
