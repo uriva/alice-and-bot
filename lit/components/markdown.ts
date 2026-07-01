@@ -93,7 +93,7 @@ const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
 const inlineCodeHtml = (code: string, isDark: boolean) => {
   const bg = isDark ? "#ffffff22" : "#00000012";
   const color = isDark ? "#e5e7eb" : "#111";
-  return `<code style="background:${bg};color:${color};padding:0 4px;border-radius:4px;font-family:${monoFont};font-size:13px">${code}</code>`;
+  return `<code style="background:${bg};color:${color};padding:0 4px;border-radius:4px;font-family:${monoFont};font-size:13px;user-select:text;-webkit-user-select:text">${code}</code>`;
 };
 
 const videoPlayerHtml = (src: string) =>
@@ -195,12 +195,17 @@ export const renderMarkdown = (
   const trimmedHtml = html.replace(/(?:<br\s*\/?>)+$/gi, "");
 
   const spanCount = (trimmedHtml.match(/<span\b/g) || []).length;
-  const hasOtherBlocks = /<(div|pre|blockquote|ul|ol|table|h[1-6])\b/i.test(trimmedHtml);
-  
-  if (spanCount === 1 && !hasOtherBlocks && trimmedHtml.startsWith("<span") && trimmedHtml.endsWith("</span>")) {
+  const hasOtherBlocks = /<(div|pre|blockquote|ul|ol|table|h[1-6])\b/i.test(
+    trimmedHtml,
+  );
+
+  if (
+    spanCount === 1 && !hasOtherBlocks && trimmedHtml.startsWith("<span") &&
+    trimmedHtml.endsWith("</span>")
+  ) {
     return trimmedHtml.replace(/^<span\b[^>]*>/i, "").replace(/<\/span>$/i, "");
   }
-  
+
   return trimmedHtml;
 };
 

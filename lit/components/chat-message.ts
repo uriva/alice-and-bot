@@ -774,7 +774,7 @@ export class ChatMessage extends LitElement {
         >
           <div
             class="msg-bubble"
-            style="user-select:none;-webkit-user-select:none;display:inline-block;min-width:0;max-width:100%;background:${noBubble
+            style="display:inline-block;min-width:0;max-width:100%;background:${noBubble
               ? "transparent"
               : baseColor};color:${textColor};align-self:${isOwn
               ? "flex-end"
@@ -793,91 +793,92 @@ export class ChatMessage extends LitElement {
               ? ";animation:msg-highlight .3s ease forwards"
               : ""}"
           >${shouldShowName({
-                isStartOfSequence,
-                isOwn,
-                isGroupChat: this.isGroupChat,
-                hideNames: customColors?.hideNames,
-              })
-              ? html`
-                <b data-testid="author-name" style="font-size:11px;color:${participantColor};user-select:none;-webkit-user-select:none"
-                >${authorName}</b>
-              `
-              : nothing}${this.msg.replyTo
-              ? renderQuotedMessage(
-                this.msg.replyTo,
-                isDark,
-                customColors,
-                textColor,
-              )
-              : nothing}${this._isEditing
-              ? html`
-                <div style="margin-top:4px">
-                  <textarea
-                    .value="${this._editText}"
-                    @input="${(e: InputEvent) => {
-                      this._editText = (e.target as HTMLTextAreaElement).value;
-                    }}"
-                    @keydown="${(e: KeyboardEvent) => e.stopPropagation()}"
-                    style="${editTextareaStyle}"
-                  ></textarea>
-                  <div style="display:flex;gap:4px;margin-top:4px">
-                    <button
-                      type="button"
-                      @click="${this._submitEdit}"
-                      ?disabled="${!canSave}"
-                      style="${saveButtonStyle(isDark)}${canSave
-                        ? ""
-                        : ";opacity:0.4;cursor:default"}"
-                    >
-                      Save
-                    </button>
-                    <button type="button" @click="${this
-                      ._cancelEdit}" style="${cancelButtonStyle}">
-                      Cancel
-                    </button>
-                  </div>
+              isStartOfSequence,
+              isOwn,
+              isGroupChat: this.isGroupChat,
+              hideNames: customColors?.hideNames,
+            })
+            ? html`
+              <b data-testid="author-name"
+                style="font-size:11px;color:${participantColor};user-select:none;-webkit-user-select:none"
+              >${authorName}</b>
+            `
+            : nothing}${this.msg.replyTo
+            ? renderQuotedMessage(
+              this.msg.replyTo,
+              isDark,
+              customColors,
+              textColor,
+            )
+            : nothing}${this._isEditing
+            ? html`
+              <div style="margin-top:4px">
+                <textarea
+                  .value="${this._editText}"
+                  @input="${(e: InputEvent) => {
+                    this._editText = (e.target as HTMLTextAreaElement).value;
+                  }}"
+                  @keydown="${(e: KeyboardEvent) => e.stopPropagation()}"
+                  style="${editTextareaStyle}"
+                ></textarea>
+                <div style="display:flex;gap:4px;margin-top:4px">
+                  <button
+                    type="button"
+                    @click="${this._submitEdit}"
+                    ?disabled="${!canSave}"
+                    style="${saveButtonStyle(isDark)}${canSave
+                      ? ""
+                      : ";opacity:0.4;cursor:default"}"
+                  >
+                    Save
+                  </button>
+                  <button type="button" @click="${this
+                    ._cancelEdit}" style="${cancelButtonStyle}">
+                    Cancel
+                  </button>
                 </div>
-              `
-              : displayedText || this.streamActive
-              ? html`
-                <span
-                  data-testid="message-text"
-                  dir="auto"
-                  style="display:inline;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;word-break:break-word;min-width:0;${callDetails
-                    ? "display:flex;align-items:center;gap:8px"
-                    : ""}"
-                >${callDetails ? faPhoneAlt : nothing}${unsafeHTML(
-                    (this.streamActive || isRevealing) && displayedText.trim()
-                      ? injectCursorAtEnd(markdownHtml, liveCursorHtml(isDark))
-                      : markdownHtml,
-                  )}</span>
-              `
-              : nothing}${attachments && attachments.length > 0
-              ? html`
-                <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
-                  ${attachments.map(
-                    (att: Attachment) =>
-                      html`
-                        <chat-attachment
-                          .attachment="${att}"
-                          .isDark="${isDark}"
-                          .textColor="${textColor}"
-                          .primaryColor="${attachmentPrimaryColor(
-                            isDark,
-                            customColors,
-                          )}"
-                          .isOwn="${isOwn}"
-                          .messageTimestamp="${timestamp}"
-                          .sessionStart="${this.sessionStart}"
-                          .onDecrypt="${this.onDecryptAttachment}"
-                          .selectedImageSrc="${this._selectedImage?.src}"
-                          .longPressActive="${this._longPressActive}"
-                        ></chat-attachment>
-                      `,
-                  )}
-                </div>
-              `
-              : nothing}<div
+              </div>
+            `
+            : displayedText || this.streamActive
+            ? html`
+              <span
+                data-testid="message-text"
+                dir="auto"
+                style="display:inline;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;word-break:break-word;min-width:0;${callDetails
+                  ? "display:flex;align-items:center;gap:8px"
+                  : ""}"
+              >${callDetails ? faPhoneAlt : nothing}${unsafeHTML(
+                (this.streamActive || isRevealing) && displayedText.trim()
+                  ? injectCursorAtEnd(markdownHtml, liveCursorHtml(isDark))
+                  : markdownHtml,
+              )}</span>
+            `
+            : nothing}${attachments && attachments.length > 0
+            ? html`
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+                ${attachments.map(
+                  (att: Attachment) =>
+                    html`
+                      <chat-attachment
+                        .attachment="${att}"
+                        .isDark="${isDark}"
+                        .textColor="${textColor}"
+                        .primaryColor="${attachmentPrimaryColor(
+                          isDark,
+                          customColors,
+                        )}"
+                        .isOwn="${isOwn}"
+                        .messageTimestamp="${timestamp}"
+                        .sessionStart="${this.sessionStart}"
+                        .onDecrypt="${this.onDecryptAttachment}"
+                        .selectedImageSrc="${this._selectedImage?.src}"
+                        .longPressActive="${this._longPressActive}"
+                      ></chat-attachment>
+                    `,
+                )}
+              </div>
+            `
+            : nothing}<div
               style="display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:4px;user-select:none;-webkit-user-select:none"
             >
               ${showMenu
