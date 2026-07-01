@@ -488,3 +488,48 @@ test("attach menu works when chat-box is mounted inside a shadow root", async ({
     .click();
   expect(await fileChooserPromise).toBeDefined();
 });
+
+test("copying message text via selection has no trailing newlines", async ({ page }) => {
+  await page.goto("/");
+  const firstMessageText = page.locator('[data-testid="message-text"]').first();
+  await expect(firstMessageText).toBeVisible();
+  
+  // Select the text inside data-testid="message-text"
+  await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="message-text"]');
+    if (el) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  });
+
+  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  expect(selectedText).toBe("Hey, can you help me with a sorting algorithm?");
+});
+
+test("copying the entire msg-bubble via selection has no trailing newlines", async ({ page }) => {
+  await page.goto("/");
+  const bubble = page.locator(".msg-bubble").first();
+  await expect(bubble).toBeVisible();
+  
+  // Select the text inside .msg-bubble
+  await page.evaluate(() => {
+    const el = document.querySelector('.msg-bubble');
+    if (el) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  });
+
+  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  console.log("SELECTED TEXT START:");
+  console.log(JSON.stringify(selectedText));
+  console.log("SELECTED TEXT END");
+  expect(selectedText.endsWith("\n")).toBe(false);
+});

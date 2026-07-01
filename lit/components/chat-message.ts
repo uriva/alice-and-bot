@@ -723,6 +723,7 @@ export class ChatMessage extends LitElement {
       <style>
       ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}${liveCursorCss}${highlightCss}
       .msg-wrap .msg-reply-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-reply-trigger{opacity:1}
+      .msg-bubble p:last-of-type { margin-bottom: 0 !important; }
       </style>
       <div
         data-testid="message"
