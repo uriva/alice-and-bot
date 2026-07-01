@@ -449,27 +449,37 @@ const handleTransferImport = async () => {
   if (transferImportInFlight) return;
   transferImportInFlight = true;
   globalThis.location.hash = "";
-  let result = await retrieveTransferPayload(parsed.relayId);
-  if ("error" in result) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    result = await retrieveTransferPayload(parsed.relayId);
-  }
-  if ("error" in result) {
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    result = await retrieveTransferPayload(parsed.relayId);
-  }
-  if ("error" in result) {
-    showToast("Transfer link expired or already used", "error");
+  try {
+    let result = await retrieveTransferPayload(parsed.relayId);
+    if ("error" in result) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      result = await retrieveTransferPayload(parsed.relayId);
+    }
+    if ("error" in result) {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      result = await retrieveTransferPayload(parsed.relayId);
+    }
+    if ("error" in result) {
+      showToast("Transfer link expired or already used", "error");
+      transferImportInFlight = false;
+      credentialsChecked = true;
+      rerenderChat();
+      return;
+    }
+    const creds = await decryptSymmetric<Credentials>(
+      parsed.aesKey,
+      result.encryptedPayload as EncryptedSymmetric<Credentials>,
+    );
+    localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
+    showToast("Credentials imported — reloading…", "success");
+    setTimeout(() => globalThis.location.reload(), 500);
+  } catch (e) {
+    console.error("Error importing transfer credentials", e);
+    showToast("Failed to import credentials", "error");
     transferImportInFlight = false;
-    return;
+    credentialsChecked = true;
+    rerenderChat();
   }
-  const creds = await decryptSymmetric<Credentials>(
-    parsed.aesKey,
-    result.encryptedPayload as EncryptedSymmetric<Credentials>,
-  );
-  localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
-  showToast("Credentials imported \u2014 reloading\u2026", "success");
-  setTimeout(() => globalThis.location.reload(), 500);
 };
 
 const generateTransferUrl = async (creds: Credentials) => {
@@ -2329,6 +2339,7 @@ export const chat = (): TemplateResult => {
   yourKeyBalanceData = null;
   yourKeyDepositData = null;
   yourKeyPriceTagInput = "0";
+  transferImportInFlight = false;
 
   const id = "chat-mount";
 
@@ -2343,7 +2354,11 @@ export const chat = (): TemplateResult => {
     } catch (e) {
       console.error("Failed to parse stored credentials", e);
     }
-    credentialsChecked = true;
+    const hasTransfer = typeof globalThis.location !== "undefined" &&
+      parseTransferFragment(globalThis.location.hash) !== null;
+    if (!hasTransfer) {
+      credentialsChecked = true;
+    }
 
     // Init viewport + overflow
     viewportCleanup = initViewportHeightListener();
