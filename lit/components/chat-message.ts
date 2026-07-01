@@ -278,7 +278,7 @@ const renderQuotedMessage = (
     <div
       style="margin-bottom:4px;padding:6px 8px;border-radius:6px;border-left:3px solid ${barColor};background:${isDark
         ? "rgba(255,255,255,0.06)"
-        : "rgba(0,0,0,0.05)"};cursor:pointer"
+        : "rgba(0,0,0,0.05)"};cursor:pointer;user-select:none;-webkit-user-select:none"
     >
       <div
         style="font-size:11px;font-weight:600;color:${barColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
@@ -785,7 +785,7 @@ export class ChatMessage extends LitElement {
                 hideNames: customColors?.hideNames,
               })
               ? html`
-                <b data-testid="author-name" style="font-size:11px;color:${participantColor}"
+                <b data-testid="author-name" style="font-size:11px;color:${participantColor};user-select:none;-webkit-user-select:none"
                 >${authorName}</b>
               `
               : nothing} ${this.msg.replyTo
@@ -866,8 +866,8 @@ export class ChatMessage extends LitElement {
                 </div>
               `
               : nothing}
-            <div
-              style="display:flex;justify-content:flex-end;align-items:center;gap:4px"
+             <div
+              style="display:flex;justify-content:flex-end;align-items:center;gap:4px;user-select:none;-webkit-user-select:none"
             >
               ${showMenu
                 ? html`
