@@ -115,3 +115,8 @@ Deno.test("shouldShowScrollDownButton returns true if user has scrolled up a bun
   assertEquals(shouldShowScrollDownButton(1000, 599, 1), false); // 1000 - 599 - 1 = 400 not > 400 (false)
   assertEquals(shouldShowScrollDownButton(1000, 600, 50), false); // 1000 - 600 - 50 = 350 <= 400
 });
+
+Deno.test("preprocessText converts initial asterisks to standard list bullets and ignores code blocks", () => {
+  const result = preprocessText("*item 1\n```\n* inside code\n```\n*item 2");
+  assertEquals(result, "* item 1\n```\n* inside code\n```\n* item 2");
+});

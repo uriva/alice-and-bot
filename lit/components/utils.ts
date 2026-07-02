@@ -130,12 +130,27 @@ export const htmlListToMarkdown = (text: string) =>
     .replace(/<li[^>]*>/gi, "- ")
     .replace(/<\/li>/gi, "\n");
 
+export const asteriskToBullet = (text: string): string => {
+  let inCodeBlock = false;
+  return text
+    .split("\n")
+    .map((line) => {
+      if (line.trim().startsWith("```")) {
+        inCodeBlock = !inCodeBlock;
+        return line;
+      }
+      if (inCodeBlock) return line;
+      return line.replace(/^(\s*)\*\s*(?!\*)/, (_, spaces) => spaces + "* ");
+    })
+    .join("\n");
+};
+
 export const preprocessText = (text: string) =>
   decodeHtmlEntities(
     htmlCodeToMarkdown(
       htmlListToMarkdown(
         htmlAnchorToMarkdown(
-          htmlImgToMarkdown(htmlMediaToMarkdown(htmlInlineToMarkdown(text))),
+          htmlImgToMarkdown(htmlMediaToMarkdown(htmlInlineToMarkdown(asteriskToBullet(text)))),
         ),
       ),
     ),
