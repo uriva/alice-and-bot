@@ -39,6 +39,7 @@ import { chatPath, homePath } from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
 import { getCredentialsToCopy } from "../../lit/core/credentials.ts";
+import { startActiveReporting } from "../../lit/core/activeReporting.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { subscribeIsMobile } from "../../lit/core/responsive.ts";
 import { accessAdminDb, accessDb } from "../../lit/core/instant-client.ts";
@@ -497,21 +498,6 @@ const generateTransferQr = async (url: string) => {
 
 // --- Active reporting ---
 
-const startActiveReporting = (creds: Credentials) => {
-  const fire = () => reportActive(creds);
-  const onVisibility = () => {
-    if (document.visibilityState !== "visible") return;
-    fire();
-  };
-  fire();
-  const id = setInterval(fire, 30_000);
-  document.addEventListener("visibilitychange", onVisibility);
-  return () => {
-    clearInterval(id);
-    document.removeEventListener("visibilitychange", onVisibility);
-  };
-};
-
 // --- URL sync ---
 
 const syncUrlFromState = () => {
@@ -639,12 +625,14 @@ const subscribeYourKeyProfile = (publicSignKey: string) => {
 
 const fetchBalance = () => {
   if (!credentials) return;
-  getBalanceAndTransactionsSigned(credentials).then((res) => {
-    if (!("error" in res)) {
-      yourKeyBalanceData = res;
-      rerenderChat();
-    }
-  });
+  getBalanceAndTransactionsSigned(credentials)
+    .then((res) => {
+      if (!("error" in res)) {
+        yourKeyBalanceData = res;
+        rerenderChat();
+      }
+    })
+    .catch(() => {});
 };
 
 const startDepositPolling = () => {
@@ -652,18 +640,21 @@ const startDepositPolling = () => {
   if (!yourKeyDepositData || !credentials) return;
   const creds = credentials;
   const address = yourKeyDepositData.address;
-  yourKeyDepositInterval = setInterval(async () => {
-    const res = await checkCryptoPaymentSigned({
+  yourKeyDepositInterval = setInterval(() => {
+    checkCryptoPaymentSigned({
       paymentAddress: address,
       credentials: creds,
-    });
-    if (!("error" in res)) {
-      showToast(res.message, "success");
-      yourKeyDepositData = null;
-      stopDepositPolling();
-      fetchBalance();
-      rerenderChat();
-    }
+    })
+      .then((res) => {
+        if (!("error" in res)) {
+          showToast(res.message, "success");
+          yourKeyDepositData = null;
+          stopDepositPolling();
+          fetchBalance();
+          rerenderChat();
+        }
+      })
+      .catch(() => {});
   }, 10000) as unknown as number;
 };
 
