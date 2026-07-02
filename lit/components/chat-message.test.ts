@@ -156,3 +156,8 @@ Deno.test("renderMarkdown preserves span tags with bottom margin for multi-parag
   assertEquals(html.startsWith('<span dir="auto"'), true);
   assertEquals(html.endsWith("</span>"), true);
 });
+
+Deno.test("renderMarkdown list items do not contain double line breaks between bullets", () => {
+  const html = renderMarkdown("* first\n* second\n* third", "#222", false);
+  assertFalse(/<li[\s\S]*?<br\s*\/?>\s*<br\s*\/?>[\s\S]*?<\/li>/i.test(html));
+});

@@ -152,9 +152,11 @@ const createMarked = (textColor: string, isDark: boolean) => {
         this: { parser: { parse(t: Token[]): string } },
         item: Tokens.ListItem,
       ) {
-        return `<li style="margin:2px 0"><span dir="auto">${
-          this.parser.parse(item.tokens)
-        }</span></li>`;
+        const content = this.parser.parse(item.tokens).replace(
+          /(?:<br\s*\/?>\s*)+$/gi,
+          "",
+        );
+        return `<li style="margin:2px 0"><span dir="auto">${content}</span></li>`;
       },
       table(
         this: { parser: { parseInline(t: Token[]): string } },
