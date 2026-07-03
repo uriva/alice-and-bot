@@ -1,5 +1,6 @@
 import { Marked, type Token, type Tokens } from "marked";
 import { isAudioUrl, isVideoUrl, preprocessText } from "./utils.ts";
+import { blurSecretsInHtml, secretBlurCss } from "./secrets.ts";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import typescript from "highlight.js/lib/languages/typescript";
@@ -205,11 +206,15 @@ export const renderMarkdown = (
     spanCount === 1 && !hasOtherBlocks && trimmedHtml.startsWith("<span") &&
     trimmedHtml.endsWith("</span>")
   ) {
-    return trimmedHtml.replace(/^<span\b[^>]*>/i, "").replace(/<\/span>$/i, "");
+    return blurSecretsInHtml(
+      trimmedHtml.replace(/^<span\b[^>]*>/i, "").replace(/<\/span>$/i, ""),
+    );
   }
 
-  return trimmedHtml;
+  return blurSecretsInHtml(trimmedHtml);
 };
 
 export const fencedCodeHoverCss =
   `.fenced-code-wrap:hover [data-testid="copy-code-button"]{opacity:1!important;background:#ffffff1a!important}`;
+
+export { secretBlurCss };

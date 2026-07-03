@@ -27,6 +27,7 @@ import {
   fencedCodeHoverCss,
   highlightCss,
   renderMarkdown,
+  secretBlurCss,
 } from "./markdown.ts";
 import type {
   AbstracChatMessage,
@@ -735,7 +736,9 @@ export class ChatMessage extends LitElement {
 
     return html`
       <style>
-      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}${liveCursorCss}${highlightCss}
+      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}${liveCursorCss}${highlightCss}${secretBlurCss(
+        isDark,
+      )}
       .msg-wrap .msg-reply-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-reply-trigger{opacity:1}
       [data-testid="message-text"] > :last-child { margin-bottom: 0 !important; }
       </style>
