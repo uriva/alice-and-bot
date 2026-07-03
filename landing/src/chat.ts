@@ -107,6 +107,10 @@ let loginStoreInBrowser = true;
 let loginShowWhat = false;
 let loginShowNoEmail = false;
 let loginExistingInput = "";
+let loginIsScanningQr = false;
+let qrScanVideoElement: HTMLVideoElement | null = null;
+let qrScanStream: MediaStream | null = null;
+let qrScanAnimationId: number | null = null;
 
 let newChatInput = "";
 
@@ -1618,6 +1622,99 @@ const yourKey = () => {
 
 // --- Existing user form ---
 
+// --- Existing user form ---
+
+const stopQrScan = () => {
+  loginIsScanningQr = false;
+  if (qrScanStream) {
+    qrScanStream.getTracks().forEach((track) => track.stop());
+  }
+  qrLoading = false;
+  rerenderChat();
+};
+
+const handleQRScanResult = async (urlStr: string) => {
+  try {
+    const url = new URL(urlStr);
+    const hash = url.hash;
+    const parsed = parseTransferFragment(hash);
+    if (!parsed) {
+      showToast("Invalid QR code", "error");
+      return;
+    }
+    stopQrScan();
+    globalThis.location.hash = hash;
+    handleTransferImport();
+  } catch {
+    showToast("Invalid QR code", "error");
+  }
+};
+
+const scanQrFrame = async () => {
+  if (!loginIsScanningQr || !qrScanVideoElement) return;
+  if (qrScanVideoElement.readyState === qrScanVideoElement.HAVE_ENOUGH_DATA) {
+    const canvas = document.createElement("canvas");
+    canvas.width = qrScanVideoElement.videoWidth;
+    canvas.height = qrScanVideoElement.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(qrScanVideoElement, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      try {
+        const jsQRModule = await import("https://esm.sh/jsqr@1.4.0");
+        const code = jsQRModule.default(imageData.data, imageData.width, imageData.height);
+        if (code) {
+          const url = code.data;
+          const match = url.match(/#transfer=([^:]+):(.+)$/);
+          if (match) {
+            stopQrScan();
+            globalThis.location.hash = `transfer=${match[1]}:${match[2]}`;
+            handleTransferImport();
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("QR decoding error", e);
+      }
+    }
+  }
+  qrScanAnimationId = requestAnimationFrame(scanQrFrame);
+};
+
+const startQrScan = async () => {
+  loginIsScanningQr = true;
+  rerenderChat();
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+    });
+    qrScanStream = stream;
+    setTimeout(() => {
+      qrScanVideoElement = document.getElementById("qr-video") as HTMLVideoElement;
+      if (qrScanPreviewActive()) {
+        rerenderHeader();
+      }
+      rerenderChat();
+    }, 100);
+  } catch (e) {
+    console.error("Error creating identity", e);
+    showToast("Failed to access camera. Please allow camera access or scan with your phone's built-in camera.", "error");
+    loginIsScanningQr = false;
+    rerenderChat();
+  }
+};
+
+const qrScanPreviewActive = () => {
+  if (qrScanStream && qrScanVideoElement) {
+    qrScanVideoElement.srcObject = qrScanStream;
+    qrScanVideoElement.setAttribute("playsinline", "true");
+    qrScanVideoElement.play().catch((_) => {});
+    qrScanAnimationId = requestAnimationFrame(scanQrFrame);
+    return true;
+  }
+  return false;
+};
+
 const existingUserForm = () => {
   const identify = () => {
     try {
@@ -1634,36 +1731,79 @@ const existingUserForm = () => {
       showToast("Invalid credentials string", "error");
     }
   };
+  // Autoplay handler for Lit element mounting
+  setTimeout(qrScanPreviewActive, 150);
+
   return html`
     <div class="${sectionSpacing}">
-      <label class="${labelStyle}">Paste your credentials string</label>
-      <div class="${inputRowStyle}">
-        <input
-          class="${inputStyle}"
-          placeholder="Paste credentials string here"
-          .value="${loginExistingInput}"
-          @input="${(e: Event) => {
-            loginExistingInput = (e.target as HTMLInputElement).value;
-          }}"
-        />
-        <button type="button" class="${buttonClass(
-          "secondary",
-        )}" @click="${identify}">
-          Sign in
-        </button>
-      </div>
-      <div class="flex items-center mt-1">
-        <input
-          id="storeInBrowser2"
-          type="checkbox"
-          .checked="${loginStoreInBrowser}"
-          @change="${(e: Event) => {
-            loginStoreInBrowser = (e.target as HTMLInputElement).checked;
-          }}"
-          class="mr-2"
-        />
-        <label for="storeInBrowser2" class="${labelSmallStyle}">${storeCredentialsLabel}</label>
-      </div>
+      ${loginIsScanningQr
+        ? html`
+          <div class="flex flex-col gap-2">
+            <div class="flex justify-center p-4 bg-white rounded-lg border border-gray-200 dark:border-gray-800">
+              <video id="qr-video" class="w-full max-w-sm aspect-square bg-black rounded-lg overflow-hidden object-cover" autoplay playsinline></video>
+            </div>
+            <button type="button" class="${buttonClass("secondary", "default", "w-full")}" @click="${stopQrScan}">
+              Cancel Scan
+            </button>
+            <div class="text-xs text-gray-500 dark:text-gray-400 text-center max-w-sm mt-2">
+              Point your camera at the QR code displayed on your other device.
+            </div>
+          </div>
+        `
+        : html`
+          <label class="${labelStyle}">Paste your credentials string</label>
+          <div class="${inputRowStyle}">
+            <input
+              class="${inputStyle}"
+              placeholder="Paste credentials string here"
+              .value="${loginExistingInput}"
+              @input="${(e: Event) => {
+                loginExistingInput = (e.target as HTMLInputElement).value;
+              }}"
+            />
+            <button type="button" class="${buttonClass(
+              "secondary",
+            )}" @click="${identify}">
+              Sign in
+            </button>
+          </div>
+          <div class="flex items-center mt-1">
+            <input
+              id="storeInBrowser2"
+              type="checkbox"
+              .checked="${loginStoreInBrowser}"
+              @change="${(e: Event) => {
+                loginStoreInBrowser = (e.target as HTMLInputElement).checked;
+              }}"
+              class="mr-2"
+            />
+            <label for="storeInBrowser2" class="${labelSmallStyle}">${storeCredentialsLabel}</label>
+          </div>
+
+          ${currentIsMobile
+            ? html`
+              <div class="w-full border-t border-gray-200 dark:border-gray-800 my-4"></div>
+              <div class="flex flex-col gap-3">
+                <button type="button" class="${buttonClass("default", "default", "w-full flex items-center justify-center gap-2")}" @click="${startQrScan}">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                  </svg>
+                  Scan Transfer QR Code
+                </button>
+                <div class="p-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-lg text-left">
+                  <span class="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1">To get the QR code from your other device:</span>
+                  <ol class="text-[11px] text-gray-500 dark:text-gray-400 space-y-1.5 list-decimal list-inside">
+                    <li>Open <strong>Alice&Bot Chat</strong> on your other device (e.g., computer).</li>
+                    <li>Navigate to the settings screen by clicking your profile name/avatar, or go to <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]">aliceandbot.com/chat?view=identity</span>.</li>
+                    <li>Click the <strong>\"Connect another device\"</strong> button.</li>
+                    <li>Click the button above to open the camera and scan the generated QR code!</li>
+                  </ol>
+                </div>
+              </div>
+            `
+            : html``}
+        `}
     </div>
   `;
 };
