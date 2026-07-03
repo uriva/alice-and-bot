@@ -349,6 +349,27 @@ const landingTemplate = (): TemplateResult =>
             The developer-first, privacy-first chat platform. No phone numbers. No
             bureaucracy.
           </p>
+          <div class="flex flex-wrap justify-center gap-4 mt-8">
+            <a
+              href="${chatPath}"
+              class="${buttonClass("default", "lg", "font-bold shadow-lg hover:scale-105 transform transition duration-200 flex items-center gap-2 rounded-xl")}"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z" />
+              </svg>
+              Open Messenger
+            </a>
+            <a
+              href="https://storage.googleapis.com/alice-and-bot/android/app-debug.apk"
+              class="${buttonClass("secondary", "lg", "font-bold shadow-lg hover:scale-105 transform transition duration-200 flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-800")}"
+              download
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 text-green-600 dark:text-green-400">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              Download Android App
+            </a>
+          </div>
         </div>
       </section>
       ${audienceTabs()}
