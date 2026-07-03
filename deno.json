@@ -2,7 +2,7 @@
   "tasks": {
     "build-landing": "deno run -A --node-modules-dir=auto npm:vite build",
     "landing": "deno run -A --node-modules-dir=auto npm:vite",
-    "widget": "deno cache widget/src/entry.ts && cd widget && deno run -A --node-modules-dir=auto npm:vite build --config vite.config.ts",
+    "widget": "deno cache --minimum-dependency-age=0 widget/src/entry.ts && cd widget && deno run -A --minimum-dependency-age=0 --node-modules-dir=auto npm:vite build --config vite.config.ts",
     "chatgpt-style": "cd example; deno run -A --node-modules-dir=auto npm:vite",
     "build": "deno run -A --node-modules-dir=auto npm:vite build",
     "check": "deno fmt --check && deno lint && deno check *.ts backend/**/*.ts example/**/*.ts landing/**/*.ts lit/**/*.ts protocol/**/*.ts widget/**/*.ts && cd e2e && deno check *.spec.ts helpers.ts mocks/*.ts",

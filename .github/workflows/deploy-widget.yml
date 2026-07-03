@@ -15,7 +15,7 @@ jobs:
         with:
           deno-version: v2.x
       - uses: actions/checkout@v4
-      - run: deno cache widget/src/entry.ts
+      - run: deno cache --minimum-dependency-age=0 widget/src/entry.ts
       - run: deno task widget
       - name: Confirm widget is built
         run: ls -l widget/dist
