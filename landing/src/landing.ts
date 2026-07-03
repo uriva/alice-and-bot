@@ -190,7 +190,7 @@ const tabContent = (): TemplateResult => {
               class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2"
             >Android</strong>
             <ol
-              class="text-gray-700 dark:text-gray-200 text-sm space-y-1 list-decimal list-inside"
+              class="text-gray-700 dark:text-gray-200 text-sm space-y-1 list-decimal list-inside mb-4"
             >
               <li>
                 Open <a
@@ -201,6 +201,17 @@ const tabContent = (): TemplateResult => {
               <li>Tap the menu (three dots)</li>
               <li>Tap "Add to Home screen"</li>
             </ol>
+            <div class="w-full border-t border-gray-200 dark:border-gray-800 my-3"></div>
+            <a
+              href="https://storage.googleapis.com/alice-and-bot/android/app-debug.apk"
+              class="${buttonClass("default", "default", "w-full text-center flex items-center justify-center gap-2")}"
+              download
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              Download Native APK
+            </a>
           </div>
           <div
             class="flex flex-col items-center p-6 bg-white/90 dark:bg-[#111]/80 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl"
