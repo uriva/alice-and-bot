@@ -1,7 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import deno from "@deno/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
-import { copyFileSync } from "node:fs";
+import { copyFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,11 +9,15 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const spaFallback = (): Plugin => ({
   name: "spa-fallback-404",
-  closeBundle: () =>
-    copyFileSync(
-      resolve(__dirname, "landing/dist/index.html"),
-      resolve(__dirname, "landing/dist/404.html"),
-    ),
+  closeBundle: () => {
+    const src = resolve(__dirname, "landing/dist/index.html");
+    const dest = resolve(__dirname, "landing/dist/404.html");
+    if (existsSync(src)) {
+      copyFileSync(src, dest);
+    } else {
+      console.warn("spaFallback: index.html not found, skipping copy to 404.html");
+    }
+  },
 });
 
 export default defineConfig({

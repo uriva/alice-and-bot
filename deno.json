@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "build-landing": "deno run -A --node-modules-dir=auto npm:vite build",
+    "build-landing": "deno run -A --minimum-dependency-age=0 --node-modules-dir=auto npm:vite build",
     "landing": "deno run -A --node-modules-dir=auto npm:vite",
     "widget": "deno cache --minimum-dependency-age=0 widget/src/entry.ts && cd widget && deno run -A --minimum-dependency-age=0 --node-modules-dir=auto npm:vite build --config vite.config.ts",
     "chatgpt-style": "cd example; deno run -A --node-modules-dir=auto npm:vite",
