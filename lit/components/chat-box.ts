@@ -61,6 +61,10 @@ import {
 
 const oneMinuteMs = 60_000;
 
+declare const AndroidNotificationBridge: {
+  showNotification(title: string, body: string): void;
+} | undefined;
+
 const indicatorColor = (isDark: boolean, color?: string, stale?: boolean) =>
   stale
     ? (isDark ? "#f87171" : "#b91c1c")
@@ -1353,6 +1357,16 @@ export class ChatBox extends LitElement {
       this.messages.slice(prevCount).some((m) => m.authorId !== this.userId)
     ) {
       playNotificationSound();
+      if (typeof AndroidNotificationBridge !== "undefined" && AndroidNotificationBridge) {
+        this.messages.slice(prevCount)
+          .filter((m) => m.authorId !== this.userId)
+          .forEach((m) => {
+            AndroidNotificationBridge.showNotification(
+              m.authorName || "New message",
+              m.text || "Sent an attachment",
+            );
+          });
+      }
     }
   }
 

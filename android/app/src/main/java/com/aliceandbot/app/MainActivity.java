@@ -2,6 +2,10 @@ package com.aliceandbot.app;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -10,6 +14,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -22,6 +27,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
@@ -155,6 +161,17 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        // Setup native notifications
+        createNotificationChannel();
+        myWebView.addJavascriptInterface(new AndroidNotificationBridge(this), "AndroidNotificationBridge");
+
+        // Request notification permissions if running on Android 13+ (API 33)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATIONS_PERMISSION_REQUEST_CODE);
+            }
+        }
+
         // Load the chat application directly
         myWebView.loadUrl("https://aliceandbot.com/chat");
     }
@@ -204,6 +221,17 @@ public class MainActivity extends AppCompatActivity {
                     pendingPermissionRequest = null;
                 }
             }
+        } else if (requestCode == NOTIFICATIONS_PERMISSION_REQUEST_CODE) {
+            boolean allGranted = true;
+            for (int r : grantResults) {
+                if (r != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+            if (!allGranted) {
+                Toast.makeText(this, "Notification permission denied. You won't receive message alerts.", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -227,6 +255,81 @@ public class MainActivity extends AppCompatActivity {
             }
             mUploadMessage.onReceiveValue(results);
             mUploadMessage = null;
+        }
+    }
+
+    private final static int NOTIFICATIONS_PERMISSION_REQUEST_CODE = 3;
+    private static final String CHANNEL_ID = "chat_notifications";
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "Chat Notifications";
+            String description = "Notifications for new chat messages";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    public class AndroidNotificationBridge {
+        private Context mContext;
+
+        public AndroidNotificationBridge(Context context) {
+            this.mContext = context;
+        }
+
+        @JavascriptInterface
+        public void showNotification(String title, String body) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    return;
+                }
+            }
+
+            Intent intent = new Intent(mContext, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                mContext,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext, CHANNEL_ID)
+                    .setSmallIcon(R.drawable.icon)
+                    .setContentTitle(title)
+                    .setContentText(body)
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setAutoCancel(true)
+                    .setContentIntent(pendingIntent);
+
+            NotificationManager notificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.notify((int) System.currentTimeMillis(), builder.build());
+            }
+        }
+
+        @JavascriptInterface
+        public boolean hasNotificationPermission() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                return ContextCompat.checkSelfPermission(mContext, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+            }
+            return true;
+        }
+
+        @JavascriptInterface
+        public void requestNotificationPermission() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ActivityCompat.requestPermissions(
+                    (Activity) mContext,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    NOTIFICATIONS_PERMISSION_REQUEST_CODE
+                );
+            }
         }
     }
 
