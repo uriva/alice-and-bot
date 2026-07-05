@@ -116,6 +116,83 @@ let newChatInput = "";
 
 let showArchived = false;
 
+// Touch/Swipe state for conversation list items on mobile
+let activeSwipeConvId: string | null = null;
+let activeSwipeOffset = 0;
+let touchStartX = 0;
+let touchStartY = 0;
+let swipeDirectionLocked: "x" | "y" | null = null;
+let wasSwiping = false;
+let wasSwipingTimeout: number | null = null;
+
+const handleTouchStart = (e: TouchEvent, convId: string) => {
+  if (e.touches.length === 0) return;
+  if (wasSwipingTimeout) clearTimeout(wasSwipingTimeout);
+  wasSwiping = false;
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  activeSwipeConvId = convId;
+  activeSwipeOffset = 0;
+  swipeDirectionLocked = null;
+};
+
+const handleTouchMove = (e: TouchEvent, convId: string) => {
+  if (
+    activeSwipeConvId !== convId || touchStartX === 0 || e.touches.length === 0
+  ) return;
+  const touch = e.touches[0];
+  const dx = touch.clientX - touchStartX;
+  const dy = touch.clientY - touchStartY;
+
+  if (swipeDirectionLocked === null) {
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+      swipeDirectionLocked = "x";
+    } else if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
+      swipeDirectionLocked = "y";
+    }
+  }
+
+  if (swipeDirectionLocked === "x") {
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+    wasSwiping = true;
+    activeSwipeOffset = dx < 0 ? dx : dx * 0.1;
+    rerenderChat();
+  }
+};
+
+const handleTouchEnd = (_e: TouchEvent, convId: string) => {
+  if (activeSwipeConvId !== convId) return;
+
+  const threshold = -80;
+  if (swipeDirectionLocked === "x" && activeSwipeOffset < threshold) {
+    const conv = conversations?.find((c) => c.id === convId);
+    const isCurrentlyArchived = conv ? isArchived(conv) : false;
+    if (isCurrentlyArchived) {
+      unarchiveConversation(convId);
+      showToast("Chat unarchived", "success");
+    } else {
+      archiveConversation(convId);
+      showToast("Chat archived", "success");
+    }
+  }
+
+  if (wasSwiping) {
+    wasSwipingTimeout = setTimeout(() => {
+      wasSwiping = false;
+    }, 100) as unknown as number;
+  }
+
+  activeSwipeConvId = null;
+  activeSwipeOffset = 0;
+  touchStartX = 0;
+  touchStartY = 0;
+  swipeDirectionLocked = null;
+  rerenderChat();
+};
+
 const isArchived = (conv: Conversation) => {
   return conv.archivedBy !== undefined && conv.archivedBy.length > 0;
 };
@@ -896,42 +973,105 @@ const conversationListItem = (conv: Conversation) => {
   const displayName = conv.title || participantName;
   const isSelected = selectedConversation === conv.id;
   const isCurrentlyArchived = isArchived(conv);
+
+  const swipeTransition =
+    "transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);";
+  const transitionStyle = activeSwipeConvId === conv.id
+    ? "transition: none;"
+    : swipeTransition;
+
   return html`
-    <li class="group relative">
-      <button type="button" class="${`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-300 dark:border-gray-700 transition-colors ${
-        isSelected
-          ? "bg-gray-100 dark:bg-black/50 border-l-4 border-l-gray-500"
-          : "hover:bg-gray-50 dark:hover:bg-[#1a1a1a]/50"
-      }`}" @click="${() => selectConversation(conv.id)}">
-        ${displayName === null ? shimmerCircle() : chatAvatar({
-          name: displayName,
-          baseColor: avatarColor(otherKey, currentDark),
-        })}
-        <div class="flex-grow overflow-hidden min-w-0 pr-8">
-          <div class="${`font-medium ${textColorStyle} truncate`}">
-            ${displayName === null ? shimmerText() : displayName}
-          </div>
-        </div>
-      </button>
-      ${displayName !== null
+    <li class="relative group overflow-hidden">
+      <!-- Swipe background reveal on mobile -->
+      ${activeSwipeConvId === conv.id && activeSwipeOffset < 0
         ? html`
-          <button
-            type="button"
-            class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] hover:text-gray-800 dark:hover:text-gray-200"
-            title="${isCurrentlyArchived ? "Unarchive Chat" : "Archive Chat"}"
-            @click="${(e: Event) => {
-              e.stopPropagation();
-              if (isCurrentlyArchived) {
-                unarchiveConversation(conv.id);
-              } else {
-                archiveConversation(conv.id);
-              }
-            }}"
+          <div
+            class="absolute inset-0 bg-blue-600 dark:bg-blue-700 text-white flex items-center justify-end pr-6 pointer-events-none rounded-lg"
           >
-            ${isCurrentlyArchived ? unarchiveSvg : archiveSvg}
-          </button>
+            <div
+              class="flex flex-col items-center justify-center gap-0.5"
+              style="transform: scale(${Math.min(
+                1.2,
+                Math.max(0.8, Math.abs(activeSwipeOffset) / 80),
+              )}); transition: transform 0.1s ease-out;"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                ${isCurrentlyArchived
+                  ? html`
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3-3m0 0l3 3m-3-3V15"
+                    />
+                  `
+                  : html`
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                    />
+                  `}
+              </svg>
+              <span class="text-[10px] font-bold uppercase tracking-wider"
+              >${isCurrentlyArchived ? "Unarchive" : "Archive"}</span>
+            </div>
+          </div>
         `
-        : nothing}
+        : null}
+
+      <div
+        style="transform: translateX(${activeSwipeConvId === conv.id
+          ? activeSwipeOffset
+          : 0}px); ${transitionStyle}"
+        class="w-full"
+        @touchstart="${(e: TouchEvent) => handleTouchStart(e, conv.id)}"
+        @touchmove="${(e: TouchEvent) => handleTouchMove(e, conv.id)}"
+        @touchend="${(e: TouchEvent) => handleTouchEnd(e, conv.id)}"
+      >
+        <button type="button" class="${`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-300 dark:border-gray-700 transition-colors ${
+          isSelected
+            ? "bg-gray-100 dark:bg-black/50 border-l-4 border-l-gray-500"
+            : "hover:bg-gray-50 dark:hover:bg-[#1a1a1a]/50"
+        }`}" @click="${() => {
+          if (wasSwiping) return;
+          selectConversation(conv.id);
+        }}">
+          ${displayName === null ? shimmerCircle() : chatAvatar({
+            name: displayName,
+            baseColor: avatarColor(otherKey, currentDark),
+          })}
+          <div class="flex-grow overflow-hidden min-w-0 pr-8">
+            <div class="${`font-medium ${textColorStyle} truncate`}">
+              ${displayName === null ? shimmerText() : displayName}
+            </div>
+          </div>
+        </button>
+        ${displayName !== null && !currentIsMobile
+          ? html`
+            <button
+              type="button"
+              class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] hover:text-gray-800 dark:hover:text-gray-200"
+              title="${isCurrentlyArchived ? "Unarchive Chat" : "Archive Chat"}"
+              @click="${(e: Event) => {
+                e.stopPropagation();
+                if (isCurrentlyArchived) {
+                  unarchiveConversation(conv.id);
+                } else {
+                  archiveConversation(conv.id);
+                }
+              }}"
+            >
+              ${isCurrentlyArchived ? unarchiveSvg : archiveSvg}
+            </button>
+          `
+          : nothing}
+      </div>
     </li>
   `;
 };
@@ -1662,7 +1802,11 @@ const scanQrFrame = async () => {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       try {
         const jsQRModule = await import("https://esm.sh/jsqr@1.4.0");
-        const code = jsQRModule.default(imageData.data, imageData.width, imageData.height);
+        const code = jsQRModule.default(
+          imageData.data,
+          imageData.width,
+          imageData.height,
+        );
         if (code) {
           const url = code.data;
           const match = url.match(/#transfer=([^:]+):(.+)$/);
@@ -1690,7 +1834,9 @@ const startQrScan = async () => {
     });
     qrScanStream = stream;
     setTimeout(() => {
-      qrScanVideoElement = document.getElementById("qr-video") as HTMLVideoElement;
+      qrScanVideoElement = document.getElementById(
+        "qr-video",
+      ) as HTMLVideoElement;
       if (qrScanPreviewActive()) {
         rerenderHeader();
       }
@@ -1698,7 +1844,10 @@ const startQrScan = async () => {
     }, 100);
   } catch (e) {
     console.error("Error creating identity", e);
-    showToast("Failed to access camera. Please allow camera access or scan with your phone's built-in camera.", "error");
+    showToast(
+      "Failed to access camera. Please allow camera access or scan with your phone's built-in camera.",
+      "error",
+    );
     loginIsScanningQr = false;
     rerenderChat();
   }
@@ -1739,13 +1888,27 @@ const existingUserForm = () => {
       ${loginIsScanningQr
         ? html`
           <div class="flex flex-col gap-2">
-            <div class="flex justify-center p-4 bg-white rounded-lg border border-gray-200 dark:border-gray-800">
-              <video id="qr-video" class="w-full max-w-sm aspect-square bg-black rounded-lg overflow-hidden object-cover" autoplay playsinline></video>
+            <div
+              class="flex justify-center p-4 bg-white rounded-lg border border-gray-200 dark:border-gray-800"
+            >
+              <video
+                id="qr-video"
+                class="w-full max-w-sm aspect-square bg-black rounded-lg overflow-hidden object-cover"
+                autoplay
+                playsinline
+              >
+              </video>
             </div>
-            <button type="button" class="${buttonClass("secondary", "default", "w-full")}" @click="${stopQrScan}">
+            <button type="button" class="${buttonClass(
+              "secondary",
+              "default",
+              "w-full",
+            )}" @click="${stopQrScan}">
               Cancel Scan
             </button>
-            <div class="text-xs text-gray-500 dark:text-gray-400 text-center max-w-sm mt-2">
+            <div
+              class="text-xs text-gray-500 dark:text-gray-400 text-center max-w-sm mt-2"
+            >
               Point your camera at the QR code displayed on your other device.
             </div>
           </div>
@@ -1784,25 +1947,62 @@ const existingUserForm = () => {
             ? html`
               <div class="w-full border-t border-gray-200 dark:border-gray-800 my-4"></div>
               <div class="flex flex-col gap-3">
-                <button type="button" class="${buttonClass("default", "default", "w-full flex items-center justify-center gap-2")}" @click="${startQrScan}">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                <button type="button" class="${buttonClass(
+                  "default",
+                  "default",
+                  "w-full flex items-center justify-center gap-2",
+                )}" @click="${startQrScan}">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2"
+                    stroke="currentColor"
+                    class="w-4 h-4"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
+                    />
                   </svg>
                   Scan Transfer QR Code
                 </button>
-                <div class="p-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-lg text-left">
-                  <span class="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1">To get the QR code from your other device:</span>
-                  <ol class="text-[11px] text-gray-500 dark:text-gray-400 space-y-1.5 list-decimal list-inside">
-                    <li>Open <strong>Alice&Bot Chat</strong> on your other device (e.g., computer).</li>
-                    <li>Navigate to the settings screen by clicking your profile name/avatar, or go to <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]">aliceandbot.com/chat?view=identity</span>.</li>
-                    <li>Click the <strong>\"Connect another device\"</strong> button.</li>
-                    <li>Click the button above to open the camera and scan the generated QR code!</li>
+                <div
+                  class="p-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-lg text-left"
+                >
+                  <span class="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1"
+                  >To get the QR code from your other device:</span>
+                  <ol
+                    class="text-[11px] text-gray-500 dark:text-gray-400 space-y-1.5 list-decimal list-inside"
+                  >
+                    <li>
+                      Open <strong>Alice&Bot Chat</strong> on your other device (e.g.,
+                      computer).
+                    </li>
+                    <li>
+                      Navigate to the settings screen by clicking your profile name/avatar, or
+                      go to <span
+                        class="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]"
+                      >aliceandbot.com/chat?view=identity</span>.
+                    </li>
+                    <li>Click the <strong>\\"Connect another device\\"</strong> button.</li>
+                    <li>
+                      Click the button above to open the camera and scan the generated QR
+                      code!
+                    </li>
                   </ol>
                 </div>
               </div>
             `
-            : html``}
+            : html`
+
+            `}
         `}
     </div>
   `;
