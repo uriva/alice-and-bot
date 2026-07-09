@@ -500,14 +500,14 @@ test("copying message text via selection has no trailing newlines", async ({ pag
     if (el) {
       const range = document.createRange();
       range.selectNodeContents(el);
-      const sel = window.getSelection();
+      const sel = globalThis.getSelection();
       sel?.removeAllRanges();
       sel?.addRange(range);
     }
   });
 
   const selectedText = await page.evaluate(() =>
-    window.getSelection()?.toString() ?? ""
+    globalThis.getSelection()?.toString() ?? ""
   );
   expect(selectedText).toBe("Hey, can you help me with a sorting algorithm?");
 });
@@ -523,14 +523,14 @@ test("copying the entire msg-bubble via selection has no trailing newlines", asy
     if (el) {
       const range = document.createRange();
       range.selectNodeContents(el);
-      const sel = window.getSelection();
+      const sel = globalThis.getSelection();
       sel?.removeAllRanges();
       sel?.addRange(range);
     }
   });
 
   const selectedText = await page.evaluate(() =>
-    window.getSelection()?.toString() ?? ""
+    globalThis.getSelection()?.toString() ?? ""
   );
   console.log("SELECTED TEXT START:");
   console.log(JSON.stringify(selectedText));
@@ -555,14 +555,14 @@ test("copying a multi-paragraph message text has no trailing newlines", async ({
     if (el) {
       const range = document.createRange();
       range.selectNodeContents(el);
-      const sel = window.getSelection();
+      const sel = globalThis.getSelection();
       sel?.removeAllRanges();
       sel?.addRange(range);
     }
   });
 
   const selectedText = await page.evaluate(() =>
-    window.getSelection()?.toString() ?? ""
+    globalThis.getSelection()?.toString() ?? ""
   );
   console.log("MULTI-PARA SELECTED TEXT START:");
   console.log(JSON.stringify(selectedText));
@@ -579,7 +579,7 @@ test("triple clicking a message bubble selects only the message text without tra
   await firstMessageText.click({ clickCount: 3 });
 
   const selectedText = await page.evaluate(() =>
-    window.getSelection()?.toString() ?? ""
+    globalThis.getSelection()?.toString() ?? ""
   );
   console.log("TRIPLE-CLICK SELECTED TEXT START:");
   console.log(JSON.stringify(selectedText));
@@ -594,7 +594,7 @@ test("triple clicking the last paragraph of a multi-paragraph message has no tra
   await expect(lastParagraph).toBeVisible();
 
   const style = await lastParagraph.evaluate((el) =>
-    window.getComputedStyle(el).marginBottom
+    globalThis.getComputedStyle(el).marginBottom
   );
   console.log("MARGIN-BOTTOM OF LAST PARAGRAPH:", style);
 
@@ -602,7 +602,7 @@ test("triple clicking the last paragraph of a multi-paragraph message has no tra
   await lastParagraph.click({ clickCount: 3 });
 
   const selectedText = await page.evaluate(() =>
-    window.getSelection()?.toString() ?? ""
+    globalThis.getSelection()?.toString() ?? ""
   );
   console.log("LAST-PARA TRIPLE-CLICK SELECTED TEXT START:");
   console.log(JSON.stringify(selectedText));

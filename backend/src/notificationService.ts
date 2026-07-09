@@ -68,8 +68,11 @@ try {
       vapidPrivateKey,
     );
   }
-} catch (e: any) {
-  console.warn("VAPID details registration skipped:", e.message);
+} catch (e) {
+  console.warn(
+    "VAPID details registration skipped:",
+    e instanceof Error ? e.message : e,
+  );
 }
 
 export const sendPushToParticipants = async (

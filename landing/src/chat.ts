@@ -34,7 +34,7 @@ import {
   retrieveTransferPayload,
   storeTransferPayload,
 } from "../../backend/src/api.ts";
-import { registerPush, reportActive } from "../../protocol/src/pushClient.ts";
+import { registerPush } from "../../protocol/src/pushClient.ts";
 import { chatPath, homePath } from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
@@ -1752,28 +1752,15 @@ const yourKey = () => {
 
 const stopQrScan = () => {
   loginIsScanningQr = false;
+  if (qrScanAnimationId !== null) {
+    cancelAnimationFrame(qrScanAnimationId);
+    qrScanAnimationId = null;
+  }
   if (qrScanStream) {
     qrScanStream.getTracks().forEach((track) => track.stop());
   }
   qrLoading = false;
   rerenderChat();
-};
-
-const handleQRScanResult = async (urlStr: string) => {
-  try {
-    const url = new URL(urlStr);
-    const hash = url.hash;
-    const parsed = parseTransferFragment(hash);
-    if (!parsed) {
-      showToast("Invalid QR code", "error");
-      return;
-    }
-    stopQrScan();
-    globalThis.location.hash = hash;
-    handleTransferImport();
-  } catch {
-    showToast("Invalid QR code", "error");
-  }
 };
 
 const scanQrFrame = async () => {
@@ -1787,8 +1774,11 @@ const scanQrFrame = async () => {
       ctx.drawImage(qrScanVideoElement, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       try {
-        const jsQRModule = await import("https://esm.sh/jsqr@1.4.0");
-        const code = jsQRModule.default(
+        const jsqrDefault = (await import("jsqr")).default;
+        const jsQR = typeof jsqrDefault === "function"
+          ? jsqrDefault
+          : jsqrDefault.default;
+        const code = jsQR(
           imageData.data,
           imageData.width,
           imageData.height,

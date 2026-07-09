@@ -1,5 +1,6 @@
-import type { DecipheredMessage } from "../../protocol/src/clientApi.ts";
 import type { ActiveSpinner } from "./types.ts";
+
+type TimelineMessage = { timestamp: number; type: string };
 
 type UiElement = {
   elementId: string;
@@ -9,7 +10,7 @@ type UiElement = {
   updatedAt: number;
 };
 
-export const isPast = (timestamp: number, messages: DecipheredMessage[]) =>
+export const isPast = (timestamp: number, messages: TimelineMessage[]) =>
   messages.some((m) =>
     m.timestamp > timestamp && (m.type === "text" || m.type === "edit")
   );
@@ -32,7 +33,7 @@ export const standaloneSpinnerEntries = (
       active: el.active !== false,
     }));
 
-export const latestTimestamp = (messages: DecipheredMessage[]): number =>
+export const latestTimestamp = (messages: TimelineMessage[]): number =>
   messages.reduce(
     (maxTimestamp, message) => Math.max(maxTimestamp, message.timestamp),
     0,
