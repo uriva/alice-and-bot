@@ -2,6 +2,7 @@ import { assertEquals, assertFalse } from "@std/assert";
 import { FakeTime } from "@std/testing/time";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import {
+  createConversationSafely,
   type DecryptedMessagesResult,
   makeCreateTypingNotifier,
   makeSubscribeDecryptedMessages,
@@ -363,6 +364,56 @@ Deno.test("onInput after onBlurOrSend does not re-send isTyping: true", () => {
   } finally {
     time.restore();
   }
+});
+
+// Regression: getOrCreateConversation's createConversation().then() had no
+// .catch(), so a rejected fetch (e.g. blocked backend / offline) escaped as an
+// unhandled promise rejection, surfacing as a page error and tearing down the
+// builder-chat tree. createConversationSafely must swallow rejections and
+// report a failed creation so the caller can retry.
+Deno.test("createConversationSafely does not leak a rejected create promise", async () => {
+  const settled: boolean[] = [];
+  const done = new Promise<void>((resolve) =>
+    createConversationSafely(
+      () => Promise.reject(new TypeError("Failed to fetch")),
+      (created) => {
+        settled.push(created);
+        resolve();
+      },
+    )
+  );
+  await done;
+  assertEquals(settled, [false]);
+});
+
+Deno.test("createConversationSafely reports failure when result carries an error", async () => {
+  const settled: boolean[] = [];
+  const done = new Promise<void>((resolve) =>
+    createConversationSafely(
+      () => Promise.resolve({ error: "boom" }),
+      (created) => {
+        settled.push(created);
+        resolve();
+      },
+    )
+  );
+  await done;
+  assertEquals(settled, [false]);
+});
+
+Deno.test("createConversationSafely reports success on a clean result", async () => {
+  const settled: boolean[] = [];
+  const done = new Promise<void>((resolve) =>
+    createConversationSafely(
+      () => Promise.resolve({ id: "convo1" }),
+      (created) => {
+        settled.push(created);
+        resolve();
+      },
+    )
+  );
+  await done;
+  assertEquals(settled, [true]);
 });
 
 Deno.test("messages query does not join the conversation entity", () => {

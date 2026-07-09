@@ -385,6 +385,18 @@ const matchesParticipants =
       participants.includes(publicSignKey)
     );
 
+export const createConversationSafely = <T extends object>(
+  create: () => Promise<T | { error: unknown }>,
+  onSettled: (created: boolean) => void,
+): void => {
+  create()
+    .then((result) => onSettled(!("error" in result)))
+    .catch((error) => {
+      console.error("Error creating conversation:", error);
+      onSettled(false);
+    });
+};
+
 export const getOrCreateConversation = (
   credentials: Credentials,
   participants: string[],
@@ -404,16 +416,17 @@ export const getOrCreateConversation = (
       if (existing) return onConversation(existing.id);
       if (inFlight) return;
       inFlight = true;
-      createConversation(accessAdminDb)(
-        fixedParticipants,
-        "Chat",
-        credentials,
-      ).then((result) => {
-        if ("error" in result) {
-          console.error("Error creating conversation:", result.error);
-          inFlight = false;
-        }
-      });
+      createConversationSafely(
+        () =>
+          createConversation(accessAdminDb)(
+            fixedParticipants,
+            "Chat",
+            credentials,
+          ),
+        (created) => {
+          if (!created) inFlight = false;
+        },
+      );
     },
   );
 };
