@@ -99,7 +99,11 @@ const initialMessages: AbstracChatMessage[] = [
       label: "Tel Aviv, Israel",
     }],
   },
-  makeBotMsg("14", "Here is some text with `hello` inline code for testing selection and copy-paste.", 1),
+  makeBotMsg(
+    "14",
+    "Here is some text with `hello` inline code for testing selection and copy-paste.",
+    1,
+  ),
 ];
 
 const chatGptColors: CustomColors = {

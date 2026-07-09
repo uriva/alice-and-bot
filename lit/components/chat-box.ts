@@ -124,22 +124,26 @@ const renderSpinnerIndicator = (
             isDark,
             color,
             stale,
-          )}"><div style="${indeterminateBarStyle(
-            isDark,
-            color,
-          )}"></div></div>
+          )}">
+            <div style="${indeterminateBarStyle(
+              isDark,
+              color,
+            )}"></div>
+          </div>
         `
         : html`
           <div style="${linearBarTrackStyle(
             isDark,
             color,
             stale,
-          )}"><div style="${linearBarFillStyle(
-            1,
-            isDark,
-            color,
-            stale,
-          )}"></div></div>
+          )}">
+            <div style="${linearBarFillStyle(
+              1,
+              isDark,
+              color,
+              stale,
+            )}"></div>
+          </div>
         `}
     </div>
   `;
@@ -164,12 +168,14 @@ const renderProgressIndicator = (
         isDark,
         color,
         stale,
-      )}"><div style="${linearBarFillStyle(
-        progress.percentage,
-        isDark,
-        color,
-        stale,
-      )}"></div></div>
+      )}">
+        <div style="${linearBarFillStyle(
+          progress.percentage,
+          isDark,
+          color,
+          stale,
+        )}"></div>
+      </div>
     </div>
   `;
 };
@@ -212,14 +218,14 @@ const spinnerEl = (isDark: boolean, color?: string) =>
   html`
     <style>
     ${spinnerKeyframes}
-    </style><div
+    </style>
+    <div
       style="width:40px;height:40px;border:4px solid ${isDark
         ? "#ffffff1a"
         : "#00000010"};border-top:4px solid ${color ?? (isDark
           ? "#ffffff80"
           : "#00000040")};border-radius:50%;animation:spin 1s linear infinite"
-    >
-    </div>
+    ></div>
   `;
 
 const sendingAudioIndicator = (primaryColor: string, isDark?: boolean) =>
@@ -243,8 +249,7 @@ const sendingAudioIndicator = (primaryColor: string, isDark?: boolean) =>
             )
             ? "#00000040"
             : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
-        >
-        </div>
+        ></div>
         <span style="color:${isLightColor(primaryColor, isDark)
           ? "#222"
           : "#fff"};font-size:13px">Sending audio...</span>
@@ -1357,7 +1362,10 @@ export class ChatBox extends LitElement {
       this.messages.slice(prevCount).some((m) => m.authorId !== this.userId)
     ) {
       playNotificationSound();
-      if (typeof AndroidNotificationBridge !== "undefined" && AndroidNotificationBridge) {
+      if (
+        typeof AndroidNotificationBridge !== "undefined" &&
+        AndroidNotificationBridge
+      ) {
         this.messages.slice(prevCount)
           .filter((m) => m.authorId !== this.userId)
           .forEach((m) => {

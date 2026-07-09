@@ -41,10 +41,12 @@
   }
 
   /* Base code text color */
-  pre, code {
+  pre,
+  code {
     color: #383a42;
   }
-  .dark pre, .dark code {
+  .dark pre,
+  .dark code {
     color: #abb2bf;
   }
 

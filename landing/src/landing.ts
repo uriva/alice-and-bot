@@ -204,7 +204,11 @@ const tabContent = (): TemplateResult => {
             <div class="w-full border-t border-gray-200 dark:border-gray-800 my-3"></div>
             <a
               href="https://storage.googleapis.com/alice-and-bot/android/app-debug.apk"
-              class="${buttonClass("default", "default", "w-full text-center flex items-center justify-center gap-2")}"
+              class="${buttonClass(
+                "default",
+                "default",
+                "w-full text-center flex items-center justify-center gap-2",
+              )}"
               download="alice-and-bot.apk"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">

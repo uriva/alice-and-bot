@@ -14,10 +14,12 @@ Deno.test("startActiveReporting - catches reportActive errors", async () => {
     return Promise.reject(new TypeError("Failed to fetch"));
   };
 
-  const cleanup = startActiveReportingWith(failingReportActive)(dummyCredentials);
-  
+  const cleanup = startActiveReportingWith(failingReportActive)(
+    dummyCredentials,
+  );
+
   await new Promise((resolve) => setTimeout(resolve, 50));
-  
+
   cleanup();
   assertEquals(callCount, 1);
 });

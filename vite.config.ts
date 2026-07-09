@@ -15,7 +15,9 @@ const spaFallback = (): Plugin => ({
     if (existsSync(src)) {
       copyFileSync(src, dest);
     } else {
-      console.warn("spaFallback: index.html not found, skipping copy to 404.html");
+      console.warn(
+        "spaFallback: index.html not found, skipping copy to 404.html",
+      );
     }
   },
 });

@@ -150,7 +150,9 @@ export const preprocessText = (text: string) =>
     htmlCodeToMarkdown(
       htmlListToMarkdown(
         htmlAnchorToMarkdown(
-          htmlImgToMarkdown(htmlMediaToMarkdown(htmlInlineToMarkdown(asteriskToBullet(text)))),
+          htmlImgToMarkdown(
+            htmlMediaToMarkdown(htmlInlineToMarkdown(asteriskToBullet(text))),
+          ),
         ),
       ),
     ),

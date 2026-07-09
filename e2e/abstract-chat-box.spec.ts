@@ -493,7 +493,7 @@ test("copying message text via selection has no trailing newlines", async ({ pag
   await page.goto("/");
   const firstMessageText = page.locator('[data-testid="message-text"]').first();
   await expect(firstMessageText).toBeVisible();
-  
+
   // Select the text inside data-testid="message-text"
   await page.evaluate(() => {
     const el = document.querySelector('[data-testid="message-text"]');
@@ -506,7 +506,9 @@ test("copying message text via selection has no trailing newlines", async ({ pag
     }
   });
 
-  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  const selectedText = await page.evaluate(() =>
+    window.getSelection()?.toString() ?? ""
+  );
   expect(selectedText).toBe("Hey, can you help me with a sorting algorithm?");
 });
 
@@ -514,10 +516,10 @@ test("copying the entire msg-bubble via selection has no trailing newlines", asy
   await page.goto("/");
   const bubble = page.locator(".msg-bubble").first();
   await expect(bubble).toBeVisible();
-  
+
   // Select the text inside .msg-bubble
   await page.evaluate(() => {
-    const el = document.querySelector('.msg-bubble');
+    const el = document.querySelector(".msg-bubble");
     if (el) {
       const range = document.createRange();
       range.selectNodeContents(el);
@@ -527,7 +529,9 @@ test("copying the entire msg-bubble via selection has no trailing newlines", asy
     }
   });
 
-  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  const selectedText = await page.evaluate(() =>
+    window.getSelection()?.toString() ?? ""
+  );
   console.log("SELECTED TEXT START:");
   console.log(JSON.stringify(selectedText));
   console.log("SELECTED TEXT END");
@@ -543,7 +547,9 @@ test("copying a multi-paragraph message text has no trailing newlines", async ({
 
   // Select the text inside this multi-paragraph message-text element
   await page.evaluate(() => {
-    const el = Array.from(document.querySelectorAll('[data-testid="message-text"]')).find(
+    const el = Array.from(
+      document.querySelectorAll('[data-testid="message-text"]'),
+    ).find(
       (node) => node.textContent?.includes("Great questions!"),
     );
     if (el) {
@@ -555,7 +561,9 @@ test("copying a multi-paragraph message text has no trailing newlines", async ({
     }
   });
 
-  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  const selectedText = await page.evaluate(() =>
+    window.getSelection()?.toString() ?? ""
+  );
   console.log("MULTI-PARA SELECTED TEXT START:");
   console.log(JSON.stringify(selectedText));
   console.log("MULTI-PARA SELECTED TEXT END");
@@ -570,7 +578,9 @@ test("triple clicking a message bubble selects only the message text without tra
   // Perform a triple-click on the first message text to select it
   await firstMessageText.click({ clickCount: 3 });
 
-  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  const selectedText = await page.evaluate(() =>
+    window.getSelection()?.toString() ?? ""
+  );
   console.log("TRIPLE-CLICK SELECTED TEXT START:");
   console.log(JSON.stringify(selectedText));
   console.log("TRIPLE-CLICK SELECTED TEXT END");
@@ -579,16 +589,21 @@ test("triple clicking a message bubble selects only the message text without tra
 
 test("triple clicking the last paragraph of a multi-paragraph message has no trailing newlines", async ({ page }) => {
   await page.goto("/");
-  const lastParagraph = page.locator('[data-testid="message-text"] span').last();
+  const lastParagraph = page.locator('[data-testid="message-text"] span')
+    .last();
   await expect(lastParagraph).toBeVisible();
 
-  const style = await lastParagraph.evaluate((el) => window.getComputedStyle(el).marginBottom);
+  const style = await lastParagraph.evaluate((el) =>
+    window.getComputedStyle(el).marginBottom
+  );
   console.log("MARGIN-BOTTOM OF LAST PARAGRAPH:", style);
 
   // Perform a triple-click on the last paragraph to select it
   await lastParagraph.click({ clickCount: 3 });
 
-  const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  const selectedText = await page.evaluate(() =>
+    window.getSelection()?.toString() ?? ""
+  );
   console.log("LAST-PARA TRIPLE-CLICK SELECTED TEXT START:");
   console.log(JSON.stringify(selectedText));
   console.log("LAST-PARA TRIPLE-CLICK SELECTED TEXT END");
@@ -603,7 +618,7 @@ test("message text container should contain only inline elements and no block-le
   const hasBlocks = await firstMessageText.evaluate((el) => {
     return el.querySelector("p, div") !== null;
   });
-  
+
   // It should have NO block-level elements inside
   expect(hasBlocks).toBe(false);
 });
@@ -618,7 +633,7 @@ test("message text should contain no p tags at all to ensure perfect copying acr
   const hasPTags = await multiParaMessage.evaluate((el) => {
     return el.querySelector("p") !== null;
   });
-  
+
   // It should have NO p tags inside (we use display:inline-block spans instead)
   expect(hasPTags).toBe(false);
 });
