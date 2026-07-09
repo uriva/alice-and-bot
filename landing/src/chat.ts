@@ -1837,9 +1837,7 @@ const startQrScan = async () => {
       qrScanVideoElement = document.getElementById(
         "qr-video",
       ) as HTMLVideoElement;
-      if (qrScanPreviewActive()) {
-        rerenderHeader();
-      }
+      qrScanPreviewActive();
       rerenderChat();
     }, 100);
   } catch (e) {
