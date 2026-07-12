@@ -1,5 +1,6 @@
 import { captureClientErrors } from "@uri/anomalisa";
 import { html } from "lit";
+import { setErrorReporter } from "../../lit/core/error-reporter.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { initRouter } from "./router.ts";
@@ -24,7 +25,9 @@ import {
 } from "./paths.ts";
 import "./app.css";
 
-captureClientErrors({ token: "fd1a64b2-666e-4c0a-9fe6-b7954e6f86d3" });
+setErrorReporter(
+  captureClientErrors({ token: "fd1a64b2-666e-4c0a-9fe6-b7954e6f86d3" }),
+);
 
 const setDocumentDarkClass = (isDark: boolean) => {
   document.documentElement.classList.toggle("dark", isDark);

@@ -1,5 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import type { Attachment } from "../../protocol/src/clientApi.ts";
+import { reportError } from "../core/error-reporter.ts";
 import { isLightColor } from "./design.ts";
 import "./chat-audio-player.ts";
 import "./chat-location-card.ts";
@@ -54,6 +55,16 @@ const videoPlaceholderStyle = (isDark: boolean) =>
     isDark ? "#1a1a1a" : "#e5e7eb"
   }`;
 
+export const decryptAttachmentSafely = (
+  decrypt: () => Promise<string>,
+  report: (eventName: string) => void,
+): Promise<string | null> =>
+  decrypt().catch((error) => {
+    console.error("Failed to decrypt attachment:", error);
+    report("attachment_decrypt_failed");
+    return null;
+  });
+
 export class ChatAttachment extends LitElement {
   static override properties = {
     attachment: { attribute: false },
@@ -106,8 +117,12 @@ export class ChatAttachment extends LitElement {
       !this.onDecrypt || this._decryptedUrl ||
       this.attachment.type === "location"
     ) return;
+    const { onDecrypt, attachment } = this;
     this._loading = true;
-    this._decryptedUrl = await this.onDecrypt(this.attachment.url);
+    this._decryptedUrl = await decryptAttachmentSafely(
+      () => onDecrypt(attachment.url),
+      reportError,
+    );
     this._loading = false;
   };
 

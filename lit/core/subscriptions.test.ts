@@ -4,6 +4,7 @@ import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import {
   createConversationSafely,
   type DecryptedMessagesResult,
+  decryptKeySafely,
   makeCreateTypingNotifier,
   makeSubscribeDecryptedMessages,
   makeSubscribeTypingStates,
@@ -414,6 +415,34 @@ Deno.test("createConversationSafely reports success on a clean result", async ()
   );
   await done;
   assertEquals(settled, [true]);
+});
+
+// Regression: subscribeConversationKey did decryptAsymmetric(...).then(onChange)
+// with no .catch, so a bad/rotated key rejected on every subscription tick and
+// escaped as an unhandled promise rejection. decryptKeySafely must swallow the
+// rejection, report a named event, and fall back to onChange(null).
+Deno.test("decryptKeySafely reports failure and emits null on rejection", async () => {
+  const changes: (string | null)[] = [];
+  const reported: string[] = [];
+  await decryptKeySafely(
+    () => Promise.reject(new Error("bad key")),
+    (key) => changes.push(key),
+    (name) => reported.push(name),
+  );
+  assertEquals(changes, [null]);
+  assertEquals(reported, ["conversation_key_decrypt_failed"]);
+});
+
+Deno.test("decryptKeySafely emits the key on success without reporting", async () => {
+  const changes: (string | null)[] = [];
+  const reported: string[] = [];
+  await decryptKeySafely(
+    () => Promise.resolve("plainkey"),
+    (key) => changes.push(key),
+    (name) => reported.push(name),
+  );
+  assertEquals(changes, ["plainkey"]);
+  assertEquals(reported, []);
 });
 
 Deno.test("messages query does not join the conversation entity", () => {

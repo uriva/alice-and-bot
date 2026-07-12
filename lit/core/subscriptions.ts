@@ -10,6 +10,7 @@ import {
 } from "../../protocol/src/clientApi.ts";
 import { decryptAsymmetric } from "../../protocol/src/crypto.ts";
 import type schema from "../../instant.schema.ts";
+import { reportError } from "./error-reporter.ts";
 import { accessAdminDb, accessDb } from "./instant-client.ts";
 
 export const compactPublicKey = (k: string): string =>
@@ -48,6 +49,19 @@ export const subscribeConversations = (
     },
   );
 
+export const decryptKeySafely = (
+  decrypt: () => Promise<string>,
+  onChange: (key: string | null) => void,
+  report: (eventName: string) => void,
+): Promise<void> =>
+  decrypt()
+    .then(onChange)
+    .catch((error) => {
+      console.error("Failed to decrypt conversation key", error);
+      report("conversation_key_decrypt_failed");
+      onChange(null);
+    });
+
 export const subscribeConversationKey = (
   conversationId: string,
   { publicSignKey, privateEncryptKey }: Credentials,
@@ -66,7 +80,11 @@ export const subscribeConversationKey = (
       if (error) console.error("Failed to fetch conversation key", error);
       const encryptedKey = data?.identities?.[0]?.keys?.[0]?.key;
       if (!encryptedKey) return onChange(null);
-      decryptAsymmetric<string>(privateEncryptKey, encryptedKey).then(onChange);
+      decryptKeySafely(
+        () => decryptAsymmetric<string>(privateEncryptKey, encryptedKey),
+        onChange,
+        reportError,
+      );
     },
   );
 
