@@ -35,6 +35,7 @@ import {
   storeTransferPayload,
 } from "../../backend/src/api.ts";
 import { registerPush } from "../../protocol/src/pushClient.ts";
+import { copyToClipboard } from "../../lit/components/utils.ts";
 import { chatPath, homePath } from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
@@ -1141,11 +1142,16 @@ const newChatScreen = (onChatCreated?: () => void) => {
   }
   const creds = credentials;
   const onStart = () =>
-    startConversation(creds, newChatInput).then(() => {
-      newChatInput = "";
-      onChatCreated?.();
-      rerenderChat();
-    });
+    startConversation(creds, newChatInput)
+      .then(() => {
+        newChatInput = "";
+        onChatCreated?.();
+        rerenderChat();
+      })
+      .catch((error) => {
+        console.error("Failed to start conversation:", error);
+        showToast("Failed to start conversation", "error");
+      });
   return html`
     <div class="flex flex-col items-center px-4 py-8">
       <div class="w-full max-w-md">
@@ -1182,9 +1188,10 @@ const newChatScreen = (onChatCreated?: () => void) => {
 
 const copyInviteLinkButton = (publicSignKey: string) => {
   const link = chatWithMeLink(publicSignKey);
-  const onClick = () => {
-    navigator.clipboard.writeText(link);
-    showToast("Invite link copied!", "success");
+  const onClick = async () => {
+    if (await copyToClipboard(link)) {
+      showToast("Invite link copied!", "success");
+    } else showToast("Failed to copy invite link", "error");
   };
   return html`
     <div class="mb-4">
@@ -1203,17 +1210,15 @@ const copyInviteLinkButton = (publicSignKey: string) => {
 // --- Copy credentials button ---
 
 const copyCredentialsButton = () => {
-  const onClick = () => {
+  const onClick = async () => {
     const creds = getCredentialsToCopy("alicebot_credentials", credentials);
-    if (creds) {
-      navigator.clipboard.writeText(creds);
-      copiedCredentials = true;
+    if (!creds || !(await copyToClipboard(creds))) return;
+    copiedCredentials = true;
+    rerenderChat();
+    setTimeout(() => {
+      copiedCredentials = false;
       rerenderChat();
-      setTimeout(() => {
-        copiedCredentials = false;
-        rerenderChat();
-      }, 2000);
-    }
+    }, 2000);
   };
   return html`
     <div class="mb-4">
@@ -1318,9 +1323,8 @@ const qrCodeTransfer = () => {
     qrLoading = false;
     rerenderChat();
   };
-  const onCopy = () => {
-    if (!qrTransferUrl) return;
-    navigator.clipboard.writeText(qrTransferUrl);
+  const onCopy = async () => {
+    if (!qrTransferUrl || !(await copyToClipboard(qrTransferUrl))) return;
     qrCopied = true;
     rerenderChat();
   };

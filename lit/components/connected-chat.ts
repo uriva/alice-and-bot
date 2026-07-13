@@ -949,16 +949,16 @@ export class ConnectedChat extends LitElement {
     this.requestUpdate();
   };
 
-  private _handleCopyTransferUrl = () => {
-    if (!this._transferUrl) return;
-    navigator.clipboard.writeText(this._transferUrl).then(() => {
-      this._copiedTransferUrl = true;
+  private _handleCopyTransferUrl = async () => {
+    if (!this._transferUrl || !(await copyToClipboard(this._transferUrl))) {
+      return;
+    }
+    this._copiedTransferUrl = true;
+    this.requestUpdate();
+    setTimeout(() => {
+      this._copiedTransferUrl = false;
       this.requestUpdate();
-      setTimeout(() => {
-        this._copiedTransferUrl = false;
-        this.requestUpdate();
-      }, 2000);
-    });
+    }, 2000);
   };
 
   private _handleImportKeyDown = (e: KeyboardEvent) => {

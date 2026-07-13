@@ -2,6 +2,7 @@ import { html, type TemplateResult } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
+import { copyToClipboard } from "../../lit/components/utils.ts";
 
 hljs.registerLanguage("typescript", typescript);
 hljs.registerLanguage("javascript", typescript);
@@ -56,14 +57,14 @@ const truncateStr = (str: string) =>
   str.length <= 10 ? str : `${str.slice(0, 6)}...${str.slice(-4)}`;
 
 export const copyableString = (str: string) => {
-  const copy = () =>
-    navigator.clipboard.writeText(str).then(() => {
-      const el = document.querySelector(`[data-copy-key="${str}"]`);
-      if (el) {
-        el.textContent = "Copied!";
-        setTimeout(() => (el.textContent = "Copy"), 2000);
-      }
-    });
+  const copy = async () => {
+    if (!(await copyToClipboard(str))) return;
+    const el = document.querySelector(`[data-copy-key="${str}"]`);
+    if (el) {
+      el.textContent = "Copied!";
+      setTimeout(() => (el.textContent = "Copy"), 2000);
+    }
+  };
   return html`
     <span class="inline-flex items-center gap-2 font-mono text-sm">
       <span>${truncateStr(str)}</span>
@@ -100,14 +101,14 @@ export const inlineCode = (text: string) =>
   `;
 
 const copyButton = (code: string, id: string) => {
-  const copy = () =>
-    navigator.clipboard.writeText(code).then(() => {
-      const el = document.querySelector(`[data-copy-id="${id}"]`);
-      if (el) {
-        el.textContent = "Copied!";
-        setTimeout(() => (el.textContent = "Copy"), 2000);
-      }
-    });
+  const copy = async () => {
+    if (!(await copyToClipboard(code))) return;
+    const el = document.querySelector(`[data-copy-id="${id}"]`);
+    if (el) {
+      el.textContent = "Copied!";
+      setTimeout(() => (el.textContent = "Copy"), 2000);
+    }
+  };
   return html`
     <button
       type="button"

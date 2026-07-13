@@ -17,6 +17,7 @@ import { subscribeIsMobile } from "../../lit/core/responsive.ts";
 import { getOrCreateConversation } from "../../lit/core/subscriptions.ts";
 import "../../lit/components/connected-chat.ts";
 import { isLightColor } from "../../lit/components/design.ts";
+import { copyToClipboard } from "../../lit/components/utils.ts";
 
 const fontStack = [
   "Inter",
@@ -544,14 +545,12 @@ export const renderSecretIdentityDialog = (
     }
   });
 
-  const handleCopy = () => {
-    if (!transferUrl) return;
-    navigator.clipboard.writeText(transferUrl).then(() => {
-      copyBtn.textContent = "Copied!";
-      setTimeout(() => {
-        copyBtn.textContent = "Continue on another device";
-      }, 2000);
-    });
+  const handleCopy = async () => {
+    if (!transferUrl || !(await copyToClipboard(transferUrl))) return;
+    copyBtn.textContent = "Copied!";
+    setTimeout(() => {
+      copyBtn.textContent = "Continue on another device";
+    }, 2000);
   };
 
   copyBtn.addEventListener("click", handleCopy);
