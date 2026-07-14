@@ -6,6 +6,7 @@ import { isValidAlias, normalizeAlias } from "../../protocol/src/alias.ts";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
 import { issueNonceHelper, kv, verifyAuthToken } from "./auth.ts";
+import { conversationHasExactParticipants } from "./conversationParticipants.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import {
@@ -204,16 +205,11 @@ export const endpoints: BackendApiImpl = {
           },
         },
       });
-      const filtered = conversations.filter((c) => {
-        const participantKeys = c.participants.map(({ publicSignKey }) =>
-          publicSignKey
-        );
-        return (
-          publicSignKeys.every((k: string) => participantKeys.includes(k)) &&
-          participantKeys.length === publicSignKeys.length
-        );
-      });
-      return { conversations: filtered };
+      return {
+        conversations: conversations.filter(
+          conversationHasExactParticipants(publicSignKeys),
+        ),
+      };
     },
     getConversationInfo: async ({ conversationId }) => {
       const { conversations } = await query({
