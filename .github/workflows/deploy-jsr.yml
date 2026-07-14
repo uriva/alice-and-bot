@@ -12,14 +12,44 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - name: Publish package
-        run: |
-          # Run with a 180-second timeout. If it hangs on post-upload CDN verification, timeout will terminate it.
-          timeout 180s npx jsr publish --allow-slow-types --no-provenance || echo "Publish command completed or timed out"
 
-      - name: Verify publish success
+      - name: Check if version needs publishing
+        id: check
         run: |
           VERSION=$(jq -r .version deno.json)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "deno.json version is ${VERSION}"
+          if curl -sI "https://jsr.io/@alice-and-bot/core/${VERSION}_meta.json?cb=$RANDOM" | grep -qE "HTTP/.* 200"; then
+            echo "Version ${VERSION} is already published to JSR; nothing to publish."
+            echo "::notice::Skipping publish: version ${VERSION} already exists on JSR. Bump \"version\" in deno.json to publish new changes."
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version ${VERSION} is not yet on JSR; will publish."
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish package
+        if: steps.check.outputs.should_publish == 'true'
+        run: |
+          # jsr publish can hang on post-upload CDN verification (not a real
+          # failure). Tolerate ONLY that timeout (exit 124); fail on anything else.
+          set +e
+          timeout 180s npx jsr publish --allow-slow-types --no-provenance
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "Publish completed."
+          elif [ "$status" -eq 124 ]; then
+            echo "Publish timed out on CDN verification; verifying resolvability below."
+          else
+            echo "::error::jsr publish failed with exit code ${status}."
+            exit "$status"
+          fi
+
+      - name: Verify publish success
+        if: steps.check.outputs.should_publish == 'true'
+        run: |
+          VERSION=${{ steps.check.outputs.version }}
           echo "Verifying JSR version ${VERSION} is live..."
           for i in {1..90}; do
             # Use cache-busting parameter to ensure we see the true origin state
@@ -30,5 +60,5 @@ jobs:
             echo "Waiting for JSR CDN..."
             sleep 10
           done
-          echo "Error: JSR version ${VERSION} is not resolvable after 15 minutes."
+          echo "::error::JSR version ${VERSION} is not resolvable after 15 minutes."
           exit 1
