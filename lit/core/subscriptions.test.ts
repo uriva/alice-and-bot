@@ -2,6 +2,7 @@ import { assertEquals, assertFalse } from "@std/assert";
 import { FakeTime } from "@std/testing/time";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import {
+  type ConversationActivity,
   createConversationSafely,
   type DecryptedMessagesResult,
   decryptKeySafely,
@@ -9,6 +10,7 @@ import {
   makeSubscribeDecryptedMessages,
   makeSubscribeTypingStates,
   messagesInfiniteQuery,
+  pickBestConversation,
   typingTtl,
 } from "./subscriptions.ts";
 
@@ -514,4 +516,52 @@ Deno.test("subscribeDecryptedMessages handles decryption failure gracefully", as
 
   await promise;
   assertEquals(received.at(-1)?.messages, []);
+});
+
+// Regression: a user can have two conversations with the identical participant
+// set (e.g. an admin/system task spawned a second {user, bot} conversation).
+// getOrCreateConversation used .find() (first / most-recently-touched match),
+// which landed on the EMPTY duplicate and hid the real message history behind
+// the "Ready to build your bot?" empty state. pickBestConversation must prefer
+// the conversation that actually has messages.
+const activityMap = (m: Record<string, ConversationActivity>) => (id: string) =>
+  m[id];
+
+Deno.test("pickBestConversation prefers the conversation with messages over an empty newer one", () => {
+  const real = { id: "real", updatedAt: 100 };
+  const emptyNewer = { id: "empty", updatedAt: 999 };
+  const best = pickBestConversation(
+    [emptyNewer, real],
+    activityMap({
+      real: { hasMessages: true, lastMessageAt: 50 },
+      empty: { hasMessages: false, lastMessageAt: 0 },
+    }),
+  );
+  assertEquals(best?.id, "real");
+});
+
+Deno.test("pickBestConversation prefers the most recent last message among non-empty", () => {
+  const older = { id: "older", updatedAt: 10 };
+  const newer = { id: "newer", updatedAt: 5 };
+  const best = pickBestConversation(
+    [older, newer],
+    activityMap({
+      older: { hasMessages: true, lastMessageAt: 100 },
+      newer: { hasMessages: true, lastMessageAt: 200 },
+    }),
+  );
+  assertEquals(best?.id, "newer");
+});
+
+Deno.test("pickBestConversation falls back to updatedAt when activity is unknown", () => {
+  const a = { id: "a", updatedAt: 1 };
+  const b = { id: "b", updatedAt: 2 };
+  const best = pickBestConversation([a, b], () => undefined);
+  assertEquals(best?.id, "b");
+});
+
+Deno.test("pickBestConversation returns the sole candidate unchanged", () => {
+  const only = { id: "only", updatedAt: 1 };
+  assertEquals(pickBestConversation([only], () => undefined)?.id, "only");
+  assertEquals(pickBestConversation([], () => undefined), undefined);
 });

@@ -412,6 +412,39 @@ const matchesParticipants =
       participants.includes(publicSignKey)
     );
 
+// A user can hold more than one conversation with the exact same participant set
+// (e.g. an admin/system task spawns a second {user, bot} conversation). Picking
+// the first/most-recently-touched match can land on an empty duplicate and hide
+// the real history. Rank by real message activity first (a conversation that has
+// messages beats an empty one; newer last message wins), then fall back to
+// updatedAt so behaviour is unchanged when activity is unknown/equal.
+export type ConversationActivity = {
+  hasMessages: boolean;
+  lastMessageAt: number;
+};
+
+export const pickBestConversation = <
+  T extends { id: string; updatedAt?: number },
+>(
+  candidates: T[],
+  activityOf: (id: string) => ConversationActivity | undefined,
+): T | undefined => {
+  if (candidates.length <= 1) return candidates[0];
+  const score = (c: T) => {
+    const a = activityOf(c.id);
+    return [
+      a?.hasMessages ? 1 : 0,
+      a?.lastMessageAt ?? 0,
+      c.updatedAt ?? 0,
+    ] as const;
+  };
+  return [...candidates].sort((a, b) => {
+    const [ah, al, au] = score(a);
+    const [bh, bl, bu] = score(b);
+    return bh - ah || bl - al || bu - au;
+  })[0];
+};
+
 export const createConversationSafely = <T extends object>(
   create: () => Promise<T | { error: unknown }>,
   onSettled: (created: boolean) => void,
@@ -424,6 +457,38 @@ export const createConversationSafely = <T extends object>(
     });
 };
 
+const subscribeConversationsActivity = (
+  conversationIds: string[],
+  onChange: (activity: Record<string, ConversationActivity>) => void,
+): () => void =>
+  accessDb().subscribeQuery(
+    {
+      messages: {
+        conversation: {},
+        $: {
+          where: { conversation: { $in: conversationIds } },
+          order: { timestamp: "desc" },
+        },
+      },
+    },
+    ({ data }) => {
+      const activity: Record<string, ConversationActivity> = {};
+      for (const id of conversationIds) {
+        activity[id] = { hasMessages: false, lastMessageAt: 0 };
+      }
+      for (const m of data?.messages ?? []) {
+        const convId = m.conversation?.id;
+        const current = convId ? activity[convId] : undefined;
+        if (!convId || !current) continue;
+        activity[convId] = {
+          hasMessages: true,
+          lastMessageAt: Math.max(current.lastMessageAt, m.timestamp),
+        };
+      }
+      onChange(activity);
+    },
+  );
+
 export const getOrCreateConversation = (
   credentials: Credentials,
   participants: string[],
@@ -433,29 +498,49 @@ export const getOrCreateConversation = (
     unique([credentials.publicSignKey, ...participants]),
   );
   let inFlight = false;
-  return subscribeConversations(
+  let activityUnsub: (() => void) | null = null;
+  const teardown = () => {
+    activityUnsub?.();
+    activityUnsub = null;
+  };
+  const createIfNeeded = () => {
+    if (inFlight) return;
+    inFlight = true;
+    createConversationSafely(
+      () =>
+        createConversation(accessAdminDb)(
+          fixedParticipants,
+          "Chat",
+          credentials,
+        ),
+      (created) => {
+        if (!created) inFlight = false;
+      },
+    );
+  };
+  const unsub = subscribeConversations(
     credentials.publicSignKey,
     (conversations) => {
       if (!conversations) return;
-      const existing = conversations.find(
+      const matches = conversations.filter(
         matchesParticipants(fixedParticipants),
       );
-      if (existing) return onConversation(existing.id);
-      if (inFlight) return;
-      inFlight = true;
-      createConversationSafely(
-        () =>
-          createConversation(accessAdminDb)(
-            fixedParticipants,
-            "Chat",
-            credentials,
-          ),
-        (created) => {
-          if (!created) inFlight = false;
+      teardown();
+      if (matches.length === 0) return createIfNeeded();
+      if (matches.length === 1) return onConversation(matches[0].id);
+      activityUnsub = subscribeConversationsActivity(
+        matches.map((c) => c.id),
+        (activity) => {
+          const best = pickBestConversation(matches, (id) => activity[id]);
+          if (best) onConversation(best.id);
         },
       );
     },
   );
+  return () => {
+    teardown();
+    unsub();
+  };
 };
 
 export const sendInitialMessage = (
