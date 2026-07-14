@@ -420,8 +420,14 @@ Deno.test("createConversationSafely reports success on a clean result", async ()
 // Regression: subscribeConversationKey did decryptAsymmetric(...).then(onChange)
 // with no .catch, so a bad/rotated key rejected on every subscription tick and
 // escaped as an unhandled promise rejection. decryptKeySafely must swallow the
-// rejection, report a named event, and fall back to onChange(null).
-Deno.test("decryptKeySafely reports failure and emits null on rejection", async () => {
+// rejection and report a named event.
+//
+// It must NOT emit onChange(null) on failure: nulling the key wipes the
+// already-decrypted conversation key downstream, which drops the entire visible
+// message history (a transient/spurious decrypt tick would blank the chat). A
+// failed decrypt of an existing key leaves the last good key in place; the
+// genuine "no key" case is handled separately by the !encryptedKey branch.
+Deno.test("decryptKeySafely reports failure without emitting on rejection", async () => {
   const changes: (string | null)[] = [];
   const reported: string[] = [];
   await decryptKeySafely(
@@ -429,7 +435,7 @@ Deno.test("decryptKeySafely reports failure and emits null on rejection", async 
     (key) => changes.push(key),
     (name) => reported.push(name),
   );
-  assertEquals(changes, [null]);
+  assertEquals(changes, []);
   assertEquals(reported, ["conversation_key_decrypt_failed"]);
 });
 

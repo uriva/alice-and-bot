@@ -59,7 +59,6 @@ export const decryptKeySafely = (
     .catch((error) => {
       console.error("Failed to decrypt conversation key", error);
       report("conversation_key_decrypt_failed");
-      onChange(null);
     });
 
 export const subscribeConversationKey = (
