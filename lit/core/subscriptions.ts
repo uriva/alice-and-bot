@@ -457,37 +457,40 @@ export const createConversationSafely = <T extends object>(
     });
 };
 
+// InstantDB does not support filtering a link by an `$in` array of ids
+// (`where: { conversation: { $in: [...] } }` returns nothing), so activity is
+// gathered per-conversation with the same single-id message query the chat
+// itself uses. Duplicate participant sets are rare, so a handful of tiny
+// subscriptions is fine.
+const activityMessageQuery = (conversationId: string) => ({
+  messages: {
+    $: {
+      where: { conversation: conversationId },
+      order: { timestamp: "desc" as const },
+      limit: 1,
+    },
+  },
+});
+
 const subscribeConversationsActivity = (
   conversationIds: string[],
   onChange: (activity: Record<string, ConversationActivity>) => void,
-): () => void =>
-  accessDb().subscribeQuery(
-    {
-      messages: {
-        conversation: {},
-        $: {
-          where: { conversation: { $in: conversationIds } },
-          order: { timestamp: "desc" },
-        },
-      },
-    },
-    ({ data }) => {
-      const activity: Record<string, ConversationActivity> = {};
-      for (const id of conversationIds) {
-        activity[id] = { hasMessages: false, lastMessageAt: 0 };
-      }
-      for (const m of data?.messages ?? []) {
-        const convId = m.conversation?.id;
-        const current = convId ? activity[convId] : undefined;
-        if (!convId || !current) continue;
-        activity[convId] = {
-          hasMessages: true,
-          lastMessageAt: Math.max(current.lastMessageAt, m.timestamp),
-        };
-      }
-      onChange(activity);
-    },
+): () => void => {
+  const activity: Record<string, ConversationActivity> = {};
+  for (const id of conversationIds) {
+    activity[id] = { hasMessages: false, lastMessageAt: 0 };
+  }
+  const unsubs = conversationIds.map((id) =>
+    accessDb().subscribeQuery(activityMessageQuery(id), ({ data }) => {
+      const latest = data?.messages?.[0];
+      activity[id] = latest
+        ? { hasMessages: true, lastMessageAt: latest.timestamp }
+        : { hasMessages: false, lastMessageAt: 0 };
+      onChange({ ...activity });
+    })
   );
+  return () => unsubs.forEach((u) => u());
+};
 
 export const getOrCreateConversation = (
   credentials: Credentials,
