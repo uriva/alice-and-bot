@@ -16,6 +16,7 @@ import { accessDb } from "../core/instant-client.ts";
 import {
   compactPublicKey,
   createTypingNotifier,
+  nextConversationKey,
   subscribeConversationKey,
   subscribeDecryptedMessages,
   subscribeIdentityDetailsMap,
@@ -674,9 +675,10 @@ export class ConnectedChat extends LitElement {
         this.conversationId,
         this.credentials,
         (key) => {
-          if (key === this._lastMessageSubscriptionKey) return;
-          this._lastMessageSubscriptionKey = key;
-          this._conversationKey = key;
+          const resolved = nextConversationKey(this._conversationKey, key);
+          if (resolved === this._lastMessageSubscriptionKey) return;
+          this._lastMessageSubscriptionKey = resolved;
+          this._conversationKey = resolved;
           this._resubscribeMessages();
           this.requestUpdate();
         },

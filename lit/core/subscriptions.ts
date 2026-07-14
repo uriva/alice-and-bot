@@ -49,6 +49,16 @@ export const subscribeConversations = (
     },
   );
 
+// subscribeConversationKey re-fires on every tick and can emit a transient null
+// (a decrypt blip, or a momentarily-empty key row). Nulling an already-resolved
+// conversation key wipes the visible message history downstream, so a null must
+// never overwrite a good key; only a real key or the genuine first "no key"
+// state takes effect.
+export const nextConversationKey = (
+  current: string | null,
+  incoming: string | null,
+): string | null => incoming ?? current;
+
 export const decryptKeySafely = (
   decrypt: () => Promise<string>,
   onChange: (key: string | null) => void,

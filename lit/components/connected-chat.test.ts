@@ -1,4 +1,5 @@
 import { assertEquals } from "@std/assert";
+import { nextConversationKey } from "../core/subscriptions.ts";
 
 type DecipheredMessage = {
   id: string;
@@ -163,3 +164,22 @@ Deno.test(
     assertEquals(hasWillUpdate, true);
   },
 );
+
+// Regression: subscribeConversationKey re-fires on every tick and can emit a
+// transient null (e.g. a decrypt blip or a momentarily-empty key row). Nulling
+// an already-loaded conversation key wipes the visible message history (the chat
+// blanks out even though the conversation is fully healthy). A null incoming key
+// must not overwrite a previously-resolved key; only a real key or the genuine
+// first "no key" state should take effect.
+Deno.test("nextConversationKey keeps the last good key when a null tick arrives", () => {
+  assertEquals(nextConversationKey("goodkey", null), "goodkey");
+});
+
+Deno.test("nextConversationKey adopts a newly resolved key", () => {
+  assertEquals(nextConversationKey(null, "freshkey"), "freshkey");
+  assertEquals(nextConversationKey("oldkey", "rotatedkey"), "rotatedkey");
+});
+
+Deno.test("nextConversationKey stays null until a key resolves", () => {
+  assertEquals(nextConversationKey(null, null), null);
+});
