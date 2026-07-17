@@ -35,6 +35,13 @@ Deno.test("blurSecretsInHtml does not touch normal text", () => {
   assertEquals(blurSecretsInHtml(text), text);
 });
 
+Deno.test("blurSecretsInHtml does not blur site:https://google.com", () => {
+  const text = "site:https://google.com";
+  assertEquals(blurSecretsInHtml(text), text);
+  const textLong = "site:https://google.com/foo/bar/baz/qux";
+  assertEquals(blurSecretsInHtml(textLong), textLong);
+});
+
 Deno.test("blurSecretsInHtml does not corrupt html tags/attributes", () => {
   const html = '<a href="https://example.com/x" style="color:#222">link</a>';
   assertEquals(blurSecretsInHtml(html), html);
