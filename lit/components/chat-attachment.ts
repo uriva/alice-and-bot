@@ -22,7 +22,8 @@ const spinnerHtml = (isDark: boolean) =>
         : "#00000010"};border-top:4px solid ${isDark
         ? "#ffffff80"
         : "#00000040"};border-radius:50%;animation:spin 1s linear infinite"
-    ></div>
+    >
+    </div>
   `;
 
 const audioPlaceholderStyle = (isDark: boolean) =>
@@ -194,7 +195,8 @@ export class ChatAttachment extends LitElement {
                       style="width:3px;height:${height}px;border-radius:2px;background:${isDark
                         ? "#ffffff40"
                         : "#00000020"}"
-                    ></div>
+                    >
+                    </div>
                   `
                 )}
               </div>

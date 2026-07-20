@@ -963,6 +963,7 @@ const scrollbarStyle = () =>
 const conversationListItem = (conv: Conversation) => {
   if (!credentials) {
     return html`
+
     `;
   }
   const otherParticipant = conv.participants.find(
@@ -1138,6 +1139,7 @@ const openChats = (sq?: string, onNewChat?: () => void) => {
 const newChatScreen = (onChatCreated?: () => void) => {
   if (!credentials) {
     return html`
+
     `;
   }
   const creds = credentials;
@@ -1230,6 +1232,7 @@ const copyCredentialsButton = () => {
             <span class="text-sm ml-1">Copied!</span>
           `
           : html`
+
           `}
       </button>
       <div class="${hintStyle}">
@@ -1294,6 +1297,7 @@ const dangerZone = () =>
           </div>
         `
         : html`
+
         `}
     </div>
   `;
@@ -1303,6 +1307,7 @@ const dangerZone = () =>
 const qrCodeTransfer = () => {
   if (!credentials) {
     return html`
+
     `;
   }
   const creds = credentials;
@@ -1351,6 +1356,7 @@ const qrCodeTransfer = () => {
           <div class="text-xs text-red-600 dark:text-red-400">${qrError}</div>
         `
         : html`
+
         `} ${qrDataUrl
         ? html`
           <div class="flex justify-center p-4 bg-white rounded-lg">
@@ -1358,6 +1364,7 @@ const qrCodeTransfer = () => {
           </div>
         `
         : html`
+
         `} ${qrTransferUrl
         ? html`
           <div class="flex flex-col gap-1 items-center">
@@ -1372,6 +1379,7 @@ const qrCodeTransfer = () => {
           </div>
         `
         : html`
+
         `}
     </div>
   `;
@@ -1382,6 +1390,7 @@ const qrCodeTransfer = () => {
 const yourKey = () => {
   if (!credentials) {
     return html`
+
     `;
   }
   const publicSignKey = credentials.publicSignKey;
@@ -1531,6 +1540,7 @@ const yourKey = () => {
         }`}">${status.message}</div>
       `
       : html`
+
       `;
 
   return html`
@@ -1606,6 +1616,7 @@ const yourKey = () => {
               </div>
             `
             : html`
+
             `}
         </div>
       </div>
@@ -1650,6 +1661,7 @@ const yourKey = () => {
                       )}">Withdraw</button>
                   `
                   : html`
+
                   `}
               </div>
             </div>
@@ -1684,10 +1696,12 @@ const yourKey = () => {
                 </div>
               `
               : html`
+
               `}
           </div>
         `
         : html`
+
         `}
 
       <!-- Monetization -->
@@ -1874,7 +1888,8 @@ const existingUserForm = () => {
                 class="w-full max-w-sm aspect-square bg-black rounded-lg overflow-hidden object-cover"
                 autoplay
                 playsinline
-              ></video>
+              >
+              </video>
             </div>
             <button type="button" class="${buttonClass(
               "secondary",
@@ -1978,6 +1993,7 @@ const existingUserForm = () => {
               </div>
             `
             : html`
+
             `}
         `}
     </div>
@@ -2118,6 +2134,7 @@ const messengerLogin = () => {
                 </div>
               `
               : html`
+
               `}
             <div class="mt-3"></div>
             <button
@@ -2144,10 +2161,12 @@ const messengerLogin = () => {
                 </div>
               `
               : html`
+
               `}
           </div>
         `
         : html`
+
         `} ${loginShowForm === "existing"
         ? html`
           <div class="flex flex-col items-center flex-grow justify-center px-4">
@@ -2155,6 +2174,7 @@ const messengerLogin = () => {
           </div>
         `
         : html`
+
         `}
     </div>
   `;
@@ -2286,6 +2306,7 @@ const mobileChatsListView = () => {
   const showChatsList = !selectedConversation;
   if (!showChatsList) {
     return html`
+
     `;
   }
   return html`
@@ -2297,6 +2318,7 @@ const mobileChatsListView = () => {
           )}</div>
         `
         : html`
+
         `} ${view === "new_chat"
         ? html`
           <div
@@ -2306,6 +2328,7 @@ const mobileChatsListView = () => {
           </div>
         `
         : html`
+
         `} ${view === "identity"
         ? html`
           <div
@@ -2315,6 +2338,7 @@ const mobileChatsListView = () => {
           </div>
         `
         : html`
+
         `} ${view === "chats"
         ? html`
           <div class="p-3 bg-white dark:bg-black flex-shrink-0">
@@ -2331,6 +2355,7 @@ const mobileChatsListView = () => {
           </div>
         `
         : html`
+
         `}
       <div
         class="flex-1 overflow-y-auto min-h-0 bg-white dark:bg-black"
@@ -2339,14 +2364,17 @@ const mobileChatsListView = () => {
         ${view === "chats"
           ? openChats(searchQuery, () => setView_("new_chat"))
           : html`
+
           `} ${view === "new_chat"
           ? newChatScreen(() => setView_("chats"))
           : html`
+
           `} ${view === "identity"
           ? html`
             <div class="p-4">${yourKey()}</div>
           `
           : html`
+
           `}
       </div>
       ${view === "chats"
@@ -2374,13 +2402,15 @@ const mobileChatsListView = () => {
 const mobileChatView = () => {
   if (!selectedConversation || view !== "chats") {
     return html`
+
     `;
   }
   return html`
     <div
       style="display:flex;flex-grow:1;flex-direction:column;width:100%;height:100%;min-height:0"
       id="mobile-chat-panel"
-    ></div>
+    >
+    </div>
   `;
 };
 
@@ -2500,11 +2530,13 @@ const loggedInMessenger = () =>
       style="min-height:0;min-width:0"
     >
       ${!currentIsMobile ? desktopSidebar() : html`
+
       `} ${currentIsMobile
         ? html`
           ${mobileChatsListView()}${mobileChatView()}
         `
         : html`
+
         `} ${!currentIsMobile
         ? html`
           <div
@@ -2514,6 +2546,7 @@ const loggedInMessenger = () =>
           </div>
         `
         : html`
+
         `}
     </div>
   `;
@@ -2530,8 +2563,11 @@ const chatTemplate = (): TemplateResult =>
           </div>
         `
         : html`
+
         `} ${credentialsChecked && !credentials ? messengerLogin() : html`
+
       `} ${credentialsChecked && credentials ? loggedInMessenger() : html`
+
       `}
     </div>
   `;

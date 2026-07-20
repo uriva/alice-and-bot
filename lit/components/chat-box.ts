@@ -225,7 +225,8 @@ const spinnerEl = (isDark: boolean, color?: string) =>
         : "#00000010"};border-top:4px solid ${color ?? (isDark
           ? "#ffffff80"
           : "#00000040")};border-radius:50%;animation:spin 1s linear infinite"
-    ></div>
+    >
+    </div>
   `;
 
 const sendingAudioIndicator = (primaryColor: string, isDark?: boolean) =>
@@ -249,7 +250,8 @@ const sendingAudioIndicator = (primaryColor: string, isDark?: boolean) =>
             )
             ? "#00000040"
             : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
-        ></div>
+        >
+        </div>
         <span style="color:${isLightColor(primaryColor, isDark)
           ? "#222"
           : "#fff"};font-size:13px">Sending audio...</span>

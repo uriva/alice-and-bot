@@ -2,7 +2,7 @@
 <resources>
   <!-- Base application theme. -->
   <style name="Theme.AliceAndBot" parent="Theme.AppCompat.NoActionBar">
-  <!-- Primary brand color. -->
+    <!-- Primary brand color. -->
     <item name="colorPrimary">@color/colorPrimary</item>
     <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
     <item name="colorAccent">@color/colorAccent</item>
