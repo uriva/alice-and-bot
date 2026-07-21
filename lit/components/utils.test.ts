@@ -10,6 +10,7 @@ import {
   maxTextareaHeight,
   minTextareaHeight,
   preprocessText,
+  sendingStatusText,
   shouldShowScrollDownButton,
 } from "./utils.ts";
 
@@ -119,4 +120,12 @@ Deno.test("shouldShowScrollDownButton returns true if user has scrolled up a bun
 Deno.test("preprocessText converts initial asterisks to standard list bullets and ignores code blocks", () => {
   const result = preprocessText("*item 1\n```\n* inside code\n```\n*item 2");
   assertEquals(result, "* item 1\n```\n* inside code\n```\n* item 2");
+});
+
+Deno.test("sendingStatusText returns correct message based on sending type", () => {
+  assertEquals(sendingStatusText("audio"), "Sending audio...");
+  assertEquals(sendingStatusText("image"), "Uploading image...");
+  assertEquals(sendingStatusText("file"), "Sending file...");
+  assertEquals(sendingStatusText(null), "Sending audio...");
+  assertEquals(sendingStatusText(undefined), "Sending audio...");
 });

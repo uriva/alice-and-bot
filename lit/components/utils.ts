@@ -492,3 +492,11 @@ const staleTimeoutMs = 3600000;
 
 export const isStale = (timestamp: number) =>
   Date.now() - timestamp > staleTimeoutMs;
+
+export const sendingStatusText = (
+  sendingType?: "audio" | "image" | "file" | null,
+) => {
+  if (sendingType === "image") return "Uploading image...";
+  if (sendingType === "file") return "Sending file...";
+  return "Sending audio...";
+};

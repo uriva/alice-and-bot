@@ -55,6 +55,7 @@ import {
   playNotificationSound,
   recordingExtension,
   recordingMimeType,
+  sendingStatusText,
   shouldShowScrollDownButton,
   showAuthorName,
 } from "./utils.ts";
@@ -229,7 +230,11 @@ const spinnerEl = (isDark: boolean, color?: string) =>
     </div>
   `;
 
-const sendingAudioIndicator = (primaryColor: string, isDark?: boolean) =>
+const sendingIndicator = (
+  text: string,
+  primaryColor: string,
+  isDark?: boolean,
+) =>
   html`
     <div style="display:flex;flex-direction:row-reverse;gap:6px">
       <div
@@ -254,7 +259,7 @@ const sendingAudioIndicator = (primaryColor: string, isDark?: boolean) =>
         </div>
         <span style="color:${isLightColor(primaryColor, isDark)
           ? "#222"
-          : "#fff"};font-size:13px">Sending audio...</span>
+          : "#fff"};font-size:13px">${text}</span>
       </div>
     </div>
   `;
@@ -487,6 +492,7 @@ export class ChatBox extends LitElement {
     _swipeOffset: { state: true },
     _optimisticMessages: { state: true },
     _isSending: { state: true },
+    _sendingType: { state: true },
     _fetchingMore: { state: true },
     _textareaHeight: { state: true },
     _textareaOverflow: { state: true },
@@ -567,6 +573,7 @@ export class ChatBox extends LitElement {
   declare private _swipeOffset: { x: number; y: number };
   declare private _optimisticMessages: AbstracChatMessage[];
   declare private _isSending: boolean;
+  declare private _sendingType: "audio" | "image" | "file" | null;
   declare private _fetchingMore: boolean;
   declare private _textareaHeight: number;
   declare private _textareaOverflow: string;
@@ -616,6 +623,7 @@ export class ChatBox extends LitElement {
     this._swipeOffset = { x: 0, y: 0 };
     this._optimisticMessages = [];
     this._isSending = false;
+    this._sendingType = null;
     this._fetchingMore = false;
     this._textareaHeight = minTextareaHeight;
     this._textareaOverflow = "hidden";
@@ -957,6 +965,7 @@ export class ChatBox extends LitElement {
         this._recordingDuration = 0;
         if (this.onSendWithAttachments) {
           this._pendingAudioMessageCount = this.messages.length;
+          this._sendingType = "audio";
           this._isSending = true;
           await this.onSendWithAttachments(
             "",
@@ -1001,9 +1010,13 @@ export class ChatBox extends LitElement {
     this.onInputActivity?.();
 
     if (files.length > 0 && this.onSendWithAttachments) {
+      this._sendingType = files.some((f) => f.type.startsWith("image/"))
+        ? "image"
+        : "file";
       this._isSending = true;
       await this.onSendWithAttachments(text, files, undefined, replyTo);
       this._isSending = false;
+      this._sendingType = null;
     } else if (text) {
       this._optimisticMessages = [
         ...this._optimisticMessages,
@@ -1316,6 +1329,7 @@ export class ChatBox extends LitElement {
       if (hasNewAudio) {
         this._pendingAudioMessageCount = null;
         this._isSending = false;
+        this._sendingType = null;
       }
     }
 
@@ -1697,7 +1711,8 @@ export class ChatBox extends LitElement {
                       isDark,
                     ),
                 )} ${this._isSending
-                  ? sendingAudioIndicator(
+                  ? sendingIndicator(
+                    sendingStatusText(this._sendingType),
                     customColors?.primary ?? defaultPrimary(isDark),
                     isDark,
                   )
