@@ -58,11 +58,15 @@ const truncateStr = (str: string) =>
 
 export const copyableString = (str: string) => {
   const copy = async () => {
-    if (!(await copyToClipboard(str))) return;
-    const el = document.querySelector(`[data-copy-key="${str}"]`);
-    if (el) {
-      el.textContent = "Copied!";
-      setTimeout(() => (el.textContent = "Copy"), 2000);
+    try {
+      if (!(await copyToClipboard(str))) return;
+      const el = document.querySelector(`[data-copy-key="${str}"]`);
+      if (el) {
+        el.textContent = "Copied!";
+        setTimeout(() => (el.textContent = "Copy"), 2000);
+      }
+    } catch (e) {
+      console.error("Failed to copy string", e);
     }
   };
   return html`
@@ -102,11 +106,15 @@ export const inlineCode = (text: string) =>
 
 const copyButton = (code: string, id: string) => {
   const copy = async () => {
-    if (!(await copyToClipboard(code))) return;
-    const el = document.querySelector(`[data-copy-id="${id}"]`);
-    if (el) {
-      el.textContent = "Copied!";
-      setTimeout(() => (el.textContent = "Copy"), 2000);
+    try {
+      if (!(await copyToClipboard(code))) return;
+      const el = document.querySelector(`[data-copy-id="${id}"]`);
+      if (el) {
+        el.textContent = "Copied!";
+        setTimeout(() => (el.textContent = "Copy"), 2000);
+      }
+    } catch (e) {
+      console.error("Failed to copy code", e);
     }
   };
   return html`

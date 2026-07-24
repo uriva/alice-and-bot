@@ -527,23 +527,28 @@ export const renderSecretIdentityDialog = (
 
   let transferUrl = "";
 
-  generateTransferUrl(credentials).then(async (url) => {
-    transferUrl = url;
-    try {
-      const QRCode = (await import("qrcode")).default;
-      const dataUrl = await QRCode.toDataURL(url, { width: 184, margin: 1 });
-      qrContainer.innerHTML = "";
-      const img = document.createElement("img");
-      img.src = dataUrl;
-      img.alt = "Export Identity QR Code";
-      img.style.width = "100%";
-      img.style.height = "100%";
-      qrContainer.append(img);
-      copyBtn.disabled = false;
-    } catch (_err) {
+  generateTransferUrl(credentials)
+    .then(async (url) => {
+      transferUrl = url;
+      try {
+        const QRCode = (await import("qrcode")).default;
+        const dataUrl = await QRCode.toDataURL(url, { width: 184, margin: 1 });
+        qrContainer.innerHTML = "";
+        const img = document.createElement("img");
+        img.src = dataUrl;
+        img.alt = "Export Identity QR Code";
+        img.style.width = "100%";
+        img.style.height = "100%";
+        qrContainer.append(img);
+        copyBtn.disabled = false;
+      } catch (_err) {
+        qrContainer.textContent = "Failed to generate QR code";
+      }
+    })
+    .catch((err) => {
+      console.error("Failed to generate transfer URL", err);
       qrContainer.textContent = "Failed to generate QR code";
-    }
-  });
+    });
 
   const handleCopy = async () => {
     if (!transferUrl || !(await copyToClipboard(transferUrl))) return;
@@ -824,12 +829,16 @@ export const createWidget = (
   };
 
   const loadCredentialsForName = (name: string) => {
-    loadOrCreateCredentials(name, "aliceAndBotCredentials").then((creds) => {
-      if (!creds) return;
-      credentials = creds;
-      subscribeConversation();
-      updateShadowContent();
-    });
+    loadOrCreateCredentials(name, "aliceAndBotCredentials")
+      .then((creds) => {
+        if (!creds) return;
+        credentials = creds;
+        subscribeConversation();
+        updateShadowContent();
+      })
+      .catch((err) =>
+        console.error("Failed to load credentials for name", err)
+      );
   };
 
   const escapeHandler = (e: KeyboardEvent) => {
@@ -896,14 +905,14 @@ export const createWidget = (
         }
         requestAnimationFrame(waitForCreds);
       };
-      loadOrCreateCredentials(defaultName, "aliceAndBotCredentials").then(
-        (creds) => {
+      loadOrCreateCredentials(defaultName, "aliceAndBotCredentials")
+        .then((creds) => {
           if (!creds) return;
           credentials = creds;
           subscribeConversation();
           setChatOpen(true);
-        },
-      );
+        })
+        .catch((err) => console.error("Failed to load credentials", err));
     }
   } else if (startOpen) {
     if (credentials) {

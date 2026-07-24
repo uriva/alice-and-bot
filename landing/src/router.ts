@@ -15,17 +15,21 @@ const matchRoute = (pathname: string) =>
 
 let currentPath = "";
 
-const renderRoute = async () => {
-  const pathname = globalThis.location.pathname;
-  if (pathname === currentPath) return;
-  if (currentLeave) {
-    currentLeave();
-    currentLeave = null;
-  }
-  currentPath = pathname;
-  const match = matchRoute(pathname);
-  const template = match ? await match.component() : notFound();
-  render(template, rootEl);
+const renderRoute = () => {
+  (async () => {
+    const pathname = globalThis.location.pathname;
+    if (pathname === currentPath) return;
+    if (currentLeave) {
+      currentLeave();
+      currentLeave = null;
+    }
+    currentPath = pathname;
+    const match = matchRoute(pathname);
+    const template = match ? await match.component() : notFound();
+    render(template, rootEl);
+  })().catch((err) => {
+    console.error("Failed to render route", err);
+  });
 };
 
 const isLocalLink = (el: HTMLAnchorElement) =>

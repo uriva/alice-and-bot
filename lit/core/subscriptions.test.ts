@@ -518,6 +518,34 @@ Deno.test("subscribeDecryptedMessages handles decryption failure gracefully", as
   assertEquals(received.at(-1)?.messages, []);
 });
 
+Deno.test("subscribeDecryptedMessages handles decryption promise rejection gracefully without unhandled rejection", async () => {
+  const received: DecryptedMessagesResult[] = [];
+  const badMessages = [{
+    id: "msg-bad",
+    get payload(): EncryptedMessage {
+      throw new Error("Corrupted payload structure");
+    },
+    timestamp: Date.now(),
+  }];
+  const subscribe = makeSubscribeDecryptedMessages((_query, cb) => {
+    cb({
+      data: { messages: badMessages as unknown as never },
+      canLoadNextPage: false,
+    });
+    return { unsubscribe: () => {}, loadNextPage: () => {} };
+  });
+
+  const promise = new Promise<void>((resolve) => {
+    subscribe("convo1", "key", (result) => {
+      received.push(result);
+      resolve();
+    });
+  });
+
+  await promise;
+  assertEquals(received.at(-1)?.messages, null);
+});
+
 // Regression: a user can have two conversations with the identical participant
 // set (e.g. an admin/system task spawned a second {user, bot} conversation).
 // getOrCreateConversation used .find() (first / most-recently-touched match),

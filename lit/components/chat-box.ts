@@ -1096,14 +1096,16 @@ export class ChatBox extends LitElement {
     );
     this._input = newText;
     this._autocompleteState = null;
-    this.updateComplete.then(() => {
-      if (this._inputEl) {
-        this._inputEl.selectionStart = newCursorIndex;
-        this._inputEl.selectionEnd = newCursorIndex;
-        this._inputEl.focus();
-        this._resizeTextarea(this._inputEl);
-      }
-    });
+    this.updateComplete
+      .then(() => {
+        if (this._inputEl) {
+          this._inputEl.selectionStart = newCursorIndex;
+          this._inputEl.selectionEnd = newCursorIndex;
+          this._inputEl.focus();
+          this._resizeTextarea(this._inputEl);
+        }
+      })
+      .catch(() => {});
   }
 
   private _onTextareaInput = (e: InputEvent) => {

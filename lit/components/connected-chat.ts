@@ -930,19 +930,23 @@ export class ConnectedChat extends LitElement {
     this._copiedTransferUrl = false;
     this.requestUpdate();
 
-    generateTransferUrl(this.credentials).then(async (url) => {
-      this._transferUrl = url;
-      try {
-        const QRCode = (await import("qrcode")).default;
-        this._qrCodeDataUrl = await QRCode.toDataURL(url, {
-          width: 184,
-          margin: 1,
-        });
-      } catch (err) {
-        console.error("Failed to generate QR code", err);
-      }
-      this.requestUpdate();
-    });
+    generateTransferUrl(this.credentials)
+      .then(async (url) => {
+        this._transferUrl = url;
+        try {
+          const QRCode = (await import("qrcode")).default;
+          this._qrCodeDataUrl = await QRCode.toDataURL(url, {
+            width: 184,
+            margin: 1,
+          });
+        } catch (err) {
+          console.error("Failed to generate QR code", err);
+        }
+        this.requestUpdate();
+      })
+      .catch((err) => {
+        console.error("Failed to generate transfer URL", err);
+      });
   };
 
   private _handleImportIdentity = () => {

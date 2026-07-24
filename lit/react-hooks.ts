@@ -116,7 +116,9 @@ export const useCredentials = (
 ): Credentials | null => {
   const [credentials, setCredentials] = useState<Credentials | null>(null);
   useEffect(() => {
-    loadOrCreateCredentials(name, key).then(setCredentials);
+    loadOrCreateCredentials(name, key)
+      .then(setCredentials)
+      .catch((err) => console.error("Failed to load credentials", err));
   }, [name, key]);
   return credentials;
 };

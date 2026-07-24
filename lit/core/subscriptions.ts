@@ -160,9 +160,12 @@ export const makeSubscribeDecryptedMessages =
         const encrypted = resp.data?.messages;
         if (!conversationKey || !encrypted) return emit(null);
         const sorted = [...encrypted].sort((a, b) => b.timestamp - a.timestamp);
-        Promise.all(sorted.map(decryptMessage(conversationKey))).then((msgs) =>
-          emit(msgs.filter((m) => m !== undefined))
-        );
+        Promise.all(sorted.map(decryptMessage(conversationKey)))
+          .then((msgs) => emit(msgs.filter((m) => m !== undefined)))
+          .catch((err) => {
+            console.error("Failed to decrypt messages", err);
+            emit(null);
+          });
       },
     );
     return unsubscribe;

@@ -658,7 +658,11 @@ const handleChatWithInvite = async () => {
     selectedConversation = existing.id;
     conversationId = existing.id;
   } else {
-    conversationId = await startConversation(credentials, cw, topic);
+    try {
+      conversationId = await startConversation(credentials, cw, topic);
+    } catch (e) {
+      console.error("Failed to start conversation invite", e);
+    }
   }
   if (!conversationId) {
     chatWithInFlight = false;
@@ -1191,9 +1195,13 @@ const newChatScreen = (onChatCreated?: () => void) => {
 const copyInviteLinkButton = (publicSignKey: string) => {
   const link = chatWithMeLink(publicSignKey);
   const onClick = async () => {
-    if (await copyToClipboard(link)) {
-      showToast("Invite link copied!", "success");
-    } else showToast("Failed to copy invite link", "error");
+    try {
+      if (await copyToClipboard(link)) {
+        showToast("Invite link copied!", "success");
+      } else showToast("Failed to copy invite link", "error");
+    } catch (_e) {
+      showToast("Failed to copy invite link", "error");
+    }
   };
   return html`
     <div class="mb-4">
@@ -1213,14 +1221,18 @@ const copyInviteLinkButton = (publicSignKey: string) => {
 
 const copyCredentialsButton = () => {
   const onClick = async () => {
-    const creds = getCredentialsToCopy("alicebot_credentials", credentials);
-    if (!creds || !(await copyToClipboard(creds))) return;
-    copiedCredentials = true;
-    rerenderChat();
-    setTimeout(() => {
-      copiedCredentials = false;
+    try {
+      const creds = getCredentialsToCopy("alicebot_credentials", credentials);
+      if (!creds || !(await copyToClipboard(creds))) return;
+      copiedCredentials = true;
       rerenderChat();
-    }, 2000);
+      setTimeout(() => {
+        copiedCredentials = false;
+        rerenderChat();
+      }, 2000);
+    } catch (e) {
+      console.error("Failed to copy credentials", e);
+    }
   };
   return html`
     <div class="mb-4">
@@ -1329,9 +1341,13 @@ const qrCodeTransfer = () => {
     rerenderChat();
   };
   const onCopy = async () => {
-    if (!qrTransferUrl || !(await copyToClipboard(qrTransferUrl))) return;
-    qrCopied = true;
-    rerenderChat();
+    try {
+      if (!qrTransferUrl || !(await copyToClipboard(qrTransferUrl))) return;
+      qrCopied = true;
+      rerenderChat();
+    } catch (e) {
+      console.error("Failed to copy transfer URL", e);
+    }
   };
   return html`
     <div class="flex flex-col gap-2">
@@ -1405,21 +1421,26 @@ const yourKey = () => {
     yourKeySavingName = true;
     yourKeyNameStatus = null;
     rerenderChat();
-    const res = await setName({ name: trimmed, credentials: credentials! });
-    yourKeySavingName = false;
-    if (res.success) {
-      yourKeyNameStatus = { type: "success", message: "Name saved" };
-      setTimeout(() => {
-        yourKeyNameStatus = null;
-        rerenderChat();
-      }, 2000);
-    } else {
-      const message = res.error === "invalid-name"
-        ? "Invalid name (max 50 characters)"
-        : res.error === "not-found"
-        ? "Identity not found"
-        : "Authentication failed";
-      yourKeyNameStatus = { type: "error", message };
+    try {
+      const res = await setName({ name: trimmed, credentials: credentials! });
+      yourKeySavingName = false;
+      if (res.success) {
+        yourKeyNameStatus = { type: "success", message: "Name saved" };
+        setTimeout(() => {
+          yourKeyNameStatus = null;
+          rerenderChat();
+        }, 2000);
+      } else {
+        const message = res.error === "invalid-name"
+          ? "Invalid name (max 50 characters)"
+          : res.error === "not-found"
+          ? "Identity not found"
+          : "Authentication failed";
+        yourKeyNameStatus = { type: "error", message };
+      }
+    } catch (_e) {
+      yourKeySavingName = false;
+      yourKeyNameStatus = { type: "error", message: "Failed to save name" };
     }
     rerenderChat();
   };
@@ -1434,23 +1455,28 @@ const yourKey = () => {
     yourKeySavingAlias = true;
     yourKeyAliasStatus = null;
     rerenderChat();
-    const res = await setAlias({ alias: trimmed, credentials: credentials! });
-    yourKeySavingAlias = false;
-    if (res.success) {
-      yourKeyAliasStatus = { type: "success", message: "Alias saved" };
-      yourKeyAliasInput = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, "")
-        .slice(0, 15);
-      setTimeout(() => {
-        yourKeyAliasStatus = null;
-        rerenderChat();
-      }, 2000);
-    } else {
-      let message = "Failed to set alias";
-      if (res.error === "alias-taken") message = "Alias already taken";
-      if (res.error === "invalid-alias") message = "Invalid alias";
-      if (res.error === "not-found") message = "Identity not found";
-      if (res.error === "invalid-auth") message = "Authentication failed";
-      yourKeyAliasStatus = { type: "error", message };
+    try {
+      const res = await setAlias({ alias: trimmed, credentials: credentials! });
+      yourKeySavingAlias = false;
+      if (res.success) {
+        yourKeyAliasStatus = { type: "success", message: "Alias saved" };
+        yourKeyAliasInput = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, "")
+          .slice(0, 15);
+        setTimeout(() => {
+          yourKeyAliasStatus = null;
+          rerenderChat();
+        }, 2000);
+      } else {
+        let message = "Failed to set alias";
+        if (res.error === "alias-taken") message = "Alias already taken";
+        if (res.error === "invalid-alias") message = "Invalid alias";
+        if (res.error === "not-found") message = "Identity not found";
+        if (res.error === "invalid-auth") message = "Authentication failed";
+        yourKeyAliasStatus = { type: "error", message };
+      }
+    } catch (_e) {
+      yourKeySavingAlias = false;
+      yourKeyAliasStatus = { type: "error", message: "Failed to set alias" };
     }
     rerenderChat();
   };
@@ -1466,18 +1492,23 @@ const yourKey = () => {
     yourKeyPriceStatus = null;
     rerenderChat();
     const priceTagCents = Math.round(val * 100);
-    const res = await setPriceTagSigned({
-      priceTag: priceTagCents,
-      credentials: credentials!,
-    });
-    yourKeySavingPrice = false;
-    if (res.success) {
-      yourKeyPriceStatus = { type: "success", message: "Price saved" };
-      setTimeout(() => {
-        yourKeyPriceStatus = null;
-        rerenderChat();
-      }, 2000);
-    } else {
+    try {
+      const res = await setPriceTagSigned({
+        priceTag: priceTagCents,
+        credentials: credentials!,
+      });
+      yourKeySavingPrice = false;
+      if (res.success) {
+        yourKeyPriceStatus = { type: "success", message: "Price saved" };
+        setTimeout(() => {
+          yourKeyPriceStatus = null;
+          rerenderChat();
+        }, 2000);
+      } else {
+        yourKeyPriceStatus = { type: "error", message: "Failed to save price" };
+      }
+    } catch (_e) {
+      yourKeySavingPrice = false;
       yourKeyPriceStatus = { type: "error", message: "Failed to save price" };
     }
     rerenderChat();
@@ -1492,39 +1523,47 @@ const yourKey = () => {
       return;
     }
     showToast("Generating deposit address...");
-    const res = await prepareCryptoPaymentSigned({
-      amount,
-      credentials: credentials!,
-    });
-    if ("error" in res) {
-      showToast(`Failed: ${res.error}`, "error");
-    } else {
-      yourKeyDepositData = res;
-      startDepositPolling();
-      rerenderChat();
+    try {
+      const res = await prepareCryptoPaymentSigned({
+        amount,
+        credentials: credentials!,
+      });
+      if ("error" in res) {
+        showToast(`Failed: ${res.error}`, "error");
+      } else {
+        yourKeyDepositData = res;
+        startDepositPolling();
+        rerenderChat();
+      }
+    } catch (_e) {
+      showToast("Failed to generate deposit address", "error");
     }
   };
 
   const onCheckPayment = async () => {
     if (!yourKeyDepositData) return;
     showToast("Checking payment...");
-    const res = await checkCryptoPaymentSigned({
-      paymentAddress: yourKeyDepositData.address,
-      credentials: credentials!,
-    });
-    if ("error" in res) {
-      showToast(
-        res.error === "not-paid"
-          ? "Payment not found yet. We are checking automatically."
-          : `Failed: ${res.error}`,
-        "error",
-      );
-    } else {
-      showToast(res.message, "success");
-      yourKeyDepositData = null;
-      stopDepositPolling();
-      fetchBalance();
-      rerenderChat();
+    try {
+      const res = await checkCryptoPaymentSigned({
+        paymentAddress: yourKeyDepositData.address,
+        credentials: credentials!,
+      });
+      if ("error" in res) {
+        showToast(
+          res.error === "not-paid"
+            ? "Payment not found yet. We are checking automatically."
+            : `Failed: ${res.error}`,
+          "error",
+        );
+      } else {
+        showToast(res.message, "success");
+        yourKeyDepositData = null;
+        stopDepositPolling();
+        fetchBalance();
+        rerenderChat();
+      }
+    } catch (_e) {
+      showToast("Failed to check payment", "error");
     }
   };
 
@@ -1754,7 +1793,7 @@ const yourKey = () => {
             loading: "Enabling notifications\u2026",
             success: "Notifications enabled",
             error: "Failed to enable notifications",
-          })}">
+          }).catch(() => {})}">
           Enable push notifications
         </button>
       </div>
@@ -1781,7 +1820,7 @@ const stopQrScan = () => {
   rerenderChat();
 };
 
-const scanQrFrame = async () => {
+const scanQrFrame = () => {
   if (!loginIsScanningQr || !qrScanVideoElement) return;
   if (qrScanVideoElement.readyState === qrScanVideoElement.HAVE_ENOUGH_DATA) {
     const canvas = document.createElement("canvas");
@@ -1791,32 +1830,38 @@ const scanQrFrame = async () => {
     if (ctx) {
       ctx.drawImage(qrScanVideoElement, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      try {
-        const jsqrDefault = (await import("jsqr")).default;
-        const jsQR = typeof jsqrDefault === "function"
-          ? jsqrDefault
-          : jsqrDefault.default;
-        const code = jsQR(
-          imageData.data,
-          imageData.width,
-          imageData.height,
-        );
-        if (code) {
-          const url = code.data;
-          const match = url.match(/#transfer=([^:]+):(.+)$/);
-          if (match) {
-            stopQrScan();
-            globalThis.location.hash = `transfer=${match[1]}:${match[2]}`;
-            handleTransferImport();
-            return;
+      (async () => {
+        try {
+          const jsqrDefault = (await import("jsqr")).default;
+          const jsQR = typeof jsqrDefault === "function"
+            ? jsqrDefault
+            : jsqrDefault.default;
+          const code = jsQR(
+            imageData.data,
+            imageData.width,
+            imageData.height,
+          );
+          if (code) {
+            const url = code.data;
+            const match = url.match(/#transfer=([^:]+):(.+)$/);
+            if (match) {
+              stopQrScan();
+              globalThis.location.hash = `transfer=${match[1]}:${match[2]}`;
+              handleTransferImport().catch((e) =>
+                console.error("Transfer import error", e)
+              );
+              return;
+            }
           }
+        } catch (e) {
+          console.error("QR decoding error", e);
         }
-      } catch (e) {
-        console.error("QR decoding error", e);
-      }
+      })();
     }
   }
-  qrScanAnimationId = requestAnimationFrame(scanQrFrame);
+  if (loginIsScanningQr) {
+    qrScanAnimationId = requestAnimationFrame(scanQrFrame);
+  }
 };
 
 const startQrScan = async () => {
@@ -2239,10 +2284,14 @@ const handleChatWith = async (publicSignKey: string) => {
     selectConversation(existing.id);
     return;
   }
-  const conversationId = await startConversation(credentials, publicSignKey);
-  if (conversationId) {
-    view = "chats";
-    rerenderChat();
+  try {
+    const conversationId = await startConversation(credentials, publicSignKey);
+    if (conversationId) {
+      view = "chats";
+      rerenderChat();
+    }
+  } catch (e) {
+    console.error("Failed to start conversation with user", e);
   }
 };
 
@@ -2688,7 +2737,9 @@ export const chat = (): TemplateResult => {
     overflowCleanup = lockOverflow();
 
     // Transfer import
-    handleTransferImport();
+    handleTransferImport().catch((e) =>
+      console.error("Failed transfer import", e)
+    );
 
     // URL popstate
     globalThis.addEventListener("popstate", onPopstate);

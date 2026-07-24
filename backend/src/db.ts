@@ -5,6 +5,8 @@ import { instantAppId } from "../../protocol/src/clientApi.ts";
 
 export const { auth, query, tx, transact } = init({
   appId: instantAppId,
-  adminToken: coerce(Deno.env.get("INSTANT_ADMIN_TOKEN")),
+  adminToken: coerce(
+    Deno.env.get("INSTANT_ADMIN_TOKEN") ?? "dummy-admin-token",
+  ),
   schema,
 });
