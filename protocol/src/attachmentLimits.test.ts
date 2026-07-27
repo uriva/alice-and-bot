@@ -1,8 +1,12 @@
-import { assertThrows } from "@std/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import {
   assertTextLengthOk,
+  fileSizeLimits,
+  getFileSizeLimitByExtension,
+  getFileSizeLimitByMimeType,
   maxEncryptedMessageLength,
   maxTextLength,
+  MB,
 } from "./attachmentLimits.ts";
 import { encryptSymmetric, generateSymmetricKey } from "./crypto.ts";
 
@@ -49,4 +53,12 @@ Deno.test("maxEncryptedMessageLength accommodates maxTextLength of non-ASCII (He
       `encrypted Hebrew payload length ${encrypted.length} exceeds maxEncryptedMessageLength=${maxEncryptedMessageLength}`,
     );
   }
+});
+
+Deno.test("fileSizeLimits allows images up to 25MB and supports HEIC/HEIF extensions", () => {
+  assertEquals(fileSizeLimits.image, 25 * MB);
+  assertEquals(getFileSizeLimitByExtension("photo.heic"), 25 * MB);
+  assertEquals(getFileSizeLimitByExtension("PHOTO.HEIF"), 25 * MB);
+  assertEquals(getFileSizeLimitByExtension("camera_photo.JPG"), 25 * MB);
+  assertEquals(getFileSizeLimitByMimeType("image/heic"), 25 * MB);
 });

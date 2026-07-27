@@ -21,13 +21,23 @@ export const assertTextLengthOk = (serialized: string): void => {
 };
 
 export const fileSizeLimits = {
-  image: 10 * MB,
+  image: 25 * MB,
   audio: 25 * MB,
   video: 100 * MB,
   file: 25 * MB,
 };
 
-const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp"];
+const imageExts = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".svg",
+  ".bmp",
+  ".heic",
+  ".heif",
+];
 const audioExts = [".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"];
 const videoExts = [".mp4", ".webm", ".mov", ".avi", ".mkv"];
 

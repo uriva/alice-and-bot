@@ -231,7 +231,7 @@ const spinnerEl = (isDark: boolean, color?: string) =>
   `;
 
 const sendingIndicator = (
-  text: string,
+  label: string,
   primaryColor: string,
   isDark?: boolean,
 ) =>
@@ -259,8 +259,9 @@ const sendingIndicator = (
         </div>
         <span style="color:${isLightColor(primaryColor, isDark)
           ? "#222"
-          : "#fff"};font-size:13px">${text}</span>
+          : "#fff"};font-size:13px">${label}</span>
       </div>
+    </div>
     </div>
   `;
 
@@ -1010,13 +1011,19 @@ export class ChatBox extends LitElement {
     this.onInputActivity?.();
 
     if (files.length > 0 && this.onSendWithAttachments) {
-      this._sendingType = files.some((f) => f.type.startsWith("image/"))
+      this._sendingType = files.some((f) =>
+          !f.type || f.type.startsWith("image/") ||
+          /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(f.name)
+        )
         ? "image"
         : "file";
       this._isSending = true;
-      await this.onSendWithAttachments(text, files, undefined, replyTo);
-      this._isSending = false;
-      this._sendingType = null;
+      try {
+        await this.onSendWithAttachments(text, files, undefined, replyTo);
+      } finally {
+        this._isSending = false;
+        this._sendingType = null;
+      }
     } else if (text) {
       this._optimisticMessages = [
         ...this._optimisticMessages,
@@ -1764,7 +1771,7 @@ export class ChatBox extends LitElement {
                             ? "#2a2a2a"
                             : "#cbd5e1"};border-radius:4px;font-size:12px"
                         >
-                          <span>${f.name}</span>
+                          <span>${f.name || "Photo"}</span>
                           <button
                             type="button"
                             @click="${() => {

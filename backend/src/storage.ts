@@ -12,7 +12,7 @@ const bucket = storage.bucket(bucketName);
 
 const getExtension = (fileName: string) => {
   const dot = fileName.lastIndexOf(".");
-  return dot === -1 ? "" : fileName.slice(dot);
+  return dot === -1 ? "" : fileName.slice(dot).toLowerCase();
 };
 
 export const generateUploadUrl = async ({

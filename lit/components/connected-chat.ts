@@ -828,28 +828,37 @@ export class ConnectedChat extends LitElement {
     replyTo?: string,
   ) => {
     if (!this._conversationKey || !this.credentials) return;
-    const attachments: Attachment[] = [];
-    for (const file of files) {
-      const result = await uploadAttachment({
-        credentials: this.credentials,
-        conversationId: this.conversationId,
-        conversationKey: this._conversationKey,
-        file,
-        durationOverride: audioDuration,
-      });
-      if ("error" in result) {
-        alert(`Failed to upload ${file.name}: ${result.error}`);
-        return;
+    try {
+      const attachments: Attachment[] = [];
+      for (const file of files) {
+        const result = await uploadAttachment({
+          credentials: this.credentials,
+          conversationId: this.conversationId,
+          conversationKey: this._conversationKey,
+          file,
+          durationOverride: audioDuration,
+        });
+        if ("error" in result) {
+          alert(`Failed to upload ${file.name || "file"}: ${result.error}`);
+          return;
+        }
+        attachments.push(result);
       }
-      attachments.push(result);
+      await sendMessageWithKey({
+        conversationKey: this._conversationKey,
+        credentials: this.credentials,
+        message: { type: "text", text, attachments, replyTo },
+        conversation: this.conversationId,
+      });
+      this._typingNotifier?.onBlurOrSend();
+    } catch (err) {
+      console.error("Failed to send message with attachments", err);
+      alert(
+        `Failed to send message: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
     }
-    await sendMessageWithKey({
-      conversationKey: this._conversationKey,
-      credentials: this.credentials,
-      message: { type: "text", text, attachments, replyTo },
-      conversation: this.conversationId,
-    });
-    this._typingNotifier?.onBlurOrSend();
   };
 
   private _handleDecryptAttachment = async (url: string) => {

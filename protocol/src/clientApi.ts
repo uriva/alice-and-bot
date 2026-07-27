@@ -652,6 +652,36 @@ const getAudioDuration = (file: File): Promise<number | undefined> =>
     audio.src = URL.createObjectURL(file);
   });
 
+const normalizeFileDetails = (file: File) => {
+  let mimeType = file.type;
+  let fileName = file.name ? file.name.trim() : "";
+
+  if (!mimeType) {
+    const dot = fileName.lastIndexOf(".");
+    const ext = dot === -1 ? "" : fileName.slice(dot).toLowerCase();
+    if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
+    else if (ext === ".png") mimeType = "image/png";
+    else if (ext === ".webp") mimeType = "image/webp";
+    else if (ext === ".gif") mimeType = "image/gif";
+    else if (ext === ".heic") mimeType = "image/heic";
+    else if (ext === ".heif") mimeType = "image/heif";
+    else mimeType = "image/jpeg";
+  }
+
+  if (!fileName) {
+    fileName = mimeType.startsWith("image/") ? "image.jpg" : "attachment";
+  }
+
+  const dot = fileName.lastIndexOf(".");
+  if (dot === -1 && mimeType.startsWith("image/")) {
+    const sub = mimeType.split("/")[1] || "jpeg";
+    const ext = sub === "jpeg" || sub === "pjpeg" ? ".jpg" : `.${sub}`;
+    fileName = `${fileName}${ext}`;
+  }
+
+  return { fileName, mimeType };
+};
+
 export const uploadAttachment = async ({
   credentials,
   conversationId,
@@ -665,60 +695,78 @@ export const uploadAttachment = async ({
   file: File;
   durationOverride?: number;
 }): Promise<Attachment | { error: string }> => {
-  const limit = getFileSizeLimitByMimeType(file.type);
-  if (file.size > limit) {
-    return { error: `file-too-large:${Math.round(limit / MB)}MB` };
-  }
-  const arrayBuffer = await file.arrayBuffer();
-  const encrypted = await encryptBinary(conversationKey, arrayBuffer);
-  const contentHash = await computeHash(encrypted);
+  try {
+    const { fileName, mimeType } = normalizeFileDetails(file);
+    const limit = getFileSizeLimitByMimeType(mimeType);
+    if (file.size > limit) {
+      return { error: `file-too-large:${Math.round(limit / MB)}MB` };
+    }
+    const arrayBuffer = await file.arrayBuffer();
+    const encrypted = await encryptBinary(conversationKey, arrayBuffer);
+    const contentHash = await computeHash(encrypted);
 
-  const result = await getUploadUrl(credentials, {
-    conversationId,
-    contentHash,
-    fileName: file.name,
-    contentType: "application/octet-stream",
-  });
-  if ("error" in result) return { error: result.error };
+    const result = await getUploadUrl(credentials, {
+      conversationId,
+      contentHash,
+      fileName,
+      contentType: "application/octet-stream",
+    });
+    if ("error" in result) return { error: result.error };
 
-  const { uploadUrl, fileUrl, maxSize } = result;
+    const { uploadUrl, fileUrl, maxSize } = result;
 
-  const response = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/octet-stream",
-      "x-goog-content-length-range": `0,${maxSize}`,
-    },
-    body: encrypted,
-  });
-  if (!response.ok) {
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "x-goog-content-length-range": `0,${maxSize}`,
+      },
+      body: encrypted,
+    });
+    if (!response.ok) {
+      return {
+        error: `upload-failed:${response.status}:${await response.text()}`,
+      };
+    }
+
+    const base: { url: string; name: string; size: number } = {
+      url: fileUrl,
+      name: fileName,
+      size: file.size,
+    };
+
+    if (mimeType.startsWith("image/")) {
+      return {
+        ...base,
+        type: "image",
+        mimeType: mimeType as `image/${string}`,
+      };
+    }
+    if (mimeType.startsWith("audio/")) {
+      const duration = durationOverride ?? await getAudioDuration(file);
+      return {
+        ...base,
+        type: "audio",
+        mimeType: mimeType as `audio/${string}`,
+        duration,
+      };
+    }
+    if (mimeType.startsWith("video/")) {
+      return {
+        ...base,
+        type: "video",
+        mimeType: mimeType as `video/${string}`,
+      };
+    }
+    return { ...base, type: "file", mimeType };
+  } catch (err) {
+    console.error("uploadAttachment error:", err);
     return {
-      error: `upload-failed:${response.status}:${await response.text()}`,
+      error: `upload-failed:${
+        err instanceof Error ? err.message : String(err)
+      }`,
     };
   }
-
-  const base: { url: string; name: string; size: number } = {
-    url: fileUrl,
-    name: file.name,
-    size: file.size,
-  };
-
-  if (file.type.startsWith("image/")) {
-    return { ...base, type: "image", mimeType: file.type as `image/${string}` };
-  }
-  if (file.type.startsWith("audio/")) {
-    const duration = durationOverride ?? await getAudioDuration(file);
-    return {
-      ...base,
-      type: "audio",
-      mimeType: file.type as `audio/${string}`,
-      duration,
-    };
-  }
-  if (file.type.startsWith("video/")) {
-    return { ...base, type: "video", mimeType: file.type as `video/${string}` };
-  }
-  return { ...base, type: "file", mimeType: file.type };
 };
 
 export const downloadAttachment = async ({
