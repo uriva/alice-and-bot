@@ -44,7 +44,7 @@ Deno.test("uploadAttachment normalizes nameless camera photos and missing mimeTy
     if (urlStr.includes("upload-test")) {
       return new Response("OK", { status: 200 });
     }
-    return originalFetch(input, init);
+    return await originalFetch(input, init);
   };
 
   try {
