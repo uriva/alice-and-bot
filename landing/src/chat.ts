@@ -1,5 +1,4 @@
 import { html, nothing, render, type TemplateResult } from "lit";
-import { aliasToPublicSignKey } from "../../backend/src/api.ts";
 import "../../lit/components/connected-chat.ts";
 import { buttonClass, copyableString } from "./components.ts";
 import {
@@ -18,6 +17,7 @@ import {
   getBalanceAndTransactionsSigned,
   getProfile,
   prepareCryptoPaymentSigned,
+  resolveHandle,
   setAlias,
   setName,
   setPriceTagSigned,
@@ -440,7 +440,7 @@ const startConversation = async (
   }
   const resolved = await Promise.all(tokens.map(async (token) => {
     try {
-      const res = await aliasToPublicSignKey(token);
+      const res = await resolveHandle(token);
       if ("publicSignKey" in res) return res.publicSignKey;
     } catch (_) {
       // network / other errors fall through
@@ -644,7 +644,7 @@ const handleChatWithInvite = async () => {
 
   let resolvedKey = cw;
   try {
-    const res = await aliasToPublicSignKey(cw);
+    const res = await resolveHandle(cw);
     if ("publicSignKey" in res) resolvedKey = res.publicSignKey;
   } catch (_) {
     // assume it's already a public sign key

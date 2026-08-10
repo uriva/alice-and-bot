@@ -44,6 +44,14 @@ export const backendApiSchema = {
       z.object({ error: z.enum(["no-such-alias"]) }),
     ]),
   }),
+  resolveHandle: endpoint({
+    authRequired: false,
+    input: z.object({ handle: z.string() }),
+    output: z.union([
+      z.object({ publicSignKey: z.string() }),
+      z.object({ error: z.enum(["no-such-handle"]) }),
+    ]),
+  }),
   publicSignKeyToAlias: endpoint({
     authRequired: false,
     input: z.object({ publicSignKey: z.string() }),

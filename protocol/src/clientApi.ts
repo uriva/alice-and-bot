@@ -16,6 +16,7 @@ import {
 } from "../../protocol/src/crypto.ts";
 import { normalizeAlias } from "./alias.ts";
 import { buildSignedRequest } from "./authClient.ts";
+import { shortIdFromPublicSignKey } from "./shortId.ts";
 import {
   base64ToBase64Url,
   decryptAsymmetric,
@@ -514,10 +515,16 @@ export const chatWithMeLink = (
   topic?: string,
 ): string => {
   const url = `${baseUrl}${chatPath}?chatWith=${
-    encodeURIComponent(publicSignKey)
+    shortIdFromPublicSignKey(publicSignKey)
   }`;
   return topic ? `${url}&topic=${encodeURIComponent(topic)}` : url;
 };
+
+export const resolveHandle = (
+  handle: string,
+): Promise<
+  { publicSignKey: string } | { error: "no-such-handle" }
+> => apiClient({ endpoint: "resolveHandle", payload: { handle } });
 
 export const generateTransferUrl = async (
   creds: Credentials,
@@ -529,7 +536,7 @@ export const generateTransferUrl = async (
   const fragment = `transfer=${relayId}:${base64ToBase64Url(aesKey)}`;
   const url = `${baseUrl}${chatPath}`;
   return chatWithPubKey
-    ? `${url}?chatWith=${encodeURIComponent(chatWithPubKey)}#${fragment}`
+    ? `${url}?chatWith=${shortIdFromPublicSignKey(chatWithPubKey)}#${fragment}`
     : `${url}#${fragment}`;
 };
 

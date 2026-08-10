@@ -40,6 +40,7 @@ export {
   type ImageAttachment,
   type LocationAttachment,
   renameConversation,
+  resolveHandle,
   sendMessage,
   sendMessageWithKey,
   setAlias,
@@ -54,6 +55,10 @@ export {
   maxEncryptedMessageLength,
   maxTextLength,
 } from "./protocol/src/attachmentLimits.ts";
+export {
+  shortIdFromPublicSignKey,
+  shortIdLength,
+} from "./protocol/src/shortId.ts";
 export { setDarkModeOverride } from "./lit/core/dark-mode.ts";
 export {
   type Conversation,

@@ -3,6 +3,10 @@ import { id } from "@instantdb/admin";
 import { apiHandler } from "typed-api";
 import type { PushSubscriptionJSON } from "../../instant.schema.ts";
 import { isValidAlias, normalizeAlias } from "../../protocol/src/alias.ts";
+import {
+  shortIdFromPublicSignKey,
+  shortIdLength,
+} from "../../protocol/src/shortId.ts";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
 import { issueNonceHelper, kv, verifyAuthToken } from "./auth.ts";
@@ -33,13 +37,42 @@ const createIdentityForAccount = async (
 ): Promise<{ success: true }> => {
   await transact(
     tx.identities[id()]
-      .update({ publicSignKey, publicEncryptKey })
+      .update({
+        publicSignKey,
+        publicEncryptKey,
+        shortId: shortIdFromPublicSignKey(publicSignKey),
+      })
       .link({ account }),
   );
   return { success: true };
 };
 
 const TRANSFER_TTL_MS = 5 * 60 * 1000;
+
+const identityPublicSignKeyBy = (
+  where: { publicSignKey: string } | { alias: string } | { shortId: string },
+) =>
+  query({ identities: { $: { where } } }).then(
+    ({ identities }) => identities[0]?.publicSignKey,
+  );
+
+const firstDefined = async (
+  lookups: (() => Promise<string | undefined>)[],
+): Promise<string | undefined> =>
+  lookups.length === 0
+    ? undefined
+    : (await lookups[0]()) ?? firstDefined(lookups.slice(1));
+
+const handleLookups = (handle: string) => {
+  const alias = normalizeAlias(handle);
+  return [
+    () => identityPublicSignKeyBy({ publicSignKey: handle }),
+    ...(isValidAlias(alias) ? [() => identityPublicSignKeyBy({ alias })] : []),
+    ...(handle.length === shortIdLength
+      ? [() => identityPublicSignKeyBy({ shortId: handle })]
+      : []),
+  ];
+};
 
 const transferKey = (relayId: string) => ["transfer", relayId];
 
@@ -155,6 +188,7 @@ export const endpoints: BackendApiImpl = {
           name,
           publicSignKey,
           publicEncryptKey,
+          shortId: shortIdFromPublicSignKey(publicSignKey),
           ...(finalAlias ? { alias: finalAlias } : {}),
         }),
       );
@@ -262,6 +296,13 @@ export const endpoints: BackendApiImpl = {
       });
       if (identities.length === 0) return { error: "no-such-alias" };
       return { publicSignKey: identities[0].publicSignKey };
+    },
+    resolveHandle: async ({ handle }) => {
+      const stripped = handle.trim().replace(/^@/, "");
+      const publicSignKey = await firstDefined(handleLookups(stripped));
+      return publicSignKey
+        ? { publicSignKey }
+        : { error: "no-such-handle" as const };
     },
     publicSignKeyToAlias: async ({ publicSignKey }) => {
       const { identities } = await query({

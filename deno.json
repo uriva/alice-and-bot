@@ -23,6 +23,7 @@
     "@google-cloud/storage": "npm:@google-cloud/storage@7.16.0",
     "@instantdb/admin": "npm:@instantdb/admin@1.0.41",
     "@instantdb/core": "npm:@instantdb/core@1.0.41",
+    "@noble/hashes/sha2.js": "npm:@noble/hashes@2.0.1/sha2.js",
     "@std/assert": "jsr:@std/assert@1",
     "@uri/gamla": "jsr:@uri/gamla@0.0.14",
     "@uri/silly-nlp": "jsr:@uri/silly-nlp@^0.2.6",
@@ -79,7 +80,7 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "0.0.363",
+  "version": "0.0.364",
   "publish": {
     "include": [
       "mod.ts",

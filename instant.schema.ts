@@ -32,6 +32,7 @@ const _schema = i.schema({
       avatar: i.string().optional(),
       publicEncryptKey: i.string().unique().indexed(),
       publicSignKey: i.string().unique().indexed(),
+      shortId: i.string().unique().indexed().optional(),
       webhook: i.string().indexed().optional(),
       alias: i.string().unique().indexed().optional(),
       lastActiveAt: i.number().optional(),

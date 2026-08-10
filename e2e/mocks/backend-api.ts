@@ -75,6 +75,10 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
       await delay(50);
       return route.fulfill(json({ publicSignKey: data.bob.publicSignKey }));
     }
+    if (endpoint === "resolveHandle") {
+      await delay(50);
+      return route.fulfill(json({ publicSignKey: data.bob.publicSignKey }));
+    }
     if (endpoint === "createConversation") {
       await delay(200);
       return route.fulfill(json({ conversationId: data.conversationId }));
