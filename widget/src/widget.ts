@@ -676,6 +676,12 @@ export const createWidget = (
           chat.addEventListener("import-identity", () => {
             openImportIdentityDialog();
           });
+          chat.addEventListener("new-thread", (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (chat && detail?.conversationId) {
+              chat.conversationId = detail.conversationId;
+            }
+          });
           chat.darkModeOverride = app.mode === "dark";
           chat.isDark = app.mode === "dark";
           chat.enableVoiceCall = params.enableVoiceCall ?? false;

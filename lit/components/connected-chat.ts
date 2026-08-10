@@ -1,18 +1,19 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
-import { sortKey } from "@uri/gamla";
+import { empty, sort, sortKey, unique } from "@uri/gamla";
 import type {
   Attachment,
   Credentials,
   DecipheredMessage,
 } from "../../protocol/src/clientApi.ts";
 import {
+  createConversation,
   downloadAttachment,
   generateTransferUrl,
   sendMessageWithKey,
   uploadAttachment,
 } from "../../protocol/src/clientApi.ts";
 import { importIdentity, saveCredentials } from "../core/credentials.ts";
-import { accessDb } from "../core/instant-client.ts";
+import { accessAdminDb, accessDb } from "../core/instant-client.ts";
 import {
   compactPublicKey,
   createTypingNotifier,
@@ -484,6 +485,7 @@ export class ConnectedChat extends LitElement {
     isDark: { type: Boolean },
     emptyMessage: { attribute: false },
     onChatWith: { attribute: false },
+    onNewThread: { attribute: false },
   };
 
   declare credentials: Credentials | null;
@@ -497,6 +499,7 @@ export class ConnectedChat extends LitElement {
   declare isDark: boolean;
   declare emptyMessage: string | undefined;
   declare onChatWith: ((publicSignKey: string) => void) | undefined;
+  declare onNewThread: ((conversationId: string) => void) | undefined;
 
   constructor() {
     super();
@@ -926,6 +929,37 @@ export class ConnectedChat extends LitElement {
     this.requestUpdate();
   };
 
+  private _handleNewThread = async () => {
+    if (!this.credentials || empty(this._participants)) return;
+    const participantKeys = sort(
+      unique([
+        this.credentials.publicSignKey,
+        ...this._participants.map((p) => p.publicSignKey),
+      ]),
+    );
+    try {
+      const res = await createConversation(accessAdminDb)(
+        participantKeys,
+        this._conversationTitle || "Chat",
+        this.credentials,
+      );
+      if ("error" in res) {
+        console.error("Failed to create new thread", res.error);
+        return;
+      }
+      this.onNewThread?.(res.conversationId);
+      this.dispatchEvent(
+        new CustomEvent("new-thread", {
+          bubbles: true,
+          composed: true,
+          detail: { conversationId: res.conversationId },
+        }),
+      );
+    } catch (err) {
+      console.error("Failed to create new thread", err);
+    }
+  };
+
   private _handleCloseParticipants = () => {
     this._showParticipantsPopup = false;
     this.requestUpdate();
@@ -1116,6 +1150,8 @@ export class ConnectedChat extends LitElement {
         .isGroupChat="${this._isGroupChat}"
         .isDark="${isDark}"
         .emptyMessage="${this.emptyMessage}"
+        .onNewThread="${this._handleNewThread}"
+        @new-thread="${this._handleNewThread}"
         @show-participants="${this._handleShowParticipants}"
         @secret-identity="${this._handleSecretIdentity}"
         @import-identity="${this._handleImportIdentity}"

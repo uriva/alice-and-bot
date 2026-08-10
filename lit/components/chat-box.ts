@@ -226,8 +226,7 @@ const spinnerEl = (isDark: boolean, color?: string) =>
         : "#00000010"};border-top:4px solid ${color ?? (isDark
           ? "#ffffff80"
           : "#00000040")};border-radius:50%;animation:spin 1s linear infinite"
-    >
-    </div>
+    ></div>
   `;
 
 const sendingIndicator = (
@@ -255,8 +254,7 @@ const sendingIndicator = (
             )
             ? "#00000040"
             : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
-        >
-        </div>
+        ></div>
         <span style="color:${isLightColor(primaryColor, isDark)
           ? "#222"
           : "#fff"};font-size:13px">${label}</span>
@@ -477,6 +475,7 @@ export class ChatBox extends LitElement {
     onReact: { attribute: false },
     onAvatarClick: { attribute: false },
     onSendLocation: { attribute: false },
+    onNewThread: { attribute: false },
     activeSpinners: { type: Array },
     activeProgress: { type: Array },
     activeStreams: { type: Array },
@@ -553,6 +552,7 @@ export class ChatBox extends LitElement {
   declare onSendLocation:
     | ((lat: number, lng: number, label?: string) => void)
     | undefined;
+  declare onNewThread: (() => void) | undefined;
   declare activeSpinners: ActiveSpinner[];
   declare activeProgress: ActiveProgress[];
   declare activeStreams: ActiveStream[];
@@ -740,6 +740,15 @@ export class ChatBox extends LitElement {
     this.onStartCall?.();
   }
 
+  private _handleMenuNewThread = (e: Event) => {
+    e.stopPropagation();
+    this._showMenu = false;
+    this.dispatchEvent(
+      new CustomEvent("new-thread", { bubbles: true, composed: true }),
+    );
+    this.onNewThread?.();
+  };
+
   private _handleMenuSecretIdentity(e: Event) {
     e.stopPropagation();
     this._showMenu = false;
@@ -775,8 +784,14 @@ export class ChatBox extends LitElement {
             Voice Call
           </div>
         `
-        : nothing} ${this.credentials
+        : nothing}       ${this.credentials
         ? html`
+          <div
+            class="menu-item"
+            @click="${this._handleMenuNewThread}"
+          >
+            New Thread
+          </div>
           <div
             class="menu-item"
             @click="${this._handleMenuSecretIdentity}"

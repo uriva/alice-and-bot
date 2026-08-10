@@ -55,8 +55,7 @@ export const spinner = (color?: string): TemplateResult => {
     </style>
     <div
       style="width:40px;height:40px;border:${border};border-top:${borderTop};border-radius:50%;animation:spin 1s linear infinite"
-    >
-    </div>
+    ></div>
   `;
 };
 

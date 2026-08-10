@@ -183,3 +183,19 @@ Deno.test("nextConversationKey adopts a newly resolved key", () => {
 Deno.test("nextConversationKey stays null until a key resolves", () => {
   assertEquals(nextConversationKey(null, null), null);
 });
+
+Deno.test("chat-box renders New Thread option when credentials present", async () => {
+  const code = await Deno.readTextFile("./lit/components/chat-box.ts");
+  const hasNewThreadOption = code.includes("New Thread");
+  const hasHandleNewThread = code.includes("_handleMenuNewThread");
+  assertEquals(hasNewThreadOption, true);
+  assertEquals(hasHandleNewThread, true);
+});
+
+Deno.test("connected-chat connects new-thread event from chat-box", async () => {
+  const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+  const hasNewThreadEvent = code.includes("@new-thread");
+  const hasHandleNewThread = code.includes("_handleNewThread");
+  assertEquals(hasNewThreadEvent, true);
+  assertEquals(hasHandleNewThread, true);
+});
