@@ -15,13 +15,19 @@ const backfillPage = async (offset: number): Promise<number> => {
   });
   const missing = identities.filter(({ shortId }) => !shortId);
   if (missing.length > 0) {
-    await chunksOf(transactChunk)(missing).reduce(
+    const withShortId = await Promise.all(
+      missing.map(async (identity) => ({
+        ...identity,
+        shortId: await shortIdFromPublicSignKey(identity.publicSignKey),
+      })),
+    );
+    await chunksOf(transactChunk)(withShortId).reduce(
       (prev, chunk) =>
         prev.then(() =>
           transact(
             chunk.map((identity) =>
               tx.identities[identity.id].update({
-                shortId: shortIdFromPublicSignKey(identity.publicSignKey),
+                shortId: identity.shortId,
               })
             ),
           )

@@ -510,13 +510,13 @@ export const createIdentity = async (
 
 export const baseUrl = "https://aliceandbot.com";
 
-export const chatWithMeLink = (
+export const chatWithMeLink = async (
   publicSignKey: string,
   topic?: string,
-): string => {
-  const url = `${baseUrl}${chatPath}?chatWith=${
-    shortIdFromPublicSignKey(publicSignKey)
-  }`;
+): Promise<string> => {
+  const url = `${baseUrl}${chatPath}?chatWith=${await shortIdFromPublicSignKey(
+    publicSignKey,
+  )}`;
   return topic ? `${url}&topic=${encodeURIComponent(topic)}` : url;
 };
 
@@ -536,7 +536,9 @@ export const generateTransferUrl = async (
   const fragment = `transfer=${relayId}:${base64ToBase64Url(aesKey)}`;
   const url = `${baseUrl}${chatPath}`;
   return chatWithPubKey
-    ? `${url}?chatWith=${shortIdFromPublicSignKey(chatWithPubKey)}#${fragment}`
+    ? `${url}?chatWith=${await shortIdFromPublicSignKey(
+      chatWithPubKey,
+    )}#${fragment}`
     : `${url}#${fragment}`;
 };
 

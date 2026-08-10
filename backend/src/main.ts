@@ -40,7 +40,7 @@ const createIdentityForAccount = async (
       .update({
         publicSignKey,
         publicEncryptKey,
-        shortId: shortIdFromPublicSignKey(publicSignKey),
+        shortId: await shortIdFromPublicSignKey(publicSignKey),
       })
       .link({ account }),
   );
@@ -188,7 +188,7 @@ export const endpoints: BackendApiImpl = {
           name,
           publicSignKey,
           publicEncryptKey,
-          shortId: shortIdFromPublicSignKey(publicSignKey),
+          shortId: await shortIdFromPublicSignKey(publicSignKey),
           ...(finalAlias ? { alias: finalAlias } : {}),
         }),
       );

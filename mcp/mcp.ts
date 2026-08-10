@@ -152,7 +152,7 @@ const setup = async () => {
     credentials,
   });
   startPolling();
-  const baseLink = chatWithMeLink(credentials.publicSignKey);
+  const baseLink = await chatWithMeLink(credentials.publicSignKey);
   const dirName = process.cwd().split("/").pop() || "dir";
   const topic = `OpenCode_${dirName}_${Date.now()}`;
   const link = `${baseLink}&topic=${encodeURIComponent(topic)}`;

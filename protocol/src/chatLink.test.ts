@@ -10,7 +10,7 @@ const chatWithParam = (link: string) => {
 
 Deno.test("chat invite link handle is short and resolves back to the same identity", async () => {
   const credentials = await createIdentity("link-test");
-  const handle = chatWithParam(chatWithMeLink(credentials.publicSignKey));
+  const handle = chatWithParam(await chatWithMeLink(credentials.publicSignKey));
   assertEquals(handle.length, shortIdLength);
   const resolved = await resolveHandle(handle);
   if ("error" in resolved) throw new Error(resolved.error);

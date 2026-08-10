@@ -1191,9 +1191,9 @@ const newChatScreen = (onChatCreated?: () => void) => {
 // --- Copy invite link ---
 
 const copyInviteLinkButton = (publicSignKey: string) => {
-  const link = chatWithMeLink(publicSignKey);
   const onClick = async () => {
     try {
+      const link = await chatWithMeLink(publicSignKey);
       if (await copyToClipboard(link)) {
         showToast("Invite link copied!", "success");
       } else showToast("Failed to copy invite link", "error");
