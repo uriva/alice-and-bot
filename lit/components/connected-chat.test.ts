@@ -199,3 +199,52 @@ Deno.test("connected-chat connects new-thread event from chat-box", async () => 
   assertEquals(hasNewThreadEvent, true);
   assertEquals(hasHandleNewThread, true);
 });
+
+Deno.test("connected-chat and chat-box do not trigger duplicate new-thread handlers", async () => {
+  const connectedChatCode = await Deno.readTextFile(
+    "./lit/components/connected-chat.ts",
+  );
+  const chatBoxCode = await Deno.readTextFile("./lit/components/chat-box.ts");
+
+  const hasDuplicateBindingInConnectedChat = connectedChatCode.includes(
+    '.onNewThread="${this._handleNewThread}"',
+  );
+  assertEquals(hasDuplicateBindingInConnectedChat, false);
+
+  const handleMenuNewThreadMatch = chatBoxCode.match(
+    /_handleMenuNewThread[\s\S]*?\};/,
+  );
+  const handleMenuNewThreadBody = handleMenuNewThreadMatch
+    ? handleMenuNewThreadMatch[0]
+    : "";
+  const callsOnNewThreadInMenu = handleMenuNewThreadBody.includes(
+    "this.onNewThread?.()",
+  );
+  assertEquals(callsOnNewThreadInMenu, false);
+});
+
+Deno.test(
+  "chat-box _handleMenuNewThread dispatches new-thread event exactly once",
+  () => {
+    let eventCount = 0;
+    const mockChatBox = {
+      _showMenu: true,
+      dispatchEvent: (evt: Event) => {
+        if (evt.type === "new-thread") eventCount++;
+        return true;
+      },
+      _handleMenuNewThread: (e: Event) => {
+        e.stopPropagation();
+        mockChatBox._showMenu = false;
+        mockChatBox.dispatchEvent(
+          new CustomEvent("new-thread", { bubbles: true, composed: true }),
+        );
+      },
+    };
+
+    const dummyEvent = new CustomEvent("click");
+    mockChatBox._handleMenuNewThread(dummyEvent);
+
+    assertEquals(eventCount, 1);
+  },
+);

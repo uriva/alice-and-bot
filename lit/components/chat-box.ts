@@ -475,7 +475,6 @@ export class ChatBox extends LitElement {
     onReact: { attribute: false },
     onAvatarClick: { attribute: false },
     onSendLocation: { attribute: false },
-    onNewThread: { attribute: false },
     activeSpinners: { type: Array },
     activeProgress: { type: Array },
     activeStreams: { type: Array },
@@ -552,7 +551,6 @@ export class ChatBox extends LitElement {
   declare onSendLocation:
     | ((lat: number, lng: number, label?: string) => void)
     | undefined;
-  declare onNewThread: (() => void) | undefined;
   declare activeSpinners: ActiveSpinner[];
   declare activeProgress: ActiveProgress[];
   declare activeStreams: ActiveStream[];
@@ -746,7 +744,6 @@ export class ChatBox extends LitElement {
     this.dispatchEvent(
       new CustomEvent("new-thread", { bubbles: true, composed: true }),
     );
-    this.onNewThread?.();
   };
 
   private _handleMenuSecretIdentity(e: Event) {

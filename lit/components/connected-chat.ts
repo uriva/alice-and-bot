@@ -1150,7 +1150,6 @@ export class ConnectedChat extends LitElement {
         .isGroupChat="${this._isGroupChat}"
         .isDark="${isDark}"
         .emptyMessage="${this.emptyMessage}"
-        .onNewThread="${this._handleNewThread}"
         @new-thread="${this._handleNewThread}"
         @show-participants="${this._handleShowParticipants}"
         @secret-identity="${this._handleSecretIdentity}"
