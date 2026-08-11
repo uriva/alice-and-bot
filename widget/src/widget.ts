@@ -138,7 +138,7 @@ const resolveAppearance = (
   return { mode, colors, colorSchemeValue };
 };
 
-const widgetBaseCss = ({
+export const widgetBaseCss = ({
   colorScheme,
   headerColor,
   hoverBg,
@@ -150,6 +150,38 @@ const widgetBaseCss = ({
 :host, *, *::before, *::after { font-family: ${fontStack}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 :host { color-scheme: ${colorScheme}; }
 
+@keyframes widget-open {
+  0% { opacity: 0; transform: scale(0.88) translateY(16px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes widget-mobile-open {
+  0% { opacity: 0; transform: translateY(100%); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes widget-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes widget-dialog-open {
+  0% { opacity: 0; transform: scale(0.9) translateY(12px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+[data-testid="widget-start-button"] {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease !important;
+}
+
+[data-testid="widget-start-button"]:hover {
+  transform: scale(1.05) !important;
+}
+
+[data-testid="widget-start-button"]:active {
+  transform: scale(0.95) !important;
+}
+
 [data-testid="widget-close-button"] {
   color: ${headerColor} !important;
   font-size: 22px !important;
@@ -160,6 +192,14 @@ const widgetBaseCss = ({
 
 [data-testid="widget-close-button"]:hover {
   background: ${hoverBg} !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 `;
 
@@ -176,7 +216,7 @@ const startButtonCss = (colors: WidgetModeColors, hasText: boolean) =>
     ? `padding:10px 20px;border-radius:8px;border:none;background:${colors.startButton};color:${colors.startButtonText};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-shadow:0 2px 8px ${colors.startShadow}`
     : `width:48px;height:48px;border-radius:50%;border:none;background:${colors.startButton};color:${colors.startButtonText};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px ${colors.startShadow}`;
 
-const containerCss = (
+export const containerCss = (
   { isMobile, isDark, isOpen, viewportHeight }: {
     isMobile: boolean;
     isDark: boolean;
@@ -188,17 +228,17 @@ const containerCss = (
     ? isMobile
       ? `position:absolute;top:0;left:0;width:100%;height:${
         viewportHeight ? `${viewportHeight}px` : "100%"
-      };display:flex;flex-direction:column;overflow:hidden;background:#fff`
+      };display:flex;flex-direction:column;overflow:hidden;background:#fff;animation:widget-mobile-open 0.28s cubic-bezier(0.16, 1, 0.3, 1)`
       : `position:absolute;right:24px;bottom:24px;flex-direction:column;width:min(400px, 90vw);height:min(80dvh, 720px);max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);box-shadow:${
         isDark ? "0 10px 30px rgba(0,0,0,0.5)" : "0 10px 30px rgba(0,0,0,0.12)"
-      };display:flex;border-radius:12px;overflow:hidden`
+      };display:flex;border-radius:12px;overflow:hidden;transform-origin:bottom right;animation:widget-open 0.28s cubic-bezier(0.16, 1, 0.3, 1)`
     : "position:absolute;right:24px;bottom:24px;display:flex;flex-direction:column";
 
 const chatWrapperCss =
   "display:flex;flex-direction:column;width:100%;height:100%;min-height:0;overflow:hidden";
 
 const overlayCss = (colors: WidgetModeColors) =>
-  `position:fixed;inset:0;z-index:10002;background:${colors.overlay};display:flex;align-items:center;justify-content:center;padding:16px;font-family:${fontStack}`;
+  `position:fixed;inset:0;z-index:10002;background:${colors.overlay};display:flex;align-items:center;justify-content:center;padding:16px;font-family:${fontStack};animation:widget-fade-in 0.2s ease-out`;
 
 const toastCss =
   "position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:10003;background:#ef4444;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:none;transition:opacity 0.3s";

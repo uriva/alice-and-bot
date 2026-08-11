@@ -1,3 +1,25 @@
+if (
+  typeof (globalThis as unknown as { Element: unknown }).Element === "undefined"
+) {
+  class DummyElement {}
+  (DummyElement.prototype as unknown as Record<string, unknown>)
+    .replaceChildren = () => {};
+  (globalThis as unknown as { Element: unknown }).Element = DummyElement;
+  (globalThis as unknown as { HTMLElement: unknown }).HTMLElement =
+    DummyElement;
+  (globalThis as unknown as { customElements: unknown }).customElements = {
+    get: () => {},
+    define: () => {},
+  };
+}
+if (
+  typeof (globalThis as unknown as { requestAnimationFrame: unknown })
+    .requestAnimationFrame === "undefined"
+) {
+  (globalThis as unknown as { requestAnimationFrame: unknown })
+    .requestAnimationFrame = (cb: FrameRequestCallback) => setTimeout(cb, 16);
+}
+
 import { assertMatch, assertNotMatch } from "@std/assert";
 import { closeButtonCss, dialogBoxCss } from "./styles.ts";
 
@@ -18,6 +40,39 @@ const dummyColors = {
   inputText: "#000",
   inputBorder: "#e5e7eb",
 } as const;
+
+Deno.test("widget container has smooth open animation when opened on desktop", async () => {
+  const { containerCss } = await import("./widget.ts");
+  const css = containerCss({
+    isMobile: false,
+    isDark: false,
+    isOpen: true,
+  });
+  assertMatch(css, /animation:\s*widget-open/);
+  assertMatch(css, /transform-origin:\s*bottom right/);
+});
+
+Deno.test("widget container has slide open animation when opened on mobile", async () => {
+  const { containerCss } = await import("./widget.ts");
+  const css = containerCss({
+    isMobile: true,
+    isDark: false,
+    isOpen: true,
+  });
+  assertMatch(css, /animation:\s*widget-mobile-open/);
+});
+
+Deno.test("widgetBaseCss contains keyframe animations for widget open", async () => {
+  const { widgetBaseCss } = await import("./widget.ts");
+  const css = widgetBaseCss({
+    colorScheme: "light",
+    headerColor: "#000",
+    hoverBg: "rgba(0,0,0,0.1)",
+  });
+  assertMatch(css, /@keyframes widget-open/);
+  assertMatch(css, /@keyframes widget-mobile-open/);
+  assertMatch(css, /@keyframes widget-dialog-open/);
+});
 
 Deno.test("widget close button is flat — no box-shadow", () => {
   const css = closeButtonCss({ colors: dummyColors });

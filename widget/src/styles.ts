@@ -16,7 +16,7 @@ export const dialogBoxCss = (
     mode === "dark" ? "#2a2a2a" : "#e5e7eb"
   };box-shadow:${
     mode === "dark" ? "0 8px 24px #0008" : "0 8px 24px #0002"
-  };padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px`;
+  };padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px;animation:widget-dialog-open 0.25s cubic-bezier(0.16, 1, 0.3, 1)`;
 
 export const fieldCss = (colors: WidgetModeColors) =>
   `width:100%;max-width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid ${colors.inputBorder};background:${colors.inputBackground};color:${colors.inputText};outline:none`;
