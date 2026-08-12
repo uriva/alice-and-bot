@@ -1,6 +1,7 @@
 import { captureClientErrors } from "@uri/anomalisa";
 import { posthog } from "posthog-js";
 import { html } from "lit";
+import { installClientErrorSuppression } from "./suppressClientErrors.ts";
 import { setErrorReporter } from "../../lit/core/error-reporter.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
@@ -27,6 +28,7 @@ import {
 import "./app.css";
 
 if (typeof window !== "undefined") {
+  installClientErrorSuppression(window);
   posthog.init("phc_C5kWoUuyR7D4qa5Cgw5aQGQx5zkhu92EUpTJ69ES5yJL", {
     api_host: "https://us.posthog.com",
   });
