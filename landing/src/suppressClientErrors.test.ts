@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
 import {
+  isEventRejection,
   isResizeObserverError,
   suppressClientErrorEvent,
   suppressClientRejectionEvent,
@@ -70,6 +71,28 @@ Deno.test("suppressClientErrorEvent leaves real errors untouched", () => {
 
   assertEquals(prevented, false);
   assertEquals(stopped, false);
+});
+
+Deno.test("isEventRejection matches raw DOM events, DOMExceptions, and storage event objects", () => {
+  assertEquals(isEventRejection(new Event("error")), true);
+  assertEquals(isEventRejection(new Event("close")), true);
+  assertEquals(
+    isEventRejection(new DOMException("q", "QuotaExceededError")),
+    true,
+  );
+  assertEquals(isEventRejection({ isTrusted: false }), true);
+  assertEquals(isEventRejection({ isTrusted: true }), true);
+  assertEquals(
+    isEventRejection({
+      message:
+        "NotFoundError: Failed to execute 'transaction' on 'IDBDatabase': One of the specified object stores was not found.",
+    }),
+    true,
+  );
+  assertEquals(isEventRejection(new Error("boom")), false);
+  assertEquals(isEventRejection(null), false);
+  assertEquals(isEventRejection(undefined), false);
+  assertEquals(isEventRejection("Load failed"), false);
 });
 
 Deno.test("suppressClientRejectionEvent swallows InstantDB raw Event rejections", () => {

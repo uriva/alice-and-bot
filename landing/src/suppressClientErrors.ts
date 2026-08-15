@@ -41,8 +41,32 @@ export const isNextSiblingNullError = (reasonOrEvent: unknown): boolean =>
     "Cannot read properties of null (reading 'nextSibling')",
   );
 
-export const isEventRejection = (reason: unknown): boolean =>
-  typeof Event !== "undefined" && reason instanceof Event;
+const isRecord = (val: unknown): val is Record<string, unknown> =>
+  typeof val === "object" && val !== null;
+
+const constructorName = (obj: Record<string, unknown>): string =>
+  typeof obj.constructor === "function" ? obj.constructor.name : "";
+
+export const isEventRejection = (reason: unknown): boolean => {
+  if (!isRecord(reason)) return false;
+  if (typeof Event !== "undefined" && reason instanceof Event) return true;
+  if (typeof DOMException !== "undefined" && reason instanceof DOMException) {
+    return true;
+  }
+  const tag = Object.prototype.toString.call(reason);
+  if (tag.endsWith("Event]") || tag === "[object DOMException]") return true;
+  const name = constructorName(reason);
+  if (name === "Event" || name.endsWith("Event") || name === "DOMException") {
+    return true;
+  }
+  if (typeof reason.isTrusted === "boolean") return true;
+  if (
+    typeof reason.message === "string" && reason.message.includes("IDBDatabase")
+  ) {
+    return true;
+  }
+  return false;
+};
 
 export const isNullRejection = (reason: unknown): boolean =>
   reason === null || reason === undefined;
