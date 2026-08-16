@@ -69,11 +69,19 @@ const htmlMediaToMarkdown = (text: string) =>
     .replace(/<\/video>/gi, "")
     .replace(/<\/audio>/gi, "");
 
+const stripIncompleteTrailingTag = (text: string) =>
+  text.replace(/<[a-zA-Z\/][^>]*$/, "");
+
 const htmlAnchorToMarkdown = (text: string) =>
-  text.replace(
-    /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
-    (_, href, label) => `[${label}](${href})`,
-  );
+  text
+    .replace(
+      /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
+      (_, href, label) => `[${label}](${href})`,
+    )
+    .replace(
+      /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*)$/gi,
+      (_, href, label) => `[${label}](${href})`,
+    );
 
 const htmlStyledToMd = (tag: string, md: string) => (text: string) =>
   text
@@ -151,7 +159,11 @@ export const preprocessText = (text: string) =>
       htmlListToMarkdown(
         htmlAnchorToMarkdown(
           htmlImgToMarkdown(
-            htmlMediaToMarkdown(htmlInlineToMarkdown(asteriskToBullet(text))),
+            htmlMediaToMarkdown(
+              htmlInlineToMarkdown(
+                asteriskToBullet(stripIncompleteTrailingTag(text)),
+              ),
+            ),
           ),
         ),
       ),
@@ -492,6 +504,15 @@ const staleTimeoutMs = 3600000;
 
 export const isStale = (timestamp: number) =>
   Date.now() - timestamp > staleTimeoutMs;
+
+export const nextVisibleText = (target: string, visible: string) => {
+  if (visible === target) return visible;
+  if (!target.startsWith(visible)) return target;
+  const remaining = target.slice(visible.length);
+  const tagMatch = remaining.match(/^<[a-zA-Z\/][^>]*>/);
+  if (tagMatch) return visible + tagMatch[0];
+  return target.slice(0, visible.length + 1);
+};
 
 export const sendingStatusText = (
   sendingType?: "audio" | "image" | "file" | null,

@@ -9,6 +9,7 @@ import {
   isStale,
   maxTextareaHeight,
   minTextareaHeight,
+  nextVisibleText,
   preprocessText,
   sendingStatusText,
   shouldShowScrollDownButton,
@@ -128,4 +129,33 @@ Deno.test("sendingStatusText returns correct message based on sending type", () 
   assertEquals(sendingStatusText("file"), "Sending file...");
   assertEquals(sendingStatusText(null), "Sending audio...");
   assertEquals(sendingStatusText(undefined), "Sending audio...");
+});
+
+Deno.test("nextVisibleText jumps HTML opening tag atomically", () => {
+  assertEquals(
+    nextVisibleText('Hello <a href="https://example.com">world</a>', "Hello "),
+    'Hello <a href="https://example.com">',
+  );
+});
+
+Deno.test("nextVisibleText jumps HTML closing tag atomically", () => {
+  assertEquals(
+    nextVisibleText(
+      'Hello <a href="https://example.com">world</a>!',
+      'Hello <a href="https://example.com">world',
+    ),
+    'Hello <a href="https://example.com">world</a>',
+  );
+});
+
+Deno.test("preprocessText converts unclosed anchor tags at end of stream into markdown links", () => {
+  assertEquals(
+    preprocessText('Visit <a href="https://example.com">Google'),
+    "Visit [Google](https://example.com)",
+  );
+});
+
+Deno.test("preprocessText strips incomplete trailing HTML tags to avoid rendering partial html", () => {
+  assertEquals(preprocessText('Visit <a href="https://example.c'), "Visit ");
+  assertEquals(preprocessText("Visit <a"), "Visit ");
 });

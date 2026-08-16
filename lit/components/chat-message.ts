@@ -44,6 +44,7 @@ import {
   eventOutside,
   formatEditTime,
   formatFullTimestamp,
+  nextVisibleText,
   successorText,
   wordDiff,
 } from "./utils.ts";
@@ -114,12 +115,6 @@ const liveCursorCss =
   `@keyframes msg-live-cursor{0%,100%{opacity:.35;transform:scaleY(.9)}50%{opacity:1;transform:scaleY(1)}}`;
 
 const streamTickMs = 20;
-
-const nextVisibleText = (target: string, visible: string) => {
-  if (visible === target) return visible;
-  if (!target.startsWith(visible)) return target;
-  return target.slice(0, visible.length + 1);
-};
 
 const liveCursorHtml = (isDark: boolean) =>
   `<span aria-hidden="true" style="display:inline-block;width:2px;height:1.05em;margin-inline-start:2px;border-radius:999px;vertical-align:-0.12em;background:${

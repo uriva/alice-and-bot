@@ -161,3 +161,25 @@ Deno.test("renderMarkdown list items do not contain double line breaks between b
   const html = renderMarkdown("* first\n* second\n* third", "#222", false);
   assertFalse(/<li[\s\S]*?<br\s*\/?>\s*<br\s*\/?>[\s\S]*?<\/li>/i.test(html));
 });
+
+Deno.test("renderMarkdown renders unclosed anchor tag as a link during streaming without escaping to raw html", () => {
+  const html = renderMarkdown(
+    'Visit <a href="https://example.com">Google',
+    "#222",
+    false,
+  );
+  assertEquals(html.includes('<a href="https://example.com"'), true);
+  assertEquals(html.includes("&lt;a"), false);
+  assertEquals(html.includes("Google</a>"), true);
+});
+
+Deno.test("renderMarkdown does not display incomplete trailing tag during streaming", () => {
+  const html = renderMarkdown(
+    'Visit <a href="https://example.c',
+    "#222",
+    false,
+  );
+  assertEquals(html.includes("&lt;a"), false);
+  assertEquals(html.includes("<a href="), false);
+  assertEquals(html, "Visit ");
+});
