@@ -875,12 +875,16 @@ export class ConnectedChat extends LitElement {
 
   private _handleEdit = async (messageId: string, newText: string) => {
     if (!this._conversationKey || !this.credentials) return;
-    await sendMessageWithKey({
-      conversationKey: this._conversationKey,
-      credentials: this.credentials,
-      message: { type: "edit", editOf: messageId, text: newText },
-      conversation: this.conversationId,
-    });
+    try {
+      await sendMessageWithKey({
+        conversationKey: this._conversationKey,
+        credentials: this.credentials,
+        message: { type: "edit", editOf: messageId, text: newText },
+        conversation: this.conversationId,
+      });
+    } catch (err) {
+      console.error("Failed to edit message", err);
+    }
   };
 
   private _handleReact = (
@@ -999,15 +1003,19 @@ export class ConnectedChat extends LitElement {
   };
 
   private _handleCopyTransferUrl = async () => {
-    if (!this._transferUrl || !(await copyToClipboard(this._transferUrl))) {
-      return;
-    }
-    this._copiedTransferUrl = true;
-    this.requestUpdate();
-    setTimeout(() => {
-      this._copiedTransferUrl = false;
+    try {
+      if (!this._transferUrl || !(await copyToClipboard(this._transferUrl))) {
+        return;
+      }
+      this._copiedTransferUrl = true;
       this.requestUpdate();
-    }, 2000);
+      setTimeout(() => {
+        this._copiedTransferUrl = false;
+        this.requestUpdate();
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy transfer URL", err);
+    }
   };
 
   private _handleImportKeyDown = (e: KeyboardEvent) => {
@@ -1063,13 +1071,17 @@ export class ConnectedChat extends LitElement {
 
   private _handleCopyParticipant = async (e: Event, key: string) => {
     e.stopPropagation();
-    await copyToClipboard(key);
-    this._copiedParticipantId = key;
-    this.requestUpdate();
-    setTimeout(() => {
-      this._copiedParticipantId = null;
+    try {
+      await copyToClipboard(key);
+      this._copiedParticipantId = key;
       this.requestUpdate();
-    }, 1500);
+      setTimeout(() => {
+        this._copiedParticipantId = null;
+        this.requestUpdate();
+      }, 1500);
+    } catch (err) {
+      console.error("Failed to copy participant key", err);
+    }
   };
 
   private _handleStartCall = () => {

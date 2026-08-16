@@ -2,6 +2,7 @@ import { html, type TemplateResult } from "lit";
 import { renderMarkdown } from "./markdown.ts";
 import { header } from "./header.ts";
 import { buttonClass } from "./components.ts";
+import { copyToClipboard } from "../../lit/components/utils.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import manifestoText from "./manifesto.md?raw";
 import { baseUrl } from "../../protocol/src/clientApi.ts";
@@ -26,11 +27,17 @@ const showToast = (message: string) => {
   }, 2000);
 };
 
-const handleCopy = () =>
-  navigator.clipboard.writeText(manifestoUrl).then(
-    () => showToast("Link copied to clipboard!"),
-    () => showToast("Failed to copy link"),
-  );
+const handleCopy = async () => {
+  try {
+    if (await copyToClipboard(manifestoUrl)) {
+      showToast("Link copied to clipboard!");
+    } else {
+      showToast("Failed to copy link");
+    }
+  } catch (_e) {
+    showToast("Failed to copy link");
+  }
+};
 
 const shareLinkClass =
   "px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#1a1a1a] hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium text-sm transition-colors";

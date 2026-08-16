@@ -27,6 +27,51 @@ const extractMessage = (input: unknown): string =>
     ? input.message
     : "";
 
+const extensionPrefixes = [
+  "chrome-extension://",
+  "moz-extension://",
+  "safari-extension://",
+  "safari-web-extension://",
+  "ms-browser-extension://",
+  "extension://",
+];
+
+const extensionMessages = [
+  "Object Not Found Matching Id",
+  "The message port closed before a response was received",
+  "message channel closed before a response was received",
+  "Could not establish connection. Receiving end does not exist",
+  "Extension context invalidated",
+];
+
+const abortMessages = [
+  "The play() request was interrupted",
+  "play() failed because the user didn't interact",
+  "The operation was aborted",
+  "Fetch is aborted",
+  "The user aborted a request",
+];
+
+const extractStrings = (input: unknown): string[] => {
+  if (typeof input === "string") return [input];
+  if (!isRecord(input)) return [];
+  return ["message", "stack", "filename", "fileName", "sourceURL", "name"]
+    .map((k) => input[k])
+    .filter((v): v is string => typeof v === "string");
+};
+
+export const isBrowserExtensionError = (reasonOrEvent: unknown): boolean =>
+  extractStrings(reasonOrEvent).some(
+    (str) =>
+      extensionPrefixes.some((prefix) => str.includes(prefix)) ||
+      extensionMessages.some((msg) => str.includes(msg)),
+  );
+
+export const isMediaOrNetworkAbortError = (reasonOrEvent: unknown): boolean =>
+  extractStrings(reasonOrEvent).some((str) =>
+    abortMessages.some((msg) => str.includes(msg))
+  );
+
 export const isResizeObserverError = (reasonOrEvent: unknown): boolean =>
   extractMessage(reasonOrEvent).includes("ResizeObserver");
 
@@ -34,7 +79,7 @@ export const isScriptError = (event: ErrorEventLike): boolean =>
   event.message === "Script error." && !event.error;
 
 export const isExtensionHostObjectRejection = (reason: unknown): boolean =>
-  extractMessage(reason).includes("Object Not Found Matching Id");
+  isBrowserExtensionError(reason);
 
 export const isNextSiblingNullError = (reasonOrEvent: unknown): boolean =>
   extractMessage(reasonOrEvent).includes(
@@ -85,7 +130,11 @@ export const suppressClientErrorEvent = (event: unknown): void => {
     !isResizeObserverError(e.error) &&
     !isScriptError(e) &&
     !isNextSiblingNullError(e.message) &&
-    !isNextSiblingNullError(e.error)
+    !isNextSiblingNullError(e.error) &&
+    !isBrowserExtensionError(e.message) &&
+    !isBrowserExtensionError(e.error) &&
+    !isMediaOrNetworkAbortError(e.message) &&
+    !isMediaOrNetworkAbortError(e.error)
   ) {
     return;
   }
@@ -105,8 +154,9 @@ export const suppressClientRejectionEvent = (event: unknown): void => {
   if (
     !isResizeObserverError(e.reason) &&
     !isEventRejection(e.reason) &&
-    !isExtensionHostObjectRejection(e.reason) &&
+    !isBrowserExtensionError(e.reason) &&
     !isNextSiblingNullError(e.reason) &&
+    !isMediaOrNetworkAbortError(e.reason) &&
     !isNullRejection(e.reason)
   ) {
     return;

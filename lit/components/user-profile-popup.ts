@@ -117,11 +117,15 @@ export class UserProfilePopup extends LitElement {
   }
 
   private _handleCopy = async () => {
-    await copyToClipboard(this.authorId);
-    this._copied = true;
-    setTimeout(() => {
-      this._copied = false;
-    }, 1500);
+    try {
+      await copyToClipboard(this.authorId);
+      this._copied = true;
+      setTimeout(() => {
+        this._copied = false;
+      }, 1500);
+    } catch (err) {
+      console.error("Failed to copy author ID", err);
+    }
   };
 
   private _handleChatWith = () => {

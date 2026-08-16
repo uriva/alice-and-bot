@@ -164,3 +164,54 @@ Deno.test("own messages do not trigger ringing", () => {
   ctrl.handleMessages();
   assertEquals(ctrl.getState(), "idle");
 });
+
+Deno.test("rejectCall handles sendCall rejection gracefully without leaking unhandled rejection", async () => {
+  const deps = makeDeps([]);
+  deps.sendCall = () => Promise.reject(new Error("Network error"));
+  const ctrl = makeCreateVoiceCall(deps)({
+    conversationId: "conv1",
+    credentials,
+    getConversationKey: () => "convkey",
+    getMessages: () => [
+      {
+        id: "m1",
+        type: "call",
+        callId: "c1",
+        action: "offer",
+        sdp: "fake",
+        publicSignKey: "other",
+        timestamp: 1_000_000,
+      } as DecipheredMessage,
+    ],
+    onChange: () => {},
+  });
+  ctrl.handleMessages();
+  assertEquals(ctrl.getState(), "ringing");
+  await ctrl.rejectCall();
+  assertEquals(ctrl.getState(), "idle");
+});
+
+Deno.test("endCall handles sendCall rejection gracefully without leaking unhandled rejection", async () => {
+  const deps = makeDeps([]);
+  deps.sendCall = () => Promise.reject(new Error("Network error"));
+  const ctrl = makeCreateVoiceCall(deps)({
+    conversationId: "conv1",
+    credentials,
+    getConversationKey: () => "convkey",
+    getMessages: () => [
+      {
+        id: "m1",
+        type: "call",
+        callId: "c1",
+        action: "offer",
+        sdp: "fake",
+        publicSignKey: "other",
+        timestamp: 1_000_000,
+      } as DecipheredMessage,
+    ],
+    onChange: () => {},
+  });
+  ctrl.handleMessages();
+  await ctrl.endCall();
+  assertEquals(ctrl.getState(), "idle");
+});

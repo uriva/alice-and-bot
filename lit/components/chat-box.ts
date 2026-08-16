@@ -226,7 +226,8 @@ const spinnerEl = (isDark: boolean, color?: string) =>
         : "#00000010"};border-top:4px solid ${color ?? (isDark
           ? "#ffffff80"
           : "#00000040")};border-radius:50%;animation:spin 1s linear infinite"
-    ></div>
+    >
+    </div>
   `;
 
 const sendingIndicator = (
@@ -254,7 +255,8 @@ const sendingIndicator = (
             )
             ? "#00000040"
             : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
-        ></div>
+        >
+        </div>
         <span style="color:${isLightColor(primaryColor, isDark)
           ? "#222"
           : "#fff"};font-size:13px">${label}</span>
@@ -781,7 +783,7 @@ export class ChatBox extends LitElement {
             Voice Call
           </div>
         `
-        : nothing}       ${this.credentials
+        : nothing} ${this.credentials
         ? html`
           <div
             class="menu-item"
@@ -961,30 +963,37 @@ export class ChatBox extends LitElement {
         if (e.data.size > 0) this._audioChunks.push(e.data);
       };
       recorder.onstop = async () => {
-        const capturedDuration = Math.round(
-          (Date.now() - this._recordingStartTime) / 1000,
-        );
-        if (this._audioChunks.length === 0) {
-          this._stream?.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        const blob = new Blob(this._audioChunks, { type: recordingMimeType });
-        const file = new File(
-          [blob],
-          `recording-${Date.now()}.${recordingExtension}`,
-          { type: recordingMimeType },
-        );
-        this._stream?.getTracks().forEach((t) => t.stop());
-        this._recordingDuration = 0;
-        if (this.onSendWithAttachments) {
-          this._pendingAudioMessageCount = this.messages.length;
-          this._sendingType = "audio";
-          this._isSending = true;
-          await this.onSendWithAttachments(
-            "",
-            [file],
-            capturedDuration > 0 ? capturedDuration : 1,
+        try {
+          const capturedDuration = Math.round(
+            (Date.now() - this._recordingStartTime) / 1000,
           );
+          if (this._audioChunks.length === 0) {
+            this._stream?.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          const blob = new Blob(this._audioChunks, { type: recordingMimeType });
+          const file = new File(
+            [blob],
+            `recording-${Date.now()}.${recordingExtension}`,
+            { type: recordingMimeType },
+          );
+          this._stream?.getTracks().forEach((t) => t.stop());
+          this._recordingDuration = 0;
+          if (this.onSendWithAttachments) {
+            this._pendingAudioMessageCount = this.messages.length;
+            this._sendingType = "audio";
+            this._isSending = true;
+            await this.onSendWithAttachments(
+              "",
+              [file],
+              capturedDuration > 0 ? capturedDuration : 1,
+            );
+          }
+        } catch (err) {
+          console.error("Failed to send audio recording", err);
+        } finally {
+          this._isSending = false;
+          this._sendingType = null;
         }
       };
       recorder.start(100);

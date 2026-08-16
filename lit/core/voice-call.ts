@@ -366,7 +366,13 @@ export const makeCreateVoiceCall =
       const callId = activeCallId;
       cleanup();
       setState("idle");
-      if (callId) await sendCall("reject", callId);
+      if (callId) {
+        try {
+          await sendCall("reject", callId);
+        } catch (e) {
+          console.error("Failed to send reject call", e);
+        }
+      }
     };
 
     const endCall = async () => {
@@ -375,7 +381,13 @@ export const makeCreateVoiceCall =
       const callId = activeCallId;
       cleanup();
       setState("idle");
-      if (callId) await sendCall("end", callId);
+      if (callId) {
+        try {
+          await sendCall("end", callId);
+        } catch (e) {
+          console.error("Failed to send end call", e);
+        }
+      }
     };
 
     const toggleMute = () => {

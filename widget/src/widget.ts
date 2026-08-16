@@ -591,11 +591,15 @@ export const renderSecretIdentityDialog = (
     });
 
   const handleCopy = async () => {
-    if (!transferUrl || !(await copyToClipboard(transferUrl))) return;
-    copyBtn.textContent = "Copied!";
-    setTimeout(() => {
-      copyBtn.textContent = "Continue on another device";
-    }, 2000);
+    try {
+      if (!transferUrl || !(await copyToClipboard(transferUrl))) return;
+      copyBtn.textContent = "Copied!";
+      setTimeout(() => {
+        copyBtn.textContent = "Continue on another device";
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy transfer URL", err);
+    }
   };
 
   copyBtn.addEventListener("click", handleCopy);

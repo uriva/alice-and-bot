@@ -1,6 +1,8 @@
 import { assertEquals } from "@std/assert";
 import {
+  isBrowserExtensionError,
   isEventRejection,
+  isMediaOrNetworkAbortError,
   isResizeObserverError,
   suppressClientErrorEvent,
   suppressClientRejectionEvent,
@@ -101,6 +103,90 @@ Deno.test("suppressClientRejectionEvent swallows InstantDB raw Event rejections"
 
   const mockEvent = {
     reason: new Event("error"),
+    preventDefault: () => {
+      prevented = true;
+    },
+    stopImmediatePropagation: () => {
+      stopped = true;
+    },
+  };
+
+  suppressClientRejectionEvent(mockEvent);
+
+  assertEquals(prevented, true);
+  assertEquals(stopped, true);
+});
+
+Deno.test("isBrowserExtensionError identifies extension URLs and disconnect messages", () => {
+  assertEquals(
+    isBrowserExtensionError(
+      new Error("chrome-extension://abcdef/script.js: failed"),
+    ),
+    true,
+  );
+  assertEquals(
+    isBrowserExtensionError(
+      "The message port closed before a response was received.",
+    ),
+    true,
+  );
+  assertEquals(
+    isBrowserExtensionError(
+      "A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received",
+    ),
+    true,
+  );
+  assertEquals(
+    isBrowserExtensionError(
+      "Could not establish connection. Receiving end does not exist.",
+    ),
+    true,
+  );
+  assertEquals(
+    isBrowserExtensionError("Extension context invalidated."),
+    true,
+  );
+  assertEquals(
+    isBrowserExtensionError(new Error("Something real failed")),
+    false,
+  );
+});
+
+Deno.test("isMediaOrNetworkAbortError identifies media and abort rejections", () => {
+  assertEquals(
+    isMediaOrNetworkAbortError(
+      "The play() request was interrupted by a call to pause().",
+    ),
+    true,
+  );
+  assertEquals(
+    isMediaOrNetworkAbortError(
+      "play() failed because the user didn't interact with the document first.",
+    ),
+    true,
+  );
+  assertEquals(
+    isMediaOrNetworkAbortError("The operation was aborted"),
+    true,
+  );
+  assertEquals(
+    isMediaOrNetworkAbortError(new Error("The user aborted a request.")),
+    true,
+  );
+  assertEquals(
+    isMediaOrNetworkAbortError(new Error("Something real failed")),
+    false,
+  );
+});
+
+Deno.test("suppressClientRejectionEvent swallows extension and media abort rejections", () => {
+  let stopped = false;
+  let prevented = false;
+
+  const mockEvent = {
+    reason: new Error(
+      "The message port closed before a response was received.",
+    ),
     preventDefault: () => {
       prevented = true;
     },
