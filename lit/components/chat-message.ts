@@ -855,8 +855,6 @@ export class ChatMessage extends LitElement {
                   dir="${textDirection(displayedText)}"
                   style="${callDetails
                     ? "display:flex;align-items:center;gap:8px;"
-                    : noBubble
-                    ? "display:block;"
                     : "display:inline;"}user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;word-break:break-word;min-width:0"
                 >${callDetails ? faPhoneAlt : nothing}${unsafeHTML(
                   (this.streamActive || isRevealing) && displayedText.trim()
