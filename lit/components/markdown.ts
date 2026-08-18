@@ -153,10 +153,17 @@ const createMarked = (textColor: string, isDark: boolean) => {
         this: { parser: { parse(t: Token[]): string } },
         item: Tokens.ListItem,
       ) {
-        const content = this.parser.parse(item.tokens).replace(
+        const rawContent = this.parser.parse(item.tokens).replace(
           /(?:<br\s*\/?>\s*)+$/gi,
           "",
         );
+        const content =
+          rawContent.startsWith("<span") && rawContent.endsWith("</span>")
+            ? rawContent.replace(/^<span\b[^>]*>/i, "").replace(
+              /<\/span>$/i,
+              "",
+            )
+            : rawContent;
         return `<li style="margin:2px 0"><span dir="auto">${content}</span></li>`;
       },
       table(

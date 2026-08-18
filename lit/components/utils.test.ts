@@ -159,3 +159,8 @@ Deno.test("preprocessText strips incomplete trailing HTML tags to avoid renderin
   assertEquals(preprocessText('Visit <a href="https://example.c'), "Visit ");
   assertEquals(preprocessText("Visit <a"), "Visit ");
 });
+
+Deno.test("preprocessText converts unicode bullets to standard list bullets", () => {
+  const result = preprocessText("• כתובת: לוינסקי 81\n• טלפון: 03-6996544");
+  assertEquals(result, "* כתובת: לוינסקי 81\n* טלפון: 03-6996544");
+});

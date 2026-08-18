@@ -183,3 +183,25 @@ Deno.test("renderMarkdown does not display incomplete trailing tag during stream
   assertEquals(html.includes("<a href="), false);
   assertEquals(html, "Visit ");
 });
+
+Deno.test("renderMarkdown renders RTL text with bullet points as an RTL list", () => {
+  const input = `אספתי את כל המידע מהאתר של Social Dental Clinic:
+
+• כתובת: לוינסקי 81, תל אביב-יפו
+• טלפון: 03-6996544 | אימייל: office@clinic.org.il
+• זמינות: פתוח 7 ימים בשבוע (כולל שישי, שבת ומקרי חירום)
+• שירותים עיקריים: יישור שיניים, שיננית, הלבנות, ציפויי חרסינה, השתלות, כתרים וגשרים, סתימות, טיפולי שורש, עקירות ושיקום פה מלא
+• שפות שירות: עברית, English, Tagalog
+• אינטגרציה: מערכת RapidOne לניהול וזימון תורים, טיפול בלידים ומעקב מטופלים (נשתמש ב-API Key שהעברת)
+
+אז אתה מעוניין בסוכן חכם לקליניקה שיספק מענה ושירות למטופלים, יקלוט פניות ויתממשק למערכת RapidOne. להמשיך ולבנות אותו עבורך?`;
+
+  const html = renderMarkdown(input, "#222", false);
+  assertEquals(html.includes('<ul dir="rtl"'), true);
+  assertEquals(
+    html.includes(
+      '<li style="margin:2px 0"><span dir="auto">כתובת: לוינסקי 81, תל אביב-יפו</span></li>',
+    ),
+    true,
+  );
+});

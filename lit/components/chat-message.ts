@@ -735,6 +735,8 @@ export class ChatMessage extends LitElement {
         isDark,
       )}
       .msg-wrap .msg-reply-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-reply-trigger{opacity:1}
+      [data-testid="message-text"]{unicode-bidi:plaintext;text-align:start}
+      [data-testid="message-text"] span[dir="auto"]{unicode-bidi:plaintext;text-align:start}
       [data-testid="message-text"] > :last-child { margin-bottom: 0 !important; }
       </style>
       <div
@@ -844,9 +846,9 @@ export class ChatMessage extends LitElement {
                 <span
                   data-testid="message-text"
                   dir="auto"
-                  style="display:inline;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;word-break:break-word;min-width:0;${callDetails
-                    ? "display:flex;align-items:center;gap:8px"
-                    : ""}"
+                  style="${callDetails
+                    ? "display:flex;align-items:center;gap:8px;"
+                    : "display:inline;"}user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;word-break:break-word;min-width:0"
                 >${callDetails ? faPhoneAlt : nothing}${unsafeHTML(
                   (this.streamActive || isRevealing) && displayedText.trim()
                     ? injectCursorAtEnd(markdownHtml, liveCursorHtml(isDark))

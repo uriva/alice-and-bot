@@ -148,7 +148,10 @@ export const asteriskToBullet = (text: string): string => {
         return line;
       }
       if (inCodeBlock) return line;
-      return line.replace(/^(\s*)\*\s*(?!\*)/, (_, spaces) => spaces + "* ");
+      return line.replace(
+        /^(\s*)(?:\*|•|\u2022)\s*(?!\*)/,
+        (_, spaces) => spaces + "* ",
+      );
     })
     .join("\n");
 };
