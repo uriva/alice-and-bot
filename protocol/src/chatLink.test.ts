@@ -1,5 +1,10 @@
 import { assertEquals } from "@std/assert";
-import { chatWithMeLink, createIdentity, resolveHandle } from "./clientApi.ts";
+import {
+  chatWithMeLink,
+  createIdentity,
+  parseChatWithUrl,
+  resolveHandle,
+} from "./clientApi.ts";
 import { shortIdLength } from "./shortId.ts";
 
 const chatWithParam = (link: string) => {
@@ -37,4 +42,33 @@ Deno.test("alias handles resolve with or without @", async () => {
 Deno.test("unknown handle returns no-such-handle", async () => {
   const resolved = await resolveHandle("zzzzzzzzzzzz");
   assertEquals(resolved, { error: "no-such-handle" });
+});
+
+Deno.test("parseChatWithUrl parses full aliceandbot URLs with and without topic", () => {
+  assertEquals(
+    parseChatWithUrl("https://aliceandbot.com/chat?chatWith=MIIBIjANBgkqhki"),
+    { chatWith: "MIIBIjANBgkqhki", topic: undefined },
+  );
+  assertEquals(
+    parseChatWithUrl(
+      "https://aliceandbot.com/chat?chatWith=MIIBIjANBgkqhki&topic=Support%20Agent",
+    ),
+    { chatWith: "MIIBIjANBgkqhki", topic: "Support Agent" },
+  );
+  assertEquals(
+    parseChatWithUrl("/chat?chatWith=short123"),
+    { chatWith: "short123", topic: undefined },
+  );
+  assertEquals(
+    parseChatWithUrl("?chatWith=short123"),
+    { chatWith: "short123", topic: undefined },
+  );
+  assertEquals(
+    parseChatWithUrl("https://example.com/chat?chatWith=short123"),
+    null,
+  );
+  assertEquals(
+    parseChatWithUrl("https://aliceandbot.com/docs"),
+    null,
+  );
 });

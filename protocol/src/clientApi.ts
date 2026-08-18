@@ -520,6 +520,27 @@ export const chatWithMeLink = async (
   return topic ? `${url}&topic=${encodeURIComponent(topic)}` : url;
 };
 
+export const parseChatWithUrl = (
+  href: string,
+): { chatWith: string; topic?: string } | null => {
+  try {
+    const url = new URL(href, baseUrl);
+    const isAliceAndBotHost = url.hostname === "aliceandbot.com" ||
+      url.hostname === "www.aliceandbot.com" ||
+      url.hostname === "alice-and-bot.com" ||
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1";
+    const chatWith = url.searchParams.get("chatWith");
+    if (!chatWith) return null;
+    const isRelative = href.startsWith("/") || href.startsWith("?");
+    if (!isAliceAndBotHost && !isRelative) return null;
+    const topic = url.searchParams.get("topic") || undefined;
+    return { chatWith, topic };
+  } catch (_) {
+    return null;
+  }
+};
+
 export const resolveHandle = (
   handle: string,
 ): Promise<

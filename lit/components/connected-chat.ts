@@ -9,6 +9,8 @@ import {
   createConversation,
   downloadAttachment,
   generateTransferUrl,
+  parseChatWithUrl,
+  resolveHandle,
   sendMessageWithKey,
   uploadAttachment,
 } from "../../protocol/src/clientApi.ts";
@@ -679,6 +681,7 @@ export class ConnectedChat extends LitElement {
     this.style.minWidth = "0";
     this.style.maxWidth = "100%";
     this._activeConversationId = this.conversationId;
+    this.addEventListener("click", this._handleClick);
     if (this.enableChatSwitching) {
       this._responsiveUnsub = subscribeIsMobile((m) => {
         this._isMobile = m;
@@ -690,6 +693,7 @@ export class ConnectedChat extends LitElement {
 
   override disconnectedCallback() {
     super.disconnectedCallback();
+    this.removeEventListener("click", this._handleClick);
     this._teardown();
   }
 
@@ -1227,6 +1231,84 @@ export class ConnectedChat extends LitElement {
       });
   };
 
+  private _chatWithInFlight = false;
+
+  private _handleClick = (e: MouseEvent) => {
+    if (
+      !this.enableChatSwitching || !this.credentials || e.button !== 0 ||
+      e.ctrlKey || e.metaKey || e.shiftKey || e.altKey
+    ) {
+      return;
+    }
+    const target = e.target as HTMLElement | null;
+    const anchor = target?.closest("a");
+    if (!anchor) return;
+    const href = anchor.getAttribute("href") || anchor.href;
+    if (!href) return;
+    const parsed = parseChatWithUrl(href);
+    if (!parsed) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this._handleChatWith(parsed.chatWith, parsed.topic);
+  };
+
+  private _handleChatWith = async (chatWith: string, topic?: string) => {
+    if (!this.credentials || this._chatWithInFlight) return;
+    if (this.onChatWith) {
+      this.onChatWith(chatWith);
+      return;
+    }
+    this._chatWithInFlight = true;
+    try {
+      let resolvedKey = chatWith;
+      try {
+        const res = await resolveHandle(chatWith);
+        if (res && "publicSignKey" in res) {
+          resolvedKey = res.publicSignKey;
+        }
+      } catch (_) {
+        // fallback to chatWith
+      }
+      const myKey = this.credentials.publicSignKey;
+      const participantKeys = sort(
+        unique([myKey, resolvedKey]),
+      );
+      const existing = (this._conversations ?? []).find((c) => {
+        const keys = sort(c.participants.map((p) => p.publicSignKey));
+        return keys.length === participantKeys.length &&
+          keys.every((k, i) => k === participantKeys[i]) &&
+          (!topic || c.title === topic);
+      });
+      if (existing) {
+        this._selectConversation(existing.id);
+        return;
+      }
+      const title = topic || "Chat";
+      const res = await createConversation(accessAdminDb)(
+        participantKeys,
+        title,
+        this.credentials,
+      );
+      if ("error" in res) {
+        console.error("Failed to create conversation", res.error);
+        return;
+      }
+      this._selectConversation(res.conversationId);
+      this.onNewThread?.(res.conversationId);
+      this.dispatchEvent(
+        new CustomEvent("new-thread", {
+          bubbles: true,
+          composed: true,
+          detail: { conversationId: res.conversationId },
+        }),
+      );
+    } catch (err) {
+      console.error("Failed to start chat with", err);
+    } finally {
+      this._chatWithInFlight = false;
+    }
+  };
+
   private _handleImportIdentity = () => {
     this._showImportIdentityPopup = true;
     this._importing = false;
@@ -1511,7 +1593,8 @@ export class ConnectedChat extends LitElement {
                 ?.avatar ?? ""}"
               .isDark="${isDark}"
               .onClose="${this._closeProfile}"
-              .onChatWith="${this.onChatWith}"
+              .onChatWith="${this.onChatWith ??
+                (this.enableChatSwitching ? this._handleChatWith : undefined)}"
             ></user-profile-popup>
           `
           : nothing} ${this._showParticipantsPopup

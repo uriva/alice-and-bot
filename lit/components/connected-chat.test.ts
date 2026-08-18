@@ -1,4 +1,5 @@
 import { assertEquals } from "@std/assert";
+import { parseChatWithUrl } from "../../protocol/src/clientApi.ts";
 import { nextConversationKey } from "../core/subscriptions.ts";
 
 type DecipheredMessage = {
@@ -263,4 +264,164 @@ Deno.test("ConnectedChat exposes onConversationChange and handles switching", as
   );
   assertEquals(code.includes("_selectConversation"), true);
   assertEquals(code.includes("conversation-change"), true);
+});
+
+Deno.test("ConnectedChat intercepts chatWith links when enableChatSwitching is true", async () => {
+  const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+  assertEquals(code.includes("parseChatWithUrl"), true);
+  assertEquals(code.includes("_handleChatWith"), true);
+});
+
+Deno.test("ConnectedChat click handler intercepts aliceandbot chatWith links when chat switching is enabled", () => {
+  let prevented = false;
+  let stopped = false;
+  let chatWithCalledWith: { chatWith: string; topic?: string } | null = null;
+
+  const mockConnectedChat = {
+    enableChatSwitching: true,
+    credentials: {
+      publicSignKey: "pk1",
+      privateSignKey: "sk1",
+      privateEncryptKey: "ek1",
+    },
+    _handleChatWith: (chatWith: string, topic?: string) => {
+      chatWithCalledWith = { chatWith, topic };
+    },
+    _handleClick: (e: {
+      button: number;
+      ctrlKey: boolean;
+      metaKey: boolean;
+      shiftKey: boolean;
+      altKey: boolean;
+      target: unknown;
+      preventDefault: () => void;
+      stopPropagation: () => void;
+    }) => {
+      if (
+        !mockConnectedChat.enableChatSwitching ||
+        !mockConnectedChat.credentials || e.button !== 0 ||
+        e.ctrlKey || e.metaKey || e.shiftKey || e.altKey
+      ) {
+        return;
+      }
+      const anchor = (e.target as {
+        closest?: (
+          s: string,
+        ) => { getAttribute: (a: string) => string; href: string } | null;
+      })?.closest?.("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") || anchor.href;
+      if (!href) return;
+      const parsed = parseChatWithUrl(href);
+      if (!parsed) return;
+      e.preventDefault();
+      e.stopPropagation();
+      mockConnectedChat._handleChatWith(parsed.chatWith, parsed.topic);
+    },
+  };
+
+  const fakeAnchor = {
+    getAttribute: (name: string) =>
+      name === "href"
+        ? "https://aliceandbot.com/chat?chatWith=bot123&topic=Mia"
+        : "",
+    href: "https://aliceandbot.com/chat?chatWith=bot123&topic=Mia",
+  };
+  const fakeEvent = {
+    button: 0,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    altKey: false,
+    target: {
+      closest: (sel: string) => sel === "a" ? fakeAnchor : null,
+    },
+    preventDefault: () => {
+      prevented = true;
+    },
+    stopPropagation: () => {
+      stopped = true;
+    },
+  };
+
+  mockConnectedChat._handleClick(fakeEvent);
+
+  assertEquals(prevented, true);
+  assertEquals(stopped, true);
+  assertEquals(chatWithCalledWith, { chatWith: "bot123", topic: "Mia" });
+});
+
+Deno.test("ConnectedChat click handler ignores links when enableChatSwitching is false", () => {
+  let prevented = false;
+  let chatWithCalled = false;
+
+  const mockConnectedChat = {
+    enableChatSwitching: false,
+    credentials: {
+      publicSignKey: "pk1",
+      privateSignKey: "sk1",
+      privateEncryptKey: "ek1",
+    },
+    _handleChatWith: () => {
+      chatWithCalled = true;
+    },
+    _handleClick: (e: {
+      button: number;
+      ctrlKey: boolean;
+      metaKey: boolean;
+      shiftKey: boolean;
+      altKey: boolean;
+      target: unknown;
+      preventDefault: () => void;
+      stopPropagation: () => void;
+    }) => {
+      if (
+        !mockConnectedChat.enableChatSwitching ||
+        !mockConnectedChat.credentials || e.button !== 0 ||
+        e.ctrlKey || e.metaKey || e.shiftKey || e.altKey
+      ) {
+        return;
+      }
+      const anchor = (e.target as {
+        closest?: (
+          s: string,
+        ) => { getAttribute: (a: string) => string; href: string } | null;
+      })?.closest?.("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") || anchor.href;
+      if (!href) return;
+      const parsed = parseChatWithUrl(href);
+      if (!parsed) return;
+      e.preventDefault();
+      e.stopPropagation();
+      mockConnectedChat._handleChatWith();
+    },
+  };
+
+  const fakeAnchor = {
+    getAttribute: (name: string) =>
+      name === "href"
+        ? "https://aliceandbot.com/chat?chatWith=bot123&topic=Mia"
+        : "",
+    href: "https://aliceandbot.com/chat?chatWith=bot123&topic=Mia",
+  };
+  const fakeEvent = {
+    button: 0,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    altKey: false,
+    target: {
+      closest: (sel: string) => sel === "a" ? fakeAnchor : null,
+    },
+    preventDefault: () => {
+      prevented = true;
+    },
+    stopPropagation: () => {},
+  };
+
+  mockConnectedChat._handleClick(fakeEvent);
+
+  assertEquals(prevented, false);
+  assertEquals(chatWithCalled, false);
 });

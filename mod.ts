@@ -39,6 +39,7 @@ export {
   handleWebhookUpdate,
   type ImageAttachment,
   type LocationAttachment,
+  parseChatWithUrl,
   renameConversation,
   resolveHandle,
   sendMessage,
