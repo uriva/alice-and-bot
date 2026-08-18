@@ -134,10 +134,11 @@ export const useEphemeralStreams = (
   );
 
 export const useGetOrCreateConversation = (
-  { credentials, participants, initialMessage }: {
+  { credentials, participants, initialMessage, title }: {
     credentials: Credentials;
     participants: string[];
     initialMessage?: string;
+    title?: string;
   },
 ): string | null => {
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -147,8 +148,14 @@ export const useGetOrCreateConversation = (
   const participantsKey = [...participants].sort().join(",");
 
   useEffect(
-    () => getOrCreateConversation(credentials, participants, setConversationId),
-    [credentials.publicSignKey, participantsKey],
+    () =>
+      getOrCreateConversation(
+        credentials,
+        participants,
+        setConversationId,
+        title,
+      ),
+    [credentials.publicSignKey, participantsKey, title],
   );
 
   useEffect(() => {

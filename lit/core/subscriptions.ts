@@ -6,6 +6,7 @@ import {
   type Credentials,
   type DecipheredMessage,
   decryptMessage,
+  renameConversation,
   sendMessageWithKey,
 } from "../../protocol/src/clientApi.ts";
 import { decryptAsymmetric } from "../../protocol/src/crypto.ts";
@@ -499,6 +500,7 @@ export const getOrCreateConversation = (
   credentials: Credentials,
   participants: string[],
   onConversation: (id: string) => void,
+  title = "Chat",
 ): () => void => {
   const fixedParticipants = sort(
     unique([credentials.publicSignKey, ...participants]),
@@ -516,7 +518,7 @@ export const getOrCreateConversation = (
       () =>
         createConversation(accessAdminDb)(
           fixedParticipants,
-          "Chat",
+          title,
           credentials,
         ),
       (created) => {
@@ -533,6 +535,17 @@ export const getOrCreateConversation = (
       );
       teardown();
       if (matches.length === 0) return createIfNeeded();
+      if (title && title !== "Chat") {
+        matches.forEach((conv) => {
+          if (conv.title !== title) {
+            renameConversation({
+              conversationId: conv.id,
+              title,
+              credentials,
+            }).catch(() => {});
+          }
+        });
+      }
       if (matches.length === 1) return onConversation(matches[0].id);
       activityUnsub = subscribeConversationsActivity(
         matches.map((c) => c.id),

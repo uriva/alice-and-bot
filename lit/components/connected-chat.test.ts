@@ -248,3 +248,19 @@ Deno.test(
     assertEquals(eventCount, 1);
   },
 );
+
+Deno.test("ConnectedChat supports enableChatSwitching property defaulting to false", async () => {
+  const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+  assertEquals(code.includes("enableChatSwitching: { type: Boolean }"), true);
+  assertEquals(code.includes("this.enableChatSwitching = false;"), true);
+});
+
+Deno.test("ConnectedChat exposes onConversationChange and handles switching", async () => {
+  const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+  assertEquals(
+    code.includes("onConversationChange: { attribute: false }"),
+    true,
+  );
+  assertEquals(code.includes("_selectConversation"), true);
+  assertEquals(code.includes("conversation-change"), true);
+});

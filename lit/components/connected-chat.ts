@@ -16,13 +16,17 @@ import { importIdentity, saveCredentials } from "../core/credentials.ts";
 import { accessAdminDb, accessDb } from "../core/instant-client.ts";
 import {
   compactPublicKey,
+  type Conversation,
   createTypingNotifier,
   nextConversationKey,
   subscribeConversationKey,
+  subscribeConversations,
   subscribeDecryptedMessages,
   subscribeIdentityDetailsMap,
   subscribeTypingStates,
+  subscribeUserName,
 } from "../core/subscriptions.ts";
+import { subscribeIsMobile } from "../core/responsive.ts";
 import {
   type EphemeralStreamEvent,
   subscribeEphemeralStreams,
@@ -34,7 +38,7 @@ import {
 import "./chat-box.ts";
 import "./user-profile-popup.ts";
 import "./chat-avatar.ts";
-import { avatarColor } from "./design.ts";
+import { avatarColor, defaultPrimary } from "./design.ts";
 import { copyToClipboard } from "./utils.ts";
 import type {
   AbstracChatMessage,
@@ -423,6 +427,108 @@ const uiOverridesMap = (uiElements: UiElement[]) =>
     }]),
   );
 
+const chatSwitcherContainerStyle =
+  "display:flex;flex-direction:row;width:100%;height:100%;min-height:0;min-width:0;overflow:hidden;position:relative";
+
+const sidebarContainerStyle = (isDark: boolean, customColors?: CustomColors) =>
+  `width:280px;min-width:240px;max-width:320px;flex-shrink:0;display:flex;flex-direction:column;height:100%;min-height:0;background:${
+    customColors?.background ?? (isDark ? "#111111" : "#f8f7f4")
+  };border-right:1px solid ${
+    isDark ? "#2a2a2a" : "#e5e7eb"
+  };font-family:sans-serif;box-sizing:border-box`;
+
+const sidebarHeaderStyle = (isDark: boolean) =>
+  `padding:12px 14px;border-bottom:1px solid ${
+    isDark ? "#222222" : "#eeeeee"
+  };display:flex;flex-direction:column;gap:8px;flex-shrink:0`;
+
+const sidebarSearchInputStyle = (
+  isDark: boolean,
+  customColors?: CustomColors,
+) =>
+  `width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;border:1px solid ${
+    isDark ? "#333333" : "#e5e7eb"
+  };background:${
+    customColors?.inputBackground ?? (isDark ? "#1a1a1a" : "#f3f4f6")
+  };color:${
+    customColors?.text ?? (isDark ? "#f4f4f4" : "#111827")
+  };box-sizing:border-box`;
+
+const sidebarListStyle = (scrollbarColor?: string) =>
+  `flex:1;min-height:0;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:2px;${
+    scrollbarColor ? `scrollbar-color:${scrollbarColor};` : ""
+  }`;
+
+const sidebarItemStyle = (
+  isSelected: boolean,
+  isDark: boolean,
+  customColors?: CustomColors,
+) =>
+  `display:flex;align-items:center;gap:10px;padding:8px 10px;width:100%;text-align:left;background:${
+    isSelected
+      ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)")
+      : "transparent"
+  };border:none;border-radius:8px;cursor:pointer;transition:background 0.15s;box-sizing:border-box;outline:none;${
+    isSelected
+      ? `border-left:3px solid ${
+        customColors?.primary ?? defaultPrimary(isDark)
+      };`
+      : ""
+  }`;
+
+const sidebarItemTitleStyle = (
+  isDark: boolean,
+  isSelected: boolean,
+  customColors?: CustomColors,
+) =>
+  `font-size:13px;font-weight:${isSelected ? "600" : "500"};color:${
+    customColors?.text ?? (isDark ? "#f4f4f4" : "#111827")
+  };white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1`;
+
+const mobileBackButtonStyle = (isDark: boolean, customColors?: CustomColors) =>
+  `position:absolute;top:10px;left:10px;z-index:90;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:18px;background:${
+    isDark ? "rgba(30,30,30,0.9)" : "rgba(255,255,255,0.9)"
+  };color:${
+    customColors?.text ?? (isDark ? "#f4f4f4" : "#111827")
+  };border:1px solid ${
+    isDark ? "#444" : "#e5e7eb"
+  };box-shadow:0 2px 8px rgba(0,0,0,0.15);cursor:pointer;font-size:12px;font-weight:600;backdrop-filter:blur(4px)`;
+
+const mobileFullListStyle = (isDark: boolean, customColors?: CustomColors) =>
+  `display:flex;flex-direction:column;width:100%;height:100%;min-height:0;background:${
+    customColors?.background ?? (isDark ? "#111111" : "#f8f7f4")
+  };font-family:sans-serif;box-sizing:border-box`;
+
+const mainChatContainerStyle =
+  "display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;overflow:hidden;position:relative";
+
+const chatsIconSvg = html`
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+`;
+
+const resolveConversationDisplayName = (
+  conv: Conversation,
+  myKey: string,
+  nameCache: Map<string, string | null>,
+) => {
+  if (conv.title && conv.title !== "Chat") return conv.title;
+  const other = conv.participants.find((p) => p.publicSignKey !== myKey);
+  if (!other) return conv.title || "Chat";
+  const cachedName = nameCache.get(other.publicSignKey);
+  return cachedName || conv.title || compactPublicKey(other.publicSignKey);
+};
+
 const notFoundHtml = (customColors?: CustomColors, isDark?: boolean) =>
   html`
     <div
@@ -482,10 +588,12 @@ export class ConnectedChat extends LitElement {
     enableAttachments: { type: Boolean },
     enableAudioRecording: { type: Boolean },
     enableVoiceCall: { type: Boolean },
+    enableChatSwitching: { type: Boolean },
     isDark: { type: Boolean },
     emptyMessage: { attribute: false },
     onChatWith: { attribute: false },
     onNewThread: { attribute: false },
+    onConversationChange: { attribute: false },
   };
 
   declare credentials: Credentials | null;
@@ -496,10 +604,12 @@ export class ConnectedChat extends LitElement {
   declare enableAttachments: boolean;
   declare enableAudioRecording: boolean;
   declare enableVoiceCall: boolean;
+  declare enableChatSwitching: boolean;
   declare isDark: boolean;
   declare emptyMessage: string | undefined;
   declare onChatWith: ((publicSignKey: string) => void) | undefined;
   declare onNewThread: ((conversationId: string) => void) | undefined;
+  declare onConversationChange: ((conversationId: string) => void) | undefined;
 
   constructor() {
     super();
@@ -508,8 +618,19 @@ export class ConnectedChat extends LitElement {
     this.enableAttachments = true;
     this.enableAudioRecording = true;
     this.enableVoiceCall = false;
+    this.enableChatSwitching = false;
     this.isDark = false;
   }
+
+  private _activeConversationId = "";
+  private _conversations: Conversation[] | null = null;
+  private _searchQuery = "";
+  private _nameCache = new Map<string, string | null>();
+  private _nameUnsubs = new Map<string, () => void>();
+  private _conversationsUnsub: (() => void) | null = null;
+  private _mobileShowList = false;
+  private _isMobile = false;
+  private _responsiveUnsub: (() => void) | null = null;
 
   private _conversationKey: string | null = null;
   private _messages: DecipheredMessage[] | null = null;
@@ -557,6 +678,13 @@ export class ConnectedChat extends LitElement {
     this.style.minHeight = "0";
     this.style.minWidth = "0";
     this.style.maxWidth = "100%";
+    this._activeConversationId = this.conversationId;
+    if (this.enableChatSwitching) {
+      this._responsiveUnsub = subscribeIsMobile((m) => {
+        this._isMobile = m;
+        this.requestUpdate();
+      });
+    }
     this._setupSubscriptions();
   }
 
@@ -577,8 +705,13 @@ export class ConnectedChat extends LitElement {
         credentialsOrNull(changed.get("credentials")),
         this.credentials,
       );
-    if (credentialsChanged || changed.has("conversationId")) {
-      this._teardown();
+    const conversationIdChanged = changed.has("conversationId") &&
+      changed.get("conversationId") !== this.conversationId;
+    if (conversationIdChanged && this.conversationId) {
+      this._activeConversationId = this.conversationId;
+    }
+    if (credentialsChanged || conversationIdChanged) {
+      this._teardownConversation();
     }
   }
 
@@ -588,12 +721,32 @@ export class ConnectedChat extends LitElement {
         credentialsOrNull(changed.get("credentials")),
         this.credentials,
       );
-    if (credentialsChanged || changed.has("conversationId")) {
+    const conversationIdChanged = changed.has("conversationId") &&
+      changed.get("conversationId") !== this.conversationId;
+    const chatSwitchingChanged = changed.has("enableChatSwitching") &&
+      changed.get("enableChatSwitching") !== this.enableChatSwitching;
+    if (chatSwitchingChanged) {
+      if (this.enableChatSwitching) {
+        if (!this._responsiveUnsub) {
+          this._responsiveUnsub = subscribeIsMobile((m) => {
+            this._isMobile = m;
+            this.requestUpdate();
+          });
+        }
+        this._setupChatListSubscriptions();
+      } else {
+        this._responsiveUnsub?.();
+        this._responsiveUnsub = null;
+        this._conversationsUnsub?.();
+        this._conversationsUnsub = null;
+      }
+    }
+    if (credentialsChanged || conversationIdChanged) {
       this._setupSubscriptions();
     }
   }
 
-  private _teardown() {
+  private _teardownConversation() {
     this._unsubs.forEach((u) => u());
     this._unsubs = [];
     this._typingNotifier?.stop();
@@ -617,18 +770,88 @@ export class ConnectedChat extends LitElement {
     this._conversationKey = null;
   }
 
+  private _teardown() {
+    this._teardownConversation();
+    this._conversationsUnsub?.();
+    this._conversationsUnsub = null;
+    this._nameUnsubs.forEach((u) => u());
+    this._nameUnsubs.clear();
+    this._nameCache.clear();
+    this._responsiveUnsub?.();
+    this._responsiveUnsub = null;
+  }
+
   private _setupSubscriptions() {
-    if (!this.credentials || !this.conversationId) return;
+    if (!this.credentials) return;
+    if (this.enableChatSwitching) {
+      this._setupChatListSubscriptions();
+    }
+    this._setupConversationSubscriptions();
+  }
+
+  private _setupChatListSubscriptions() {
+    if (!this.credentials) return;
+    this._conversationsUnsub?.();
+    this._conversationsUnsub = subscribeConversations(
+      this.credentials.publicSignKey,
+      (convs) => {
+        this._conversations = convs;
+        convs?.forEach((conv) => {
+          const other = conv.participants.find(
+            (p) => p.publicSignKey !== this.credentials!.publicSignKey,
+          );
+          if (other) this._subscribeName(other.publicSignKey);
+        });
+        if (
+          !this._activeConversationId && convs && convs.length > 0 &&
+          this.enableChatSwitching
+        ) {
+          this._selectConversation(convs[0].id);
+        }
+        this.requestUpdate();
+      },
+    );
+  }
+
+  private _subscribeName(publicSignKey: string) {
+    if (this._nameUnsubs.has(publicSignKey)) return;
+    const unsub = subscribeUserName(publicSignKey, (name) => {
+      this._nameCache.set(publicSignKey, name);
+      this.requestUpdate();
+    });
+    this._nameUnsubs.set(publicSignKey, unsub);
+  }
+
+  private _selectConversation(id: string) {
+    if (this._activeConversationId === id && !this._mobileShowList) return;
+    this._activeConversationId = id;
+    this._mobileShowList = false;
+    this.onConversationChange?.(id);
+    this.dispatchEvent(
+      new CustomEvent("conversation-change", {
+        bubbles: true,
+        composed: true,
+        detail: { conversationId: id },
+      }),
+    );
+    this._teardownConversation();
+    this._setupConversationSubscriptions();
+    this.requestUpdate();
+  }
+
+  private _setupConversationSubscriptions() {
+    const targetId = this._activeConversationId || this.conversationId;
+    if (!this.credentials || !targetId) return;
 
     const { publicSignKey } = this.credentials;
 
     this._typingNotifier = createTypingNotifier(
-      this.conversationId,
+      targetId,
       publicSignKey,
     );
 
     this._voiceCall = createVoiceCall({
-      conversationId: this.conversationId,
+      conversationId: targetId,
       credentials: this.credentials,
       getConversationKey: () => this._conversationKey,
       getMessages: () => this._messages ?? [],
@@ -640,7 +863,7 @@ export class ConnectedChat extends LitElement {
         {
           conversations: {
             participants: {},
-            $: { where: { id: this.conversationId } },
+            $: { where: { id: targetId } },
           },
         },
         ({ data }) => {
@@ -661,7 +884,7 @@ export class ConnectedChat extends LitElement {
           identities: {
             $: { where: { publicSignKey } },
             keys: {
-              $: { where: { conversation: this.conversationId } },
+              $: { where: { conversation: targetId } },
             },
           },
         },
@@ -675,7 +898,7 @@ export class ConnectedChat extends LitElement {
 
     this._unsubs.push(
       subscribeConversationKey(
-        this.conversationId,
+        targetId,
         this.credentials,
         (key) => {
           const resolved = nextConversationKey(this._conversationKey, key);
@@ -689,7 +912,7 @@ export class ConnectedChat extends LitElement {
     );
 
     const typingSub = subscribeTypingStates(
-      this.conversationId,
+      targetId,
       publicSignKey,
       (names) => {
         this._typingNames = names;
@@ -700,7 +923,7 @@ export class ConnectedChat extends LitElement {
     this._suppressTypingAuthor = typingSub.suppressAuthor;
 
     this._unsubs.push(
-      subscribeEphemeralStreams(this.conversationId, (streams) => {
+      subscribeEphemeralStreams(targetId, (streams) => {
         this._ephemeralStreams = streams;
         this._resubscribeIdentities();
         this.requestUpdate();
@@ -711,7 +934,7 @@ export class ConnectedChat extends LitElement {
       accessDb().subscribeQuery(
         {
           uiElements: {
-            $: { where: { conversation: this.conversationId } },
+            $: { where: { conversation: targetId } },
           },
         },
         ({ data }) => {
@@ -727,9 +950,11 @@ export class ConnectedChat extends LitElement {
   private _messagesUnsub: (() => void) | null = null;
 
   private _resubscribeMessages() {
+    const targetId = this._activeConversationId || this.conversationId;
+    if (!targetId) return;
     this._messagesUnsub?.();
     this._messagesUnsub = subscribeDecryptedMessages(
-      this.conversationId,
+      targetId,
       this._conversationKey,
       ({ messages, canLoadMore, loadMore }) => {
         if (!messages) return;
@@ -814,12 +1039,13 @@ export class ConnectedChat extends LitElement {
   }
 
   private _handleSend = (text: string, replyTo?: string) => {
-    if (!this._conversationKey || !this.credentials) return;
+    const targetId = this._activeConversationId || this.conversationId;
+    if (!this._conversationKey || !this.credentials || !targetId) return;
     sendMessageWithKey({
       conversationKey: this._conversationKey,
       credentials: this.credentials,
       message: { type: "text", text, replyTo },
-      conversation: this.conversationId,
+      conversation: targetId,
     }).catch((err) => console.error("Failed to send message", err));
     this._typingNotifier?.onBlurOrSend();
   };
@@ -830,13 +1056,14 @@ export class ConnectedChat extends LitElement {
     audioDuration?: number,
     replyTo?: string,
   ) => {
-    if (!this._conversationKey || !this.credentials) return;
+    const targetId = this._activeConversationId || this.conversationId;
+    if (!this._conversationKey || !this.credentials || !targetId) return;
     try {
       const attachments: Attachment[] = [];
       for (const file of files) {
         const result = await uploadAttachment({
           credentials: this.credentials,
-          conversationId: this.conversationId,
+          conversationId: targetId,
           conversationKey: this._conversationKey,
           file,
           durationOverride: audioDuration,
@@ -851,7 +1078,7 @@ export class ConnectedChat extends LitElement {
         conversationKey: this._conversationKey,
         credentials: this.credentials,
         message: { type: "text", text, attachments, replyTo },
-        conversation: this.conversationId,
+        conversation: targetId,
       });
       this._typingNotifier?.onBlurOrSend();
     } catch (err) {
@@ -874,13 +1101,14 @@ export class ConnectedChat extends LitElement {
   };
 
   private _handleEdit = async (messageId: string, newText: string) => {
-    if (!this._conversationKey || !this.credentials) return;
+    const targetId = this._activeConversationId || this.conversationId;
+    if (!this._conversationKey || !this.credentials || !targetId) return;
     try {
       await sendMessageWithKey({
         conversationKey: this._conversationKey,
         credentials: this.credentials,
         message: { type: "edit", editOf: messageId, text: newText },
-        conversation: this.conversationId,
+        conversation: targetId,
       });
     } catch (err) {
       console.error("Failed to edit message", err);
@@ -892,12 +1120,13 @@ export class ConnectedChat extends LitElement {
     emoji: string,
     remove?: boolean,
   ) => {
-    if (!this._conversationKey || !this.credentials) return;
+    const targetId = this._activeConversationId || this.conversationId;
+    if (!this._conversationKey || !this.credentials || !targetId) return;
     sendMessageWithKey({
       conversationKey: this._conversationKey,
       credentials: this.credentials,
       message: { type: "reaction", reactTo: messageId, emoji, remove },
-      conversation: this.conversationId,
+      conversation: targetId,
     }).catch((err) => console.error("Failed to send reaction", err));
   };
 
@@ -906,7 +1135,8 @@ export class ConnectedChat extends LitElement {
     longitude: number,
     label?: string,
   ) => {
-    if (!this._conversationKey || !this.credentials) return;
+    const targetId = this._activeConversationId || this.conversationId;
+    if (!this._conversationKey || !this.credentials || !targetId) return;
     sendMessageWithKey({
       conversationKey: this._conversationKey,
       credentials: this.credentials,
@@ -915,7 +1145,7 @@ export class ConnectedChat extends LitElement {
         text: "",
         attachments: [{ type: "location", latitude, longitude, label }],
       },
-      conversation: this.conversationId,
+      conversation: targetId,
     }).catch((err) => console.error("Failed to send location", err));
   };
 
@@ -951,6 +1181,7 @@ export class ConnectedChat extends LitElement {
         console.error("Failed to create new thread", res.error);
         return;
       }
+      this._selectConversation(res.conversationId);
       this.onNewThread?.(res.conversationId);
       this.dispatchEvent(
         new CustomEvent("new-thread", {
@@ -1105,9 +1336,96 @@ export class ConnectedChat extends LitElement {
     this.requestUpdate();
   };
 
-  override render(): TemplateResult | typeof nothing {
-    if (!this.credentials || !this.conversationId) return nothing;
-    const isDark = this._effectiveDark;
+  private _handleSearchInput = (e: Event) => {
+    this._searchQuery = (e.target as HTMLInputElement).value;
+    this.requestUpdate();
+  };
+
+  private _renderConversationList(isDark: boolean) {
+    if (!this._conversations) {
+      return html`
+        <div style="font-size:12px;color:${isDark
+          ? "#888"
+          : "#999"};padding:16px;text-align:center">
+          Loading chats...
+        </div>
+      `;
+    }
+    const myKey = this.credentials?.publicSignKey ?? "";
+    const filtered = this._searchQuery.trim()
+      ? this._conversations.filter((c) => {
+        const name = resolveConversationDisplayName(c, myKey, this._nameCache);
+        return name.toLowerCase().includes(this._searchQuery.toLowerCase());
+      })
+      : this._conversations;
+
+    if (empty(filtered)) {
+      return html`
+        <div style="font-size:12px;color:${isDark
+          ? "#888"
+          : "#999"};padding:16px;text-align:center">
+          No chats found
+        </div>
+      `;
+    }
+
+    const currentId = this._activeConversationId || this.conversationId;
+
+    return filtered.map((conv) => {
+      const isSelected = conv.id === currentId;
+      const displayName = resolveConversationDisplayName(
+        conv,
+        myKey,
+        this._nameCache,
+      );
+      const otherParticipant = conv.participants.find(
+        (p) => p.publicSignKey !== myKey,
+      );
+      const otherKey = otherParticipant?.publicSignKey ?? conv.id;
+      const baseColor = avatarColor(otherKey, isDark);
+      const avatar = otherParticipant
+        ? this._identityDetails[otherParticipant.publicSignKey]?.avatar
+        : undefined;
+
+      return html`
+        <button
+          type="button"
+          style="${sidebarItemStyle(isSelected, isDark, this.customColors)}"
+          @click="${() => this._selectConversation(conv.id)}"
+        >
+          <chat-avatar
+            .image="${avatar}"
+            .name="${displayName}"
+            .baseColor="${baseColor}"
+            .isDark="${isDark}"
+          ></chat-avatar>
+          <div style="${sidebarItemTitleStyle(
+            isDark,
+            isSelected,
+            this.customColors,
+          )}">
+            ${displayName}
+          </div>
+        </button>
+      `;
+    });
+  }
+
+  private _renderChatContent(isDark: boolean) {
+    const targetId = this._activeConversationId || this.conversationId;
+    if (!targetId) {
+      return html`
+        <div
+          style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;width:100%;color:${this
+            .customColors?.text ??
+            (isDark ? "#888" : "#999")};background:${this.customColors
+            ?.background ??
+            (isDark ? "#111" : "#f9fafb")};font-family:sans-serif"
+        >
+          Select a chat to view messages
+        </div>
+      `;
+    }
     if (this._convNotFound) {
       return notFoundHtml(this.customColors, isDark);
     }
@@ -1128,7 +1446,7 @@ export class ConnectedChat extends LitElement {
         }))}"
         .canLoadMore="${this._canLoadMore}"
         .loadMore="${this._loadMore}"
-        .userId="${this.credentials.publicSignKey}"
+        .userId="${this.credentials?.publicSignKey ?? ""}"
         .credentials="${this.credentials}"
         .onSend="${this._handleSend}"
         .onSendWithAttachments="${this._handleSendWithAttachments}"
@@ -1167,212 +1485,302 @@ export class ConnectedChat extends LitElement {
         @secret-identity="${this._handleSecretIdentity}"
         @import-identity="${this._handleImportIdentity}"
       ></chat-box>
-      ${this._profileAuthorId
-        ? html`
-          <user-profile-popup
-            .authorId="${this._profileAuthorId}"
-            .authorName="${resolveName(this._identityDetails)(
-              this._profileAuthorId,
-            )}"
-            .authorAvatar="${this._identityDetails[this._profileAuthorId]
-              ?.avatar ?? ""}"
-            .isDark="${isDark}"
-            .onClose="${this._closeProfile}"
-            .onChatWith="${this.onChatWith}"
-          ></user-profile-popup>
-        `
-        : nothing} ${this._showParticipantsPopup
-        ? html`
-          <div style="${participantsOverlayStyle}" @click="${this
-            ._handleCloseParticipants}">
-            <div style="${participantsPopupStyle(isDark)}" @click="${(
-              e: Event,
-            ) => e.stopPropagation()}">
-              <h3 style="${popupTitleStyle(isDark)}">Participants</h3>
-              <div style="${participantsListStyle}">
-                ${this._participants.map((p) => {
-                  const name = resolveParticipantName(p, this._identityDetails);
-                  const avatar = resolveParticipantAvatar(
-                    p,
-                    this._identityDetails,
-                  );
-                  const baseColor = avatarColor(p.publicSignKey, isDark);
-                  const isCopied =
-                    this._copiedParticipantId === p.publicSignKey;
-                  return html`
-                    <div
-                      style="${participantRowStyle(isDark)}"
-                      @click="${() =>
-                        this._handleParticipantClick(p.publicSignKey)}"
-                      @mouseover="${(e: MouseEvent) => {
-                        const target = e.currentTarget as HTMLElement;
-                        target.style.background = isDark
-                          ? "rgba(255,255,255,0.06)"
-                          : "rgba(0,0,0,0.05)";
-                      }}"
-                      @mouseout="${(e: MouseEvent) => {
-                        const target = e.currentTarget as HTMLElement;
-                        target.style.background = isDark
-                          ? "rgba(255,255,255,0.02)"
-                          : "rgba(0,0,0,0.02)";
-                      }}"
-                    >
-                      <div style="${participantInfoStyle}">
-                        <chat-avatar
-                          .image="${avatar}"
-                          .name="${name}"
-                          .baseColor="${baseColor}"
-                          .isDark="${isDark}"
-                        ></chat-avatar>
-                        <div style="${participantMetaStyle}">
-                          <div style="${participantNameStyle(
-                            isDark,
-                          )}">${name}</div>
-                          <div style="${participantIdStyle(
-                            isDark,
-                          )}">${compactPublicKey(p.publicSignKey)}</div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        style="${copyButtonStyle(isDark)}"
-                        @click="${(e: Event) =>
-                          this._handleCopyParticipant(e, p.publicSignKey)}"
+    `;
+  }
+
+  override render(): TemplateResult | typeof nothing {
+    if (
+      !this.credentials ||
+      (!this.conversationId && !this._activeConversationId &&
+        !this.enableChatSwitching)
+    ) {
+      return nothing;
+    }
+    const isDark = this._effectiveDark;
+
+    const renderPopups = () =>
+      html`
+        ${this._profileAuthorId
+          ? html`
+            <user-profile-popup
+              .authorId="${this._profileAuthorId}"
+              .authorName="${resolveName(this._identityDetails)(
+                this._profileAuthorId,
+              )}"
+              .authorAvatar="${this._identityDetails[this._profileAuthorId]
+                ?.avatar ?? ""}"
+              .isDark="${isDark}"
+              .onClose="${this._closeProfile}"
+              .onChatWith="${this.onChatWith}"
+            ></user-profile-popup>
+          `
+          : nothing} ${this._showParticipantsPopup
+          ? html`
+            <div style="${participantsOverlayStyle}" @click="${this
+              ._handleCloseParticipants}">
+              <div style="${participantsPopupStyle(isDark)}" @click="${(
+                e: Event,
+              ) => e.stopPropagation()}">
+                <h3 style="${popupTitleStyle(isDark)}">Participants</h3>
+                <div style="${participantsListStyle}">
+                  ${this._participants.map((p) => {
+                    const name = resolveParticipantName(
+                      p,
+                      this._identityDetails,
+                    );
+                    const avatar = resolveParticipantAvatar(
+                      p,
+                      this._identityDetails,
+                    );
+                    const baseColor = avatarColor(p.publicSignKey, isDark);
+                    const isCopied =
+                      this._copiedParticipantId === p.publicSignKey;
+                    return html`
+                      <div
+                        style="${participantRowStyle(isDark)}"
+                        @click="${() =>
+                          this._handleParticipantClick(p.publicSignKey)}"
+                        @mouseover="${(e: MouseEvent) => {
+                          const target = e.currentTarget as HTMLElement;
+                          target.style.background = isDark
+                            ? "rgba(255,255,255,0.06)"
+                            : "rgba(0,0,0,0.05)";
+                        }}"
+                        @mouseout="${(e: MouseEvent) => {
+                          const target = e.currentTarget as HTMLElement;
+                          target.style.background = isDark
+                            ? "rgba(255,255,255,0.02)"
+                            : "rgba(0,0,0,0.02)";
+                        }}"
                       >
-                        ${isCopied ? "Copied!" : "Copy ID"}
-                      </button>
-                    </div>
-                  `;
-                })}
-              </div>
-              <button
-                type="button"
-                style="${closeButtonStyle(isDark)}"
-                @click="${this._handleCloseParticipants}"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        `
-        : nothing} ${this._showSecretIdentityPopup && this.credentials
-        ? html`
-          <div style="${participantsOverlayStyle}" @click="${() => {
-            this._showSecretIdentityPopup = false;
-            this.requestUpdate();
-          }}">
-            <div style="${participantsPopupStyle(isDark)}" @click="${(
-              e: Event,
-            ) => e.stopPropagation()}">
-              <h3 style="${popupTitleStyle(isDark)}">Export Identity</h3>
-              <p style="font-size:13px;opacity:0.9;text-align:center;line-height:1.4">
-                Scan this QR code with your mobile device to open Alice&Bot with your
-                export identity.
-              </p>
-              <div
-                style="display:flex;justify-content:center;align-items:center;width:200px;height:200px;background:#ffffff;border-radius:8px;padding:8px;margin: 0 auto;"
-              >
-                ${this._qrCodeDataUrl
-                  ? html`
-                    <img
-                      src="${this._qrCodeDataUrl}"
-                      alt="Export Identity QR Code"
-                      style="width:100%;height:100%"
-                    />
-                  `
-                  : html`
-                    <div style="color:#000000;font-size:14px">Generating...</div>
-                  `}
-              </div>
-              <div
-                style="display:flex;flex-direction:column;gap:8px;width:100%;align-items:center"
-              >
+                        <div style="${participantInfoStyle}">
+                          <chat-avatar
+                            .image="${avatar}"
+                            .name="${name}"
+                            .baseColor="${baseColor}"
+                            .isDark="${isDark}"
+                          ></chat-avatar>
+                          <div style="${participantMetaStyle}">
+                            <div style="${participantNameStyle(
+                              isDark,
+                            )}">${name}</div>
+                            <div style="${participantIdStyle(
+                              isDark,
+                            )}">${compactPublicKey(p.publicSignKey)}</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          style="${copyButtonStyle(isDark)}"
+                          @click="${(e: Event) =>
+                            this._handleCopyParticipant(e, p.publicSignKey)}"
+                        >
+                          ${isCopied ? "Copied!" : "Copy ID"}
+                        </button>
+                      </div>
+                    `;
+                  })}
+                </div>
                 <button
                   type="button"
-                  style="${copyButtonStyle(
-                    isDark,
-                  )};width:100%;padding:10px;border-radius:8px;cursor:pointer"
-                  ?disabled="${!this._transferUrl}"
-                  @click="${this._handleCopyTransferUrl}"
-                >
-                  ${this._copiedTransferUrl
-                    ? "Copied!"
-                    : "Continue on another device"}
-                </button>
-                <button
-                  type="button"
-                  style="${closeButtonStyle(
-                    isDark,
-                  )};width:100%;padding:10px;border-radius:8px;cursor:pointer"
-                  @click="${() => {
-                    this._showSecretIdentityPopup = false;
-                    this.requestUpdate();
-                  }}"
+                  style="${closeButtonStyle(isDark)}"
+                  @click="${this._handleCloseParticipants}"
                 >
                   Close
                 </button>
               </div>
             </div>
-          </div>
-        `
-        : nothing} ${this._showImportIdentityPopup
-        ? html`
-          <div style="${participantsOverlayStyle}" @click="${() => {
-            this._showImportIdentityPopup = false;
-            this.requestUpdate();
-          }}">
-            <div style="${participantsPopupStyle(isDark)}" @click="${(
-              e: Event,
-            ) => e.stopPropagation()}">
-              <h3 style="${popupTitleStyle(isDark)}">Import Identity</h3>
-              <p style="font-size:13px;opacity:0.9;text-align:center;line-height:1.4">
-                Paste your secret key, credentials JSON, or transfer URL to import your
-                identity.
-              </p>
-              <input
-                type="text"
-                id="import-identity-input"
-                placeholder="Paste secret key or URL here"
-                style="width:100%;padding:10px;border-radius:8px;border:1px solid ${isDark
-                  ? "#4b5563"
-                  : "#d1d5db"};background:${isDark
-                  ? "#2a2a2a"
-                  : "#ffffff"};color:${isDark
-                  ? "#ffffff"
-                  : "#000000"};font-size:14px"
-                @keydown="${this._handleImportKeyDown}"
-              />
-              <div style="display:flex;gap:8px;justify-content:center;width:100%">
-                <button
-                  type="button"
-                  style="${closeButtonStyle(
-                    isDark,
-                  )};flex:1;padding:10px;border-radius:8px;cursor:pointer"
-                  @click="${() => {
-                    this._showImportIdentityPopup = false;
-                    this.requestUpdate();
-                  }}"
+          `
+          : nothing} ${this._showSecretIdentityPopup && this.credentials
+          ? html`
+            <div style="${participantsOverlayStyle}" @click="${() => {
+              this._showSecretIdentityPopup = false;
+              this.requestUpdate();
+            }}">
+              <div style="${participantsPopupStyle(isDark)}" @click="${(
+                e: Event,
+              ) => e.stopPropagation()}">
+                <h3 style="${popupTitleStyle(isDark)}">Export Identity</h3>
+                <p style="font-size:13px;opacity:0.9;text-align:center;line-height:1.4">
+                  Scan this QR code with your mobile device to open Alice&Bot with your
+                  export identity.
+                </p>
+                <div
+                  style="display:flex;justify-content:center;align-items:center;width:200px;height:200px;background:#ffffff;border-radius:8px;padding:8px;margin: 0 auto;"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  id="import-identity-submit-btn"
-                  style="${copyButtonStyle(
-                    isDark,
-                  )};flex:1;padding:10px;border-radius:8px;background:${isDark
-                    ? "#3b82f6"
-                    : "#2563eb"};color:#ffffff;cursor:pointer"
-                  ?disabled="${this._importing}"
-                  @click="${this._handleImportSubmit}"
+                  ${this._qrCodeDataUrl
+                    ? html`
+                      <img
+                        src="${this._qrCodeDataUrl}"
+                        alt="Export Identity QR Code"
+                        style="width:100%;height:100%"
+                      />
+                    `
+                    : html`
+                      <div style="color:#000000;font-size:14px">Generating...</div>
+                    `}
+                </div>
+                <div
+                  style="display:flex;flex-direction:column;gap:8px;width:100%;align-items:center"
                 >
-                  ${this._importing ? "Importing..." : "Import"}
-                </button>
+                  <button
+                    type="button"
+                    style="${copyButtonStyle(
+                      isDark,
+                    )};width:100%;padding:10px;border-radius:8px;cursor:pointer"
+                    ?disabled="${!this._transferUrl}"
+                    @click="${this._handleCopyTransferUrl}"
+                  >
+                    ${this._copiedTransferUrl
+                      ? "Copied!"
+                      : "Continue on another device"}
+                  </button>
+                  <button
+                    type="button"
+                    style="${closeButtonStyle(
+                      isDark,
+                    )};width:100%;padding:10px;border-radius:8px;cursor:pointer"
+                    @click="${() => {
+                      this._showSecretIdentityPopup = false;
+                      this.requestUpdate();
+                    }}"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
+          `
+          : nothing} ${this._showImportIdentityPopup
+          ? html`
+            <div style="${participantsOverlayStyle}" @click="${() => {
+              this._showImportIdentityPopup = false;
+              this.requestUpdate();
+            }}">
+              <div style="${participantsPopupStyle(isDark)}" @click="${(
+                e: Event,
+              ) => e.stopPropagation()}">
+                <h3 style="${popupTitleStyle(isDark)}">Import Identity</h3>
+                <p style="font-size:13px;opacity:0.9;text-align:center;line-height:1.4">
+                  Paste your secret key, credentials JSON, or transfer URL to import your
+                  identity.
+                </p>
+                <input
+                  type="text"
+                  id="import-identity-input"
+                  placeholder="Paste secret key or URL here"
+                  style="width:100%;padding:10px;border-radius:8px;border:1px solid ${isDark
+                    ? "#4b5563"
+                    : "#d1d5db"};background:${isDark
+                    ? "#2a2a2a"
+                    : "#ffffff"};color:${isDark
+                    ? "#ffffff"
+                    : "#000000"};font-size:14px"
+                  @keydown="${this._handleImportKeyDown}"
+                />
+                <div style="display:flex;gap:8px;justify-content:center;width:100%">
+                  <button
+                    type="button"
+                    style="${closeButtonStyle(
+                      isDark,
+                    )};flex:1;padding:10px;border-radius:8px;cursor:pointer"
+                    @click="${() => {
+                      this._showImportIdentityPopup = false;
+                      this.requestUpdate();
+                    }}"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    id="import-identity-submit-btn"
+                    style="${copyButtonStyle(
+                      isDark,
+                    )};flex:1;padding:10px;border-radius:8px;background:${isDark
+                      ? "#3b82f6"
+                      : "#2563eb"};color:#ffffff;cursor:pointer"
+                    ?disabled="${this._importing}"
+                    @click="${this._handleImportSubmit}"
+                  >
+                    ${this._importing ? "Importing..." : "Import"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          `
+          : nothing}
+      `;
+
+    if (!this.enableChatSwitching) {
+      return html`
+        ${this._renderChatContent(isDark)} ${renderPopups()}
+      `;
+    }
+
+    if (this._isMobile && this._mobileShowList) {
+      return html`
+        <div style="${mobileFullListStyle(isDark, this.customColors)}">
+          <div style="${sidebarHeaderStyle(isDark)}">
+            <div style="font-size:16px;font-weight:700;color:${this.customColors
+              ?.text ?? (isDark ? "#fff" : "#111")}">Chats</div>
+            <input
+              type="text"
+              placeholder="Search chats..."
+              .value="${this._searchQuery}"
+              @input="${this._handleSearchInput}"
+              style="${sidebarSearchInputStyle(isDark, this.customColors)}"
+            />
           </div>
-        `
-        : nothing}
+          <div style="${sidebarListStyle(this.customColors?.scrollbarColor)}">
+            ${this._renderConversationList(isDark)}
+          </div>
+        </div>
+        ${renderPopups()}
+      `;
+    }
+
+    if (this._isMobile && !this._mobileShowList) {
+      return html`
+        <div style="${mainChatContainerStyle}">
+          <button
+            type="button"
+            style="${mobileBackButtonStyle(isDark, this.customColors)}"
+            @click="${() => {
+              this._mobileShowList = true;
+              this.requestUpdate();
+            }}"
+            title="All Chats"
+          >
+            ${chatsIconSvg}
+            <span>Chats</span>
+          </button>
+          ${this._renderChatContent(isDark)}
+        </div>
+        ${renderPopups()}
+      `;
+    }
+
+    return html`
+      <div style="${chatSwitcherContainerStyle}">
+        <div style="${sidebarContainerStyle(isDark, this.customColors)}">
+          <div style="${sidebarHeaderStyle(isDark)}">
+            <input
+              type="text"
+              placeholder="Search chats..."
+              .value="${this._searchQuery}"
+              @input="${this._handleSearchInput}"
+              style="${sidebarSearchInputStyle(isDark, this.customColors)}"
+            />
+          </div>
+          <div style="${sidebarListStyle(this.customColors?.scrollbarColor)}">
+            ${this._renderConversationList(isDark)}
+          </div>
+        </div>
+        <div style="${mainChatContainerStyle}">
+          ${this._renderChatContent(isDark)}
+        </div>
+      </div>
+      ${renderPopups()}
     `;
   }
 }
