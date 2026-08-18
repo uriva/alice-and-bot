@@ -810,6 +810,7 @@ export class ChatMessage extends LitElement {
               ? html`
                 <b
                   data-testid="author-name"
+                  dir="auto"
                   style="font-size:11px;color:${participantColor};user-select:none;-webkit-user-select:none"
                 >${authorName}</b>
               `
@@ -896,7 +897,7 @@ export class ChatMessage extends LitElement {
                   <div style="display:flex;align-items:center;gap:4px">
                     ${hasEdits
                       ? html`
-                        <span style="font-size:10px;opacity:0.7">edited</span>
+                        <span dir="auto" style="font-size:10px;opacity:0.7">edited</span>
                       `
                       : nothing}
                     <button
@@ -962,6 +963,7 @@ export class ChatMessage extends LitElement {
                   </div>
                 `}
               <span
+                dir="auto"
                 title="${formatFullTimestamp(timestamp)}"
                 style="color:${textColor};opacity:0.7;font-size:10px"
               >${this._timeAgo}</span>

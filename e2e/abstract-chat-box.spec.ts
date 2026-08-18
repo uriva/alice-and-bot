@@ -748,3 +748,39 @@ test("single-line Hebrew message in chatgpt style renders with RTL direction and
   expect(bubbleRect.right - textRect.right).toBeLessThan(30);
   expect(textRect.left - bubbleRect.left).toBeGreaterThan(50);
 });
+
+test("relative timestamp like 3 minutes ago renders with LTR direction in RTL message bubbles", async ({ page }) => {
+  await page.goto("/");
+  const rtlText = "שלום אורי!";
+
+  await page.evaluate((text) => {
+    const chatBox = document.querySelector("chat-box") as
+      & HTMLElement
+      & Record<string, unknown>;
+    const now = Date.now();
+    chatBox.messages = [
+      {
+        id: "rtl-msg-time-ago",
+        authorId: "assistant-1",
+        authorName: "Assistant",
+        text,
+        timestamp: now - 3 * 60 * 1000,
+      },
+    ];
+  }, rtlText);
+
+  const bubble = page.locator(".msg-bubble").first();
+  await expect(bubble).toBeVisible();
+  await expect(bubble).toHaveAttribute("dir", "rtl");
+
+  const timestampSpan = bubble.locator("span").filter({
+    hasText: "3 minutes ago",
+  });
+  await expect(timestampSpan).toBeVisible();
+  await expect(timestampSpan).toHaveAttribute("dir", "auto");
+
+  const computedDir = await timestampSpan.evaluate((el) =>
+    getComputedStyle(el).direction
+  );
+  expect(computedDir).toBe("ltr");
+});

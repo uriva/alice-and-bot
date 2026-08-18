@@ -1,4 +1,9 @@
-import { assertEquals, assertFalse, assertNotEquals } from "@std/assert";
+import {
+  assertEquals,
+  assertFalse,
+  assertMatch,
+  assertNotEquals,
+} from "@std/assert";
 import {
   attachmentPrimaryColor,
   defaultOtherBubble,
@@ -245,5 +250,18 @@ Deno.test(
     const text =
       "שלום אורי! נעים להכיר, אני כאן כדי לעזור לך לבנות ולהגדיר את האייג'נט שלך ב-prompt2bot.";
     assertEquals(textDirection(text), "rtl");
+  },
+);
+
+Deno.test(
+  "chat-message template assigns dir=auto to timeAgo span to avoid reversing in RTL chats",
+  () => {
+    const code = Deno.readTextFileSync(
+      new URL("./chat-message.ts", import.meta.url).pathname,
+    );
+    assertMatch(
+      code,
+      /<span[^>]*dir="auto"[^>]*>\s*\$\{this\._timeAgo\}\s*<\/span>/,
+    );
   },
 );
