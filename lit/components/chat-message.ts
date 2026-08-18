@@ -777,6 +777,7 @@ export class ChatMessage extends LitElement {
         >
           <div
             class="msg-bubble"
+            dir="${textDirection(displayedText)}"
             style="display:${noBubble
               ? "block"
               : "inline-block"};min-width:0;max-width:100%;${noBubble

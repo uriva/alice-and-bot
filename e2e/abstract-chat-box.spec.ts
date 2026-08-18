@@ -701,3 +701,50 @@ Telegram ייעודי או ערוצים נוספים.
   );
   expect(computedDir).toBe("rtl");
 });
+
+test("single-line Hebrew message in chatgpt style renders with RTL direction and alignment", async ({ page }) => {
+  await page.goto("/");
+  const rtlText =
+    "שלום אורי! נעים להכיר, אני כאן כדי לעזור לך לבנות ולהגדיר את האייג'נט שלך ב-prompt2bot.";
+
+  await page.evaluate((text) => {
+    const chatBox = document.querySelector("chat-box") as
+      & HTMLElement
+      & Record<string, unknown>;
+    const now = Date.now();
+    chatBox.messages = [
+      {
+        id: "rtl-msg-single",
+        authorId: "assistant-1",
+        authorName: "Assistant",
+        text,
+        timestamp: now,
+      },
+    ];
+  }, rtlText);
+
+  const bubble = page.locator(".msg-bubble").first();
+  await expect(bubble).toBeVisible();
+  await expect(bubble).toHaveAttribute("dir", "rtl");
+
+  const computedDir = await bubble.evaluate((el) =>
+    getComputedStyle(el).direction
+  );
+  expect(computedDir).toBe("rtl");
+
+  const msgText = page.locator('[data-testid="message-text"]').first();
+  await expect(msgText).toHaveAttribute("dir", "rtl");
+
+  const { bubbleRect, textRect } = await page.evaluate(() => {
+    const b = document.querySelector(".msg-bubble")!.getBoundingClientRect();
+    const t = document.querySelector('[data-testid="message-text"]')!
+      .getBoundingClientRect();
+    return {
+      bubbleRect: { left: b.left, right: b.right, width: b.width },
+      textRect: { left: t.left, right: t.right, width: t.width },
+    };
+  });
+
+  expect(bubbleRect.right - textRect.right).toBeLessThan(30);
+  expect(textRect.left - bubbleRect.left).toBeGreaterThan(50);
+});

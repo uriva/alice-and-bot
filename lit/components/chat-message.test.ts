@@ -10,7 +10,7 @@ import {
   shouldShowAvatar,
   shouldShowName,
 } from "./design.ts";
-import { renderMarkdown } from "./markdown.ts";
+import { renderMarkdown, textDirection } from "./markdown.ts";
 
 Deno.test("attachmentPrimaryColor uses custom primary when provided", () => {
   assertEquals(attachmentPrimaryColor(true, { primary: "#ff0000" }), "#ff0000");
@@ -238,3 +238,12 @@ Telegram ייעודי או ערוצים נוספים.
     true,
   );
 });
+
+Deno.test(
+  "textDirection detects Hebrew greeting with English bot name as rtl",
+  () => {
+    const text =
+      "שלום אורי! נעים להכיר, אני כאן כדי לעזור לך לבנות ולהגדיר את האייג'נט שלך ב-prompt2bot.";
+    assertEquals(textDirection(text), "rtl");
+  },
+);
