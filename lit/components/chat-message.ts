@@ -28,6 +28,7 @@ import {
   highlightCss,
   renderMarkdown,
   secretBlurCss,
+  textDirection,
 } from "./markdown.ts";
 import type {
   AbstracChatMessage,
@@ -736,7 +737,7 @@ export class ChatMessage extends LitElement {
       )}
       .msg-wrap .msg-reply-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-reply-trigger{opacity:1}
       [data-testid="message-text"]{unicode-bidi:plaintext;text-align:start}
-      [data-testid="message-text"] span[dir="auto"]{unicode-bidi:plaintext;text-align:start}
+      [data-testid="message-text"] span{unicode-bidi:plaintext;text-align:start}
       [data-testid="message-text"] > :last-child { margin-bottom: 0 !important; }
       </style>
       <div
@@ -761,7 +762,9 @@ export class ChatMessage extends LitElement {
           class="msg-wrap"
           style="display:flex;flex-direction:column;min-width:0;align-items:${isOwn
             ? "flex-end"
-            : "flex-start"};position:relative;max-width:80%${this.isMobile
+            : "flex-start"};position:relative;max-width:${noBubble
+            ? "100%"
+            : "80%"}${noBubble ? ";width:100%" : ""}${this.isMobile
             ? ";user-select:none;-webkit-user-select:none;-webkit-touch-callout:none"
             : ""}"
           @contextmenu="${(e: Event) => {
@@ -774,7 +777,11 @@ export class ChatMessage extends LitElement {
         >
           <div
             class="msg-bubble"
-            style="display:inline-block;min-width:0;max-width:100%;background:${noBubble
+            style="display:${noBubble
+              ? "block"
+              : "inline-block"};min-width:0;max-width:100%;${noBubble
+              ? "width:100%;box-sizing:border-box;"
+              : ""}background:${noBubble
               ? "transparent"
               : baseColor};color:${textColor};align-self:${isOwn
               ? "flex-end"
@@ -845,9 +852,11 @@ export class ChatMessage extends LitElement {
               ? html`
                 <span
                   data-testid="message-text"
-                  dir="auto"
+                  dir="${textDirection(displayedText)}"
                   style="${callDetails
                     ? "display:flex;align-items:center;gap:8px;"
+                    : noBubble
+                    ? "display:block;"
                     : "display:inline;"}user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;word-break:break-word;min-width:0"
                 >${callDetails ? faPhoneAlt : nothing}${unsafeHTML(
                   (this.streamActive || isRevealing) && displayedText.trim()

@@ -41,7 +41,14 @@ import "./chat-box.ts";
 import "./user-profile-popup.ts";
 import "./chat-avatar.ts";
 import { avatarColor, defaultPrimary } from "./design.ts";
-import { copyToClipboard } from "./utils.ts";
+import {
+  collectIdentityKeys,
+  copyToClipboard,
+  type IdentityDetails,
+  mergeIdentityDetails,
+  type Participant,
+  resolveConversationDisplayName,
+} from "./utils.ts";
 import type {
   AbstracChatMessage,
   ActiveProgress,
@@ -111,15 +118,6 @@ const foldEdits = (messages: DecipheredMessage[]) => {
         : undefined,
     };
   });
-};
-
-type IdentityDetails = Record<string, { name: string; avatar?: string }>;
-
-type Participant = {
-  publicSignKey: string;
-  name?: string;
-  avatar?: string;
-  alias?: string;
 };
 
 const resolveName = (details: IdentityDetails) => (key: string): string =>
@@ -519,18 +517,6 @@ const chatsIconSvg = html`
   </svg>
 `;
 
-const resolveConversationDisplayName = (
-  conv: Conversation,
-  myKey: string,
-  nameCache: Map<string, string | null>,
-) => {
-  if (conv.title && conv.title !== "Chat") return conv.title;
-  const other = conv.participants.find((p) => p.publicSignKey !== myKey);
-  if (!other) return conv.title || "Chat";
-  const cachedName = nameCache.get(other.publicSignKey);
-  return cachedName || conv.title || compactPublicKey(other.publicSignKey);
-};
-
 const notFoundHtml = (customColors?: CustomColors, isDark?: boolean) =>
   html`
     <div
@@ -743,6 +729,7 @@ export class ConnectedChat extends LitElement {
         this._responsiveUnsub = null;
         this._conversationsUnsub?.();
         this._conversationsUnsub = null;
+        this._resubscribeIdentities();
       }
     }
     if (credentialsChanged || conversationIdChanged) {
@@ -760,9 +747,6 @@ export class ConnectedChat extends LitElement {
     this._voiceCall = null;
     this._messagesUnsub?.();
     this._messagesUnsub = null;
-    this._identityUnsub?.();
-    this._identityUnsub = null;
-    this._lastIdentityKeys = "";
     this._progressMax.clear();
     this._hadMessages = false;
     this._lastMessageSubscriptionKey = undefined;
@@ -778,6 +762,10 @@ export class ConnectedChat extends LitElement {
     this._teardownConversation();
     this._conversationsUnsub?.();
     this._conversationsUnsub = null;
+    this._identityUnsub?.();
+    this._identityUnsub = null;
+    this._lastIdentityKeys = "";
+    this._identityDetails = {};
     this._nameUnsubs.forEach((u) => u());
     this._nameUnsubs.clear();
     this._nameCache.clear();
@@ -806,6 +794,7 @@ export class ConnectedChat extends LitElement {
           );
           if (other) this._subscribeName(other.publicSignKey);
         });
+        this._resubscribeIdentities();
         if (
           !this._activeConversationId && convs && convs.length > 0 &&
           this.enableChatSwitching
@@ -877,6 +866,7 @@ export class ConnectedChat extends LitElement {
           this._conversationTitle = conv?.title || "Chat";
           this._isGroupChat = (conv?.participants.length ?? 0) > 2;
           this._participants = conv?.participants ?? [];
+          this._resubscribeIdentities();
           this.requestUpdate();
         },
       ),
@@ -987,18 +977,26 @@ export class ConnectedChat extends LitElement {
   }
 
   private _resubscribeIdentities() {
-    const keys = [
-      ...(this._messages ?? []).map((m) => m.publicSignKey),
-      ...this._ephemeralStreams
-        .map((e) => e.authorId)
-        .filter((x): x is string => Boolean(x)),
-    ];
+    const keys = collectIdentityKeys({
+      messages: this._messages,
+      participants: this._participants,
+      ephemeralStreams: this._ephemeralStreams,
+      conversations: this._conversations,
+      enableChatSwitching: this.enableChatSwitching,
+    });
     const sorted = [...new Set(keys)].sort().join(",");
     if (sorted === this._lastIdentityKeys) return;
     this._lastIdentityKeys = sorted;
     this._identityUnsub?.();
+    if (empty(keys)) {
+      this._identityUnsub = null;
+      return;
+    }
     this._identityUnsub = subscribeIdentityDetailsMap(keys, (details) => {
-      this._identityDetails = details;
+      this._identityDetails = mergeIdentityDetails(
+        this._identityDetails,
+        details,
+      );
       this.requestUpdate();
     });
   }
@@ -1436,7 +1434,12 @@ export class ConnectedChat extends LitElement {
     const myKey = this.credentials?.publicSignKey ?? "";
     const filtered = this._searchQuery.trim()
       ? this._conversations.filter((c) => {
-        const name = resolveConversationDisplayName(c, myKey, this._nameCache);
+        const name = resolveConversationDisplayName(
+          c,
+          myKey,
+          this._nameCache,
+          this._identityDetails,
+        );
         return name.toLowerCase().includes(this._searchQuery.toLowerCase());
       })
       : this._conversations;
@@ -1459,6 +1462,7 @@ export class ConnectedChat extends LitElement {
         conv,
         myKey,
         this._nameCache,
+        this._identityDetails,
       );
       const otherParticipant = conv.participants.find(
         (p) => p.publicSignKey !== myKey,
@@ -1466,7 +1470,7 @@ export class ConnectedChat extends LitElement {
       const otherKey = otherParticipant?.publicSignKey ?? conv.id;
       const baseColor = avatarColor(otherKey, isDark);
       const avatar = otherParticipant
-        ? this._identityDetails[otherParticipant.publicSignKey]?.avatar
+        ? resolveParticipantAvatar(otherParticipant, this._identityDetails)
         : undefined;
 
       return html`

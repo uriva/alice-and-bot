@@ -1,5 +1,5 @@
 import type { InstaQLEntity } from "@instantdb/core";
-import { sort, unique } from "@uri/gamla";
+import { empty, sort, unique } from "@uri/gamla";
 import { sendTyping } from "../../backend/src/api.ts";
 import {
   createConversation,
@@ -184,7 +184,11 @@ export const subscribeIdentityDetailsMap = (
     details: Record<string, { name: string; avatar?: string }>,
   ) => void,
 ): () => void => {
-  const keys = Array.from(new Set(publicKeys));
+  const keys = Array.from(new Set(publicKeys)).filter(Boolean);
+  if (empty(keys)) {
+    onChange({});
+    return () => {};
+  }
   return accessDb().subscribeQuery(
     { identities: { $: { where: { publicSignKey: { $in: keys } } } } },
     ({ data }) => {

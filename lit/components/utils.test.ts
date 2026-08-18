@@ -1,6 +1,7 @@
 import { assertEquals, assertMatch } from "@std/assert";
 import {
   buildTimeline,
+  collectIdentityKeys,
   computeTextareaResize,
   filterParticipants,
   formatFullTimestamp,
@@ -8,9 +9,11 @@ import {
   insertMention,
   isStale,
   maxTextareaHeight,
+  mergeIdentityDetails,
   minTextareaHeight,
   nextVisibleText,
   preprocessText,
+  resolveConversationDisplayName,
   sendingStatusText,
   shouldShowScrollDownButton,
 } from "./utils.ts";
@@ -163,4 +166,99 @@ Deno.test("preprocessText strips incomplete trailing HTML tags to avoid renderin
 Deno.test("preprocessText converts unicode bullets to standard list bullets", () => {
   const result = preprocessText("• כתובת: לוינסקי 81\n• טלפון: 03-6996544");
   assertEquals(result, "* כתובת: לוינסקי 81\n* טלפון: 03-6996544");
+});
+
+Deno.test("collectIdentityKeys includes chat list participants when chat switching is enabled", () => {
+  const conversations = [
+    {
+      id: "c1",
+      title: "Chat 1",
+      participants: [{ publicSignKey: "pk-bot1" }, { publicSignKey: "pk-me" }],
+    },
+    {
+      id: "c2",
+      title: "Chat 2",
+      participants: [{ publicSignKey: "pk-bot2" }, { publicSignKey: "pk-me" }],
+    },
+  ];
+  const messages = [
+    {
+      id: "m1",
+      type: "text" as const,
+      text: "hi",
+      timestamp: 100,
+      publicSignKey: "pk-bot1",
+    },
+  ];
+  const participants = [{ publicSignKey: "pk-bot1" }];
+  const ephemeralStreams = [{
+    elementId: "e1",
+    text: "typing",
+    authorId: "pk-bot3",
+    active: true,
+    updatedAt: 100,
+  }];
+
+  const keysSwitching = collectIdentityKeys({
+    messages,
+    participants,
+    ephemeralStreams,
+    conversations,
+    enableChatSwitching: true,
+  });
+
+  assertEquals(
+    keysSwitching.sort(),
+    ["pk-bot1", "pk-bot2", "pk-bot3", "pk-me"].sort(),
+  );
+
+  const keysSingle = collectIdentityKeys({
+    messages,
+    participants,
+    ephemeralStreams,
+    conversations,
+    enableChatSwitching: false,
+  });
+
+  assertEquals(keysSingle.sort(), ["pk-bot1", "pk-bot3"].sort());
+});
+
+Deno.test("mergeIdentityDetails preserves already cached identities across conversation changes", () => {
+  const initial = {
+    "pk-bot1": { name: "Bot One", avatar: "https://example.com/bot1.png" },
+  };
+  const incoming = {
+    "pk-bot2": { name: "Bot Two", avatar: "https://example.com/bot2.png" },
+  };
+
+  const merged = mergeIdentityDetails(initial, incoming);
+
+  assertEquals(merged["pk-bot1"], {
+    name: "Bot One",
+    avatar: "https://example.com/bot1.png",
+  });
+  assertEquals(merged["pk-bot2"], {
+    name: "Bot Two",
+    avatar: "https://example.com/bot2.png",
+  });
+});
+
+Deno.test("resolveConversationDisplayName uses identityDetails when nameCache is empty", () => {
+  const conv = {
+    id: "c1",
+    title: "",
+    participants: [{ publicSignKey: "pk-bot1" }, { publicSignKey: "pk-me" }],
+  };
+  const nameCache = new Map<string, string | null>();
+  const identityDetails = {
+    "pk-bot1": { name: "Bot One", avatar: "https://example.com/bot1.png" },
+  };
+
+  const name = resolveConversationDisplayName(
+    conv,
+    "pk-me",
+    nameCache,
+    identityDetails,
+  );
+  assertEquals(name, "Bot One");
 });

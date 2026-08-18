@@ -637,3 +637,67 @@ test("message text should contain no p tags at all to ensure perfect copying acr
   // It should have NO p tags inside (we use display:inline-block spans instead)
   expect(hasPTags).toBe(false);
 });
+
+test("RTL message appearing after finished loading bars in chatgpt style renders with RTL direction and alignment", async ({ page }) => {
+  await page.goto("/");
+  const rtlText = `הסוכן של Social Dental Clinic נוצר בהצלחה! 🦷✨
+שמרתי גם את ה-API Key של RapidOne בצורה מאובטחת בהגדרות הסוכן.
+
+קישורים לבדיקה והתנסות מיידית:
+• צ'אט ישיר ב-Alice & Bot
+• התנסות ב-Telegram Demo
+
+אפשרויות פריסה והטמעה:
+לאחר שתתנסה, נוכל לחבר את הסוכן ל:
+
+WhatsApp ייעודי (הרשמי של מטא או קו סופרגרין).
+ווידג'ט צ'אט מעוצב להטמעה ישירה באתר המרפאה.
+Telegram ייעודי או ערוצים נוספים.
+בנוסף, תוכל לנהל ולערוך את הגדרות הסוכן בכל עת ב-דשבורד של prompt2bot, ומוזמן להצטרף ל-קבוצת הוואטסאפ של הקהילה לשאלות, טיפים ועדכונים!`;
+
+  await page.evaluate((text) => {
+    const chatBox = document.querySelector("chat-box") as
+      & HTMLElement
+      & Record<string, unknown>;
+    const now = Date.now();
+    chatBox.activeProgress = [
+      {
+        elementId: "prog-1",
+        text: "Building assistant...",
+        percentage: 1,
+        timestamp: now - 3000,
+        authorName: "Assistant",
+      },
+      {
+        elementId: "prog-2",
+        text: "Configuring integration...",
+        percentage: 1,
+        timestamp: now - 2000,
+        authorName: "Assistant",
+      },
+    ];
+    chatBox.messages = [
+      {
+        id: "rtl-msg-1",
+        authorId: "assistant-1",
+        authorName: "Assistant",
+        text,
+        timestamp: now - 1000,
+      },
+    ];
+  }, rtlText);
+
+  const msgText = page.locator('[data-testid="message-text"]').first();
+  await expect(msgText).toBeVisible();
+  await expect(msgText).toHaveAttribute("dir", "rtl");
+
+  const whatsappSpan = msgText.locator("span").filter({
+    hasText: "WhatsApp ייעודי",
+  });
+  await expect(whatsappSpan).toHaveAttribute("dir", "rtl");
+
+  const computedDir = await whatsappSpan.evaluate((el) =>
+    getComputedStyle(el).direction
+  );
+  expect(computedDir).toBe("rtl");
+});

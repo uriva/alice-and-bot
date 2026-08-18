@@ -153,7 +153,7 @@ Deno.test("renderMarkdown strips wrapping p/span tags for single-paragraph messa
 
 Deno.test("renderMarkdown preserves span tags with bottom margin for multi-paragraph messages", () => {
   const html = renderMarkdown("Hello World\n\nSecond Paragraph", "#222", false);
-  assertEquals(html.startsWith('<span dir="auto"'), true);
+  assertEquals(html.startsWith('<span dir="ltr"'), true);
   assertEquals(html.endsWith("</span>"), true);
 });
 
@@ -200,7 +200,40 @@ Deno.test("renderMarkdown renders RTL text with bullet points as an RTL list", (
   assertEquals(html.includes('<ul dir="rtl"'), true);
   assertEquals(
     html.includes(
-      '<li style="margin:2px 0"><span dir="auto">כתובת: לוינסקי 81, תל אביב-יפו</span></li>',
+      '<li style="margin:2px 0"><span dir="rtl">כתובת: לוינסקי 81, תל אביב-יפו</span></li>',
+    ),
+    true,
+  );
+});
+
+Deno.test("renderMarkdown renders RTL paragraphs and bullets starting with English words with dir=rtl", () => {
+  const input = `הסוכן של Social Dental Clinic נוצר בהצלחה! 🦷✨
+שמרתי גם את ה-API Key של RapidOne בצורה מאובטחת בהגדרות הסוכן.
+
+קישורים לבדיקה והתנסות מיידית:
+• צ'אט ישיר ב-Alice & Bot
+• התנסות ב-Telegram Demo
+
+אפשרויות פריסה והטמעה:
+לאחר שתתנסה, נוכל לחבר את הסוכן ל:
+
+WhatsApp ייעודי (הרשמי של מטא או קו סופרגרין).
+ווידג'ט צ'אט מעוצב להטמעה ישירה באתר המרפאה.
+Telegram ייעודי או ערוצים נוספים.
+בנוסף, תוכל לנהל ולערוך את הגדרות הסוכן בכל עת ב-דשבורד של prompt2bot, ומוזמן להצטרף ל-קבוצת הוואטסאפ של הקהילה לשאלות, טיפים ועדכונים!`;
+
+  const html = renderMarkdown(input, "#222", false);
+  assertEquals(html.includes('<span dir="rtl">WhatsApp ייעודי'), true);
+  assertEquals(html.includes('<ul dir="rtl"'), true);
+  assertEquals(
+    html.includes(
+      '<li style="margin:2px 0"><span dir="rtl">צ&#39;אט ישיר ב-Alice &amp; Bot</span></li>',
+    ),
+    true,
+  );
+  assertEquals(
+    html.includes(
+      '<li style="margin:2px 0"><span dir="rtl">התנסות ב-Telegram Demo</span></li>',
     ),
     true,
   );

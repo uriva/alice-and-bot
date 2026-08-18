@@ -44,13 +44,18 @@ const rtlChar = /[\u0590-\u08ff\ufb1d-\ufdfd\ufe70-\ufefc]/;
 
 const ltrChar = /[A-Za-z\u00c0-\u02af]/;
 
-const textDirection = (text: string) => {
+export const textDirection = (text: string): "rtl" | "ltr" | "auto" => {
+  const rtlMatches = text.match(new RegExp(rtlChar, "g"));
+  const ltrMatches = text.match(new RegExp(ltrChar, "g"));
+  const rtlCount = rtlMatches ? rtlMatches.length : 0;
+  const ltrCount = ltrMatches ? ltrMatches.length : 0;
+  if (rtlCount === 0 && ltrCount === 0) return "auto";
+  if (rtlCount === 0) return "ltr";
+  if (ltrCount === 0) return "rtl";
+  if (rtlCount >= ltrCount) return "rtl";
   const rtlIndex = text.search(rtlChar);
   const ltrIndex = text.search(ltrChar);
-  if (rtlIndex === -1 && ltrIndex === -1) return "auto";
-  if (rtlIndex === -1) return "ltr";
-  if (ltrIndex === -1) return "rtl";
-  return rtlIndex < ltrIndex ? "rtl" : "ltr";
+  return rtlIndex < ltrIndex && rtlCount * 2 >= ltrCount ? "rtl" : "ltr";
 };
 
 const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
@@ -111,9 +116,10 @@ const createMarked = (textColor: string, isDark: boolean) => {
     renderer: {
       paragraph(
         this: { parser: { parseInline(t: Token[]): string } },
-        { tokens }: Tokens.Paragraph,
+        { tokens, text }: Tokens.Paragraph,
       ) {
-        return `<span dir="auto">${
+        const direction = textDirection(text);
+        return `<span dir="${direction}">${
           this.parser.parseInline(tokens)
         }</span><br><br>`;
       },
@@ -164,7 +170,8 @@ const createMarked = (textColor: string, isDark: boolean) => {
               "",
             )
             : rawContent;
-        return `<li style="margin:2px 0"><span dir="auto">${content}</span></li>`;
+        const direction = textDirection(item.text);
+        return `<li style="margin:2px 0"><span dir="${direction}">${content}</span></li>`;
       },
       table(
         this: { parser: { parseInline(t: Token[]): string } },

@@ -1,4 +1,8 @@
-import { empty, sortKey } from "@uri/gamla";
+import { empty, sortKey, unique } from "@uri/gamla";
+import type { DecipheredMessage } from "../../protocol/src/clientApi.ts";
+import type { Conversation } from "../core/subscriptions.ts";
+import { compactPublicKey } from "../core/subscriptions.ts";
+import type { EphemeralStreamEvent } from "../core/room.ts";
 import type {
   AbstracChatMessage,
   ActiveProgress,
@@ -8,6 +12,61 @@ import type {
   EditHistoryEntry,
   TimelineEntry,
 } from "./types.ts";
+
+export type IdentityDetails = Record<string, { name: string; avatar?: string }>;
+
+export type Participant = {
+  publicSignKey: string;
+  name?: string;
+  avatar?: string;
+  alias?: string;
+};
+
+export const collectIdentityKeys = ({
+  messages,
+  participants,
+  ephemeralStreams,
+  conversations,
+  enableChatSwitching,
+}: {
+  messages: DecipheredMessage[] | null;
+  participants: Participant[];
+  ephemeralStreams: EphemeralStreamEvent[];
+  conversations: Conversation[] | null;
+  enableChatSwitching: boolean;
+}): string[] =>
+  unique([
+    ...(enableChatSwitching && conversations
+      ? conversations.flatMap((c) => c.participants.map((p) => p.publicSignKey))
+      : []),
+    ...(messages ?? []).map((m) => m.publicSignKey),
+    ...participants.map((p) => p.publicSignKey),
+    ...ephemeralStreams
+      .map((e) => e.authorId)
+      .filter((x): x is string => Boolean(x)),
+  ].filter(Boolean));
+
+export const mergeIdentityDetails = (
+  current: IdentityDetails,
+  incoming: IdentityDetails,
+): IdentityDetails => ({
+  ...current,
+  ...incoming,
+});
+
+export const resolveConversationDisplayName = (
+  conv: Conversation,
+  myKey: string,
+  nameCache: Map<string, string | null>,
+  identityDetails?: IdentityDetails,
+) => {
+  if (conv.title && conv.title !== "Chat") return conv.title;
+  const other = conv.participants.find((p) => p.publicSignKey !== myKey);
+  if (!other) return conv.title || "Chat";
+  const cachedName = nameCache.get(other.publicSignKey) ||
+    identityDetails?.[other.publicSignKey]?.name;
+  return cachedName || conv.title || compactPublicKey(other.publicSignKey);
+};
 
 export const recordingMimeType = typeof MediaRecorder !== "undefined" &&
     MediaRecorder.isTypeSupported("audio/webm")
