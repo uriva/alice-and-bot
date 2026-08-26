@@ -15,5 +15,5 @@ sudo docker run -d \
     --restart always \
     -v caddy_data:/data \
     -v caddy_config:/config \
-    -v /home/uri/twilio.Caddyfile:/etc/caddy/Caddyfile:ro \
-    caddy:2 caddy run --config /etc/caddy/Caddyfile --admin off
+    -v /tmp/twilio.Caddyfile:/etc/caddy/Caddyfile:ro \
+    caddy:2 caddy run --config /etc/caddy/Caddyfile
