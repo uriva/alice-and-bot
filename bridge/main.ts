@@ -7,10 +7,15 @@ import {
 } from "werift";
 import { Decoder, Encoder } from "@evan/opus";
 
-const _server = Deno.serve({ port: 8080 }, (req) => {
+const handleRequest = (req: Request): Response => {
+  const url = new URL(req.url);
   if (req.headers.get("upgrade") !== "websocket") {
     return new Response("Not a websocket request", { status: 400 });
   }
+  if (url.pathname === "/twilio-voice/stream") {
+    return proxyTwilioStream(req);
+  }
+
   const { socket, response } = Deno.upgradeWebSocket(req);
 
   let pc: RTCPeerConnection | null = null;
@@ -267,4 +272,93 @@ const _server = Deno.serve({ port: 8080 }, (req) => {
   };
 
   return response;
+};
+
+const twilioUpstreamBase = (): string =>
+  Deno.env.get("TWILIO_WSS_UPSTREAM") ?? "wss://api.prompt2bot.com";
+
+export type ProxyEndpoint = {
+  send: (data: string) => void;
+  close: () => void;
+  onMessage: (handler: (data: string) => void) => void;
+  onClose: (handler: () => void) => void;
+  onOpen: (handler: () => void) => void;
+};
+
+export const asProxyEndpoint = (ws: WebSocket): ProxyEndpoint => ({
+  send: (data) => {
+    if (ws.readyState === ws.OPEN) ws.send(data);
+  },
+  close: () => {
+    if (ws.readyState !== ws.CLOSED) ws.close();
+  },
+  onMessage: (handler) =>
+    ws.addEventListener("message", (event) => handler(String(event.data))),
+  onClose: (handler) => ws.addEventListener("close", () => handler()),
+  onOpen: (handler) => {
+    if (ws.readyState === ws.OPEN) handler();
+    else ws.addEventListener("open", () => handler());
+  },
 });
+
+const maxQueuedWhilePeerPending = 1000;
+
+const forwardInto = (from: ProxyEndpoint, to: ProxyEndpoint) => {
+  const queue: string[] = [];
+  let toReady = false;
+  to.onOpen(() => {
+    toReady = true;
+    for (const data of queue.splice(0)) to.send(data);
+  });
+  from.onMessage((data) => {
+    if (!toReady) {
+      if (queue.length >= maxQueuedWhilePeerPending) queue.shift();
+      queue.push(data);
+      return;
+    }
+    to.send(data);
+  });
+};
+
+export const pipeProxyEndpoints = (a: ProxyEndpoint, b: ProxyEndpoint) => {
+  forwardInto(a, b);
+  forwardInto(b, a);
+  a.onClose(() => b.close());
+  b.onClose(() => a.close());
+};
+
+const proxyTwilioStream = (req: Request): Response => {
+  const downstream = Deno.upgradeWebSocket(req);
+  const query = new URL(req.url).search;
+  const upstream = new WebSocket(
+    `${twilioUpstreamBase()}/twilio-voice/stream${query}`,
+  );
+  const down = asProxyEndpoint(downstream.socket);
+  const up = asProxyEndpoint(upstream);
+  let relayedDown = 0;
+  let relayedUp = 0;
+  down.onMessage(() => relayedDown++);
+  up.onMessage(() => relayedUp++);
+  pipeProxyEndpoints(down, up);
+  const reportClose = (side: string) =>
+    console.log(
+      `[twilio-proxy] ${side} closed. downstream->upstream msgs: ${relayedDown}, upstream->downstream msgs: ${relayedUp}`,
+    );
+  down.onClose(() => {
+    reportClose("Downstream");
+    up.close();
+  });
+  up.onClose(() => {
+    reportClose("Upstream");
+    down.close();
+  });
+  upstream.addEventListener("error", () => {
+    console.error("[twilio-proxy] Upstream connection error");
+    down.close();
+  });
+  return downstream.response;
+};
+
+if (import.meta.main) {
+  Deno.serve({ port: 8080 }, handleRequest);
+}

@@ -33,3 +33,17 @@ jobs:
             --zone=us-central1-a \
             --project=alice-and-bot \
             --command="docker-credential-gcr configure-docker --registries=gcr.io && docker pull gcr.io/alice-and-bot/webrtc-bridge:latest && docker stop bridge || true && docker rm bridge || true && docker run -d --name bridge --network host --restart always gcr.io/alice-and-bot/webrtc-bridge:latest"
+
+      - name: Sync Caddyfile
+        run: |
+          cat bridge/Caddyfile | gcloud compute ssh webrtc-bridge \
+            --zone=us-central1-a \
+            --project=alice-and-bot \
+            --command="cat > /home/uri/twilio.Caddyfile"
+
+      - name: Restart caddy TLS front
+        run: |
+          gcloud compute ssh webrtc-bridge \
+            --zone=us-central1-a \
+            --project=alice-and-bot \
+            --command="sudo docker pull caddy:2 && sudo docker stop caddy || true && sudo docker rm caddy || true && sudo docker run -d --name caddy --network host --restart always -v caddy_data:/data -v caddy_config:/config -v /home/uri/twilio.Caddyfile:/etc/caddy/Caddyfile:ro caddy:2 caddy run --config /etc/caddy/Caddyfile --admin off"
