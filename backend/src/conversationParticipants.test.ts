@@ -1,8 +1,46 @@
 import { assertEquals } from "@std/assert";
-import { conversationHasExactParticipants } from "./conversationParticipants.ts";
+import {
+  chooseOptimalParticipantKey,
+  conversationHasExactParticipants,
+} from "./conversationParticipants.ts";
 
 const conv = (...keys: string[]) => ({
   participants: keys.map((publicSignKey) => ({ publicSignKey })),
+});
+
+Deno.test("chooseOptimalParticipantKey prefers non-alias user over bot with alias", () => {
+  const userKey = "user_key_123";
+  const botKey = "bot_key_456";
+  const identities = [
+    { publicSignKey: botKey, alias: "some_bot" },
+    { publicSignKey: userKey, alias: null },
+  ];
+  assertEquals(
+    chooseOptimalParticipantKey([botKey, userKey], identities),
+    userKey,
+  );
+  assertEquals(
+    chooseOptimalParticipantKey([userKey, botKey], identities),
+    userKey,
+  );
+});
+
+Deno.test("chooseOptimalParticipantKey falls back to first key if all or none have alias", () => {
+  assertEquals(
+    chooseOptimalParticipantKey(["k1", "k2"], [
+      { publicSignKey: "k1", alias: "bot1" },
+      { publicSignKey: "k2", alias: "bot2" },
+    ]),
+    "k1",
+  );
+  assertEquals(
+    chooseOptimalParticipantKey(["k1", "k2"], [
+      { publicSignKey: "k1" },
+      { publicSignKey: "k2" },
+    ]),
+    "k1",
+  );
+  assertEquals(chooseOptimalParticipantKey([], []), undefined);
 });
 
 Deno.test("matches a conversation with exactly the requested participants", () => {

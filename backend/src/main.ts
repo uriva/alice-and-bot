@@ -10,7 +10,10 @@ import {
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
 import { issueNonceHelper, kv, verifyAuthToken } from "./auth.ts";
-import { conversationHasExactParticipants } from "./conversationParticipants.ts";
+import {
+  chooseOptimalParticipantKey,
+  conversationHasExactParticipants,
+} from "./conversationParticipants.ts";
 import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import {
@@ -231,11 +234,22 @@ export const endpoints: BackendApiImpl = {
       return { profile: { name, avatar, alias } };
     },
     getConversations: async ({ publicSignKeys }) => {
+      if (publicSignKeys.length === 0) return { conversations: [] };
+      const { identities } = await query({
+        identities: {
+          $: { where: { publicSignKey: { $in: publicSignKeys } } },
+        },
+      });
+      const chosenKey = chooseOptimalParticipantKey(
+        publicSignKeys,
+        identities,
+      );
+      if (!chosenKey) return { conversations: [] };
       const { conversations } = await query({
         conversations: {
           participants: {},
           $: {
-            where: { "participants.publicSignKey": { $in: publicSignKeys } },
+            where: { "participants.publicSignKey": chosenKey },
           },
         },
       });

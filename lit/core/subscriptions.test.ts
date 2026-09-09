@@ -379,8 +379,8 @@ Deno.test("createConversationSafely does not leak a rejected create promise", as
   const done = new Promise<void>((resolve) =>
     createConversationSafely(
       () => Promise.reject(new TypeError("Failed to fetch")),
-      (created) => {
-        settled.push(created);
+      (result) => {
+        settled.push(result !== null);
         resolve();
       },
     )
@@ -394,8 +394,8 @@ Deno.test("createConversationSafely reports failure when result carries an error
   const done = new Promise<void>((resolve) =>
     createConversationSafely(
       () => Promise.resolve({ error: "boom" }),
-      (created) => {
-        settled.push(created);
+      (result) => {
+        settled.push(result !== null);
         resolve();
       },
     )
@@ -405,18 +405,18 @@ Deno.test("createConversationSafely reports failure when result carries an error
 });
 
 Deno.test("createConversationSafely reports success on a clean result", async () => {
-  const settled: boolean[] = [];
+  const settled: ({ id: string } | null)[] = [];
   const done = new Promise<void>((resolve) =>
     createConversationSafely(
       () => Promise.resolve({ id: "convo1" }),
-      (created) => {
-        settled.push(created);
+      (result) => {
+        settled.push(result);
         resolve();
       },
     )
   );
   await done;
-  assertEquals(settled, [true]);
+  assertEquals(settled, [{ id: "convo1" }]);
 });
 
 // Regression: subscribeConversationKey did decryptAsymmetric(...).then(onChange)

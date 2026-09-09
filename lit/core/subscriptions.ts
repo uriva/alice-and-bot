@@ -455,13 +455,13 @@ export const pickBestConversation = <
 
 export const createConversationSafely = <T extends object>(
   create: () => Promise<T | { error: unknown }>,
-  onSettled: (created: boolean) => void,
+  onSettled: (result: T | null) => void,
 ): void => {
   create()
-    .then((result) => onSettled(!("error" in result)))
+    .then((result) => onSettled("error" in result ? null : result))
     .catch((error) => {
       console.error("Error creating conversation:", error);
-      onSettled(false);
+      onSettled(null);
     });
 };
 
@@ -525,8 +525,14 @@ export const getOrCreateConversation = (
           title,
           credentials,
         ),
-      (created) => {
-        if (!created) inFlight = false;
+      (result) => {
+        if (!result) inFlight = false;
+        else if (
+          "conversationId" in result &&
+          typeof result.conversationId === "string"
+        ) {
+          onConversation(result.conversationId);
+        }
       },
     );
   };
