@@ -56,6 +56,8 @@ import {
 } from "./utils.ts";
 import { empty } from "@uri/gamla";
 
+const clearSelection = () => globalThis.getSelection?.()?.removeAllRanges();
+
 const kebabHoverCss =
   `.msg-bubble .msg-kebab{opacity:0;transition:opacity .15s}.msg-bubble:hover .msg-kebab,.msg-kebab[data-open]{opacity:.7}`;
 
@@ -133,9 +135,9 @@ const injectCursorAtEnd = (html: string, cursor: string) => {
 };
 
 const mobileContextOverlayStyle =
-  "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999";
+  "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent";
 
-const mobileContextMenuStyle = (
+export const mobileContextMenuStyle = (
   isDark: boolean,
   touchY: number,
   touchX: number,
@@ -155,18 +157,18 @@ const mobileContextMenuStyle = (
     isDark ? "#1a1a1a" : "#fff"
   };border-radius:16px;padding:8px 0;min-width:220px;max-width:280px;box-shadow:${
     isDark ? "0 8px 32px #000a" : "0 8px 32px #0003"
-  };overflow:hidden`;
+  };overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent`;
 };
 
-const mobileContextEmojiRowStyle = (isDark: boolean) =>
+export const mobileContextEmojiRowStyle = (isDark: boolean) =>
   `display:flex;justify-content:center;gap:4px;padding:8px 12px;border-bottom:1px solid ${
     isDark ? "#2a2a2a" : "#e5e7eb"
-  }`;
+  };user-select:none;-webkit-user-select:none;-webkit-touch-callout:none`;
 
 const mobileContextActionStyle = (isDark: boolean) =>
   `display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:transparent;border:none;cursor:pointer;font-size:15px;color:${
     isDark ? "#e5e7eb" : "#1a1a1a"
-  }`;
+  };user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;outline:none`;
 
 const smileyTriggerCss =
   `.msg-wrap .msg-smiley-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-smiley-trigger{opacity:1}`;
@@ -189,10 +191,10 @@ const quickEmojiRowStyle = (isDark: boolean, isOwn: boolean) =>
     isDark ? "#2a2a2a" : "#e5e7eb"
   };border-radius:20px;padding:4px 6px;box-shadow:${
     isDark ? "0 2px 12px #0008" : "0 2px 12px #0003"
-  };z-index:10000`;
+  };z-index:10000;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent`;
 
-const reactionBtnStyle =
-  "background:transparent;border:none;cursor:pointer;font-size:16px;padding:2px 3px;line-height:1;border-radius:4px";
+export const reactionBtnStyle =
+  "background:transparent;border:none;cursor:pointer;font-size:16px;padding:2px 3px;line-height:1;border-radius:4px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;outline:none";
 
 const reactionPillStyle = (isDark: boolean, isActive: boolean) =>
   `display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:10px;font-size:12px;cursor:pointer;border:1px solid ${
@@ -201,7 +203,9 @@ const reactionPillStyle = (isDark: boolean, isActive: boolean) =>
     isActive
       ? (isDark ? "#2a2a2a" : "#e8e8ff")
       : (isDark ? "#141414" : "#f9fafb")
-  };color:${isDark ? "#e5e7eb" : "#222"}`;
+  };color:${
+    isDark ? "#e5e7eb" : "#222"
+  };user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;outline:none`;
 
 const diffPartStyle = (kind: DiffPart["kind"], isDark: boolean) =>
   kind === "add"
@@ -668,13 +672,16 @@ export class ChatMessage extends LitElement {
     this._longPressTimer = globalThis.setTimeout(() => {
       this._longPressActive = false;
       this._showMobileContext = true;
+      clearSelection();
     }, 500) as unknown as number;
   };
 
   private _longPressEnd = () => {
     clearTimeout(this._longPressTimer);
     this._longPressActive = false;
-    if (!this._showMobileContext) {
+    if (this._showMobileContext) {
+      clearSelection();
+    } else {
       this._selectedMedia = null;
     }
   };
@@ -690,6 +697,7 @@ export class ChatMessage extends LitElement {
   private _closeMobileContext = () => {
     this._showMobileContext = false;
     this._selectedMedia = null;
+    clearSelection();
   };
 
   private _shareSelectedMedia = async () => {

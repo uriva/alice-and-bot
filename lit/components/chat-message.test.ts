@@ -3,6 +3,7 @@ import {
   assertFalse,
   assertMatch,
   assertNotEquals,
+  assertStringIncludes,
 } from "@std/assert";
 import {
   attachmentPrimaryColor,
@@ -292,5 +293,69 @@ Deno.test(
       ),
       true,
     );
+  },
+);
+
+Deno.test(
+  "reactionBtnStyle in chat-message prevents text selection, callout, tap highlight, and focus outline",
+  () => {
+    const code = Deno.readTextFileSync(
+      new URL("./chat-message.ts", import.meta.url).pathname,
+    );
+    const match = code.match(/reactionBtnStyle\s*=\s*["'`]([^"'`]+)["'`]/);
+    const style = match?.[1] ?? "";
+    assertStringIncludes(style, "user-select:none");
+    assertStringIncludes(style, "-webkit-user-select:none");
+    assertStringIncludes(style, "-webkit-touch-callout:none");
+    assertStringIncludes(
+      style,
+      "-webkit-tap-highlight-color:transparent",
+    );
+    assertStringIncludes(style, "outline:none");
+  },
+);
+
+Deno.test(
+  "mobileContextMenuStyle in chat-message prevents text selection, touch callouts, and tap highlight",
+  () => {
+    const code = Deno.readTextFileSync(
+      new URL("./chat-message.ts", import.meta.url).pathname,
+    );
+    const match = code.match(
+      /mobileContextMenuStyle\s*=\s*\([^)]*\)\s*=>\s*\{[\s\S]*?return\s*`([^`]+)`/,
+    );
+    const style = match?.[1] ?? "";
+    assertStringIncludes(style, "user-select:none");
+    assertStringIncludes(style, "-webkit-user-select:none");
+    assertStringIncludes(style, "-webkit-touch-callout:none");
+    assertStringIncludes(style, "-webkit-tap-highlight-color:transparent");
+  },
+);
+
+Deno.test(
+  "mobileContextEmojiRowStyle in chat-message prevents text selection and touch callouts",
+  () => {
+    const code = Deno.readTextFileSync(
+      new URL("./chat-message.ts", import.meta.url).pathname,
+    );
+    const match = code.match(
+      /mobileContextEmojiRowStyle\s*=\s*\([^)]*\)\s*=>\s*`([^`]+)`/,
+    );
+    const style = match?.[1] ?? "";
+    assertStringIncludes(style, "user-select:none");
+    assertStringIncludes(style, "-webkit-user-select:none");
+    assertStringIncludes(style, "-webkit-touch-callout:none");
+  },
+);
+
+Deno.test(
+  "chat-message clears window selection when long press triggers mobile context",
+  () => {
+    const code = Deno.readTextFileSync(
+      new URL("./chat-message.ts", import.meta.url).pathname,
+    );
+    assertStringIncludes(code, "clearSelection");
+    assertMatch(code, /clearSelection\s*=\s*\(\)\s*=>[\s\S]*removeAllRanges/);
+    assertMatch(code, /_showMobileContext\s*=\s*true[\s\S]*clearSelection/);
   },
 );
