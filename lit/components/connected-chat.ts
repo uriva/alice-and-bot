@@ -61,6 +61,7 @@ import type {
 import {
   isPast,
   latestTimestamp,
+  standaloneProgressEntries,
   standaloneSpinnerEntries,
 } from "./transient-elements.ts";
 
@@ -380,20 +381,6 @@ type UiElement = {
   updatedAt: number;
 };
 
-const standaloneProgressEntries = (
-  uiElements: UiElement[],
-  knownIds: Set<string>,
-): ActiveProgress[] =>
-  uiElements
-    .filter((el) => el.type === "progress" && !knownIds.has(el.elementId))
-    .map((el) => ({
-      authorName: "",
-      text: el.text ?? "",
-      percentage: el.percentage ?? 0,
-      elementId: el.elementId,
-      timestamp: el.updatedAt,
-    }));
-
 const standaloneStreamEntries = (
   streams: EphemeralStreamEvent[],
   knownIds: Set<string>,
@@ -565,6 +552,67 @@ const accessDeniedHtml = (
         : nothing}
     </div>
   `;
+
+export const processChatState = ({
+  messages,
+  details,
+  uiElements,
+  ephemeralStreams,
+  progressMax,
+}: {
+  messages: DecipheredMessage[] | null;
+  details: IdentityDetails;
+  uiElements: UiElement[];
+  ephemeralStreams: EphemeralStreamEvent[];
+  progressMax: Map<string, number>;
+}) => {
+  if (!messages) {
+    return {
+      chatMessages: [],
+      activeSpinners: [],
+      activeProgress: [],
+      activeStreams: [],
+    };
+  }
+  const overrides = uiOverridesMap(uiElements);
+  const knownIds = messageElementIds(messages);
+  const messageTimestampFloor = latestTimestamp(messages);
+  const reactions = messages.filter(isReaction);
+  const addReactions = aggregateReactions(reactions, details);
+  const withReactions = foldEdits(messages.filter(isTextOrEdit)).map(
+    msgToUIMessageWithHistory(details),
+  ).map((m) => {
+    const r = addReactions(m.id);
+    return r.length ? { ...m, reactions: r } : m;
+  });
+  const msgMap = new Map(withReactions.map((m) => [m.id, m]));
+  const persistedTexts = new Set(withReactions.map((m) => m.text));
+  return {
+    chatMessages: withReactions.map(resolveReplyTo(msgMap)),
+    activeSpinners: [
+      ...latestSpinners(messages, details, overrides),
+      ...standaloneSpinnerEntries(
+        uiElements,
+        knownIds,
+        messageTimestampFloor,
+      ),
+    ],
+    activeProgress: enforceMonotonic(progressMax, [
+      ...latestProgress(messages, details, overrides),
+      ...standaloneProgressEntries(
+        uiElements,
+        knownIds,
+        messageTimestampFloor,
+      ),
+    ]),
+    activeStreams: standaloneStreamEntries(
+      ephemeralStreams,
+      knownIds,
+      persistedTexts,
+      details,
+    ),
+  };
+};
 
 export class ConnectedChat extends LitElement {
   static override properties = {
@@ -1002,42 +1050,13 @@ export class ConnectedChat extends LitElement {
   }
 
   private _processMessages() {
-    const messages = this._messages ?? [];
-    const details = this._identityDetails;
-    const overrides = uiOverridesMap(this._uiElements);
-    const knownIds = messageElementIds(messages);
-    const messageTimestampFloor = latestTimestamp(messages);
-    const reactions = messages.filter(isReaction);
-    const addReactions = aggregateReactions(reactions, details);
-    const withReactions = foldEdits(messages.filter(isTextOrEdit)).map(
-      msgToUIMessageWithHistory(details),
-    ).map((m) => {
-      const r = addReactions(m.id);
-      return r.length ? { ...m, reactions: r } : m;
+    return processChatState({
+      messages: this._messages,
+      details: this._identityDetails,
+      uiElements: this._uiElements,
+      ephemeralStreams: this._ephemeralStreams,
+      progressMax: this._progressMax,
     });
-    const msgMap = new Map(withReactions.map((m) => [m.id, m]));
-    const persistedTexts = new Set(withReactions.map((m) => m.text));
-    return {
-      chatMessages: withReactions.map(resolveReplyTo(msgMap)),
-      activeSpinners: [
-        ...latestSpinners(messages, details, overrides),
-        ...standaloneSpinnerEntries(
-          this._uiElements,
-          knownIds,
-          messageTimestampFloor,
-        ),
-      ],
-      activeProgress: enforceMonotonic(this._progressMax, [
-        ...latestProgress(messages, details, overrides),
-        ...standaloneProgressEntries(this._uiElements, knownIds),
-      ]),
-      activeStreams: standaloneStreamEntries(
-        this._ephemeralStreams,
-        knownIds,
-        persistedTexts,
-        details,
-      ),
-    };
   }
 
   private _handleSend = (text: string, replyTo?: string) => {

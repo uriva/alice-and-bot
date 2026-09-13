@@ -5,7 +5,10 @@ import {
   computeTextareaResize,
   downloadMedia,
   filterParticipants,
+  findCompletedSpinners,
+  findNewIncomingMessages,
   formatFullTimestamp,
+  getActiveSpinnerIds,
   getAutocompleteState,
   insertMention,
   isStale,
@@ -300,4 +303,191 @@ Deno.test("shareMedia safely falls back to downloadMedia in non-browser environm
     src: "https://example.com/video.mp4",
     name: "video.mp4",
   });
+});
+
+Deno.test("findCompletedSpinners returns empty during initial load or isLoading even if prevActiveIds matches", () => {
+  const now = Date.now();
+  const spinners = [
+    {
+      authorName: "bot",
+      text: "Done",
+      elementId: "s1",
+      timestamp: now - 70_000,
+      active: false,
+    },
+  ];
+  const progress = [
+    {
+      authorName: "bot",
+      text: "Done",
+      elementId: "p1",
+      timestamp: now - 70_000,
+      percentage: 1,
+    },
+  ];
+  const prevActiveIds = new Set(["s1", "p1"]);
+
+  assertEquals(
+    findCompletedSpinners({
+      spinners,
+      progress,
+      prevActiveIds,
+      now,
+      isInitialLoad: true,
+      isLoading: false,
+    }),
+    [],
+  );
+
+  assertEquals(
+    findCompletedSpinners({
+      spinners,
+      progress,
+      prevActiveIds,
+      now,
+      isInitialLoad: false,
+      isLoading: true,
+    }),
+    [],
+  );
+});
+
+Deno.test("findCompletedSpinners detects completed spinners when not initial load", () => {
+  const now = Date.now();
+  const spinners = [
+    {
+      authorName: "bot",
+      text: "Done",
+      elementId: "s1",
+      timestamp: now - 70_000,
+      active: false,
+    },
+  ];
+  const progress = [
+    {
+      authorName: "bot",
+      text: "Done",
+      elementId: "p1",
+      timestamp: now - 70_000,
+      percentage: 1,
+    },
+  ];
+  const prevActiveIds = new Set(["s1", "p1"]);
+
+  const result = findCompletedSpinners({
+    spinners,
+    progress,
+    prevActiveIds,
+    now,
+    isInitialLoad: false,
+    isLoading: false,
+  });
+  assertEquals(result.length, 2);
+});
+
+Deno.test("findNewIncomingMessages excludes messages older than session start or during initial load", () => {
+  const now = Date.now();
+  const sessionStart = now;
+  const messages = [
+    {
+      id: "m1",
+      authorId: "other",
+      authorName: "Other",
+      text: "old",
+      timestamp: now - 10_000,
+    },
+    {
+      id: "m2",
+      authorId: "other",
+      authorName: "Other",
+      text: "new",
+      timestamp: now + 5_000,
+    },
+  ];
+
+  assertEquals(
+    findNewIncomingMessages({
+      messages,
+      prevCount: 1,
+      userId: "me",
+      sessionStart,
+      isInitialLoad: true,
+    }),
+    [],
+  );
+
+  assertEquals(
+    findNewIncomingMessages({
+      messages,
+      prevCount: 1,
+      userId: "me",
+      sessionStart,
+      isLoading: true,
+    }),
+    [],
+  );
+
+  assertEquals(
+    findNewIncomingMessages({
+      messages,
+      prevCount: 1,
+      userId: "me",
+      sessionStart,
+      isInitialLoad: false,
+      isLoading: false,
+    }),
+    [{
+      id: "m2",
+      authorId: "other",
+      authorName: "Other",
+      text: "new",
+      timestamp: now + 5_000,
+    }],
+  );
+});
+
+Deno.test("getActiveSpinnerIds returns only non-stale active spinner and unfinished progress ids", () => {
+  const now = Date.now();
+  const spinners = [
+    {
+      authorName: "bot",
+      text: "Active",
+      elementId: "s1",
+      timestamp: now - 10_000,
+      active: true,
+    },
+    {
+      authorName: "bot",
+      text: "Inactive",
+      elementId: "s2",
+      timestamp: now - 10_000,
+      active: false,
+    },
+    {
+      authorName: "bot",
+      text: "Stale",
+      elementId: "s3",
+      timestamp: now - 3_700_000,
+      active: true,
+    },
+  ];
+  const progress = [
+    {
+      authorName: "bot",
+      text: "Active",
+      elementId: "p1",
+      timestamp: now - 10_000,
+      percentage: 0.5,
+    },
+    {
+      authorName: "bot",
+      text: "Done",
+      elementId: "p2",
+      timestamp: now - 10_000,
+      percentage: 1,
+    },
+  ];
+
+  const result = getActiveSpinnerIds(spinners, progress);
+  assertEquals(result, new Set(["s1", "p1"]));
 });

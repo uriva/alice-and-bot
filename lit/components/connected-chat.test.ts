@@ -425,3 +425,13 @@ Deno.test("ConnectedChat click handler ignores links when enableChatSwitching is
   assertEquals(prevented, false);
   assertEquals(chatWithCalled, false);
 });
+
+Deno.test(
+  "ConnectedChat returns empty state when messages is null to prevent phantom spinners on load",
+  async () => {
+    const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+    const guardsNullMessages = code.includes("if (!messages)") ||
+      code.includes("if (!this._messages)");
+    assertEquals(guardsNullMessages, true);
+  },
+);

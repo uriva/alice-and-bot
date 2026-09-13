@@ -46,7 +46,10 @@ import {
   estimateSerializedLength,
   eventOutside,
   filterParticipants,
+  findCompletedSpinners,
+  findNewIncomingMessages,
   formatDuration,
+  getActiveSpinnerIds,
   getAutocompleteState,
   insertMention,
   isStale,
@@ -59,8 +62,6 @@ import {
   shouldShowScrollDownButton,
   showAuthorName,
 } from "./utils.ts";
-
-const oneMinuteMs = 60_000;
 
 declare const AndroidNotificationBridge: {
   showNotification(title: string, body: string): void;
@@ -226,8 +227,7 @@ const spinnerEl = (isDark: boolean, color?: string) =>
         : "#00000010"};border-top:4px solid ${color ?? (isDark
           ? "#ffffff80"
           : "#00000040")};border-radius:50%;animation:spin 1s linear infinite"
-    >
-    </div>
+    ></div>
   `;
 
 const sendingIndicator = (
@@ -255,8 +255,7 @@ const sendingIndicator = (
             )
             ? "#00000040"
             : "#ffffff80"};border-radius:50%;animation:spin 1s linear infinite"
-        >
-        </div>
+        ></div>
         <span style="color:${isLightColor(primaryColor, isDark)
           ? "#222"
           : "#fff"};font-size:13px">${label}</span>
@@ -1363,6 +1362,7 @@ export class ChatBox extends LitElement {
       }
     }
 
+    const isInitial = this._initialLoad || this.isLoading;
     if (this._loadingMore && this._messagesContainerEl) {
       this._messagesContainerEl.scrollTop =
         this._messagesContainerEl.scrollHeight - this._prevScrollHeight;
@@ -1371,55 +1371,49 @@ export class ChatBox extends LitElement {
     } else if (this._stuckToBottom || this._initialLoad) {
       this._scrollToBottom();
       requestAnimationFrame(() => this._scrollToBottom());
-      if (this.messages.length > 0) this._initialLoad = false;
+      if (this.messages.length > 0 && !this.isLoading) {
+        this._initialLoad = false;
+      }
     }
 
-    const currentActive = new Set([
-      ...this.activeSpinners.filter((s) => s.active && !isStale(s.timestamp))
-        .map((s) => s.elementId),
-      ...this.activeProgress.filter((p) =>
-        p.percentage < 1 && !isStale(p.timestamp)
-      ).map((p) => p.elementId),
-    ]);
+    const currentActive = getActiveSpinnerIds(
+      this.activeSpinners,
+      this.activeProgress,
+    );
     const now = Date.now();
-    const justCompleted = [
-      ...this.activeSpinners.filter(
-        (s) =>
-          !s.active && !isStale(s.timestamp) &&
-          this._prevActiveSpinnerIds.has(s.elementId) &&
-          now - s.timestamp > oneMinuteMs,
-      ),
-      ...this.activeProgress.filter(
-        (p) =>
-          p.percentage >= 1 && !isStale(p.timestamp) &&
-          this._prevActiveSpinnerIds.has(p.elementId) &&
-          now - p.timestamp > oneMinuteMs,
-      ),
-    ];
+    const justCompleted = findCompletedSpinners({
+      spinners: this.activeSpinners,
+      progress: this.activeProgress,
+      prevActiveIds: this._prevActiveSpinnerIds,
+      now,
+      isLoading: this.isLoading,
+      isInitialLoad: isInitial,
+    });
     if (justCompleted.length > 0) playNotificationSound();
-    this._prevActiveSpinnerIds = currentActive;
+    this._prevActiveSpinnerIds = this.isLoading ? new Set() : currentActive;
 
     const prevCount = this._prevMessageCount;
     this._prevMessageCount = this.messages.length;
-    if (
-      prevCount > 0 &&
-      this.messages.length > prevCount &&
-      document.hidden &&
-      this.messages.slice(prevCount).some((m) => m.authorId !== this.userId)
-    ) {
+    const newIncoming = findNewIncomingMessages({
+      messages: this.messages,
+      prevCount,
+      userId: this.userId,
+      sessionStart: this._sessionStart,
+      isLoading: this.isLoading,
+      isInitialLoad: isInitial,
+    });
+    if (document.hidden && newIncoming.length > 0) {
       playNotificationSound();
       if (
         typeof AndroidNotificationBridge !== "undefined" &&
         AndroidNotificationBridge
       ) {
-        this.messages.slice(prevCount)
-          .filter((m) => m.authorId !== this.userId)
-          .forEach((m) => {
-            AndroidNotificationBridge.showNotification(
-              m.authorName || "New message",
-              m.text || "Sent an attachment",
-            );
-          });
+        newIncoming.forEach((m) => {
+          AndroidNotificationBridge.showNotification(
+            m.authorName || "New message",
+            m.text || "Sent an attachment",
+          );
+        });
       }
     }
   }

@@ -656,3 +656,69 @@ export const sendingStatusText = (
   if (sendingType === "file") return "Sending file...";
   return "Sending audio...";
 };
+
+export const oneMinuteMs = 60_000;
+
+export const getActiveSpinnerIds = (
+  spinners: ActiveSpinner[],
+  progress: ActiveProgress[],
+): Set<string> =>
+  new Set([
+    ...spinners.filter((s) => s.active && !isStale(s.timestamp)).map((s) =>
+      s.elementId
+    ),
+    ...progress.filter((p) => p.percentage < 1 && !isStale(p.timestamp)).map(
+      (p) => p.elementId,
+    ),
+  ]);
+
+export const findCompletedSpinners = ({
+  spinners,
+  progress,
+  prevActiveIds,
+  now,
+  isLoading,
+  isInitialLoad,
+}: {
+  spinners: ActiveSpinner[];
+  progress: ActiveProgress[];
+  prevActiveIds: Set<string>;
+  now: number;
+  isLoading?: boolean;
+  isInitialLoad?: boolean;
+}): (ActiveSpinner | ActiveProgress)[] =>
+  isLoading || isInitialLoad ? [] : [
+    ...spinners.filter(
+      (s) =>
+        !s.active && !isStale(s.timestamp) &&
+        prevActiveIds.has(s.elementId) &&
+        now - s.timestamp > oneMinuteMs,
+    ),
+    ...progress.filter(
+      (p) =>
+        p.percentage >= 1 && !isStale(p.timestamp) &&
+        prevActiveIds.has(p.elementId) &&
+        now - p.timestamp > oneMinuteMs,
+    ),
+  ];
+
+export const findNewIncomingMessages = ({
+  messages,
+  prevCount,
+  userId,
+  sessionStart,
+  isLoading,
+  isInitialLoad,
+}: {
+  messages: AbstracChatMessage[];
+  prevCount: number;
+  userId: string;
+  sessionStart: number;
+  isLoading?: boolean;
+  isInitialLoad?: boolean;
+}): AbstracChatMessage[] =>
+  isLoading || isInitialLoad || prevCount <= 0 || messages.length <= prevCount
+    ? []
+    : messages
+      .slice(prevCount)
+      .filter((m) => m.authorId !== userId && m.timestamp > sessionStart);

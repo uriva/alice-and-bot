@@ -2,6 +2,7 @@ import { assertEquals } from "@std/assert";
 import {
   isPast,
   latestTimestamp,
+  standaloneProgressEntries,
   standaloneSpinnerEntries,
 } from "./transient-elements.ts";
 
@@ -26,6 +27,45 @@ Deno.test("standaloneSpinnerEntries excludes stale active spinners older than cu
     1000,
   );
   assertEquals(result.map(({ elementId }) => elementId), ["spinner-fresh"]);
+});
+
+Deno.test("standaloneProgressEntries excludes stale progress older than current message timeline", () => {
+  const staleProgress = {
+    elementId: "prog-old",
+    type: "progress",
+    text: "old progress",
+    percentage: 0.5,
+    updatedAt: 100,
+  };
+  const freshProgress = {
+    elementId: "prog-fresh",
+    type: "progress",
+    text: "fresh progress",
+    percentage: 0.5,
+    updatedAt: 1001,
+  };
+  const result = standaloneProgressEntries(
+    [staleProgress, freshProgress],
+    new Set<string>(),
+    1000,
+  );
+  assertEquals(result.map(({ elementId }) => elementId), ["prog-fresh"]);
+});
+
+Deno.test("standaloneProgressEntries excludes completed progress with percentage >= 1", () => {
+  const completedProgress = {
+    elementId: "prog-done",
+    type: "progress",
+    text: "completed",
+    percentage: 1,
+    updatedAt: 1001,
+  };
+  const result = standaloneProgressEntries(
+    [completedProgress],
+    new Set<string>(),
+    1000,
+  );
+  assertEquals(result, []);
 });
 
 Deno.test("latestTimestamp returns zero for empty list", () => {

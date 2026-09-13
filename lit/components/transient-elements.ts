@@ -1,10 +1,11 @@
-import type { ActiveSpinner } from "./types.ts";
+import type { ActiveProgress, ActiveSpinner } from "./types.ts";
 
 type TimelineMessage = { timestamp: number; type: string };
 
 type UiElement = {
   elementId: string;
   active?: boolean;
+  percentage?: number;
   text?: string;
   type?: string;
   updatedAt: number;
@@ -31,6 +32,24 @@ export const standaloneSpinnerEntries = (
       elementId: el.elementId,
       timestamp: el.updatedAt,
       active: el.active !== false,
+    }));
+
+export const standaloneProgressEntries = (
+  uiElements: UiElement[],
+  knownIds: Set<string>,
+  minUpdatedAt: number,
+): ActiveProgress[] =>
+  uiElements
+    .filter((el) =>
+      el.type === "progress" && !knownIds.has(el.elementId) &&
+      (el.percentage ?? 0) < 1 && el.updatedAt >= minUpdatedAt
+    )
+    .map((el) => ({
+      authorName: "",
+      text: el.text ?? "",
+      percentage: el.percentage ?? 0,
+      elementId: el.elementId,
+      timestamp: el.updatedAt,
     }));
 
 export const latestTimestamp = (messages: TimelineMessage[]): number =>
