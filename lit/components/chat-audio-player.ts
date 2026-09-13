@@ -103,8 +103,7 @@ export class ChatAudioPlayer extends LitElement {
           @timeupdate="${this._onTimeUpdate}"
           @loadedmetadata="${this._onLoadedMetadata}"
           @ended="${this._onEnded}"
-        >
-        </audio>
+        ></audio>
         <button type="button" @click="${this
           ._togglePlay}" style="${playBtnStyle(
             this.primaryColor,
@@ -126,8 +125,7 @@ export class ChatAudioPlayer extends LitElement {
                     this.primaryColor,
                     this.isDark,
                   )};transition:background 0.1s"
-                >
-                </div>
+                ></div>
               `;
             })}
           </div>

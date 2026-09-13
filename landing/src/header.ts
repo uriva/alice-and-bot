@@ -131,7 +131,6 @@ const closeIcon = html`
 const mobileMenu = (open: boolean) =>
   !open
     ? html`
-
     `
     : html`
       <div

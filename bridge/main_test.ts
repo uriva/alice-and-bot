@@ -1,9 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
-import {
-  asProxyEndpoint,
-  pipeProxyEndpoints,
-  type ProxyEndpoint,
-} from "./main.ts";
+import { pipeProxyEndpoints, type ProxyEndpoint } from "./main.ts";
 
 type FakeSocket = {
   endpoint: ProxyEndpoint;
