@@ -261,6 +261,79 @@ export const copyToClipboard = async (text: string) => {
   }
 };
 
+export const mediaFileName = (src: string, defaultName = "video.mp4") => {
+  try {
+    const pathname = new URL(src, "http://localhost").pathname;
+    const base = pathname.split("/").pop() || "";
+    return base.includes(".") ? base : defaultName;
+  } catch (_) {
+    return defaultName;
+  }
+};
+
+export const downloadMedia = async ({
+  src,
+  name,
+}: {
+  src: string;
+  name: string;
+}) => {
+  if (typeof document === "undefined") return;
+  try {
+    const isBlobOrData = src.startsWith("blob:") || src.startsWith("data:");
+    const url = isBlobOrData
+      ? src
+      : URL.createObjectURL(await (await fetch(src)).blob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    if (!isBlobOrData) {
+      globalThis.setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+  } catch (err) {
+    console.error("Failed to download media", err);
+  }
+};
+
+export const shareMedia = async ({
+  src,
+  name,
+  fallbackTitle,
+}: {
+  src: string;
+  name: string;
+  fallbackTitle?: string;
+}) => {
+  try {
+    if (typeof navigator !== "undefined" && navigator.canShare) {
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const file = new File([blob], name, { type: blob.type });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: fallbackTitle || name,
+        });
+        return;
+      }
+    }
+    if (typeof navigator !== "undefined" && navigator.share) {
+      await navigator.share({
+        url: src,
+        title: fallbackTitle || name,
+      });
+      return;
+    }
+    await downloadMedia({ src, name });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") return;
+    console.error("Failed to share media", err);
+  }
+};
+
 export const formatDuration = (seconds: number) => {
   if (!isFinite(seconds) || isNaN(seconds)) return "--:--";
   const mins = Math.floor(seconds / 60);

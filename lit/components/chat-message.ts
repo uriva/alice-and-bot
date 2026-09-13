@@ -15,12 +15,14 @@ import "./chat-attachment.ts";
 import "./chat-avatar.ts";
 import {
   faCopy,
+  faDownload,
   faEllipsisV,
   faHistory,
   faImage,
   faPen,
   faPhoneAlt,
   faReply,
+  faShare,
   faSmile,
 } from "./icons.ts";
 import {
@@ -41,11 +43,14 @@ import type {
 import {
   computeTimeAgo,
   copyToClipboard,
+  downloadMedia,
   editWindowMs,
   eventOutside,
   formatEditTime,
   formatFullTimestamp,
+  mediaFileName,
   nextVisibleText,
+  shareMedia,
   successorText,
   wordDiff,
 } from "./utils.ts";
@@ -362,6 +367,41 @@ const renderEmojiGrid = (
     </div>
   `;
 
+const resolveTargetMedia = (
+  target: EventTarget | null,
+  msg: AbstracChatMessage,
+  host: HTMLElement,
+) => {
+  const el = target instanceof HTMLElement ? target : null;
+  const imgEl = el?.closest("img");
+  if (imgEl && imgEl.src) {
+    return {
+      type: "image" as const,
+      src: imgEl.src,
+      name: imgEl.alt || "image.png",
+    };
+  }
+  const videoEl = el?.closest("video") ||
+    el?.closest("chat-video-player")?.querySelector("video");
+  const videoSrc = videoEl?.currentSrc || videoEl?.src ||
+    videoEl?.querySelector("source")?.src;
+  if (videoSrc) {
+    return {
+      type: "video" as const,
+      src: videoSrc,
+      name: mediaFileName(videoSrc),
+    };
+  }
+  const videoAttachment = msg.attachments?.find((a) => a.type === "video");
+  if (videoAttachment) {
+    const player = host.querySelector("chat-video-player");
+    const src = player?.getAttribute("src") ||
+      player?.querySelector("video")?.currentSrc || "";
+    if (src) return { type: "video" as const, src, name: videoAttachment.name };
+  }
+  return null;
+};
+
 export class ChatMessage extends LitElement {
   static override properties = {
     msg: { attribute: false },
@@ -388,7 +428,7 @@ export class ChatMessage extends LitElement {
     _showQuickEmojis: { state: true },
     _showMobileContext: { state: true },
     _longPressActive: { state: true },
-    _selectedImage: { state: true },
+    _selectedMedia: { state: true },
     _touchY: { state: true },
     _touchX: { state: true },
   };
@@ -418,7 +458,11 @@ export class ChatMessage extends LitElement {
   declare private _showQuickEmojis: boolean;
   declare private _showMobileContext: boolean;
   declare private _longPressActive: boolean;
-  declare private _selectedImage: { src: string; alt: string } | null;
+  declare private _selectedMedia: {
+    type: "image" | "video";
+    src: string;
+    name: string;
+  } | null;
   declare private _touchY: number;
   declare private _touchX: number;
   declare private _visibleText: string;
@@ -447,7 +491,7 @@ export class ChatMessage extends LitElement {
     this._showQuickEmojis = false;
     this._showMobileContext = false;
     this._longPressActive = false;
-    this._selectedImage = null;
+    this._selectedMedia = null;
     this._touchY = 0;
     this._touchX = 0;
     this._visibleText = "";
@@ -619,14 +663,7 @@ export class ChatMessage extends LitElement {
     this._longPressActive = true;
     this._touchY = e.touches[0]?.clientY ?? 0;
     this._touchX = e.touches[0]?.clientX ?? 0;
-
-    const target = e.target;
-    const imgEl = target instanceof HTMLElement ? target.closest("img") : null;
-    if (imgEl && imgEl.src) {
-      this._selectedImage = { src: imgEl.src, alt: imgEl.alt || "image.png" };
-    } else {
-      this._selectedImage = null;
-    }
+    this._selectedMedia = resolveTargetMedia(e.target, this.msg, this);
 
     this._longPressTimer = globalThis.setTimeout(() => {
       this._longPressActive = false;
@@ -638,7 +675,7 @@ export class ChatMessage extends LitElement {
     clearTimeout(this._longPressTimer);
     this._longPressActive = false;
     if (!this._showMobileContext) {
-      this._selectedImage = null;
+      this._selectedMedia = null;
     }
   };
 
@@ -652,31 +689,25 @@ export class ChatMessage extends LitElement {
 
   private _closeMobileContext = () => {
     this._showMobileContext = false;
-    this._selectedImage = null;
+    this._selectedMedia = null;
   };
 
-  private _shareSelectedImage = async () => {
-    if (!this._selectedImage) return;
-    const { src, alt } = this._selectedImage;
+  private _shareSelectedMedia = async () => {
+    if (!this._selectedMedia) return;
+    const { src, name, type } = this._selectedMedia;
     this._closeMobileContext();
-    try {
-      const res = await fetch(src);
-      const blob = await res.blob();
-      const file = new File([blob], alt || "image.png", { type: blob.type });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: alt || "Image",
-        });
-      } else if (navigator.share) {
-        await navigator.share({
-          url: src,
-          title: alt || "Image",
-        });
-      }
-    } catch (err) {
-      console.error("Failed to share image", err);
-    }
+    await shareMedia({
+      src,
+      name,
+      fallbackTitle: type === "video" ? "Video" : "Image",
+    });
+  };
+
+  private _downloadSelectedMedia = async () => {
+    if (!this._selectedMedia) return;
+    const { src, name } = this._selectedMedia;
+    this._closeMobileContext();
+    await downloadMedia({ src, name });
   };
 
   private _copyText = () => {
@@ -797,7 +828,7 @@ export class ChatMessage extends LitElement {
               : avatarSpace + "px"};margin-right:${isOwn
               ? (showAvatar ? "0" : avatarSpace + "px")
               : "0"};overflow-x:hidden;overflow-y:hidden;word-break:break-word;overflow-wrap:anywhere${this
-                ._longPressActive && !this._selectedImage
+                ._longPressActive && !this._selectedMedia
               ? ";animation:msg-highlight .3s ease forwards"
               : ""}"
           >
@@ -882,7 +913,10 @@ export class ChatMessage extends LitElement {
                           .messageTimestamp="${timestamp}"
                           .sessionStart="${this.sessionStart}"
                           .onDecrypt="${this.onDecryptAttachment}"
-                          .selectedImageSrc="${this._selectedImage?.src}"
+                          .selectedImageSrc="${this._selectedMedia?.type ===
+                              "image"
+                            ? this._selectedMedia.src
+                            : undefined}"
                           .longPressActive="${this._longPressActive}"
                         ></chat-attachment>
                       `,
@@ -1099,14 +1133,28 @@ export class ChatMessage extends LitElement {
                       ${faReply} Reply
                     </button>
                   `
-                  : nothing} ${this._selectedImage
+                  : nothing} ${this._selectedMedia
                   ? html`
                     <button
                       type="button"
-                      @click="${this._shareSelectedImage}"
+                      @click="${this._shareSelectedMedia}"
                       style="${mobileContextActionStyle(isDark)}"
                     >
-                      ${faImage} Share Image
+                      ${this._selectedMedia.type === "video"
+                        ? faShare
+                        : faImage} Share ${this._selectedMedia.type === "video"
+                        ? "Video"
+                        : "Image"}
+                    </button>
+                    <button
+                      type="button"
+                      @click="${this._downloadSelectedMedia}"
+                      style="${mobileContextActionStyle(isDark)}"
+                    >
+                      ${faDownload} Download ${this._selectedMedia.type ===
+                          "video"
+                        ? "Video"
+                        : "Image"}
                     </button>
                   `
                   : nothing}

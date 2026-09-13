@@ -1,4 +1,5 @@
 import { Marked, type Token, type Tokens } from "marked";
+import "./chat-video-player.ts";
 import { isAudioUrl, isVideoUrl, preprocessText } from "./utils.ts";
 import { blurSecretsInHtml, secretBlurCss } from "./secrets.ts";
 import hljs from "highlight.js/lib/core";
@@ -102,8 +103,10 @@ const inlineCodeHtml = (code: string, isDark: boolean) => {
   return `<code style="background:${bg};color:${color};padding:0 4px;border-radius:4px;font-family:${monoFont};font-size:13px;user-select:text;-webkit-user-select:text">${code}</code>`;
 };
 
-const videoPlayerHtml = (src: string) =>
-  `<div style="position:relative"><video src="${src}" controls preload="metadata" playsinline style="display:block;max-width:100%;height:auto;border-radius:8px;margin-top:6px;background:#000"></video></div>`;
+const videoPlayerHtml = (src: string, isDark: boolean) =>
+  `<chat-video-player src="${src}"${
+    isDark ? " isdark" : ""
+  }></chat-video-player>`;
 
 const audioInlineHtml = (src: string) =>
   `<audio src="${src}" controls preload="metadata" style="display:block;width:100%;margin-top:6px"></audio>`;
@@ -130,7 +133,7 @@ const createMarked = (textColor: string, isDark: boolean) => {
         return inlineCodeHtml(text, isDark);
       },
       image({ href, text }: Tokens.Image) {
-        if (text === "video") return videoPlayerHtml(href);
+        if (text === "video") return videoPlayerHtml(href, isDark);
         if (text === "audio") return audioInlineHtml(href);
         return `<img src="${href}" alt="${text}" style="display:block;max-width:100%;height:auto;border-radius:8px;margin-top:6px" />`;
       },
@@ -139,7 +142,7 @@ const createMarked = (textColor: string, isDark: boolean) => {
         { href, tokens }: Tokens.Link,
       ) {
         const children = this.parser.parseInline(tokens);
-        if (isVideoUrl(href)) return videoPlayerHtml(href);
+        if (isVideoUrl(href)) return videoPlayerHtml(href, isDark);
         if (isAudioUrl(href)) return audioInlineHtml(href);
         return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:${textColor};text-decoration:underline;overflow-wrap:anywhere;word-break:break-word">${children}</a>`;
       },

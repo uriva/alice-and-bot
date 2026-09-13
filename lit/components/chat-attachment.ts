@@ -22,8 +22,7 @@ const spinnerHtml = (isDark: boolean) =>
         : "#00000010"};border-top:4px solid ${isDark
         ? "#ffffff80"
         : "#00000040"};border-radius:50%;animation:spin 1s linear infinite"
-    >
-    </div>
+    ></div>
   `;
 
 const audioPlaceholderStyle = (isDark: boolean) =>
@@ -200,8 +199,7 @@ export class ChatAttachment extends LitElement {
                       style="width:3px;height:${height}px;border-radius:2px;background:${isDark
                         ? "#ffffff40"
                         : "#00000020"}"
-                    >
-                    </div>
+                    ></div>
                   `
                 )}
               </div>
@@ -242,9 +240,11 @@ export class ChatAttachment extends LitElement {
     if (attachment.type === "video") {
       return this._decryptedUrl
         ? html`
-          <video controls preload="metadata" style="max-width:100%;border-radius:8px">
-            <source src="${this._decryptedUrl}" type="${attachment.mimeType}" />
-          </video>
+          <chat-video-player
+            .src="${this._decryptedUrl}"
+            .isDark="${isDark}"
+            .name="${attachment.name}"
+          ></chat-video-player>
         `
         : html`
           <div style="${videoPlaceholderStyle(isDark)}">${spinnerHtml(

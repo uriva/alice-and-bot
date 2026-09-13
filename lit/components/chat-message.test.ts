@@ -265,3 +265,32 @@ Deno.test(
     );
   },
 );
+
+Deno.test("renderMarkdown renders video url as chat-video-player", () => {
+  const html = renderMarkdown(
+    '<video src="https://example.com/clip.mp4"></video>',
+    "#222",
+    false,
+  );
+  assertEquals(
+    html.includes('<chat-video-player src="https://example.com/clip.mp4"'),
+    true,
+  );
+});
+
+Deno.test(
+  "renderMarkdown renders video link with isdark attribute when dark mode",
+  () => {
+    const html = renderMarkdown(
+      "Check this https://example.com/clip.mp4",
+      "#fff",
+      true,
+    );
+    assertEquals(
+      html.includes(
+        '<chat-video-player src="https://example.com/clip.mp4" isdark',
+      ),
+      true,
+    );
+  },
+);

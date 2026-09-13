@@ -3,18 +3,21 @@ import {
   buildTimeline,
   collectIdentityKeys,
   computeTextareaResize,
+  downloadMedia,
   filterParticipants,
   formatFullTimestamp,
   getAutocompleteState,
   insertMention,
   isStale,
   maxTextareaHeight,
+  mediaFileName,
   mergeIdentityDetails,
   minTextareaHeight,
   nextVisibleText,
   preprocessText,
   resolveConversationDisplayName,
   sendingStatusText,
+  shareMedia,
   shouldShowScrollDownButton,
 } from "./utils.ts";
 
@@ -261,4 +264,40 @@ Deno.test("resolveConversationDisplayName uses identityDetails when nameCache is
     identityDetails,
   );
   assertEquals(name, "Bot One");
+});
+
+Deno.test("mediaFileName extracts file name from URL or uses default", () => {
+  assertEquals(
+    mediaFileName("https://example.com/videos/demo.mp4?autoplay=1"),
+    "demo.mp4",
+  );
+  assertEquals(
+    mediaFileName("https://example.com/clip.webm#t=10"),
+    "clip.webm",
+  );
+  assertEquals(
+    mediaFileName("blob:https://chat.aliceandbot.com/uuid-123"),
+    "video.mp4",
+  );
+  assertEquals(
+    mediaFileName(
+      "blob:https://chat.aliceandbot.com/uuid-123",
+      "attachment.mp4",
+    ),
+    "attachment.mp4",
+  );
+});
+
+Deno.test("downloadMedia safely exits in non-browser environment without throwing", async () => {
+  await downloadMedia({
+    src: "https://example.com/video.mp4",
+    name: "video.mp4",
+  });
+});
+
+Deno.test("shareMedia safely falls back to downloadMedia in non-browser environment", async () => {
+  await shareMedia({
+    src: "https://example.com/video.mp4",
+    name: "video.mp4",
+  });
 });
