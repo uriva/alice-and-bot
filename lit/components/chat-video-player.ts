@@ -1,6 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { faDownload, faPlay, faShare, faVideoSlash } from "./icons.ts";
-import { downloadMedia, mediaFileName, shareMedia } from "./utils.ts";
+import { mediaFileName, shareMedia } from "./utils.ts";
 
 const pulseKeyframes =
   `@keyframes video-pulse{0%,100%{opacity:0.4}50%{opacity:1}}`;
@@ -63,20 +63,13 @@ export class ChatVideoPlayer extends LitElement {
     this._state = "error";
   };
 
-  private _handleShare = () => {
+  private _handleShare = async (e: Event) => {
+    e.stopPropagation();
     if (!this.src) return;
-    shareMedia({
+    await shareMedia({
       src: this.src,
       name: this.name || mediaFileName(this.src),
       fallbackTitle: "Video",
-    });
-  };
-
-  private _handleDownload = () => {
-    if (!this.src) return;
-    downloadMedia({
-      src: this.src,
-      name: this.name || mediaFileName(this.src),
     });
   };
 
@@ -116,29 +109,36 @@ export class ChatVideoPlayer extends LitElement {
         @loadedmetadata="${this._onLoaded}"
         @error="${this._onError}"
       ></video>
-      <div style="${actionsStyle}">
-        ${this.name
-          ? html`<span style="${nameStyle}" title="${this.name}">${this.name}</span>`
-          : nothing}
-        <div style="${actionBtnGroupStyle}">
-          <button
-            type="button"
-            @click="${this._handleShare}"
-            style="${actionBtnStyle}"
-            title="Share video"
-          >
-            ${faShare} Share
-          </button>
-          <button
-            type="button"
-            @click="${this._handleDownload}"
-            style="${actionBtnStyle}"
-            title="Download video"
-          >
-            ${faDownload} Download
-          </button>
-        </div>
-      </div>
+      ${this.src
+        ? html`
+          <div style="${actionsStyle}">
+            ${this.name
+              ? html`<span style="${nameStyle}" title="${this.name}">${this.name}</span>`
+              : nothing}
+            <div style="${actionBtnGroupStyle}">
+              <button
+                type="button"
+                @click="${this._handleShare}"
+                style="${actionBtnStyle}"
+                title="Share video"
+              >
+                ${faShare} Share
+              </button>
+              <a
+                href="${this.src}"
+                download="${this.name || mediaFileName(this.src)}"
+                target="_blank"
+                rel="noopener noreferrer"
+                style="${actionBtnStyle}"
+                title="Download video"
+                @click="${(e: Event) => e.stopPropagation()}"
+              >
+                ${faDownload} Download
+              </a>
+            </div>
+          </div>
+        `
+        : nothing}
     `;
   }
 }

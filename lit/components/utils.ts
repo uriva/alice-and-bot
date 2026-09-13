@@ -280,18 +280,37 @@ export const downloadMedia = async ({
 }) => {
   if (typeof document === "undefined") return;
   try {
-    const isBlobOrData = src.startsWith("blob:") || src.startsWith("data:");
-    const url = isBlobOrData
-      ? src
-      : URL.createObjectURL(await (await fetch(src)).blob());
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    if (!isBlobOrData) {
+    if (src.startsWith("blob:") || src.startsWith("data:")) {
+      const a = document.createElement("a");
+      a.href = src;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+    try {
+      const res = await fetch(src);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       globalThis.setTimeout(() => URL.revokeObjectURL(url), 10000);
+      return;
+    } catch (_) {
+      const a = document.createElement("a");
+      a.href = src;
+      a.download = name;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   } catch (err) {
     console.error("Failed to download media", err);
@@ -308,29 +327,34 @@ export const shareMedia = async ({
   fallbackTitle?: string;
 }) => {
   try {
-    if (typeof navigator !== "undefined" && navigator.canShare) {
-      const res = await fetch(src);
-      const blob = await res.blob();
-      const file = new File([blob], name, { type: blob.type });
-      if (navigator.canShare({ files: [file] })) {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      if (src.startsWith("http://") || src.startsWith("https://")) {
         await navigator.share({
-          files: [file],
+          url: src,
           title: fallbackTitle || name,
         });
         return;
       }
-    }
-    if (typeof navigator !== "undefined" && navigator.share) {
-      await navigator.share({
-        url: src,
-        title: fallbackTitle || name,
-      });
-      return;
+      if (navigator.canShare) {
+        const res = await fetch(src);
+        const blob = await res.blob();
+        const file = new File([blob], name, {
+          type: blob.type || "video/mp4",
+        });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: fallbackTitle || name,
+          });
+          return;
+        }
+      }
     }
     await downloadMedia({ src, name });
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") return;
     console.error("Failed to share media", err);
+    await downloadMedia({ src, name });
   }
 };
 

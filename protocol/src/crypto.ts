@@ -1,5 +1,3 @@
-import { Buffer } from "buffer";
-
 export type EncryptedAsymmetric<_T> = string & {
   readonly __brand: unique symbol;
 };
@@ -24,6 +22,16 @@ const base64ToUint8Array = (base64: string) => {
   return bytes;
 };
 
+const uint8ArrayToBase64 = (bytes: Uint8Array | ArrayBuffer): string => {
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let binary = "";
+  const chunk = 8192;
+  for (let i = 0; i < arr.length; i += chunk) {
+    binary += String.fromCharCode(...arr.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+};
+
 export const decryptAsymmetric = async <T>(
   privateKey: string,
   data: EncryptedAsymmetric<T>,
@@ -44,7 +52,7 @@ const importKey = (
     usage === "decrypt" || usage === "sign"
       ? privateKeyFormat
       : publicKeyFormat,
-    Buffer.from(key, "base64"),
+    base64ToUint8Array(key),
     usage === "decrypt" || usage === "encrypt" ? encryptAlgo : signAlgo,
     false,
     [usage],
@@ -53,25 +61,23 @@ const importKey = (
 const importSymmetricKey = (key: string, usage: KeyUsage[]) =>
   crypto.subtle.importKey(
     "raw",
-    Buffer.from(key, "base64"),
+    base64ToUint8Array(key),
     aesAlgo,
     false,
     usage,
   );
 
 export const encryptAsymmetric = async <T>(publicKey: string, data: T) =>
-  Buffer.from(
+  uint8ArrayToBase64(
     await crypto.subtle.encrypt(
       encryptAlgo,
       await importKey(publicKey, "encrypt"),
       new TextEncoder().encode(JSON.stringify(data)),
     ),
-  ).toString("base64") as EncryptedAsymmetric<T>;
+  ) as EncryptedAsymmetric<T>;
 
 const encodeKey = async (key: CryptoKey, format: "spki" | "pkcs8") =>
-  btoa(String.fromCharCode(
-    ...new Uint8Array(await crypto.subtle.exportKey(format, key)),
-  ));
+  uint8ArrayToBase64(await crypto.subtle.exportKey(format, key));
 
 const encodeKeys = async ({ publicKey, privateKey }: CryptoKeyPair) => ({
   publicKey: await encodeKey(publicKey, publicKeyFormat),
@@ -92,13 +98,13 @@ export const generateKeyPair = async (usage: "sign" | "encrypt") =>
   );
 
 export const sign = async (privateKey: string, data: string) =>
-  Buffer.from(
+  uint8ArrayToBase64(
     await crypto.subtle.sign(
       signAlgo,
       await importKey(privateKey, "sign"),
       new TextEncoder().encode(data),
     ),
-  ).toString("base64");
+  );
 
 export const verify = async (
   signature: string,
@@ -108,7 +114,7 @@ export const verify = async (
   crypto.subtle.verify(
     signAlgo,
     await importKey(publicKey, "verify"),
-    Buffer.from(signature, "base64"),
+    base64ToUint8Array(signature),
     new TextEncoder().encode(data),
   );
 
@@ -130,14 +136,14 @@ export const encryptSymmetric = async <T>(
   const combined = new Uint8Array(iv.length + ciphertext.length);
   combined.set(iv, 0);
   combined.set(ciphertext, iv.length);
-  return Buffer.from(combined).toString("base64") as EncryptedSymmetric<T>;
+  return uint8ArrayToBase64(combined) as EncryptedSymmetric<T>;
 };
 
 export const decryptSymmetric = async <T>(
   key: string,
   data: EncryptedSymmetric<T>,
 ): Promise<T> => {
-  const raw = Buffer.from(data, "base64");
+  const raw = base64ToUint8Array(data);
   const iv = raw.subarray(0, ivLength);
   const ciphertext = raw.subarray(ivLength);
   const cryptoKey = await importSymmetricKey(key, ["decrypt"]);
@@ -155,7 +161,7 @@ export const generateSymmetricKey = async (): Promise<string> => {
     "decrypt",
   ]);
   const raw = await crypto.subtle.exportKey("raw", key);
-  return Buffer.from(new Uint8Array(raw)).toString("base64");
+  return uint8ArrayToBase64(raw);
 };
 
 export const encryptBinary = async (

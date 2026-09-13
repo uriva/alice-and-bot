@@ -28,7 +28,6 @@
     "@uri/gamla": "jsr:@uri/gamla@0.0.14",
     "@uri/silly-nlp": "jsr:@uri/silly-nlp@^0.2.7",
     "@jsr/uri__gamla": "jsr:@uri/gamla@0.0.14",
-    "buffer": "npm:buffer@6.0.3",
     "emoji-picker-element": "npm:emoji-picker-element@^1.29.1",
     "highlight.js": "npm:highlight.js@^11.11.1",
     "@lit/react": "npm:@lit/react@1.0.8",
@@ -85,7 +84,7 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "publish": {
     "include": [
       "mod.ts",

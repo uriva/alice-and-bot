@@ -663,11 +663,18 @@ export class ChatMessage extends LitElement {
 
   private _longPressStart = (e: TouchEvent) => {
     if (!this.isMobile) return;
+    const target = e.target;
+    if (
+      target instanceof HTMLElement &&
+      target.closest("button, a, input, textarea")
+    ) {
+      return;
+    }
     // Removed e.preventDefault() so that normal browser scrolling isn't blocked.
     this._longPressActive = true;
     this._touchY = e.touches[0]?.clientY ?? 0;
     this._touchX = e.touches[0]?.clientX ?? 0;
-    this._selectedMedia = resolveTargetMedia(e.target, this.msg, this);
+    this._selectedMedia = resolveTargetMedia(target, this.msg, this);
 
     this._longPressTimer = globalThis.setTimeout(() => {
       this._longPressActive = false;
