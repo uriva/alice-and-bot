@@ -30,6 +30,7 @@ import {
 import "./chat-message.ts";
 import "./chat-typing-indicator.ts";
 import "./chat-avatar.ts";
+import { textDirection } from "./markdown.ts";
 import { compactPublicKey } from "../core/subscriptions.ts";
 import type {
   AbstracChatMessage,
@@ -72,10 +73,15 @@ const indicatorColor = (isDark: boolean, color?: string, stale?: boolean) =>
     ? (isDark ? "#f87171" : "#b91c1c")
     : (color ?? (isDark ? "#cbd5e1" : "#475569"));
 
-const indicatorTextStyle = (isDark: boolean, color?: string, stale?: boolean) =>
-  `padding:6px 12px 6px 44px;color:${
+const indicatorTextStyle = (
+  isDark: boolean,
+  color?: string,
+  stale?: boolean,
+  isRtl?: boolean,
+) =>
+  `padding:${isRtl ? "6px 44px 6px 12px" : "6px 12px 6px 44px"};color:${
     indicatorColor(isDark, color, stale)
-  };font-size:14px`;
+  };font-size:14px;text-align:start`;
 
 const nextFrame = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -84,10 +90,15 @@ const linearBarTrackStyle = (
   isDark: boolean,
   color?: string,
   stale?: boolean,
+  isRtl?: boolean,
 ) =>
   `width:200px;height:8px;border:1px solid ${
     indicatorColor(isDark, color, stale)
-  };border-radius:4px;margin-top:4px;overflow:hidden`;
+  };border-radius:4px;margin-top:4px;overflow:hidden;${
+    isRtl
+      ? "margin-left:auto;margin-right:0"
+      : "margin-left:0;margin-right:auto"
+  }`;
 
 const linearBarFillStyle = (
   percentage: number,
@@ -115,17 +126,25 @@ const renderSpinnerIndicator = (
 ) => {
   const stale = spinner.active && isStale(spinner.timestamp);
   const active = spinner.active && !stale;
+  const direction = textDirection(spinner.text);
+  const isRtl = direction === "rtl";
   return html`
-    <div style="${indicatorTextStyle(isDark, color, stale)}">
+    <div
+      data-testid="spinner-indicator"
+      dir="${direction}"
+      style="${indicatorTextStyle(isDark, color, stale, isRtl)}"
+    >
       <span>${showAuthorName(hideNames, isGroupChat)
-        ? `${spinner.authorName}: ${spinner.text}`
-        : spinner.text}${stale ? " (failed)" : nothing}</span>
+        ? html`<b dir="auto">${spinner.authorName}: </b>`
+        : nothing}<span data-testid="spinner-text" dir="${direction}">${spinner
+        .text}</span>${stale ? " (failed)" : nothing}</span>
       ${active
         ? html`
           <div style="${linearBarTrackStyle(
             isDark,
             color,
             stale,
+            isRtl,
           )}">
             <div style="${indeterminateBarStyle(
               isDark,
@@ -138,6 +157,7 @@ const renderSpinnerIndicator = (
             isDark,
             color,
             stale,
+            isRtl,
           )}">
             <div style="${linearBarFillStyle(
               1,
@@ -159,17 +179,25 @@ const renderProgressIndicator = (
   color?: string,
 ) => {
   const stale = progress.percentage < 1 && isStale(progress.timestamp);
+  const direction = textDirection(progress.text);
+  const isRtl = direction === "rtl";
   return html`
-    <div style="${indicatorTextStyle(isDark, color, stale)}">
+    <div
+      data-testid="progress-indicator"
+      dir="${direction}"
+      style="${indicatorTextStyle(isDark, color, stale, isRtl)}"
+    >
       <span>${showAuthorName(hideNames, isGroupChat)
-        ? `${progress.authorName}: ${progress.text}`
-        : progress.text} (${Math.round(progress.percentage * 100)}%)${stale
-        ? " (failed)"
-        : nothing}</span>
+        ? html`<b dir="auto">${progress.authorName}: </b>`
+        : nothing}<span dir="${direction}">${progress.text}</span> (${Math
+        .round(
+          progress.percentage * 100,
+        )}%)${stale ? " (failed)" : nothing}</span>
       <div style="${linearBarTrackStyle(
         isDark,
         color,
         stale,
+        isRtl,
       )}">
         <div style="${linearBarFillStyle(
           progress.percentage,

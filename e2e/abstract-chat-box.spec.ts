@@ -784,3 +784,93 @@ test("relative timestamp like 3 minutes ago renders with LTR direction in RTL me
   );
   expect(computedDir).toBe("ltr");
 });
+
+test("spinner with Hebrew text renders with RTL direction and right alignment", async ({ page }) => {
+  await page.goto("/");
+  const spinnerText = "חושב...";
+
+  await page.evaluate((text) => {
+    const chatBox = document.querySelector("chat-box") as
+      & HTMLElement
+      & Record<string, unknown>;
+    const now = Date.now();
+    chatBox.messages = [];
+    chatBox.activeSpinners = [
+      {
+        elementId: "spin-rtl-1",
+        type: "spinner",
+        text,
+        active: true,
+        timestamp: now,
+      },
+    ];
+  }, spinnerText);
+
+  const spinnerIndicator = page.locator('[data-testid="spinner-indicator"]')
+    .first();
+  await expect(spinnerIndicator).toBeVisible();
+  await expect(spinnerIndicator).toHaveAttribute("dir", "rtl");
+
+  const spinnerTextSpan = page.locator('[data-testid="spinner-text"]').first();
+  await expect(spinnerTextSpan).toBeVisible();
+  await expect(spinnerTextSpan).toHaveAttribute("dir", "rtl");
+
+  const { indicatorRect, textRect } = await page.evaluate(() => {
+    const c = document.querySelector('[data-testid="spinner-indicator"]')!
+      .getBoundingClientRect();
+    const t = document.querySelector('[data-testid="spinner-text"]')!
+      .getBoundingClientRect();
+    return {
+      indicatorRect: { left: c.left, right: c.right, width: c.width },
+      textRect: { left: t.left, right: t.right, width: t.width },
+    };
+  });
+
+  expect(indicatorRect.right - textRect.right).toBeLessThan(60);
+  expect(textRect.left - indicatorRect.left).toBeGreaterThan(50);
+});
+
+test("spinner with English text renders with LTR direction and left alignment", async ({ page }) => {
+  await page.goto("/");
+  const spinnerText = "Thinking...";
+
+  await page.evaluate((text) => {
+    const chatBox = document.querySelector("chat-box") as
+      & HTMLElement
+      & Record<string, unknown>;
+    const now = Date.now();
+    chatBox.messages = [];
+    chatBox.activeSpinners = [
+      {
+        elementId: "spin-ltr-1",
+        type: "spinner",
+        text,
+        active: true,
+        timestamp: now,
+      },
+    ];
+  }, spinnerText);
+
+  const spinnerIndicator = page.locator('[data-testid="spinner-indicator"]')
+    .first();
+  await expect(spinnerIndicator).toBeVisible();
+  await expect(spinnerIndicator).toHaveAttribute("dir", "ltr");
+
+  const spinnerTextSpan = page.locator('[data-testid="spinner-text"]').first();
+  await expect(spinnerTextSpan).toBeVisible();
+  await expect(spinnerTextSpan).toHaveAttribute("dir", "ltr");
+
+  const { indicatorRect, textRect } = await page.evaluate(() => {
+    const c = document.querySelector('[data-testid="spinner-indicator"]')!
+      .getBoundingClientRect();
+    const t = document.querySelector('[data-testid="spinner-text"]')!
+      .getBoundingClientRect();
+    return {
+      indicatorRect: { left: c.left, right: c.right, width: c.width },
+      textRect: { left: t.left, right: t.right, width: t.width },
+    };
+  });
+
+  expect(textRect.left - indicatorRect.left).toBeLessThan(60);
+  expect(indicatorRect.right - textRect.right).toBeGreaterThan(50);
+});
