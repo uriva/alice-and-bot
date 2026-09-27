@@ -298,6 +298,47 @@ Deno.test("downloadMedia safely exits in non-browser environment without throwin
   });
 });
 
+Deno.test("downloadMedia stops click event propagation to prevent router pushState interception", async () => {
+  let bubbled = false;
+  const originalDoc = globalThis.document;
+  try {
+    const listeners: Record<string, ((e: Event) => void)[]> = {};
+    const mockA = {
+      href: "",
+      download: "",
+      target: "",
+      rel: "",
+      addEventListener: (type: string, fn: (e: Event) => void) => {
+        listeners[type] = [...(listeners[type] || []), fn];
+      },
+      click: () => {
+        let stopped = false;
+        const event = {
+          stopPropagation: () => {
+            stopped = true;
+          },
+        } as unknown as Event;
+        (listeners["click"] || []).forEach((fn) => fn(event));
+        if (!stopped) bubbled = true;
+      },
+    };
+    (globalThis as unknown as { document: unknown }).document = {
+      createElement: () => mockA,
+      body: {
+        appendChild: () => {},
+        removeChild: () => {},
+      },
+    };
+    await downloadMedia({
+      src: "blob:https://example.com/uuid",
+      name: "video.mp4",
+    });
+    assertEquals(bubbled, false);
+  } finally {
+    (globalThis as unknown as { document: unknown }).document = originalDoc;
+  }
+});
+
 Deno.test("shareMedia safely falls back to downloadMedia in non-browser environment", async () => {
   await shareMedia({
     src: "https://example.com/video.mp4",

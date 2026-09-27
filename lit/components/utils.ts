@@ -271,6 +271,24 @@ export const mediaFileName = (src: string, defaultName = "video.mp4") => {
   }
 };
 
+const triggerAnchorDownload = (
+  url: string,
+  name: string,
+  openInNewTab = false,
+) => {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  if (openInNewTab) {
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+  }
+  a.addEventListener("click", (e) => e.stopPropagation());
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
 export const downloadMedia = async ({
   src,
   name,
@@ -281,12 +299,7 @@ export const downloadMedia = async ({
   if (typeof document === "undefined") return;
   try {
     if (src.startsWith("blob:") || src.startsWith("data:")) {
-      const a = document.createElement("a");
-      a.href = src;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      triggerAnchorDownload(src, name);
       return;
     }
     try {
@@ -294,23 +307,11 @@ export const downloadMedia = async ({
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      triggerAnchorDownload(url, name);
       globalThis.setTimeout(() => URL.revokeObjectURL(url), 10000);
       return;
     } catch (_) {
-      const a = document.createElement("a");
-      a.href = src;
-      a.download = name;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      triggerAnchorDownload(src, name, true);
     }
   } catch (err) {
     console.error("Failed to download media", err);
