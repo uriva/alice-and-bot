@@ -346,6 +346,56 @@ Deno.test("shareMedia safely falls back to downloadMedia in non-browser environm
   });
 });
 
+Deno.test("shareMedia prefers sharing file if navigator.canShare supports files", async () => {
+  let sharedPayload: unknown = null;
+  const originalFetch = globalThis.fetch;
+  const originalShare = (navigator as unknown as { share?: unknown }).share;
+  const originalCanShare =
+    (navigator as unknown as { canShare?: unknown }).canShare;
+  try {
+    (globalThis as unknown as { fetch: unknown }).fetch = () =>
+      Promise.resolve(
+        new Response(new Blob(["video-data"], { type: "video/mp4" })),
+      );
+    Object.defineProperty(navigator, "share", {
+      value: (payload: unknown) => {
+        sharedPayload = payload;
+        return Promise.resolve();
+      },
+      configurable: true,
+    });
+    Object.defineProperty(navigator, "canShare", {
+      value: (payload: { files?: unknown[] }) =>
+        Boolean(payload?.files && payload.files.length > 0),
+      configurable: true,
+    });
+    await shareMedia({
+      src: "https://example.com/video.mp4",
+      name: "video.mp4",
+    });
+    const files = (sharedPayload as { files?: File[] })?.files;
+    assertEquals(Boolean(files && files.length > 0), true);
+  } finally {
+    if (originalShare) {
+      Object.defineProperty(navigator, "share", {
+        value: originalShare,
+        configurable: true,
+      });
+    } else {
+      delete (navigator as unknown as { share?: unknown }).share;
+    }
+    if (originalCanShare) {
+      Object.defineProperty(navigator, "canShare", {
+        value: originalCanShare,
+        configurable: true,
+      });
+    } else {
+      delete (navigator as unknown as { canShare?: unknown }).canShare;
+    }
+    (globalThis as unknown as { fetch: unknown }).fetch = originalFetch;
+  }
+});
+
 Deno.test("findCompletedSpinners returns empty during initial load or isLoading even if prevActiveIds matches", () => {
   const now = Date.now();
   const spinners = [

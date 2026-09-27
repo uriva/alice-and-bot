@@ -329,26 +329,32 @@ export const shareMedia = async ({
 }) => {
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
+      if (navigator.canShare) {
+        try {
+          const res = await fetch(src);
+          if (res.ok) {
+            const blob = await res.blob();
+            const file = new File([blob], name, {
+              type: blob.type || "video/mp4",
+            });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: fallbackTitle || name,
+              });
+              return;
+            }
+          }
+        } catch (_) {
+          // If fetching file fails, fallback to sharing url
+        }
+      }
       if (src.startsWith("http://") || src.startsWith("https://")) {
         await navigator.share({
           url: src,
           title: fallbackTitle || name,
         });
         return;
-      }
-      if (navigator.canShare) {
-        const res = await fetch(src);
-        const blob = await res.blob();
-        const file = new File([blob], name, {
-          type: blob.type || "video/mp4",
-        });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: fallbackTitle || name,
-          });
-          return;
-        }
       }
     }
     await downloadMedia({ src, name });
