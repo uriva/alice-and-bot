@@ -1,6 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { faDownload, faPlay, faShare, faVideoSlash } from "./icons.ts";
-import { mediaFileName, shareMedia } from "./utils.ts";
+import { downloadMedia, mediaFileName, shareMedia } from "./utils.ts";
 
 const pulseKeyframes =
   `@keyframes video-pulse{0%,100%{opacity:0.4}50%{opacity:1}}`;
@@ -73,6 +73,15 @@ export class ChatVideoPlayer extends LitElement {
     });
   };
 
+  private _handleDownload = async (e: Event) => {
+    e.stopPropagation();
+    if (!this.src) return;
+    await downloadMedia({
+      src: this.src,
+      name: this.name || mediaFileName(this.src),
+    });
+  };
+
   override render() {
     if (this._state === "error") {
       return html`
@@ -124,17 +133,14 @@ export class ChatVideoPlayer extends LitElement {
               >
                 ${faShare} Share
               </button>
-              <a
-                href="${this.src}"
-                download="${this.name || mediaFileName(this.src)}"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                @click="${this._handleDownload}"
                 style="${actionBtnStyle}"
                 title="Download video"
-                @click="${(e: Event) => e.stopPropagation()}"
               >
                 ${faDownload} Download
-              </a>
+              </button>
             </div>
           </div>
         `
