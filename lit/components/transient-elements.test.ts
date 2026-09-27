@@ -68,6 +68,50 @@ Deno.test("standaloneProgressEntries excludes completed progress with percentage
   assertEquals(result, []);
 });
 
+Deno.test("standaloneProgressEntries excludes entries with empty or whitespace text", () => {
+  const emptyTextProgress = {
+    elementId: "prog-empty",
+    type: "progress",
+    percentage: 0,
+    updatedAt: 1001,
+  };
+  const whitespaceProgress = {
+    elementId: "prog-whitespace",
+    type: "progress",
+    text: "   ",
+    percentage: 0,
+    updatedAt: 1001,
+  };
+  const result = standaloneProgressEntries(
+    [emptyTextProgress, whitespaceProgress],
+    new Set<string>(),
+    1000,
+  );
+  assertEquals(result, []);
+});
+
+Deno.test("standaloneSpinnerEntries excludes entries with empty or whitespace text", () => {
+  const emptyTextSpinner = {
+    elementId: "spin-empty",
+    type: "spinner",
+    active: true,
+    updatedAt: 1001,
+  };
+  const whitespaceSpinner = {
+    elementId: "spin-whitespace",
+    type: "spinner",
+    text: "   ",
+    active: true,
+    updatedAt: 1001,
+  };
+  const result = standaloneSpinnerEntries(
+    [emptyTextSpinner, whitespaceSpinner],
+    new Set<string>(),
+    1000,
+  );
+  assertEquals(result, []);
+});
+
 Deno.test("latestTimestamp returns zero for empty list", () => {
   assertEquals(latestTimestamp([]), 0);
 });

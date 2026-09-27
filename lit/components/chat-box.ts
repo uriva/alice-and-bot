@@ -124,6 +124,7 @@ const renderSpinnerIndicator = (
   isGroupChat?: boolean,
   color?: string,
 ) => {
+  if (!spinner.text?.trim()) return nothing;
   const stale = spinner.active && isStale(spinner.timestamp);
   const active = spinner.active && !stale;
   const direction = textDirection(spinner.text);
@@ -178,6 +179,7 @@ const renderProgressIndicator = (
   isGroupChat?: boolean,
   color?: string,
 ) => {
+  if (!progress.text?.trim()) return nothing;
   const stale = progress.percentage < 1 && isStale(progress.timestamp);
   const direction = textDirection(progress.text);
   const isRtl = direction === "rtl";

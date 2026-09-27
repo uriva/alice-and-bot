@@ -24,7 +24,8 @@ export const standaloneSpinnerEntries = (
   uiElements
     .filter((el) =>
       el.type === "spinner" && !knownIds.has(el.elementId) &&
-      el.active !== false && el.updatedAt >= minUpdatedAt
+      el.active !== false && el.updatedAt >= minUpdatedAt &&
+      Boolean(el.text?.trim())
     )
     .map((el) => ({
       authorName: "",
@@ -42,7 +43,8 @@ export const standaloneProgressEntries = (
   uiElements
     .filter((el) =>
       el.type === "progress" && !knownIds.has(el.elementId) &&
-      (el.percentage ?? 0) < 1 && el.updatedAt >= minUpdatedAt
+      (el.percentage ?? 0) < 1 && el.updatedAt >= minUpdatedAt &&
+      Boolean(el.text?.trim())
     )
     .map((el) => ({
       authorName: "",
