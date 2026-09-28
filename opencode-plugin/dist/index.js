@@ -24236,24 +24236,28 @@ Reply with ${request.questions.some((question) => question.multiple) ? "a number
 var selectedLabels = (question, text) => {
   if (text.startsWith("/"))
     return [];
-  const optionsMatched = text.split(",").map((part) => {
-    const trimmed = part.trim();
-    const index = Number(trimmed);
-    if (Number.isInteger(index)) {
+  const trimmedText = text.trim();
+  const exactMatch = question.options.find((opt) => opt.label.toLowerCase() === trimmedText.toLowerCase());
+  if (exactMatch)
+    return [exactMatch.label];
+  const rawParts = trimmedText.split(/[,;\s]+|\band\b/i).map((part) => part.trim().replace(/^[#\s]+|[.\s]+$/g, "")).filter(Boolean);
+  const optionsMatched = rawParts.map((part) => {
+    const index = Number(part);
+    if (Number.isInteger(index) && index >= 1 && index <= question.options.length) {
       return question.options[index - 1]?.label;
     }
-    const lower = trimmed.toLowerCase();
+    const lower = part.toLowerCase();
     const matched = question.options.find((opt) => opt.label.toLowerCase() === lower);
     if (matched)
       return matched.label;
     return;
   }).filter((label) => Boolean(label));
-  if (optionsMatched.length > 0)
-    return optionsMatched;
+  if (optionsMatched.length > 0) {
+    return question.multiple ? Array.from(new Set(optionsMatched)) : [optionsMatched[0]];
+  }
   if (question.custom !== false) {
-    const trimmed = text.trim();
-    if (trimmed)
-      return [trimmed];
+    if (trimmedText)
+      return [trimmedText];
   }
   return [];
 };
@@ -24521,12 +24525,11 @@ var pendingQuestionForSession = async ({ client, sessionId }) => {
   const existing = pendingQuestions.get(sessionId);
   if (existing)
     return existing;
-  const method = client?.question?.list;
-  if (typeof method !== "function")
-    return;
   const result = await callFirstAvailable([
-    () => method.call(client.question, {}),
-    () => method.call(client.question)
+    () => client?.question?.list({}),
+    () => client?.question?.list(),
+    () => client?._client?.get({ url: "/question" }),
+    () => client?._client?.get({ url: `/api/session/${sessionId}/question` })
   ]).catch(() => {
     return;
   });
@@ -24867,11 +24870,26 @@ async function plugin(input) {
             const permissionReply = permissionReplyForCommand(commandText);
             if (permissionReply && pending) {
               await callFirstAvailable([
-                () => input.client.permission.reply({
+                () => input.client.permission?.reply({
                   requestID: pending.requestId,
                   reply: permissionReply
                 }),
-                () => input.client.postSessionByIdPermissionsByPermissionId({
+                () => input.client._client?.post({
+                  url: "/session/{sessionID}/permissions/{permissionID}",
+                  path: {
+                    sessionID: pending.sessionId,
+                    permissionID: pending.requestId
+                  },
+                  body: { response: permissionReply },
+                  headers: { "Content-Type": "application/json" }
+                }),
+                () => input.client._client?.post({
+                  url: "/permission/{requestID}/reply",
+                  path: { requestID: pending.requestId },
+                  body: { reply: permissionReply },
+                  headers: { "Content-Type": "application/json" }
+                }),
+                () => input.client.postSessionByIdPermissionsByPermissionId?.({
                   path: {
                     id: pending.sessionId,
                     permissionId: pending.requestId
@@ -24916,10 +24934,27 @@ Reply /yes, /no, or /always`
             if (pendingQuestion) {
               const answers = answersFromQuestionReplyText(pendingQuestion, commandText);
               if (answers) {
-                await input.client.question.reply({
-                  requestID: pendingQuestion.id,
-                  answers
-                });
+                await callFirstAvailable([
+                  () => input.client.question?.reply({
+                    requestID: pendingQuestion.id,
+                    answers
+                  }),
+                  () => input.client._client?.post({
+                    url: "/question/{requestID}/reply",
+                    path: { requestID: pendingQuestion.id },
+                    body: { answers },
+                    headers: { "Content-Type": "application/json" }
+                  }),
+                  () => input.client._client?.post({
+                    url: "/api/session/{sessionID}/question/{requestID}/reply",
+                    path: {
+                      sessionID: targetSessionId,
+                      requestID: pendingQuestion.id
+                    },
+                    body: { answers },
+                    headers: { "Content-Type": "application/json" }
+                  })
+                ]);
                 pendingQuestions.delete(targetSessionId);
                 await notifyPhone({
                   conversation: convoId,
@@ -24929,9 +24964,22 @@ Reply /yes, /no, or /always`
                 }).catch(() => {});
                 return;
               }
-              await input.client.question.reject({
-                requestID: pendingQuestion.id
-              }).catch(() => {});
+              await callFirstAvailable([
+                () => input.client.question?.reject({
+                  requestID: pendingQuestion.id
+                }),
+                () => input.client._client?.post({
+                  url: "/question/{requestID}/reject",
+                  path: { requestID: pendingQuestion.id }
+                }),
+                () => input.client._client?.post({
+                  url: "/api/session/{sessionID}/question/{requestID}/reject",
+                  path: {
+                    sessionID: targetSessionId,
+                    requestID: pendingQuestion.id
+                  }
+                })
+              ]).catch(() => {});
               pendingQuestions.delete(targetSessionId);
               await logDebug(`Rejected question ${pendingQuestion.id}; forwarding free text`);
             }
@@ -25106,7 +25154,12 @@ Reply /yes, /no, or /always`
       }
     }
     await client.tui.showToast({
-      body: { message: `Alice&Bot link copied! ${link}`, variant: "success" }
+      body: {
+        title: "Alice&Bot",
+        message: `Link copied! ${link}`,
+        variant: "success",
+        duration: 86400000
+      }
     }).catch((e) => logDebug(`Toast failed: ${e?.message}`));
     await logDebug(`Alice&Bot link: ${link}`);
     return link;

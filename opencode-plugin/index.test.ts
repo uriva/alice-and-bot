@@ -120,6 +120,57 @@ Deno.test("answersFromQuestionReplyText maps numeric replies to labels", () => {
   );
 });
 
+Deno.test("answersFromQuestionReplyText handles multiple choice numbers separated by spaces or commas", () => {
+  assertEquals(
+    answersFromQuestionReplyText({
+      id: "question-1",
+      questions: [{
+        header: "Pick Multiple",
+        question: "Select options",
+        options: [{ label: "OptA" }, { label: "OptB" }, { label: "OptC" }],
+        multiple: true,
+      }],
+    }, "1 2"),
+    [["OptA", "OptB"]],
+  );
+  assertEquals(
+    answersFromQuestionReplyText({
+      id: "question-1",
+      questions: [{
+        header: "Pick Multiple",
+        question: "Select options",
+        options: [{ label: "OptA" }, { label: "OptB" }, { label: "OptC" }],
+        multiple: true,
+      }],
+    }, "1, 3"),
+    [["OptA", "OptC"]],
+  );
+  assertEquals(
+    answersFromQuestionReplyText({
+      id: "question-1",
+      questions: [{
+        header: "Pick Multiple",
+        question: "Select options",
+        options: [{ label: "OptA" }, { label: "OptB" }, { label: "OptC" }],
+        multiple: true,
+      }],
+    }, "1. 2."),
+    [["OptA", "OptB"]],
+  );
+  assertEquals(
+    answersFromQuestionReplyText({
+      id: "question-1",
+      questions: [{
+        header: "Pick One",
+        question: "Select option",
+        options: [{ label: "OptA" }, { label: "OptB" }, { label: "OptC" }],
+        multiple: false,
+      }],
+    }, "2 3"),
+    [["OptB"]],
+  );
+});
+
 Deno.test("answersFromQuestionReplyText ignores free text replies when custom is false", () => {
   assertEquals(
     answersFromQuestionReplyText({

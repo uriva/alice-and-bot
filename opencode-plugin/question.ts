@@ -36,14 +36,28 @@ export const formatQuestionRequest = (request: QuestionRequest) =>
 const selectedLabels = (question: QuestionInfo, text: string) => {
   if (text.startsWith("/")) return [];
 
-  const optionsMatched = text.split(",")
+  const trimmedText = text.trim();
+  const exactMatch = question.options.find(
+    (opt) => opt.label.toLowerCase() === trimmedText.toLowerCase(),
+  );
+  if (exactMatch) return [exactMatch.label];
+
+  const rawParts = trimmedText
+    .split(/[,;\s]+|\band\b/i)
+    .map((part) => part.trim().replace(/^[#\s]+|[.\s]+$/g, ""))
+    .filter(Boolean);
+
+  const optionsMatched = rawParts
     .map((part) => {
-      const trimmed = part.trim();
-      const index = Number(trimmed);
-      if (Number.isInteger(index)) {
+      const index = Number(part);
+      if (
+        Number.isInteger(index) &&
+        index >= 1 &&
+        index <= question.options.length
+      ) {
         return question.options[index - 1]?.label;
       }
-      const lower = trimmed.toLowerCase();
+      const lower = part.toLowerCase();
       const matched = question.options.find(
         (opt) => opt.label.toLowerCase() === lower,
       );
@@ -52,11 +66,14 @@ const selectedLabels = (question: QuestionInfo, text: string) => {
     })
     .filter((label): label is string => Boolean(label));
 
-  if (optionsMatched.length > 0) return optionsMatched;
+  if (optionsMatched.length > 0) {
+    return question.multiple
+      ? Array.from(new Set(optionsMatched))
+      : [optionsMatched[0]];
+  }
 
   if (question.custom !== false) {
-    const trimmed = text.trim();
-    if (trimmed) return [trimmed];
+    if (trimmedText) return [trimmedText];
   }
 
   return [];

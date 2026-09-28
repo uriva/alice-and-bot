@@ -313,11 +313,11 @@ const pendingQuestionForSession = async ({ client, sessionId }: {
 }) => {
   const existing = pendingQuestions.get(sessionId);
   if (existing) return existing;
-  const method = client?.question?.list;
-  if (typeof method !== "function") return;
   const result = await callFirstAvailable([
-    () => method.call(client.question, {}),
-    () => method.call(client.question),
+    () => client?.question?.list({}),
+    () => client?.question?.list(),
+    () => client?._client?.get({ url: "/question" }),
+    () => client?._client?.get({ url: `/api/session/${sessionId}/question` }),
   ]).catch(() => undefined);
   const request = questionsFromResult(result).find((question: any) =>
     question?.sessionID === sessionId
@@ -768,13 +768,30 @@ export default async function plugin(input: unknown) {
             if (permissionReply && pending) {
               await callFirstAvailable([
                 () =>
-                  (input as any).client.permission.reply({
+                  (input as any).client.permission?.reply({
                     requestID: pending.requestId,
                     reply: permissionReply,
                   }),
                 () =>
+                  (input as any).client._client?.post({
+                    url: "/session/{sessionID}/permissions/{permissionID}",
+                    path: {
+                      sessionID: pending.sessionId,
+                      permissionID: pending.requestId,
+                    },
+                    body: { response: permissionReply },
+                    headers: { "Content-Type": "application/json" },
+                  }),
+                () =>
+                  (input as any).client._client?.post({
+                    url: "/permission/{requestID}/reply",
+                    path: { requestID: pending.requestId },
+                    body: { reply: permissionReply },
+                    headers: { "Content-Type": "application/json" },
+                  }),
+                () =>
                   (input as any).client
-                    .postSessionByIdPermissionsByPermissionId(
+                    .postSessionByIdPermissionsByPermissionId?.(
                       {
                         path: {
                           id: pending.sessionId,
@@ -828,10 +845,31 @@ export default async function plugin(input: unknown) {
                 commandText,
               );
               if (answers) {
-                await (input as any).client.question.reply({
-                  requestID: pendingQuestion.id,
-                  answers,
-                });
+                await callFirstAvailable([
+                  () =>
+                    (input as any).client.question?.reply({
+                      requestID: pendingQuestion.id,
+                      answers,
+                    }),
+                  () =>
+                    (input as any).client._client?.post({
+                      url: "/question/{requestID}/reply",
+                      path: { requestID: pendingQuestion.id },
+                      body: { answers },
+                      headers: { "Content-Type": "application/json" },
+                    }),
+                  () =>
+                    (input as any).client._client?.post({
+                      url:
+                        "/api/session/{sessionID}/question/{requestID}/reply",
+                      path: {
+                        sessionID: targetSessionId,
+                        requestID: pendingQuestion.id,
+                      },
+                      body: { answers },
+                      headers: { "Content-Type": "application/json" },
+                    }),
+                ]);
                 pendingQuestions.delete(targetSessionId);
                 await notifyPhone({
                   conversation: convoId,
@@ -841,9 +879,25 @@ export default async function plugin(input: unknown) {
                 }).catch(() => {});
                 return;
               }
-              await (input as any).client.question.reject({
-                requestID: pendingQuestion.id,
-              }).catch(() => {});
+              await callFirstAvailable([
+                () =>
+                  (input as any).client.question?.reject({
+                    requestID: pendingQuestion.id,
+                  }),
+                () =>
+                  (input as any).client._client?.post({
+                    url: "/question/{requestID}/reject",
+                    path: { requestID: pendingQuestion.id },
+                  }),
+                () =>
+                  (input as any).client._client?.post({
+                    url: "/api/session/{sessionID}/question/{requestID}/reject",
+                    path: {
+                      sessionID: targetSessionId,
+                      requestID: pendingQuestion.id,
+                    },
+                  }),
+              ]).catch(() => {});
               pendingQuestions.delete(targetSessionId);
               await logDebug(
                 `Rejected question ${pendingQuestion.id}; forwarding free text`,
@@ -1058,7 +1112,12 @@ export default async function plugin(input: unknown) {
     }
 
     await client.tui.showToast({
-      body: { message: `Alice&Bot link copied! ${link}`, variant: "success" },
+      body: {
+        title: "Alice&Bot",
+        message: `Link copied! ${link}`,
+        variant: "success",
+        duration: 86400000,
+      },
     }).catch((e: any) => logDebug(`Toast failed: ${e?.message}`));
 
     await logDebug(`Alice&Bot link: ${link}`);
