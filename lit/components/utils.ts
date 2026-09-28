@@ -305,6 +305,23 @@ export const isMobileDevice = () => {
   );
 };
 
+export const withDownloadParam = (url: string, name?: string) => {
+  try {
+    if (!url.startsWith("http://") && !url.startsWith("https://")) return url;
+    const parsed = new URL(url);
+    if (!parsed.searchParams.has("download")) {
+      parsed.searchParams.set("download", "1");
+      if (name && !parsed.searchParams.has("filename")) {
+        parsed.searchParams.set("filename", name);
+      }
+      return parsed.toString();
+    }
+  } catch (_) {
+    return url;
+  }
+  return url;
+};
+
 export const downloadMedia = async ({
   src,
   name,
@@ -313,17 +330,18 @@ export const downloadMedia = async ({
   name: string;
 }) => {
   if (typeof document === "undefined") return;
+  const downloadUrl = withDownloadParam(src, name);
   try {
-    if (src.startsWith("blob:") || src.startsWith("data:")) {
-      triggerAnchorDownload(src, name);
+    if (downloadUrl.startsWith("blob:") || downloadUrl.startsWith("data:")) {
+      triggerAnchorDownload(downloadUrl, name);
       return;
     }
     if (isMobileDevice()) {
-      globalThis.open(src, "_blank", "noopener,noreferrer");
+      globalThis.open(downloadUrl, "_blank", "noopener,noreferrer");
       return;
     }
     try {
-      const res = await fetch(src);
+      const res = await fetch(downloadUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -331,7 +349,7 @@ export const downloadMedia = async ({
       globalThis.setTimeout(() => URL.revokeObjectURL(url), 10000);
       return;
     } catch (_) {
-      triggerAnchorDownload(src, name, true);
+      triggerAnchorDownload(downloadUrl, name, true);
     }
   } catch (err) {
     console.error("Failed to download media", err);

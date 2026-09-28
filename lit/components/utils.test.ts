@@ -427,7 +427,10 @@ Deno.test("downloadMedia opens url in new window synchronously on mobile devices
       src: "https://example.com/video.mp4",
       name: "video.mp4",
     });
-    assertEquals(openedUrl, "https://example.com/video.mp4");
+    assertEquals(
+      openedUrl,
+      "https://example.com/video.mp4?download=1&filename=video.mp4",
+    );
     assertEquals(fetchCalled, false);
   } finally {
     (globalThis as unknown as { document: unknown }).document = originalDoc;
