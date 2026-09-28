@@ -310,10 +310,15 @@ Deno.test("chat.message hook does NOT abort the session on /aliceandbot command"
     Promise.resolve(new Response(JSON.stringify({ ok: true })));
 
   let abortCalled = false;
+  let revertCalled = false;
   const mockClient = {
     session: {
       abort: () => {
         abortCalled = true;
+        return Promise.resolve();
+      },
+      revert: () => {
+        revertCalled = true;
         return Promise.resolve();
       },
       get: () => Promise.resolve({ data: { info: { title: "Test" } } }),
@@ -326,27 +331,27 @@ Deno.test("chat.message hook does NOT abort the session on /aliceandbot command"
   try {
     const { default: plugin } = await import("./index.ts");
     const hooks = await plugin({ client: mockClient });
-    const hookInput = { sessionID: "test-session-id" };
+    const hookInput = {
+      sessionID: "test-session-id",
+      messageID: "test-message-id",
+    };
     const output = { parts: [{ type: "text", text: "/aliceandbot" }] };
 
     await hooks["chat.message"](hookInput, output);
 
-    assertEquals(abortCalled, false);
-    assertEquals(
-      output.parts[0].text.includes("https://aliceandbot.com/chat?chatWith="),
-      true,
-    );
+    assertEquals((output.parts[0] as any).synthetic, true);
+    assertEquals((output.parts[0] as any).ignored, true);
 
     const internalOutput = {
       parts: [{ type: "text", text: "ALICE_AND_BOT_COMMAND_INTERNAL" }],
     };
     await hooks["chat.message"](hookInput, internalOutput);
-    assertEquals(
-      internalOutput.parts[0].text.includes(
-        "https://aliceandbot.com/chat?chatWith=",
-      ),
-      true,
-    );
+    assertEquals((internalOutput.parts[0] as any).synthetic, true);
+    assertEquals((internalOutput.parts[0] as any).ignored, true);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assertEquals(abortCalled, true);
+    assertEquals(revertCalled, true);
   } finally {
     globalThis.WebSocket = originalWebSocket;
     globalThis.fetch = originalFetch;

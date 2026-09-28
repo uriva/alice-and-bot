@@ -25098,7 +25098,12 @@ Reply /yes, /no, or /always`
     try {
       clipboardy_default.writeSync(link);
     } catch (err) {
-      await logDebug(`Failed to copy to clipboard: ${err}`);
+      try {
+        const { execSync } = await import("child_process");
+        execSync(`printf "%s" "${link}" | xclip -selection clipboard 2>/dev/null`);
+      } catch {
+        await logDebug(`Failed to copy to clipboard: ${err}`);
+      }
     }
     await client.tui.showToast({
       body: { message: `Alice&Bot link copied! ${link}`, variant: "success" }
@@ -25194,14 +25199,25 @@ Reply /yes, /no, or /always`
       const textPart = output.parts?.find((part) => part.type === "text");
       const trimmed = textPart?.text?.trim() || "";
       if (aliceCommands.has(trimmed) || trimmed.startsWith("ALICE_AND_BOT_COMMAND_INTERNAL") || trimmed.startsWith("/aliceandbot") || trimmed.startsWith("/alice")) {
-        const link = await showAliceLink(hookInput.sessionID);
         if (textPart) {
-          textPart.text = `Alice&Bot connection link: ${link}
-
-Respond to the user with:
-"Alice&Bot link: ${link}
-Open this link on your phone to continue chatting on the go."`;
+          textPart.synthetic = true;
+          textPart.ignored = true;
         }
+        await showAliceLink(hookInput.sessionID);
+        const messageId = output.message?.id || hookInput.messageID;
+        setTimeout(async () => {
+          try {
+            await client.session.abort({ path: { id: hookInput.sessionID } });
+            if (messageId) {
+              await client.session.revert({
+                path: { id: hookInput.sessionID },
+                body: { messageID: messageId }
+              });
+            }
+          } catch (e) {
+            await logDebug(`Failed to abort/revert command message: ${e?.message}`);
+          }
+        }, 20);
       }
       return output;
     },
