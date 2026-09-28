@@ -267,6 +267,34 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "renderMarkdown renders <button> tags as styled quick-reply buttons",
+  () => {
+    const input =
+      'Would you like weekly updates?\n<button id="yes">Yes</button>\n<button id="no">No</button>';
+    const html = renderMarkdown(input, "#fff", true);
+    assertEquals(html.includes('class="chat-quick-replies"'), true);
+    assertEquals(html.includes('class="chat-quick-reply-btn"'), true);
+    assertEquals(html.includes('data-button-id="yes"'), true);
+    assertEquals(html.includes(">Yes</button>"), true);
+    assertEquals(html.includes('data-button-id="no"'), true);
+    assertEquals(html.includes(">No</button>"), true);
+  },
+);
+
+Deno.test(
+  "renderMarkdown handles <buttons> container and preserves clean text",
+  () => {
+    const input =
+      "רוצה לקבל עדכונים?\n<buttons>\n  <button>כן</button>\n  <button>לא</button>\n</buttons>";
+    const html = renderMarkdown(input, "#000", false);
+    assertEquals(html.includes("רוצה לקבל עדכונים?"), true);
+    assertEquals(html.includes(">כן</button>"), true);
+    assertEquals(html.includes(">לא</button>"), true);
+    assertEquals(html.includes("&lt;button&gt;"), false);
+  },
+);
+
 Deno.test("renderMarkdown renders video url as chat-video-player", () => {
   const html = renderMarkdown(
     '<video src="https://example.com/clip.mp4"></video>',

@@ -516,6 +516,7 @@ export class ChatMessage extends LitElement {
       30000,
     ) as unknown as number;
     this.addEventListener("click", this._handleCopyCode);
+    this.addEventListener("click", this._handleQuickReplyClick);
     this.addEventListener("copy", this._handleCopy);
     this._syncVisibleText();
   }
@@ -528,8 +529,26 @@ export class ChatMessage extends LitElement {
     document.removeEventListener("mousedown", this._dismissQuickEmojis);
     this._removeOutsideClick();
     this.removeEventListener("click", this._handleCopyCode);
+    this.removeEventListener("click", this._handleQuickReplyClick);
     this.removeEventListener("copy", this._handleCopy);
   }
+
+  private _handleQuickReplyClick = (e: Event) => {
+    const btn = (e.target as HTMLElement).closest?.(
+      ".chat-quick-reply-btn",
+    ) as HTMLElement | null;
+    if (!btn) return;
+    e.stopPropagation();
+    const text = btn.textContent?.trim() || "";
+    const id = btn.getAttribute("data-button-id") || text;
+    this.dispatchEvent(
+      new CustomEvent("quick-reply", {
+        detail: { text, id },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
 
   private _handleCopyCode = (e: Event) => {
     const btn = (e.target as HTMLElement).closest?.(

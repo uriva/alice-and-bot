@@ -199,6 +199,41 @@ const createMarked = (textColor: string, isDark: boolean) => {
   return instance;
 };
 
+const buttonTagRegex =
+  /<button(?:\s+[^>]*\bid=["']([^"']+)["'])?[^>]*>([\s\S]*?)<\/button>|<button(?:\s+[^>]*\bid=["']([^"']+)["'])?[^>]*\btitle=["']([^"']+)["'][^>]*\/?>/gi;
+
+const quickReplyButtonHtml = (title: string, id: string, isDark: boolean) =>
+  `<button class="chat-quick-reply-btn" data-button-id="${id}" type="button" style="display:inline-flex;align-items:center;justify-content:center;padding:6px 14px;margin:4px 4px 4px 0;border-radius:18px;border:1px solid ${
+    isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)"
+  };background:${
+    isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
+  };color:${
+    isDark ? "#93c5fd" : "#1d4ed8"
+  };font-size:13px;font-weight:500;cursor:pointer;line-height:1.4;transition:all .15s ease;-webkit-tap-highlight-color:transparent">${title}</button>`;
+
+const processButtons = (text: string, isDark: boolean) => {
+  const renderedButtons: string[] = [];
+  const textWithoutButtons = text.replace(
+    buttonTagRegex,
+    (_match, id1, content, id2, titleAttr) => {
+      const id = id1 || id2 || "";
+      const rawTitle = content !== undefined ? content : titleAttr || "";
+      const title = rawTitle.replace(/<[^>]+>/g, "").trim();
+      if (title) {
+        renderedButtons.push(quickReplyButtonHtml(title, id || title, isDark));
+      }
+      return "";
+    },
+  ).replace(/<\/?(?:buttons|quick_replies)[^>]*>/gi, "");
+
+  if (renderedButtons.length === 0) return { text, buttonsHtml: "" };
+  const buttonsHtml =
+    `<div class="chat-quick-replies" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;margin-bottom:4px">${
+      renderedButtons.join("")
+    }</div>`;
+  return { text: textWithoutButtons.trim(), buttonsHtml };
+};
+
 const escapeHtmlTags = (text: string) =>
   text.replace(/<(\/?[a-zA-Z])/g, "&lt;$1");
 
@@ -207,8 +242,9 @@ export const renderMarkdown = (
   textColor: string,
   isDark: boolean,
 ): string => {
+  const { text: cleanText, buttonsHtml } = processButtons(text, isDark);
   const html = createMarked(textColor, isDark).parse(
-    escapeHtmlTags(preprocessText(text)),
+    escapeHtmlTags(preprocessText(cleanText)),
     { async: false },
   ).trim();
 
@@ -219,16 +255,13 @@ export const renderMarkdown = (
     trimmedHtml,
   );
 
-  if (
+  const baseHtml =
     spanCount === 1 && !hasOtherBlocks && trimmedHtml.startsWith("<span") &&
-    trimmedHtml.endsWith("</span>")
-  ) {
-    return blurSecretsInHtml(
-      trimmedHtml.replace(/^<span\b[^>]*>/i, "").replace(/<\/span>$/i, ""),
-    );
-  }
+      trimmedHtml.endsWith("</span>")
+      ? trimmedHtml.replace(/^<span\b[^>]*>/i, "").replace(/<\/span>$/i, "")
+      : trimmedHtml;
 
-  return blurSecretsInHtml(trimmedHtml);
+  return blurSecretsInHtml(baseHtml + buttonsHtml);
 };
 
 export const fencedCodeHoverCss =

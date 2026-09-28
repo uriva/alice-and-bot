@@ -1045,6 +1045,12 @@ export class ChatBox extends LitElement {
     this._textareaOverflow = overflow;
   }
 
+  private _handleQuickReply = (text: string) => {
+    if (text) {
+      this.onSend(text);
+    }
+  };
+
   private async _handleSend() {
     const text = this._input.trim();
     const files = [...this._pendingFiles];
@@ -2155,6 +2161,8 @@ export class ChatBox extends LitElement {
         .customColors="${customColors}"
         .isDark="${isDark}"
         .isGroupChat="${this.isGroupChat}"
+        @quick-reply="${(e: CustomEvent<{ text: string }>) =>
+          this._handleQuickReply(e.detail.text)}"
       ></chat-message>
     `;
   }
@@ -2209,6 +2217,8 @@ export class ChatBox extends LitElement {
         .onAvatarClick="${this.onAvatarClick}"
         .customColors="${customColors}"
         .isDark="${isDark}"
+        @quick-reply="${(e: CustomEvent<{ text: string }>) =>
+          this._handleQuickReply(e.detail.text)}"
       ></chat-message>
     `;
   }
