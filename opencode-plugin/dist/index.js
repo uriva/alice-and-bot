@@ -25104,6 +25104,7 @@ Reply /yes, /no, or /always`
       body: { message: `Alice&Bot link copied! ${link}`, variant: "success" }
     }).catch((e) => logDebug(`Toast failed: ${e?.message}`));
     await logDebug(`Alice&Bot link: ${link}`);
+    return link;
   };
   return {
     event: async ({ event }) => {
@@ -25192,13 +25193,15 @@ Reply /yes, /no, or /always`
     "chat.message": async (hookInput, output) => {
       const textPart = output.parts?.find((part) => part.type === "text");
       const trimmed = textPart?.text?.trim() || "";
-      if (aliceCommands.has(trimmed)) {
-        await showAliceLink(hookInput.sessionID);
-        output.parts.length = 0;
-        throw {
-          name: "MessageAbortedError",
-          data: { message: "Command handled locally by Alice&Bot plugin" }
-        };
+      if (aliceCommands.has(trimmed) || trimmed.startsWith("ALICE_AND_BOT_COMMAND_INTERNAL") || trimmed.startsWith("/aliceandbot") || trimmed.startsWith("/alice")) {
+        const link = await showAliceLink(hookInput.sessionID);
+        if (textPart) {
+          textPart.text = `Alice&Bot connection link: ${link}
+
+Respond to the user with:
+"Alice&Bot link: ${link}
+Open this link on your phone to continue chatting on the go."`;
+        }
       }
       return output;
     },

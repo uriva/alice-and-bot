@@ -329,13 +329,24 @@ Deno.test("chat.message hook does NOT abort the session on /aliceandbot command"
     const hookInput = { sessionID: "test-session-id" };
     const output = { parts: [{ type: "text", text: "/aliceandbot" }] };
 
-    try {
-      await hooks["chat.message"](hookInput, output);
-    } catch (err: any) {
-      assertEquals(err.name, "MessageAbortedError");
-    }
+    await hooks["chat.message"](hookInput, output);
 
     assertEquals(abortCalled, false);
+    assertEquals(
+      output.parts[0].text.includes("https://aliceandbot.com/chat?chatWith="),
+      true,
+    );
+
+    const internalOutput = {
+      parts: [{ type: "text", text: "ALICE_AND_BOT_COMMAND_INTERNAL" }],
+    };
+    await hooks["chat.message"](hookInput, internalOutput);
+    assertEquals(
+      internalOutput.parts[0].text.includes(
+        "https://aliceandbot.com/chat?chatWith=",
+      ),
+      true,
+    );
   } finally {
     globalThis.WebSocket = originalWebSocket;
     globalThis.fetch = originalFetch;
