@@ -396,6 +396,90 @@ Deno.test("shareMedia prefers sharing file if navigator.canShare supports files"
   }
 });
 
+Deno.test("downloadMedia opens url in new window synchronously on mobile devices without fetching blob", async () => {
+  let openedUrl = "";
+  let fetchCalled = false;
+  const originalDoc = globalThis.document;
+  const originalOpen = globalThis.open;
+  const originalFetch = globalThis.fetch;
+  const originalNav = globalThis.navigator;
+  try {
+    (globalThis as unknown as { document: unknown }).document = {
+      createElement: () => ({ click: () => {} }),
+      body: { appendChild: () => {}, removeChild: () => {} },
+    };
+    globalThis.open = (url?: string | URL) => {
+      openedUrl = String(url);
+      return null;
+    };
+    (globalThis as unknown as { fetch: unknown }).fetch = () => {
+      fetchCalled = true;
+      return Promise.resolve(new Response(new Blob(["video"])));
+    };
+    Object.defineProperty(globalThis, "navigator", {
+      value: {
+        userAgent:
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15",
+      },
+      configurable: true,
+    });
+    await downloadMedia({
+      src: "https://example.com/video.mp4",
+      name: "video.mp4",
+    });
+    assertEquals(openedUrl, "https://example.com/video.mp4");
+    assertEquals(fetchCalled, false);
+  } finally {
+    (globalThis as unknown as { document: unknown }).document = originalDoc;
+    globalThis.open = originalOpen;
+    (globalThis as unknown as { fetch: unknown }).fetch = originalFetch;
+    Object.defineProperty(globalThis, "navigator", {
+      value: originalNav,
+      configurable: true,
+    });
+  }
+});
+
+Deno.test("shareMedia shares url directly on mobile devices to preserve user gesture without fetching blob", async () => {
+  let sharedPayload: unknown = null;
+  let fetchCalled = false;
+  const originalFetch = globalThis.fetch;
+  const originalNav = globalThis.navigator;
+  try {
+    (globalThis as unknown as { fetch: unknown }).fetch = () => {
+      fetchCalled = true;
+      return Promise.resolve(new Response(new Blob(["video"])));
+    };
+    Object.defineProperty(globalThis, "navigator", {
+      value: {
+        userAgent:
+          "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/128.0.0.0 Mobile Safari/537.36",
+        share: (payload: unknown) => {
+          sharedPayload = payload;
+          return Promise.resolve();
+        },
+        canShare: () => true,
+      },
+      configurable: true,
+    });
+    await shareMedia({
+      src: "https://example.com/video.mp4",
+      name: "video.mp4",
+    });
+    assertEquals(fetchCalled, false);
+    assertEquals(
+      (sharedPayload as { url?: string })?.url,
+      "https://example.com/video.mp4",
+    );
+  } finally {
+    (globalThis as unknown as { fetch: unknown }).fetch = originalFetch;
+    Object.defineProperty(globalThis, "navigator", {
+      value: originalNav,
+      configurable: true,
+    });
+  }
+});
+
 Deno.test("findCompletedSpinners returns empty during initial load or isLoading even if prevActiveIds matches", () => {
   const now = Date.now();
   const spinners = [

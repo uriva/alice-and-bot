@@ -289,6 +289,22 @@ const triggerAnchorDownload = (
   document.body.removeChild(a);
 };
 
+export const isMobileDevice = () => {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (
+    /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+  ) {
+    return true;
+  }
+  return Boolean(
+    navigator.maxTouchPoints &&
+      navigator.maxTouchPoints > 1 &&
+      typeof globalThis.matchMedia === "function" &&
+      globalThis.matchMedia("(max-width: 768px)").matches,
+  );
+};
+
 export const downloadMedia = async ({
   src,
   name,
@@ -300,6 +316,10 @@ export const downloadMedia = async ({
   try {
     if (src.startsWith("blob:") || src.startsWith("data:")) {
       triggerAnchorDownload(src, name);
+      return;
+    }
+    if (isMobileDevice()) {
+      globalThis.open(src, "_blank", "noopener,noreferrer");
       return;
     }
     try {
@@ -329,6 +349,16 @@ export const shareMedia = async ({
 }) => {
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
+      if (
+        isMobileDevice() &&
+        (src.startsWith("http://") || src.startsWith("https://"))
+      ) {
+        await navigator.share({
+          url: src,
+          title: fallbackTitle || name,
+        });
+        return;
+      }
       if (navigator.canShare) {
         try {
           const res = await fetch(src);
