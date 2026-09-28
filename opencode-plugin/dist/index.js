@@ -25158,7 +25158,7 @@ Reply /yes, /no, or /always`
         title: "Alice&Bot",
         message: `Link copied! ${link}`,
         variant: "success",
-        duration: 86400000
+        duration: 5000
       }
     }).catch((e) => logDebug(`Toast failed: ${e?.message}`));
     await logDebug(`Alice&Bot link: ${link}`);
@@ -25252,23 +25252,17 @@ Reply /yes, /no, or /always`
       const textPart = output.parts?.find((part) => part.type === "text");
       const trimmed = textPart?.text?.trim() || "";
       if (aliceCommands.has(trimmed) || trimmed.startsWith("ALICE_AND_BOT_COMMAND_INTERNAL") || trimmed.startsWith("/aliceandbot") || trimmed.startsWith("/alice")) {
+        const link = await showAliceLink(hookInput.sessionID);
         if (textPart) {
-          textPart.synthetic = true;
+          textPart.text = `Alice&Bot link: ${link}
+Open this link on your phone to continue chatting on the go.`;
           textPart.ignored = true;
         }
-        await showAliceLink(hookInput.sessionID);
-        const messageId = output.message?.id || hookInput.messageID;
         setTimeout(async () => {
           try {
             await client.session.abort({ path: { id: hookInput.sessionID } });
-            if (messageId) {
-              await client.session.revert({
-                path: { id: hookInput.sessionID },
-                body: { messageID: messageId }
-              });
-            }
           } catch (e) {
-            await logDebug(`Failed to abort/revert command message: ${e?.message}`);
+            await logDebug(`Failed to abort command message: ${e?.message}`);
           }
         }, 20);
       }

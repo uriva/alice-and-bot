@@ -390,19 +390,26 @@ Deno.test("chat.message hook does NOT abort the session on /aliceandbot command"
 
     await hooks["chat.message"](hookInput, output);
 
-    assertEquals((output.parts[0] as any).synthetic, true);
     assertEquals((output.parts[0] as any).ignored, true);
+    assertEquals(
+      output.parts[0].text.includes("https://aliceandbot.com/chat?chatWith="),
+      true,
+    );
 
     const internalOutput = {
       parts: [{ type: "text", text: "ALICE_AND_BOT_COMMAND_INTERNAL" }],
     };
     await hooks["chat.message"](hookInput, internalOutput);
-    assertEquals((internalOutput.parts[0] as any).synthetic, true);
     assertEquals((internalOutput.parts[0] as any).ignored, true);
+    assertEquals(
+      internalOutput.parts[0].text.includes(
+        "https://aliceandbot.com/chat?chatWith=",
+      ),
+      true,
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 50));
     assertEquals(abortCalled, true);
-    assertEquals(revertCalled, true);
   } finally {
     globalThis.WebSocket = originalWebSocket;
     globalThis.fetch = originalFetch;
