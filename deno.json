@@ -85,7 +85,7 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "publish": {
     "include": [
       "mod.ts",
@@ -101,6 +101,7 @@
   },
   "exports": {
     ".": "./mod.ts",
+    "./canvas": "./canvas/server.ts",
     "./components": "./components.ts"
   },
   "deploy": {
