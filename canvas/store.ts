@@ -50,8 +50,12 @@ export type CanvasWrite =
 const findRow = async (
   conversationId: string,
 ): Promise<CanvasRow | undefined> => {
+  // The conversation must be filtered, not just the canvas: without it this
+  // scans every conversation in the table and joins a canvas for each, which
+  // times out against a live database.
   const { conversations } = await accessAdminDb().query({
     conversations: {
+      $: { where: { id: conversationId } },
       canvas: { $: { where: { conversation: conversationId } } },
     },
   });
