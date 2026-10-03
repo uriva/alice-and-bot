@@ -2,6 +2,7 @@ import { createComponent, type ReactWebComponent } from "@lit/react";
 import React from "react";
 import { ConnectedChat as ConnectedChatElement } from "./components/connected-chat.ts";
 import { ChatBox as ChatBoxElement } from "./components/chat-box.ts";
+import { CanvasView as CanvasViewElement } from "../canvas/canvas-view.ts";
 import type { Credentials } from "../protocol/src/clientApi.ts";
 import {
   createWidget,
@@ -15,6 +16,14 @@ export const Chat: ReactWebComponent<ConnectedChatElement> = createComponent({
   elementClass: ConnectedChatElement,
   react: React,
 });
+
+export const CanvasView: ReactWebComponent<CanvasViewElement> = createComponent(
+  {
+    tagName: "canvas-view",
+    elementClass: CanvasViewElement,
+    react: React,
+  },
+);
 
 export const AbstractChatBox: ReactWebComponent<ChatBoxElement> =
   createComponent({
