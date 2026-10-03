@@ -265,6 +265,7 @@ export const endpoints: BackendApiImpl = {
       const { conversations } = await query({
         conversations: {
           participants: {},
+          canvas: {},
           $: { where: { id: conversationId } },
         },
       });
@@ -300,6 +301,7 @@ export const endpoints: BackendApiImpl = {
             },
           ),
           isPartial: conversations[0].participants.length > limited.length,
+          hasCanvas: conversations[0].canvas !== undefined,
         },
       };
     },

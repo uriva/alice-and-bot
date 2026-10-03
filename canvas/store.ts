@@ -99,6 +99,46 @@ export const readCanvas = async ({
   }
 };
 
+// The only way a canvas comes into existence. Called by the auto-landing page
+// when it creates a conversation; everywhere else a canvas either already
+// exists or does not, which is what lets a host gate a capability on it.
+export const createCanvas = async ({
+  conversationId,
+  conversationKey,
+  credentials,
+  text = emptyCanvas,
+}: {
+  conversationId: string;
+  conversationKey: string | undefined;
+  credentials: Credentials;
+  text?: string;
+}): Promise<CanvasWrite> => {
+  if (!conversationKey) {
+    return {
+      ok: false,
+      reason: "no-key",
+      message: "no access to this conversation's key",
+    };
+  }
+  if (await findRow(conversationId)) {
+    return {
+      ok: false,
+      reason: "conflict",
+      message: "this conversation already has a canvas",
+    };
+  }
+  const canvasId = crypto.randomUUID();
+  await accessAdminDb().transact([
+    accessAdminDb().tx.canvases[canvasId].update({
+      encrypted: await encryptSymmetric(conversationKey, text),
+      version: 1,
+      updatedAt: Date.now(),
+      updatedBy: credentials.publicSignKey,
+    }).link({ conversation: conversationId }),
+  ]);
+  return { ok: true, canvas: { text, version: 1 } };
+};
+
 export const writeCanvas = async ({
   conversationId,
   conversationKey,

@@ -72,6 +72,41 @@ export {
   loadOrCreateCredentials,
   saveCredentials,
 } from "./lit/core/credentials.ts";
+// Canvas: the server-side surface only. canvas/canvas-view.ts is deliberately
+// not re-exported, since importing it registers a custom element.
+export {
+  applyEdit,
+  type CanvasEdit,
+  maxCanvasLength,
+  type PatchOutcome,
+} from "./canvas/patch.ts";
+export {
+  actOnCanvas,
+  type CanvasAction,
+  type CanvasEvent,
+  type CanvasProblem,
+  type CanvasRender,
+  maxCanvasRuntimeMs,
+  renderCanvas,
+} from "./canvas/runtime.ts";
+export { canvasPrelude } from "./canvas/prelude.ts";
+export {
+  isRenderableTag,
+  renderableTags,
+  validateView,
+  type ViewElement,
+  type ViewNode,
+  viewText,
+} from "./canvas/view.ts";
+export {
+  type CanvasRead,
+  type CanvasWrite,
+  createCanvas,
+  emptyCanvas,
+  readCanvas,
+  type StoredCanvas,
+  writeCanvas,
+} from "./canvas/store.ts";
 export {
   compactPublicKey,
   useConversationKey,
@@ -133,6 +168,7 @@ export const getConversationInfo = (conversationId: string): Promise<
         alias?: string;
       }[];
       isPartial: boolean;
+      hasCanvas: boolean;
     };
   }
   | { error: "not-found" }

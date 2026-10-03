@@ -297,6 +297,11 @@ export const backendApiSchema = {
             }),
           ),
           isPartial: z.boolean(),
+          // Whether the conversation has a canvas attached. The canvas text is
+          // encrypted, but its existence is not: canvases is its own entity, so
+          // this needs no conversation key and lets a host gate a capability on
+          // it.
+          hasCanvas: z.boolean(),
         }),
       }),
       z.object({ error: z.literal("not-found") }),
@@ -648,6 +653,7 @@ export const getConversationInfo = (
         alias?: string;
       }[];
       isPartial: boolean;
+      hasCanvas: boolean;
     };
   }
   | { error: "not-found" }
