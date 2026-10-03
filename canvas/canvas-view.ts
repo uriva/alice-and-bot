@@ -189,7 +189,7 @@ export class CanvasView extends LitElement {
   private _seenMessages = 0;
   private _off: (() => void)[] = [];
 
-  override createRenderRoot() {
+  override createRenderRoot(): HTMLElement {
     return this;
   }
 
@@ -347,7 +347,7 @@ export class CanvasView extends LitElement {
     this.requestUpdate();
   }
 
-  override render() {
+  override render(): TemplateResult {
     const onAction = (action: string, fields: Record<string, string>) =>
       this._act(action, fields);
     return html`
@@ -382,10 +382,4 @@ export class CanvasView extends LitElement {
 
 if (!customElements.get("canvas-view")) {
   customElements.define("canvas-view", CanvasView);
-}
-
-declare global {
-  interface HTMLElementTagNameMap {
-    "canvas-view": CanvasView;
-  }
 }
