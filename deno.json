@@ -6,7 +6,7 @@
     "widget": "deno cache --minimum-dependency-age=0 widget/src/entry.ts && cd widget && deno run -A --minimum-dependency-age=0 --node-modules-dir=auto npm:vite build --config vite.config.ts",
     "chatgpt-style": "cd example; deno run -A --node-modules-dir=auto npm:vite",
     "build": "deno run -A --node-modules-dir=auto npm:vite build",
-    "check": "deno fmt --check && deno lint && deno check *.ts backend/**/*.ts example/**/*.ts landing/**/*.ts lit/**/*.ts protocol/**/*.ts widget/**/*.ts && cd e2e && deno check *.spec.ts helpers.ts mocks/*.ts",
+    "check": "deno fmt --check && deno lint && deno check *.ts backend/**/*.ts canvas/**/*.ts example/**/*.ts landing/**/*.ts lit/**/*.ts protocol/**/*.ts widget/**/*.ts && cd e2e && deno check *.spec.ts helpers.ts mocks/*.ts",
     "test:e2e": "cd e2e && deno run -A --node-modules-dir=auto npm:playwright test",
     "bump-widget": "deno run -A scripts/bump-widget.ts"
   },
@@ -48,6 +48,7 @@
     "vite": "npm:vite@^7.0.2",
     "web-push": "npm:web-push@3.6.7",
     "zod": "npm:zod@3.25.57",
+    "@uri/safescript": "jsr:@uri/safescript@^0.1.39",
     "clipboardy": "npm:clipboardy@^5.3.1",
     "qrcode-terminal": "npm:qrcode-terminal@^0.12.0",
     "fs/promises": "node:fs/promises",
@@ -84,11 +85,12 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "publish": {
     "include": [
       "mod.ts",
       "components.ts",
+      "canvas/**/*.ts",
       "lit/**/*.ts",
       "protocol/**/*.ts",
       "widget/src/**/*.ts",

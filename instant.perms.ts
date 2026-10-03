@@ -98,6 +98,17 @@ const rules = {
       delete: "true",
     },
   },
+  // The canvas ciphertext is only readable with the conversation key, so
+  // permissive rules here match the file's existing posture. Editing is
+  // resolved by encrypting with the conversation key, not by these rules.
+  canvases: {
+    allow: {
+      view: "true",
+      create: "true",
+      update: "true",
+      delete: "true",
+    },
+  },
 } satisfies InstantRules;
 
 export default rules;

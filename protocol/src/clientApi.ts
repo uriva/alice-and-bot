@@ -133,13 +133,30 @@ export type CallMessage = {
   duration?: number;
 };
 
-type InternalMessage =
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly Json[]
+  | { readonly [key: string]: Json };
+
+// A canvas event: something happened on the conversation's canvas. It is
+// delivered to every participant but never rendered as a chat message.
+type CanvasEventMessage = {
+  type: "event";
+  action: string;
+  data: Json;
+};
+
+export type InternalMessage =
   | TextMessage
   | EditMessage
   | SpinnerMessage
   | ProgressMessage
   | CallMessage
-  | ReactionMessage;
+  | ReactionMessage
+  | CanvasEventMessage;
 
 export type Profile = {
   publicSignKey: string;
@@ -170,7 +187,9 @@ export type EncryptedMessage = EncryptedSymmetric<
   SignedPayload<InternalMessage>
 >;
 
-const msgToStr = stringify;
+// Canonical serialization: signatures are computed over this, so any code
+// constructing a message has to sign the same bytes.
+export const msgToStr = stringify;
 
 export type EncryptedConversationKey = EncryptedAsymmetric<string>;
 
@@ -221,12 +240,28 @@ export const sendMessageWithKey = async ({
     endpoint: "sendMessage",
     payload: {
       conversation,
+      // A canvas event is not something a participant should be notified
+      // about, and the server cannot see inside the payload to know.
+      silent: message.type === "event" ? true : undefined,
       encryptedMessage: await encryptAndSign(
         conversationKey,
         credentials,
         message,
       ),
     },
+  });
+
+// Deliver a canvas event to every participant without adding it to the
+// conversation transcript that chat interfaces render.
+export const sendCanvasEvent = (params: {
+  credentials: Credentials;
+  conversation: string;
+  action: string;
+  data: Json;
+}): Promise<{ messageId: string }> =>
+  sendMessage({
+    ...params,
+    message: { type: "event", action: params.action, data: params.data },
   });
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
@@ -321,13 +356,20 @@ type DecipheredReactionMessage = DecipheredMessageBase & {
   remove?: boolean;
 };
 
+export type DecipheredCanvasEventMessage = DecipheredMessageBase & {
+  type: "event";
+  action: string;
+  data: Json;
+};
+
 export type DecipheredMessage =
   | DecipheredTextMessage
   | DecipheredEditMessage
   | DecipheredSpinnerMessage
   | DecipheredProgressMessage
   | DecipheredCallMessage
-  | DecipheredReactionMessage;
+  | DecipheredReactionMessage
+  | DecipheredCanvasEventMessage;
 
 type DistributeOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
   : never;
@@ -383,6 +425,16 @@ const decryptedPayloadToMessage = (
       reactTo: decryptedPayload.reactTo,
       emoji: decryptedPayload.emoji,
       remove: decryptedPayload.remove,
+    };
+  }
+  // Must come before the text fallthrough below, or an event would be
+  // rendered as an empty chat bubble.
+  if (decryptedPayload.type === "event") {
+    return {
+      ...base,
+      type: "event",
+      action: decryptedPayload.action,
+      data: decryptedPayload.data,
     };
   }
   return {

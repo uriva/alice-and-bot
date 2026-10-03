@@ -3,6 +3,7 @@ import type {
   EncryptedConversationKey,
   EncryptedMessage,
 } from "./protocol/src/clientApi.ts";
+import type { EncryptedSymmetric } from "./protocol/src/crypto.ts";
 
 export type PushSubscriptionJSON = {
   endpoint: string;
@@ -67,6 +68,17 @@ const _schema = i.schema({
       percentage: i.number().optional(),
       authorId: i.string().optional(),
       updatedAt: i.number().indexed(),
+    }),
+    // One canvas per conversation. The text is a safescript program encrypted
+    // with the conversation key, so it is unreadable without participant
+    // access. No history: `version` is here only to detect a stale writer.
+    canvases: i.entity({
+      // json<> rather than string so the EncryptedSymmetric brand survives, and
+      // decryptSymmetric accepts the stored value without a cast.
+      encrypted: i.json<EncryptedSymmetric<string>>(),
+      version: i.number().indexed(),
+      updatedAt: i.number().indexed(),
+      updatedBy: i.string().optional(),
     }),
   },
   links: {
@@ -142,6 +154,15 @@ const _schema = i.schema({
         onDelete: "cascade",
       },
       reverse: { on: "conversations", label: "uiElements", has: "many" },
+    },
+    conversationCanvas: {
+      forward: {
+        on: "canvases",
+        label: "conversation",
+        has: "one",
+        onDelete: "cascade",
+      },
+      reverse: { on: "conversations", label: "canvas", has: "one" },
     },
     identityWallet: {
       forward: { on: "identities", label: "wallet", has: "one" },

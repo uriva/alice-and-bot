@@ -3,6 +3,7 @@ import { empty, sort, sortKey, unique } from "@uri/gamla";
 import type {
   Attachment,
   Credentials,
+  DecipheredCanvasEventMessage,
   DecipheredMessage,
 } from "../../protocol/src/clientApi.ts";
 import {
@@ -69,6 +70,10 @@ type TextOrEditMessage = DecipheredMessage & { type: "text" | "edit" };
 
 const isTextOrEdit = (m: DecipheredMessage): m is TextOrEditMessage =>
   m.type === "text" || m.type === "edit";
+
+const isCanvasEvent = (
+  m: DecipheredMessage,
+): m is DecipheredCanvasEventMessage => m.type === "event";
 
 const hasAttachments = (
   msg: DecipheredMessage,
@@ -569,6 +574,7 @@ export const processChatState = ({
   if (!messages) {
     return {
       chatMessages: [],
+      canvasEvents: [],
       activeSpinners: [],
       activeProgress: [],
       activeStreams: [],
@@ -589,6 +595,9 @@ export const processChatState = ({
   const persistedTexts = new Set(withReactions.map((m) => m.text));
   return {
     chatMessages: withReactions.map(resolveReplyTo(msgMap)),
+    // Canvas events reach every participant but are never part of the chat
+    // transcript; `chatMessages` above is already narrowed to text and edits.
+    canvasEvents: messages.filter(isCanvasEvent),
     activeSpinners: [
       ...latestSpinners(messages, details, overrides),
       ...standaloneSpinnerEntries(

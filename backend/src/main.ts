@@ -97,7 +97,7 @@ export const endpoints: BackendApiImpl = {
         : { conversationKey: keys[0].key };
     },
     createConversation,
-    sendMessage: async ({ encryptedMessage, conversation }) => {
+    sendMessage: async ({ encryptedMessage, conversation, silent }) => {
       const messageId = id();
       const timestamp = Date.now();
       // Persist the message first; do not block on side effects (webhooks/push)
@@ -120,11 +120,13 @@ export const endpoints: BackendApiImpl = {
           timestamp,
           storeLocalRelay: relayStoreMessage,
         }).catch((e) => console.error("webhook dispatch failed", e)),
-        sendPushToParticipants({
-          messageId,
-          conversationId: conversation,
-          timestamp,
-        }).catch((e) => console.error("push dispatch failed", e)),
+        ...(silent === true ? [] : [
+          sendPushToParticipants({
+            messageId,
+            conversationId: conversation,
+            timestamp,
+          }).catch((e) => console.error("push dispatch failed", e)),
+        ]),
       ]);
       return { messageId };
     },

@@ -224,6 +224,9 @@ export const backendApiSchema = {
     input: z.object({
       encryptedMessage: z.string().max(maxEncryptedMessageLength),
       conversation: z.string(),
+      // The payload is encrypted, so the server cannot tell a canvas event
+      // from a chat message. The sender declares that it should not notify.
+      silent: z.boolean().optional(),
     }),
     output: z.object({ messageId: z.string() }),
   }),
