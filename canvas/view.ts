@@ -16,6 +16,71 @@ const forbiddenAttrs = [
 
 export const allowedEvents = ["click", "submit", "change", "input", "keydown"];
 
+// Rendering a dynamic tag needs lit's unsafeStatic, which is only sound for a
+// closed set of names, so the set is fixed here rather than derived from the
+// program.
+export const renderableTags = [
+  "div",
+  "span",
+  "section",
+  "article",
+  "header",
+  "footer",
+  "nav",
+  "main",
+  "aside",
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "ul",
+  "ol",
+  "li",
+  "strong",
+  "b",
+  "em",
+  "i",
+  "u",
+  "small",
+  "mark",
+  "sub",
+  "sup",
+  "time",
+  "figure",
+  "figcaption",
+  "dl",
+  "dt",
+  "dd",
+  "code",
+  "pre",
+  "blockquote",
+  "a",
+  "button",
+  "input",
+  "textarea",
+  "label",
+  "select",
+  "option",
+  "img",
+  "form",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "th",
+  "td",
+  "br",
+  "hr",
+];
+
+type RenderableTag = (typeof renderableTags)[number];
+
+export const isRenderableTag = (tag: string): tag is RenderableTag =>
+  renderableTags.some((allowed) => allowed === tag.toLowerCase());
+
 const forbiddenTags = [
   "script",
   "iframe",
@@ -86,6 +151,14 @@ const collectProblems = (
     own.push({
       path: `${path}.tag`,
       message: `<${tag}> is not allowed in a canvas view`,
+    });
+  }
+  if (!isRenderableTag(tag)) {
+    own.push({
+      path: `${path}.tag`,
+      message: `<${tag}> is not renderable; use one of ${
+        renderableTags.join(", ")
+      }`,
     });
   }
 

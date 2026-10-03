@@ -133,8 +133,10 @@ button = (label: string, name: string) => {
   return action("button", { class: "canvas-btn", type: "button" }, "click", name, [label])
 }
 
-submitButton = (label: string, name: string) => {
-  return action("button", { class: "canvas-btn canvas-btn-primary", type: "submit" }, "click", name, [label])
+// Binds nothing: the enclosing form's submit binding is what fires, so a
+// submit button that also handled click would fire twice.
+submitButton = (label: string) => {
+  return el("button", { class: "canvas-btn canvas-btn-primary", type: "submit" }, [label])
 }
 
 link = (label: string, href: string, name: string) => {

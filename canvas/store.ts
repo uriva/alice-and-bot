@@ -164,3 +164,27 @@ export const writeCanvas = async ({
 };
 
 export const canvasEvent = (action: string, data: Json) => ({ action, data });
+
+export const canvasQuery = (conversationId: string) => ({
+  conversations: {
+    $: { where: { id: conversationId } },
+    canvas: { $: { where: { conversation: conversationId } } },
+  },
+});
+
+// Decrypting is separated from subscribing so it can be tested directly, and so
+// the subscription stays a thin wrapper with no logic to inject.
+export const canvasFromRow = (
+  row: { readonly encrypted: unknown; readonly version: number } | undefined,
+  conversationKey: string | undefined,
+): Promise<StoredCanvas | undefined> => {
+  if (!row || !conversationKey || !isEncrypted(row.encrypted)) {
+    return Promise.resolve(undefined);
+  }
+  return decryptSymmetric<string>(conversationKey, row.encrypted).then((
+    text,
+  ) => ({
+    text,
+    version: row.version,
+  }));
+};

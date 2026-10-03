@@ -217,7 +217,7 @@ Deno.test("validateView reports the path of a nested problem", () => {
     tag: "div",
     children: [
       { tag: "p", text: "fine" },
-      { tag: "span", children: [{ tag: "b", on: { click: "" } }] },
+      { tag: "span", children: [{ tag: "em", on: { click: "" } }] },
     ],
   });
   assertEquals(result.ok, false);
@@ -240,4 +240,16 @@ Deno.test("viewText flattens a tree", () => {
     viewText({ tag: "p", children: ["a", { tag: "b", text: "b" }, 3] }),
     "ab3",
   );
+});
+
+Deno.test("validateView rejects a tag outside the renderable set", async () => {
+  const result = await renderCanvas({
+    body: `view = () => {
+  return el("marquee", { class: "x" }, ["scrolling"])
+}`,
+  });
+  assertEquals(result.ok, false);
+  if (result.ok) return;
+  assertEquals(result.problems[0].stage, "view");
+  assertEquals(result.problems[0].message.includes("not renderable"), true);
 });
