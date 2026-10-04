@@ -146,6 +146,10 @@ export const makeSubscribeDecryptedMessages =
     conversationKey: string | null,
     onChange: (result: DecryptedMessagesResult) => void,
   ) => {
+    if (!conversationId) {
+      onChange({ messages: null, canLoadMore: false, loadMore: () => {} });
+      return () => {};
+    }
     const { unsubscribe, loadNextPage } = subscribeInfiniteQuery(
       messagesInfiniteQuery(conversationId),
       (resp) => {

@@ -79,10 +79,13 @@ export const useConversationKey = (
 export const useDecryptedMessages = (
   _db: unknown,
   conversationKey: string | null,
-  conversationId: string,
+  conversationId: string | null,
 ): DecryptedMessagesResult =>
   useSubscription(
-    (cb) => subscribeDecryptedMessages(conversationId, conversationKey, cb),
+    (cb) =>
+      conversationId && conversationKey
+        ? subscribeDecryptedMessages(conversationId, conversationKey, cb)
+        : () => {},
     [conversationId, conversationKey],
     { messages: null, canLoadMore: false, loadMore: () => {} },
   );
