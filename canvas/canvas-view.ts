@@ -29,14 +29,15 @@ export const canvasViewCss = (isDark: boolean) => `
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  color: ${isDark ? "#f4f4f4" : "#222"};
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: ${isDark ? "#f3f4f6" : "#1f2937"};
+  background: var(--canvas-view-bg, ${isDark ? "#111827" : "#ffffff"});
+  font-family: inherit;
 }
 .canvas-view-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 2rem 1.5rem;
 }
 .canvas-view-toasts {
   position: absolute;
@@ -47,17 +48,19 @@ export const canvasViewCss = (isDark: boolean) => `
   gap: 0.5rem;
   padding: 1rem;
   pointer-events: none;
-  z-index: 2;
+  z-index: 20;
 }
 .canvas-view-toast {
   align-self: center;
   max-width: 34rem;
-  padding: 0.5rem 0.9rem;
+  padding: 0.5rem 1rem;
   border-radius: 999px;
-  background: ${isDark ? "#262626" : "#ffffff"};
-  border: 1px solid ${isDark ? "#3a3a3a" : "#e2e0da"};
-  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
-  font-size: 0.9rem;
+  background: ${isDark ? "#1f2937" : "#ffffff"};
+  border: 1px solid ${isDark ? "#374151" : "#e5e7eb"};
+  color: ${isDark ? "#f9fafb" : "#111827"};
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2), 0 8px 10px -6px rgba(0,0,0,0.1);
+  font-size: 0.875rem;
+  font-weight: 500;
   animation: canvas-toast ${toastLifetimeMs}ms ease forwards;
 }
 .canvas-view-error {
@@ -71,10 +74,38 @@ export const canvasViewCss = (isDark: boolean) => `
   white-space: pre-wrap;
 }
 .canvas-view-empty {
-  opacity: 0.6;
-  font-size: 0.9rem;
-  padding: 3rem 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem;
   text-align: center;
+  color: ${isDark ? "#9ca3af" : "#6b7280"};
+  font-size: 1rem;
+}
+.canvas-page {
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+.canvas-hero {
+  text-align: center;
+  padding: 3.5rem 1rem 2rem 1rem;
+}
+.canvas-hero h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 0 0 0.875rem 0;
+  color: ${isDark ? "#f9fafb" : "#111827"};
+}
+.canvas-hero p {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  opacity: 0.85;
+  max-width: 34rem;
+  margin: 0 auto;
 }
 @keyframes canvas-toast {
   0% { opacity: 0; transform: translateY(-0.5rem); }
@@ -239,7 +270,8 @@ export class CanvasView extends LitElement {
       canvasQuery(this.conversationId),
       ({ data, error }) => {
         if (error) return console.error("canvas subscription failed", error);
-        const row = data?.conversations[0]?.canvas;
+        const rawCanvas = data?.conversations[0]?.canvas;
+        const row = Array.isArray(rawCanvas) ? rawCanvas[0] : rawCanvas;
         if (row?.version === lastVersion) return;
         lastVersion = row?.version;
         canvasFromRow(row, key).then(
@@ -352,9 +384,7 @@ export class CanvasView extends LitElement {
       this._act(action, fields);
     return html`
       <style>${canvasViewCss(this.isDark)}</style>
-      <div class="canvas-view" style=${`background:${
-        this.isDark ? "#0a0a0a" : "#f8f7f4"
-      }`}>
+      <div class="canvas-view">
               ${this._toasts.length === 0 ? nothing : html`
                 <div class="canvas-view-toasts">
                   ${this._toasts.map((toast) =>

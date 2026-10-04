@@ -9,8 +9,10 @@ import { applyEdit, type CanvasEdit } from "./patch.ts";
 
 export const emptyCanvas = `view = () => {
   return div([
-    h1("This canvas is empty"),
-    p("Describe what you want and it will be built here.")
+    div([
+      h1("Your Live Canvas"),
+      p("Describe what you want to build and watch it appear here.")
+    ], "canvas-hero")
   ], "canvas-page")
 }
 `;
@@ -50,16 +52,16 @@ export type CanvasWrite =
 const findRow = async (
   conversationId: string,
 ): Promise<CanvasRow | undefined> => {
-  // The conversation must be filtered, not just the canvas: without it this
-  // scans every conversation in the table and joins a canvas for each, which
-  // times out against a live database.
+  // The conversation must be filtered: without it this scans every conversation
+  // in the table, which times out against a live database.
   const { conversations } = await accessAdminDb().query({
     conversations: {
       $: { where: { id: conversationId } },
-      canvas: { $: { where: { conversation: conversationId } } },
+      canvas: {},
     },
   });
-  const canvas = conversations[0]?.canvas;
+  const rawCanvas = conversations[0]?.canvas;
+  const canvas = Array.isArray(rawCanvas) ? rawCanvas[0] : rawCanvas;
   if (!canvas || !isEncrypted(canvas.encrypted)) return undefined;
   return {
     id: canvas.id,
@@ -212,7 +214,7 @@ export const canvasEvent = (action: string, data: Json) => ({ action, data });
 export const canvasQuery = (conversationId: string) => ({
   conversations: {
     $: { where: { id: conversationId } },
-    canvas: { $: { where: { conversation: conversationId } } },
+    canvas: {},
   },
 });
 
