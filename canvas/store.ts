@@ -10,10 +10,28 @@ import { applyEdit, type CanvasEdit } from "./patch.ts";
 export const emptyCanvas = `view = () => {
   return div([
     div([
-      h1("Your Live Canvas"),
-      p("Describe what you want to build and watch it appear here.")
-    ], "canvas-hero")
+      badge("prompt2bot", "primary"),
+      h1("Build and Configure AI Agents"),
+      lead("Autonomous bots across WhatsApp, Telegram, Web chat, and Email.")
+    ], "canvas-hero"),
+    div([
+      card("Customer Support Agent", [
+        p("Resolve inquiries 24/7 on WhatsApp & Web with intelligent tool use and escalation."),
+        button("Create Support Bot", "create_support_bot")
+      ], "canvas-feature-card"),
+      card("Personal Assistant", [
+        p("Manage tasks, schedule reminders, research the web, and draft emails autonomously."),
+        button("Create Assistant", "create_assistant_bot")
+      ], "canvas-feature-card"),
+      card("Sales & Lead Gen", [
+        p("Qualify leads, answer pricing questions, and book calendar appointments automatically."),
+        button("Create Sales Bot", "create_sales_bot")
+      ], "canvas-feature-card")
+    ], "canvas-grid")
   ], "canvas-page")
+}
+act = (action: string, fields) => {
+  return emit(action)
 }
 `;
 

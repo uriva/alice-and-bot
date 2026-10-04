@@ -91,21 +91,97 @@ export const canvasViewCss = (isDark: boolean) => `
 }
 .canvas-hero {
   text-align: center;
-  padding: 3.5rem 1rem 2rem 1rem;
+  padding: 3rem 1rem 2rem 1rem;
 }
 .canvas-hero h1 {
   font-size: 2.25rem;
   font-weight: 700;
   letter-spacing: -0.025em;
-  margin: 0 0 0.875rem 0;
+  margin: 0.75rem 0 0.875rem 0;
   color: ${isDark ? "#f9fafb" : "#111827"};
 }
-.canvas-hero p {
+.canvas-hero p, .canvas-lead {
   font-size: 1.125rem;
   line-height: 1.6;
   opacity: 0.85;
   max-width: 34rem;
   margin: 0 auto;
+}
+.canvas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+.canvas-card {
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  background: ${isDark ? "#1e293b" : "#ffffff"};
+  border: 1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"};
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+}
+.canvas-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: ${isDark ? "#f8fafc" : "#0f172a"};
+}
+.canvas-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.canvas-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid ${isDark ? "#3b82f6" : "#2563eb"};
+  background: ${isDark ? "#2563eb" : "#2563eb"};
+  color: #ffffff;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+.canvas-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+.canvas-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  background: ${isDark ? "rgba(59,130,246,0.2)" : "rgba(37,99,235,0.1)"};
+  color: ${isDark ? "#60a5fa" : "#2563eb"};
+  border: 1px solid ${isDark ? "rgba(59,130,246,0.3)" : "rgba(37,99,235,0.2)"};
+}
+.canvas-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+.canvas-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.canvas-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid ${isDark ? "#374151" : "#d1d5db"};
+  background: ${isDark ? "#111827" : "#ffffff"};
+  color: inherit;
 }
 @keyframes canvas-toast {
   0% { opacity: 0; transform: translateY(-0.5rem); }
