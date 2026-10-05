@@ -410,10 +410,12 @@ export class CanvasView extends LitElement {
     if (!result.ok) {
       this._view = undefined;
       this._problems = result.problems;
+      this.requestUpdate();
       return;
     }
     this._view = result.view;
     this._problems = [];
+    this.requestUpdate();
   }
 
   private _act = (action: string, fields: Record<string, string>) => {
