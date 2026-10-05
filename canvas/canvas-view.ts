@@ -1,5 +1,5 @@
-import { html, LitElement, nothing, type TemplateResult } from "lit";
-import { unsafeStatic } from "lit/static-html.js";
+import { LitElement, nothing, type TemplateResult } from "lit";
+import { html, unsafeStatic } from "lit/static-html.js";
 import type {
   Credentials,
   DecipheredMessage,
