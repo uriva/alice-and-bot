@@ -321,17 +321,9 @@ export class CanvasView extends LitElement {
   }
 
   override willUpdate(changed: Map<string, unknown>) {
-    if (changed.has("initialText") && !this._canvas && this.initialText) {
-      renderCanvas({ body: this.initialText }).then((result) => {
-        if (result.ok && !this._canvas) {
-          this._view = result.view;
-          this.requestUpdate();
-        }
-      });
-    }
     if (
       changed.has("conversationId") || changed.has("credentials") ||
-      changed.has("_canvas")
+      changed.has("_canvas") || changed.has("initialText")
     ) {
       this._render();
     }
@@ -402,7 +394,10 @@ export class CanvasView extends LitElement {
   }
 
   private _render() {
-    const body = this._canvas?.text;
+    const canvasText = this._canvas?.text?.trim();
+    const body = canvasText && !canvasText.includes("This canvas is empty")
+      ? canvasText
+      : this.initialText;
     if (!body) {
       this._view = undefined;
       this._problems = [];
