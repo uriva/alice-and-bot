@@ -284,12 +284,21 @@ export class CanvasView extends LitElement {
     authorNames: { attribute: false },
   };
 
-  credentials: Credentials | undefined;
-  conversationId = "";
-  isDark = false;
-  emptyMessage = "Nothing here yet";
-  initialText = "";
-  authorNames: Readonly<Record<string, string>> = {};
+  declare credentials: Credentials | undefined;
+  declare conversationId: string;
+  declare isDark: boolean;
+  declare emptyMessage: string;
+  declare initialText: string;
+  declare authorNames: Readonly<Record<string, string>>;
+
+  constructor() {
+    super();
+    this.conversationId = "";
+    this.isDark = false;
+    this.emptyMessage = "Nothing here yet";
+    this.initialText = "";
+    this.authorNames = {};
+  }
 
   private _canvas: StoredCanvas | undefined;
   private _view: ViewElement | undefined;
@@ -300,6 +309,11 @@ export class CanvasView extends LitElement {
 
   override createRenderRoot(): HTMLElement {
     return this;
+  }
+
+  override firstUpdated(changed: Map<string, unknown>) {
+    super.firstUpdated(changed);
+    this._render();
   }
 
   override connectedCallback() {
