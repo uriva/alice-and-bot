@@ -544,22 +544,28 @@ export class CanvasView extends LitElement {
   }
 
   private _act = (action: string, fields: Record<string, string>) => {
-    const body = this._canvas?.text;
+    const body = this._canvas?.text || this.initialText;
     const { credentials, conversationId } = this;
     if (!body || !credentials || !conversationId) return;
     actOnCanvas({ body, action, fields }).then((result) => {
       if (!result.ok) {
         this._problems = result.problems;
+        this.requestUpdate();
         return;
       }
-      result.emitted.forEach((event: CanvasEvent) =>
+      result.emitted.forEach((event: CanvasEvent) => {
+        this.dispatchEvent(
+          new CustomEvent("canvas-action", { detail: event, bubbles: true }),
+        );
         sendCanvasEvent({
           credentials,
           conversation: conversationId,
           action: event.action,
           data: event.data,
-        }).catch((error) => console.error("failed to send canvas event", error))
-      );
+        }).catch((error) =>
+          console.error("failed to send canvas event", error)
+        );
+      });
       if (result.view) this._view = result.view;
       this._problems = [];
       this.requestUpdate();

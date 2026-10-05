@@ -17,11 +17,17 @@ export const Chat: ReactWebComponent<ConnectedChatElement> = createComponent({
   react: React,
 });
 
-export const CanvasView: ReactWebComponent<CanvasViewElement> = createComponent(
+export const CanvasView: ReactWebComponent<
+  CanvasViewElement,
+  { onCanvasAction: "canvas-action" }
+> = createComponent(
   {
     tagName: "canvas-view",
     elementClass: CanvasViewElement,
     react: React,
+    events: {
+      onCanvasAction: "canvas-action",
+    },
   },
 );
 
