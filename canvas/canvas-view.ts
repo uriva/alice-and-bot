@@ -554,6 +554,10 @@ export class CanvasView extends LitElement {
         return;
       }
       result.emitted.forEach((event: CanvasEvent) => {
+        const actionLabel = event.action
+          .replace(/^choose_lang_|^create_|^configure_/, "")
+          .replace(/_/g, " ");
+        this._toast(`⚡ ${actionLabel}`);
         this.dispatchEvent(
           new CustomEvent("canvas-action", { detail: event, bubbles: true }),
         );
