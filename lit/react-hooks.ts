@@ -199,17 +199,18 @@ export const useGetOrCreateConversation = (
 
 export const useTypingPresence = (
   _db: unknown,
-  conversationId: string,
+  conversationId: string | null,
   selfPublicSignKey: string,
   lastMessageAuthorPublicKey: string | null,
 ): TypingPresenceResult => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingNames, setTypingNames] = useState<string[]>([]);
   const notifierRef = useRef(
-    createTypingNotifier(conversationId, selfPublicSignKey),
+    createTypingNotifier(conversationId ?? "", selfPublicSignKey),
   );
 
   useEffect(() => {
+    if (!conversationId) return;
     notifierRef.current = createTypingNotifier(
       conversationId,
       selfPublicSignKey,
@@ -220,6 +221,7 @@ export const useTypingPresence = (
   const suppressRef = useRef<((key: string) => void) | null>(null);
 
   useEffect(() => {
+    if (!conversationId) return;
     const { unsub, suppressAuthor } = subscribeTypingStates(
       conversationId,
       selfPublicSignKey,
