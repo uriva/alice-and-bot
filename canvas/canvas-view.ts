@@ -31,6 +31,12 @@ export const canvasViewCss = (isDark: boolean) => `
   color: ${isDark ? "#f3f4f6" : "#1f2937"};
   background: var(--canvas-view-bg, ${isDark ? "#111827" : "#ffffff"});
   font-family: inherit;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+.canvas-el {
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 .canvas-view-body {
   flex: 1;
@@ -231,34 +237,36 @@ const renderNode = (
 
   if (tag === "button") {
     return html`
-      <button class="canvas-el ${className}" type="button"
+      <button dir="auto" class="canvas-el ${className}" type="button"
         @click=${clickHandler}>${node.text ?? nothing}${children}</button>
     `;
   }
   if (tag === "form") {
     return html`
-      <form class="canvas-el ${className}"
+      <form dir="auto" class="canvas-el ${className}"
         @submit=${submitHandler}>${node.text ?? nothing}${children}</form>
     `;
   }
   if (tag === "input") {
     return html`
-      <input class="canvas-el ${className}" name=${node.attrs?.name ??
-        nothing} placeholder=${node.attrs?.placeholder ?? nothing}
-        .value=${node.attrs?.value ?? ""} />
+      <input dir="auto" class="canvas-el ${className}" name=${node.attrs
+        ?.name ?? nothing}
+        placeholder=${node.attrs?.placeholder ??
+          nothing} .value=${node.attrs?.value ?? ""} />
     `;
   }
   if (tag === "textarea") {
     return html`
-      <textarea class="canvas-el ${className}" name=${node.attrs?.name ??
-        nothing}
+      <textarea dir="auto" class="canvas-el ${className}" name=${node.attrs
+        ?.name ?? nothing}
         placeholder=${node.attrs?.placeholder ?? nothing}>${node.text ??
           ""}</textarea>
     `;
   }
   if (tag === "a") {
     return html`
-      <a class="canvas-el ${className}" href=${node.attrs?.href ?? "#"}
+      <a dir="auto" class="canvas-el ${className}" href=${node.attrs?.href ??
+        "#"}
         @click=${clickHandler}>${node.text ?? nothing}${children}</a>
     `;
   }
@@ -269,95 +277,97 @@ const renderNode = (
   }
   if (tag === "label") {
     return html`
-      <label class="canvas-el ${className}"
+      <label dir="auto" class="canvas-el ${className}"
         for=${node.attrs?.for ?? nothing}>${node.text ??
           nothing}${children}</label>
     `;
   }
   if (tag === "h1") {
-    return html`<h1 class="canvas-el ${className}">${
+    return html`<h1 dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</h1>`;
   }
   if (tag === "h2") {
-    return html`<h2 class="canvas-el ${className}">${
+    return html`<h2 dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</h2>`;
   }
   if (tag === "h3") {
-    return html`<h3 class="canvas-el ${className}">${
+    return html`<h3 dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</h3>`;
   }
   if (tag === "h4") {
-    return html`<h4 class="canvas-el ${className}">${
+    return html`<h4 dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</h4>`;
   }
   if (tag === "p") {
-    return html`<p class="canvas-el ${className}">${
+    return html`<p dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</p>`;
   }
   if (tag === "span") {
-    return html`<span class="canvas-el ${className}">${
+    return html`<span dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</span>`;
   }
   if (tag === "strong") {
-    return html`<strong class="canvas-el ${className}">${
+    return html`<strong dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</strong>`;
   }
   if (tag === "em") {
-    return html`<em class="canvas-el ${className}">${
+    return html`<em dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</em>`;
   }
   if (tag === "small") {
-    return html`<small class="canvas-el ${className}">${
+    return html`<small dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</small>`;
   }
   if (tag === "ul") {
-    return html`<ul class="canvas-el ${className}">${children}</ul>`;
+    return html`<ul dir="auto" class="canvas-el ${className}">${children}</ul>`;
   }
   if (tag === "li") {
-    return html`<li class="canvas-el ${className}">${
+    return html`<li dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</li>`;
   }
   if (tag === "code") {
-    return html`<code class="canvas-el ${className}">${
+    return html`<code dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</code>`;
   }
   if (tag === "pre") {
-    return html`<pre class="canvas-el ${className}">${
+    return html`<pre dir="auto" class="canvas-el ${className}">${
       node.text ?? nothing
     }${children}</pre>`;
   }
   if (tag === "blockquote") {
-    return html`<blockquote class="canvas-el ${className}">${
-      node.text ?? nothing
-    }${children}</blockquote>`;
+    return html`
+      <blockquote dir="auto"
+        class="canvas-el ${className}">${node.text ??
+          nothing}${children}</blockquote>
+    `;
   }
   if (tag === "section") {
-    return html`<section class="canvas-el ${className}">${children}</section>`;
+    return html`<section dir="auto" class="canvas-el ${className}">${children}</section>`;
   }
   if (tag === "header") {
-    return html`<header class="canvas-el ${className}">${children}</header>`;
+    return html`<header dir="auto" class="canvas-el ${className}">${children}</header>`;
   }
   if (tag === "footer") {
-    return html`<footer class="canvas-el ${className}">${children}</footer>`;
+    return html`<footer dir="auto" class="canvas-el ${className}">${children}</footer>`;
   }
   if (tag === "nav") {
-    return html`<nav class="canvas-el ${className}">${children}</nav>`;
+    return html`<nav dir="auto" class="canvas-el ${className}">${children}</nav>`;
   }
   if (tag === "main") {
-    return html`<main class="canvas-el ${className}">${children}</main>`;
+    return html`<main dir="auto" class="canvas-el ${className}">${children}</main>`;
   }
-  return html`<div class="canvas-el ${className}">${
+  return html`<div dir="auto" class="canvas-el ${className}">${
     node.text ?? nothing
   }${children}</div>`;
 };
