@@ -416,7 +416,8 @@ export class CanvasView extends LitElement {
   private _problems: CanvasProblem[] = [];
   private _toasts: { readonly id: string; readonly text: string }[] = [];
   private _seenMessages = 0;
-  private _off: (() => void)[] = [];
+  private _unsubKey: (() => void) | undefined;
+  private _watchersOff: (() => void)[] = [];
 
   override createRenderRoot(): HTMLElement {
     return this;
@@ -454,25 +455,32 @@ export class CanvasView extends LitElement {
     }
   }
 
+  private _stopWatchers() {
+    this._watchersOff.forEach((off) => off());
+    this._watchersOff = [];
+  }
+
   private _unsubscribe() {
-    this._off.forEach((off) => off());
-    this._off = [];
+    this._unsubKey?.();
+    this._unsubKey = undefined;
+    this._stopWatchers();
   }
 
   private _watch() {
     this._unsubscribe();
     const { credentials, conversationId } = this;
     if (!credentials || !conversationId) return;
-    this._off = [
-      subscribeConversationKey(conversationId, credentials, (key) => {
-        this._off.forEach((off) => off());
-        this._off = [];
+    this._unsubKey = subscribeConversationKey(
+      conversationId,
+      credentials,
+      (key) => {
+        this._stopWatchers();
         this._seenMessages = 0;
         if (!key) return this._setCanvas(undefined);
         this._watchCanvas(key);
         this._watchMessages(key);
-      }),
-    ];
+      },
+    );
   }
 
   private _watchCanvas(key: string) {
@@ -497,20 +505,19 @@ export class CanvasView extends LitElement {
         );
       },
     );
-    this._off.push(() => {
+    this._watchersOff.push(() => {
       stop();
       lastVersion = undefined;
     });
   }
 
   private _watchMessages(key: string) {
-    this._off.push(
-      subscribeDecryptedMessages(
-        this.conversationId,
-        key,
-        ({ messages }) => this._onMessages(messages ?? []),
-      ),
+    const unsub = subscribeDecryptedMessages(
+      this.conversationId,
+      key,
+      ({ messages }) => this._onMessages(messages ?? []),
     );
+    this._watchersOff.push(unsub);
   }
 
   private _setCanvas(canvas: StoredCanvas | undefined) {
