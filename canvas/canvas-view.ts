@@ -447,6 +447,9 @@ export class CanvasView extends LitElement {
   }
 
   override willUpdate(changed: Map<string, unknown>) {
+    if (changed.has("conversationId") || changed.has("credentials")) {
+      this._watch();
+    }
     if (
       changed.has("conversationId") || changed.has("credentials") ||
       changed.has("_canvas") || changed.has("initialText")
