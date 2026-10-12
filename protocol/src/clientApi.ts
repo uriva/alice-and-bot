@@ -175,6 +175,7 @@ export type WebhookUpdate = {
   timestamp: number;
   conversationId: string;
   messageId: string;
+  conversationKey?: EncryptedConversationKey;
 };
 
 type SignedPayload<T> = {
@@ -298,7 +299,12 @@ export const handleWebhookUpdate = async (
   }
   | undefined
 > => {
-  const key = await getConversationKey(credentials, whUpdate.conversationId);
+  const key = whUpdate.conversationKey
+    ? await decryptAsymmetric<string>(
+      credentials.privateEncryptKey,
+      whUpdate.conversationKey,
+    )
+    : await getConversationKey(credentials, whUpdate.conversationId);
   const message = await decryptMessagePayload(key)(whUpdate);
   if (!message) return undefined;
   return {

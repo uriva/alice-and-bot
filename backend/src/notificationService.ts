@@ -1,6 +1,7 @@
 import { coerce } from "@uri/gamla";
 import webpush from "web-push";
 import type {
+  EncryptedConversationKey,
   EncryptedMessage,
   WebhookUpdate,
 } from "../../protocol/src/clientApi.ts";
@@ -21,25 +22,34 @@ export const callWebhooks = async (
 ) => {
   const { conversations } = await query({
     conversations: {
-      participants: {},
+      participants: {
+        keys: {
+          $: { where: { conversation: conversationId } },
+        },
+      },
       $: { where: { id: conversationId } },
     },
   });
   if (!conversations.length) return {};
   const conversation = conversations[0];
-  const webhooks = conversation.participants.map((p: { webhook?: string }) =>
-    p.webhook
+  console.log(
+    "callWebhooks: webhooks",
+    conversation.participants.map((p: { webhook?: string }) => p.webhook),
   );
-  console.log("callWebhooks: webhooks", webhooks);
-  const update: WebhookUpdate = {
-    conversationId,
-    payload,
-    timestamp,
-    messageId,
-  };
   await Promise.all(
-    webhooks.map((webhook) => {
+    conversation.participants.map((p: {
+      webhook?: string;
+      keys?: { key: EncryptedConversationKey }[];
+    }) => {
+      const webhook = p.webhook;
       if (!webhook) return Promise.resolve();
+      const update: WebhookUpdate = {
+        conversationId,
+        payload,
+        timestamp,
+        messageId,
+        ...(p.keys?.length ? { conversationKey: p.keys[0].key } : {}),
+      };
       const relayToken = extractRelayToken(webhook);
       if (relayToken) return storeLocalRelay(relayToken, update);
       return fetch(webhook, {

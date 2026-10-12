@@ -301,7 +301,12 @@ export const endpoints: BackendApiImpl = {
             },
           ),
           isPartial: conversations[0].participants.length > limited.length,
-          hasCanvas: conversations[0].canvas !== undefined,
+          hasCanvas: Boolean(
+            conversations[0].canvas &&
+              (Array.isArray(conversations[0].canvas)
+                ? conversations[0].canvas.length > 0
+                : true),
+          ),
         },
       };
     },
