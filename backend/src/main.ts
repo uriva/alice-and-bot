@@ -112,22 +112,20 @@ export const endpoints: BackendApiImpl = {
         tx.conversations[conversation].update({ updatedAt: timestamp }),
       ]);
       // Fire-and-forget side effects
-      await Promise.all([
-        callWebhooks({
+      callWebhooks({
+        messageId,
+        conversationId: conversation,
+        payload: encryptedMessage as EncryptedMessage,
+        timestamp,
+        storeLocalRelay: relayStoreMessage,
+      }).catch((e) => console.error("webhook dispatch failed", e));
+      if (silent !== true) {
+        sendPushToParticipants({
           messageId,
           conversationId: conversation,
-          payload: encryptedMessage as EncryptedMessage,
           timestamp,
-          storeLocalRelay: relayStoreMessage,
-        }).catch((e) => console.error("webhook dispatch failed", e)),
-        ...(silent === true ? [] : [
-          sendPushToParticipants({
-            messageId,
-            conversationId: conversation,
-            timestamp,
-          }).catch((e) => console.error("push dispatch failed", e)),
-        ]),
-      ]);
+        }).catch((e) => console.error("push dispatch failed", e));
+      }
       return { messageId };
     },
     sendTyping: async ({ conversation, isTyping, publicSignKey }) => {
