@@ -115,21 +115,23 @@ export const endpoints: BackendApiImpl = {
           }),
         tx.conversations[conversation].update({ updatedAt: timestamp }),
       ]);
-      // Fire-and-forget side effects
-      callWebhooks({
-        messageId,
-        conversationId: conversation,
-        payload: encryptedMessage as EncryptedMessage,
-        timestamp,
-        storeLocalRelay: relayStoreMessage,
-      }).catch((e) => console.error("webhook dispatch failed", e));
-      if (silent !== true) {
-        sendPushToParticipants({
+      // Fire-and-forget side effects outside request tracing context
+      setTimeout(() => {
+        callWebhooks({
           messageId,
           conversationId: conversation,
+          payload: encryptedMessage as EncryptedMessage,
           timestamp,
-        }).catch((e) => console.error("push dispatch failed", e));
-      }
+          storeLocalRelay: relayStoreMessage,
+        }).catch((e) => console.error("webhook dispatch failed", e));
+        if (silent !== true) {
+          sendPushToParticipants({
+            messageId,
+            conversationId: conversation,
+            timestamp,
+          }).catch((e) => console.error("push dispatch failed", e));
+        }
+      }, 0);
       return { messageId };
     },
     sendTyping: async ({ conversation, isTyping, publicSignKey }) => {
