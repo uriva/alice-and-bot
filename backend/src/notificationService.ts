@@ -77,9 +77,15 @@ export const callWebhooks = async (
       };
       const relayToken = extractRelayToken(webhook);
       if (relayToken) return storeLocalRelay(relayToken, update);
+      const freshTrace = `00-${
+        crypto.randomUUID().replace(/-/g, "")
+      }-0000000000000001-01`;
       return fetch(webhook, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "traceparent": freshTrace,
+        },
         body: JSON.stringify(update),
       }).catch((e) => {
         console.error("Failed to call webhook", webhook, e);
