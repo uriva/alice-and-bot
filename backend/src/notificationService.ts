@@ -1,6 +1,7 @@
 import { coerce } from "@uri/gamla";
 import webpush from "web-push";
 import type {
+  ConversationInfo,
   EncryptedConversationKey,
   EncryptedMessage,
   WebhookUpdate,
@@ -27,6 +28,7 @@ export const callWebhooks = async (
           $: { where: { conversation: conversationId } },
         },
       },
+      canvas: {},
       $: { where: { id: conversationId } },
     },
   });
@@ -36,6 +38,28 @@ export const callWebhooks = async (
     "callWebhooks: webhooks",
     conversation.participants.map((p: { webhook?: string }) => p.webhook),
   );
+  const rawParticipants = conversation.participants;
+  const limited = rawParticipants.slice(0, 10);
+  const conversationInfo: ConversationInfo = {
+    participants: limited.map((p: {
+      publicSignKey: string;
+      name?: string;
+      avatar?: string;
+      alias?: string;
+    }) => ({
+      publicSignKey: p.publicSignKey,
+      name: p.name,
+      avatar: p.avatar,
+      alias: p.alias,
+    })),
+    isPartial: rawParticipants.length > limited.length,
+    hasCanvas: Boolean(
+      conversation.canvas &&
+        (Array.isArray(conversation.canvas)
+          ? conversation.canvas.length > 0
+          : true),
+    ),
+  };
   await Promise.all(
     conversation.participants.map((p: {
       webhook?: string;
@@ -48,6 +72,7 @@ export const callWebhooks = async (
         payload,
         timestamp,
         messageId,
+        conversationInfo,
         ...(p.keys?.length ? { conversationKey: p.keys[0].key } : {}),
       };
       const relayToken = extractRelayToken(webhook);

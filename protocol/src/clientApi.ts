@@ -170,12 +170,24 @@ export type ConversationInfoPayload = {
   isPartial: boolean; // true if there are more participants not included
 };
 
+export type ConversationInfo = {
+  participants: {
+    publicSignKey: string;
+    name?: string;
+    avatar?: string;
+    alias?: string;
+  }[];
+  isPartial: boolean;
+  hasCanvas: boolean;
+};
+
 export type WebhookUpdate = {
   payload: EncryptedMessage;
   timestamp: number;
   conversationId: string;
   messageId: string;
   conversationKey?: EncryptedConversationKey;
+  conversationInfo?: ConversationInfo;
 };
 
 type SignedPayload<T> = {

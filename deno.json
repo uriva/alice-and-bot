@@ -85,7 +85,7 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "1.0.37",
+  "version": "1.0.38",
   "publish": {
     "include": [
       "mod.ts",
