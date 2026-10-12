@@ -269,6 +269,43 @@ Deno.test("resolveConversationDisplayName uses identityDetails when nameCache is
   assertEquals(name, "Bot One");
 });
 
+Deno.test("resolveConversationDisplayName prioritizes cached other participant name over stale 1:1 conversation title", () => {
+  const conv = {
+    id: "c1",
+    title: "Old Bot Name",
+    participants: [{ publicSignKey: "pk-bot1" }, { publicSignKey: "pk-me" }],
+  };
+  const nameCache = new Map<string, string | null>([[
+    "pk-bot1",
+    "New Bot Name",
+  ]]);
+  const name = resolveConversationDisplayName(
+    conv,
+    "pk-me",
+    nameCache,
+  );
+  assertEquals(name, "New Bot Name");
+});
+
+Deno.test("resolveConversationDisplayName preserves group conversation title", () => {
+  const conv = {
+    id: "c1",
+    title: "Project Alpha",
+    participants: [
+      { publicSignKey: "pk-1" },
+      { publicSignKey: "pk-2" },
+      { publicSignKey: "pk-me" },
+    ],
+  };
+  const nameCache = new Map<string, string | null>([["pk-1", "User One"]]);
+  const name = resolveConversationDisplayName(
+    conv,
+    "pk-me",
+    nameCache,
+  );
+  assertEquals(name, "Project Alpha");
+});
+
 Deno.test("mediaFileName extracts file name from URL or uses default", () => {
   assertEquals(
     mediaFileName("https://example.com/videos/demo.mp4?autoplay=1"),

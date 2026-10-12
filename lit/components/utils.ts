@@ -60,11 +60,14 @@ export const resolveConversationDisplayName = (
   nameCache: Map<string, string | null>,
   identityDetails?: IdentityDetails,
 ) => {
-  if (conv.title && conv.title !== "Chat") return conv.title;
   const other = conv.participants.find((p) => p.publicSignKey !== myKey);
+  const cachedName = other
+    ? (nameCache.get(other.publicSignKey) ||
+      identityDetails?.[other.publicSignKey]?.name)
+    : undefined;
+  if (conv.participants.length <= 2 && cachedName) return cachedName;
+  if (conv.title && conv.title !== "Chat") return conv.title;
   if (!other) return conv.title || "Chat";
-  const cachedName = nameCache.get(other.publicSignKey) ||
-    identityDetails?.[other.publicSignKey]?.name;
   return cachedName || conv.title || compactPublicKey(other.publicSignKey);
 };
 

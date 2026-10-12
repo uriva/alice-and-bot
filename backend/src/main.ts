@@ -654,15 +654,20 @@ export const endpoints: BackendApiImpl = {
       const { conversations } = await query({
         conversations: {
           admins: {},
+          participants: {},
           $: { where: { id: conversationId } },
         },
       });
       if (conversations.length === 0) {
         return { success: false, error: "not-found" };
       }
-      const isAdmin = conversations[0].admins.some(
-        (a: { publicSignKey: string }) => a.publicSignKey === publicSignKey,
-      );
+      const isAdmin = conversations[0].admins.length > 0
+        ? conversations[0].admins.some(
+          (a: { publicSignKey: string }) => a.publicSignKey === publicSignKey,
+        )
+        : conversations[0].participants.some(
+          (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+        );
       if (!isAdmin) return { success: false, error: "not-admin" };
       await transact(
         tx.conversations[conversationId].update({ title: trimmed }),

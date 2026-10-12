@@ -1565,7 +1565,18 @@ export class ConnectedChat extends LitElement {
         .onSend="${this._handleSend}"
         .onSendWithAttachments="${this._handleSendWithAttachments}"
         .onClose="${this.onClose}"
-        .title="${this._conversationTitle}"
+        .title="${this._isGroupChat
+          ? this._conversationTitle
+          : resolveConversationDisplayName(
+            {
+              id: this.conversationId,
+              title: this._conversationTitle,
+              participants: this._participants,
+            },
+            this.credentials?.publicSignKey ?? "",
+            this._nameCache,
+            this._identityDetails,
+          )}"
         .typingUsers="${this._typingNames}"
         .isLoading="${!this._messages}"
         .darkModeOverride="${this.darkModeOverride}"

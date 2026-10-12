@@ -117,6 +117,7 @@ export const createConversation:
         updatedAt: Date.now(),
       }).link({
         participants: identities.map((x) => x.id),
+        admins: [sender.id],
       }),
       ...targetUpdates,
       ...transactions,
