@@ -98,6 +98,7 @@ export const endpoints: BackendApiImpl = {
     },
     createConversation,
     sendMessage: async ({ encryptedMessage, conversation, silent }) => {
+      console.log("[DEBUG sendMessage] received for conversation", conversation);
       const messageId = id();
       const timestamp = Date.now();
       // Persist the message first; do not block on side effects (webhooks/push)
