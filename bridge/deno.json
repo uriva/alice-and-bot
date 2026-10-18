@@ -9,6 +9,7 @@
   "imports": {
     "@std/assert": "jsr:@std/assert@^1",
     "werift": "npm:werift@0.22.9",
-    "@evan/opus": "npm:@evan/opus@1.0.3"
+    "@evan/opus": "npm:@evan/opus@1.0.3",
+    "ws": "npm:ws@^8.18.0"
   }
 }

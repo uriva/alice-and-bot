@@ -6,6 +6,7 @@ import {
   RtpPacket,
 } from "werift";
 import { Decoder, Encoder } from "@evan/opus";
+import NodeWebSocket from "ws";
 
 const handleRequest = (req: Request): Response => {
   const url = new URL(req.url);
@@ -320,21 +321,40 @@ const forwardInto = (from: ProxyEndpoint, to: ProxyEndpoint) => {
   });
 };
 
-export const pipeProxyEndpoints = (a: ProxyEndpoint, b: ProxyEndpoint) => {
+export const pipeProxyEndpoints = (
+  a: ProxyEndpoint,
+  b: ProxyEndpoint,
+): void => {
   forwardInto(a, b);
   forwardInto(b, a);
   a.onClose(() => b.close());
   b.onClose(() => a.close());
 };
 
+export const asNodeWsProxyEndpoint = (ws: NodeWebSocket): ProxyEndpoint => ({
+  send: (data) => {
+    if (ws.readyState === ws.OPEN) ws.send(data);
+  },
+  close: () => {
+    if (ws.readyState !== ws.CLOSED) ws.close();
+  },
+  onMessage: (handler) =>
+    ws.on("message", (data: unknown) => handler(String(data))),
+  onClose: (handler) => ws.on("close", () => handler()),
+  onOpen: (handler) => {
+    if (ws.readyState === ws.OPEN) handler();
+    else ws.on("open", () => handler());
+  },
+});
+
 const proxyTwilioStream = (req: Request): Response => {
   const downstream = Deno.upgradeWebSocket(req);
   const query = new URL(req.url).search;
-  const upstream = new WebSocket(
+  const upstream = new NodeWebSocket(
     `${twilioUpstreamBase()}/twilio-voice/stream${query}`,
   );
   const down = asProxyEndpoint(downstream.socket);
-  const up = asProxyEndpoint(upstream);
+  const up = asNodeWsProxyEndpoint(upstream);
   let relayedDown = 0;
   let relayedUp = 0;
   down.onMessage(() => relayedDown++);
@@ -352,8 +372,8 @@ const proxyTwilioStream = (req: Request): Response => {
     reportClose("Upstream");
     down.close();
   });
-  upstream.addEventListener("error", () => {
-    console.error("[twilio-proxy] Upstream connection error");
+  upstream.on("error", (err: unknown) => {
+    console.error("[twilio-proxy] Upstream connection error", err);
     down.close();
   });
   return downstream.response;
