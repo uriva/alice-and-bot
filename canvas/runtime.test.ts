@@ -253,3 +253,46 @@ Deno.test("validateView rejects a tag outside the renderable set", async () => {
   assertEquals(result.problems[0].stage, "view");
   assertEquals(result.problems[0].message.includes("not renderable"), true);
 });
+
+Deno.test("renderCanvas supports standard HTML tags (ul, ol, li, table, tr, td, th, a) and flexible helper arities", async () => {
+  const result = await renderCanvas({
+    body: `view = () => {
+  return div([
+    badge("Single-arg badge"),
+    card("Two-arg card with array", [
+      ul([
+        li("First item"),
+        li([strong("Second"), span(" item")], "custom-li")
+      ]),
+      ol(li("Single child ol"))
+    ]),
+    card("Two-arg card with string child", "Plain string body"),
+    card("Three-arg card with string child", "Another plain body", "featured"),
+    table([
+      tr([th("Name"), th("Status")]),
+      tr([td("Bot A"), td("Active")])
+    ]),
+    form("signup", [
+      input("email", "you@example.com"),
+      textarea("notes"),
+      submitButton("Submit")
+    ]),
+    button("Three-arg button", "act-btn", "btn-primary"),
+    a("Docs link", "https://prompt2bot.com")
+  ])
+}`,
+  });
+  assertEquals(
+    result.ok,
+    true,
+    result.ok ? "" : JSON.stringify(result.problems),
+  );
+  if (!result.ok) return;
+  const text = viewText(result.view);
+  assertEquals(text.includes("Single-arg badge"), true);
+  assertEquals(text.includes("First item"), true);
+  assertEquals(text.includes("Second item"), true);
+  assertEquals(text.includes("Plain string body"), true);
+  assertEquals(text.includes("Bot A"), true);
+  assertEquals(text.includes("Three-arg button"), true);
+});

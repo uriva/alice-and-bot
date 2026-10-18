@@ -22,125 +22,270 @@ action = (tag: string, attrs, event: string, name: string, children) => {
   return { tag: tag, attrs: attrs, on: { click: name }, children: children }
 }
 
-span = (t: string) => {
-  return { tag: "span", text: t }
+span = (t: string, className: string) => {
+  return { tag: "span", attrs: { class: className }, text: t }
 }
 
-strong = (t: string) => {
-  return { tag: "strong", text: t }
+strong = (t: string, className: string) => {
+  return { tag: "strong", attrs: { class: className }, text: t }
 }
 
-em = (t: string) => {
-  return { tag: "em", text: t }
+b = (t: string, className: string) => {
+  return { tag: "b", attrs: { class: className }, text: t }
 }
 
-small = (t: string) => {
-  return { tag: "small", text: t }
+em = (t: string, className: string) => {
+  return { tag: "em", attrs: { class: className }, text: t }
 }
 
-h1 = (t: string) => {
-  return { tag: "h1", text: t }
+i = (t: string, className: string) => {
+  return { tag: "i", attrs: { class: className }, text: t }
 }
 
-h2 = (t: string) => {
-  return { tag: "h2", text: t }
+u = (t: string, className: string) => {
+  return { tag: "u", attrs: { class: className }, text: t }
 }
 
-h3 = (t: string) => {
-  return { tag: "h3", text: t }
+small = (t: string, className: string) => {
+  return { tag: "small", attrs: { class: className }, text: t }
 }
 
-h4 = (t: string) => {
-  return { tag: "h4", text: t }
+mark = (t: string, className: string) => {
+  return { tag: "mark", attrs: { class: className }, text: t }
 }
 
-p = (t: string) => {
-  return el("p", { class: "canvas-p" }, [t])
+sub = (t: string, className: string) => {
+  return { tag: "sub", attrs: { class: className }, text: t }
 }
 
-lead = (t: string) => {
-  return el("p", { class: "canvas-lead" }, [t])
+sup = (t: string, className: string) => {
+  return { tag: "sup", attrs: { class: className }, text: t }
+}
+
+time = (t: string, className: string) => {
+  return { tag: "time", attrs: { class: className }, text: t }
+}
+
+h1 = (t: string, className: string) => {
+  return { tag: "h1", attrs: { class: className }, text: t }
+}
+
+h2 = (t: string, className: string) => {
+  return { tag: "h2", attrs: { class: className }, text: t }
+}
+
+h3 = (t: string, className: string) => {
+  return { tag: "h3", attrs: { class: className }, text: t }
+}
+
+h4 = (t: string, className: string) => {
+  return { tag: "h4", attrs: { class: className }, text: t }
+}
+
+h5 = (t: string, className: string) => {
+  return { tag: "h5", attrs: { class: className }, text: t }
+}
+
+h6 = (t: string, className: string) => {
+  return { tag: "h6", attrs: { class: className }, text: t }
+}
+
+p = (children, className: string) => {
+  return { tag: "p", attrs: { class: className == "" ? "canvas-p" : "canvas-p " + className }, children: [children] }
+}
+
+lead = (children, className: string) => {
+  return { tag: "p", attrs: { class: className == "" ? "canvas-lead" : "canvas-lead " + className }, children: [children] }
 }
 
 div = (children, className: string) => {
-  return el("div", { class: className }, children)
+  return { tag: "div", attrs: { class: className }, children: children }
 }
 
 section = (children, className: string) => {
-  return el("section", { class: className }, children)
+  return { tag: "section", attrs: { class: className }, children: children }
+}
+
+article = (children, className: string) => {
+  return { tag: "article", attrs: { class: className }, children: children }
 }
 
 header = (children, className: string) => {
-  return el("header", { class: className }, children)
+  return { tag: "header", attrs: { class: className }, children: children }
 }
 
 footer = (children, className: string) => {
-  return el("footer", { class: className }, children)
+  return { tag: "footer", attrs: { class: className }, children: children }
 }
 
 nav = (children, className: string) => {
-  return el("nav", { class: className }, children)
+  return { tag: "nav", attrs: { class: className }, children: children }
 }
 
 main = (children, className: string) => {
-  return el("main", { class: className }, children)
+  return { tag: "main", attrs: { class: className }, children: children }
+}
+
+aside = (children, className: string) => {
+  return { tag: "aside", attrs: { class: className }, children: children }
 }
 
 row = (children, className: string) => {
-  return el("div", { class: "canvas-row " + className }, children)
+  return { tag: "div", attrs: { class: className == "" ? "canvas-row" : "canvas-row " + className }, children: children }
 }
 
 col = (children, className: string) => {
-  return el("div", { class: "canvas-col " + className }, children)
+  return { tag: "div", attrs: { class: className == "" ? "canvas-col" : "canvas-col " + className }, children: children }
 }
 
 card = (title: string, children, className: string) => {
-  return el("div", { class: "canvas-card " + className }, [h3(title), div(children, "canvas-card-body")])
+  return {
+    tag: "div",
+    attrs: { class: className == "" ? "canvas-card" : "canvas-card " + className },
+    children: [
+      { tag: "h3", text: title },
+      { tag: "div", attrs: { class: "canvas-card-body" }, children: children }
+    ]
+  }
 }
 
 badge = (t: string, tone: string) => {
-  return el("span", { class: "canvas-badge canvas-badge-" + tone }, [t])
+  return { tag: "span", attrs: { class: "canvas-badge canvas-badge-" + tone }, children: [t] }
 }
 
 stat = (label: string, value: string) => {
-  return el("div", { class: "canvas-stat" }, [
-    el("span", { class: "canvas-stat-label" }, [label]),
-    el("span", { class: "canvas-stat-value" }, [value])
-  ])
+  return {
+    tag: "div",
+    attrs: { class: "canvas-stat" },
+    children: [
+      { tag: "span", attrs: { class: "canvas-stat-label" }, children: [label] },
+      { tag: "span", attrs: { class: "canvas-stat-value" }, children: [value] }
+    ]
+  }
+}
+
+ul = (children, className: string) => {
+  return { tag: "ul", attrs: { class: className }, children: children }
+}
+
+ol = (children, className: string) => {
+  return { tag: "ol", attrs: { class: className }, children: children }
+}
+
+li = (children, className: string) => {
+  return { tag: "li", attrs: { class: className == "" ? "canvas-list-item" : "canvas-list-item " + className }, children: [children] }
 }
 
 list = (items: string[], className: string) => {
-  return el("ul", { class: className }, map(listItem, items))
+  return { tag: "ul", attrs: { class: className }, children: map(listItem, items) }
 }
 
 listItem = (t: string) => {
-  return el("li", { class: "canvas-list-item" }, [t])
+  return { tag: "li", attrs: { class: "canvas-list-item" }, children: [t] }
 }
 
-code = (t: string) => {
-  return { tag: "code", text: t }
+table = (children, className: string) => {
+  return { tag: "table", attrs: { class: className }, children: children }
 }
 
-pre = (t: string) => {
-  return { tag: "pre", text: t }
+thead = (children, className: string) => {
+  return { tag: "thead", attrs: { class: className }, children: children }
+}
+
+tbody = (children, className: string) => {
+  return { tag: "tbody", attrs: { class: className }, children: children }
+}
+
+tr = (children, className: string) => {
+  return { tag: "tr", attrs: { class: className }, children: children }
+}
+
+th = (children, className: string) => {
+  return { tag: "th", attrs: { class: className }, children: [children] }
+}
+
+td = (children, className: string) => {
+  return { tag: "td", attrs: { class: className }, children: [children] }
+}
+
+dl = (children, className: string) => {
+  return { tag: "dl", attrs: { class: className }, children: children }
+}
+
+dt = (children, className: string) => {
+  return { tag: "dt", attrs: { class: className }, children: [children] }
+}
+
+dd = (children, className: string) => {
+  return { tag: "dd", attrs: { class: className }, children: [children] }
+}
+
+figure = (children, className: string) => {
+  return { tag: "figure", attrs: { class: className }, children: children }
+}
+
+figcaption = (children, className: string) => {
+  return { tag: "figcaption", attrs: { class: className }, children: [children] }
+}
+
+blockquote = (children, className: string) => {
+  return { tag: "blockquote", attrs: { class: className }, children: [children] }
+}
+
+select = (children, className: string) => {
+  return { tag: "select", attrs: { class: className }, children: children }
+}
+
+option = (children, className: string) => {
+  return { tag: "option", attrs: { class: className }, children: [children] }
+}
+
+code = (t: string, className: string) => {
+  return { tag: "code", attrs: { class: className }, text: t }
+}
+
+pre = (t: string, className: string) => {
+  return { tag: "pre", attrs: { class: className }, text: t }
 }
 
 quote = (t: string, by: string) => {
-  return el("blockquote", { class: "canvas-quote" }, [p(t), small(by)])
+  return {
+    tag: "blockquote",
+    attrs: { class: "canvas-quote" },
+    children: [
+      { tag: "p", attrs: { class: "canvas-p" }, children: [t] },
+      { tag: "small", text: by }
+    ]
+  }
 }
 
-button = (label: string, name: string) => {
-  return action("button", { class: "canvas-btn", type: "button" }, "click", name, [label])
+button = (label: string, name: string, className: string) => {
+  return {
+    tag: "button",
+    attrs: { class: className == "" ? "canvas-btn" : "canvas-btn " + className, type: "button" },
+    on: { click: name == "" ? "click" : name },
+    children: [label]
+  }
 }
 
-// Binds nothing: the enclosing form's submit binding is what fires, so a
-// submit button that also handled click would fire twice.
-submitButton = (label: string) => {
-  return el("button", { class: "canvas-btn canvas-btn-primary", type: "submit" }, [label])
+submitButton = (label: string, className: string) => {
+  return {
+    tag: "button",
+    attrs: { class: className == "" ? "canvas-btn canvas-btn-primary" : "canvas-btn canvas-btn-primary " + className, type: "submit" },
+    children: [label]
+  }
 }
 
 link = (label: string, href: string, name: string) => {
-  return action("a", { class: "canvas-link", href: href }, "click", name, [label])
+  return name == ""
+    ? { tag: "a", attrs: { class: "canvas-link", href: href }, children: [label] }
+    : { tag: "a", attrs: { class: "canvas-link", href: href }, on: { click: name }, children: [label] }
+}
+
+a = (label: string, href: string, name: string) => {
+  return name == ""
+    ? { tag: "a", attrs: { class: "canvas-link", href: href }, children: [label] }
+    : { tag: "a", attrs: { class: "canvas-link", href: href }, on: { click: name }, children: [label] }
 }
 
 input = (field: string, placeholder: string, value: string) => {
@@ -152,7 +297,7 @@ textarea = (field: string, placeholder: string, value: string) => {
 }
 
 form = (name: string, children, className: string) => {
-  return { tag: "form", attrs: { class: "canvas-form " + className }, on: { submit: name }, children: children }
+  return { tag: "form", attrs: { class: className == "" ? "canvas-form" : "canvas-form " + className }, on: { submit: name == "" ? "submit" : name }, children: children }
 }
 
 img = (src: string, alt: string, className: string) => {
@@ -160,6 +305,14 @@ img = (src: string, alt: string, className: string) => {
 }
 
 label = (t: string, field: string) => {
-  return el("label", { class: "canvas-label", for: field }, [t])
+  return { tag: "label", attrs: { class: "canvas-label", for: field }, children: [t] }
+}
+
+br = (className: string) => {
+  return { tag: "br", attrs: { class: className } }
+}
+
+hr = (className: string) => {
+  return { tag: "hr", attrs: { class: className } }
 }
 `;

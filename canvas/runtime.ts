@@ -172,6 +172,330 @@ const policyProblems = (
   return [];
 };
 
+type Tok = ReturnType<typeof tokenize>[number];
+
+const twoArgPreludeFns = new Set([
+  "span",
+  "strong",
+  "b",
+  "em",
+  "i",
+  "u",
+  "small",
+  "mark",
+  "sub",
+  "sup",
+  "time",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "p",
+  "lead",
+  "div",
+  "section",
+  "article",
+  "header",
+  "footer",
+  "nav",
+  "main",
+  "aside",
+  "row",
+  "col",
+  "ul",
+  "ol",
+  "li",
+  "list",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "th",
+  "td",
+  "dl",
+  "dt",
+  "dd",
+  "figure",
+  "figcaption",
+  "blockquote",
+  "select",
+  "option",
+  "code",
+  "pre",
+  "submitButton",
+  "label",
+  "quote",
+  "stat",
+]);
+
+const threeArgInputPreludeFns = new Set(["input", "textarea", "img"]);
+const linkPreludeFns = new Set(["link", "a"]);
+const voidTagPreludeFns = new Set(["br", "hr"]);
+
+const isPreludeHelper = (name: string) =>
+  twoArgPreludeFns.has(name) ||
+  threeArgInputPreludeFns.has(name) ||
+  linkPreludeFns.has(name) ||
+  voidTagPreludeFns.has(name) ||
+  name === "badge" ||
+  name === "button" ||
+  name === "card" ||
+  name === "form";
+
+const findCloseParen = (
+  tokens: readonly Tok[],
+  idx: number,
+  depth: number,
+): number => {
+  if (idx >= tokens.length) return -1;
+  const k = tokens[idx].kind;
+  const nextDepth = k === "(" || k === "[" || k === "{"
+    ? depth + 1
+    : k === ")" || k === "]" || k === "}"
+    ? depth - 1
+    : depth;
+  return nextDepth === 0 ? idx : findCloseParen(tokens, idx + 1, nextDepth);
+};
+
+const splitTopLevelArgs = (tokens: readonly Tok[]): Tok[][] => {
+  if (tokens.length === 0) return [];
+  const { current, acc } = tokens.reduce<{
+    depth: number;
+    current: Tok[];
+    acc: Tok[][];
+  }>(
+    (state, tok) => {
+      const k = tok.kind;
+      const nextDepth = k === "(" || k === "[" || k === "{"
+        ? state.depth + 1
+        : k === ")" || k === "]" || k === "}"
+        ? state.depth - 1
+        : state.depth;
+      return k === "," && state.depth === 0
+        ? { depth: nextDepth, current: [], acc: [...state.acc, state.current] }
+        : {
+          depth: nextDepth,
+          current: [...state.current, tok],
+          acc: state.acc,
+        };
+    },
+    { depth: 0, current: [], acc: [] },
+  );
+  return [...acc, current];
+};
+
+const isNamedArgCall = (args: Tok[][]): boolean => {
+  if (args.length !== 1) return false;
+  const [first, second, third] = args[0];
+  if (!first || first.kind !== "{" || !second) return false;
+  if (second.kind === "}") return true;
+  return (second.kind === "ident" || second.kind === "string") &&
+    (third?.kind === ":" || third?.kind === "," || third?.kind === "}");
+};
+
+const containerChildrenPreludeFns = new Set([
+  "div",
+  "section",
+  "article",
+  "header",
+  "footer",
+  "nav",
+  "main",
+  "aside",
+  "row",
+  "col",
+  "ul",
+  "ol",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "dl",
+  "figure",
+  "select",
+]);
+
+const strArg = (value: string, refTok: Tok): Tok[] => [
+  { kind: "string", value, line: refTok.line, col: refTok.col },
+];
+
+const ensureArrayArg = (arg: Tok[], refTok: Tok): Tok[] => {
+  const first = arg[0];
+  if (!first || first.kind === "[") return arg;
+  if (
+    first.kind === "string" ||
+    (first.kind === "ident" && isPreludeHelper(first.value))
+  ) {
+    return [
+      { kind: "[", value: "[", line: refTok.line, col: refTok.col },
+      ...arg,
+      { kind: "]", value: "]", line: refTok.line, col: refTok.col },
+    ];
+  }
+  return arg;
+};
+
+const joinArgsWithCommas = (args: Tok[][], refTok: Tok): Tok[] => {
+  const commaTok: Tok = {
+    kind: ",",
+    value: ",",
+    line: refTok.line,
+    col: refTok.col,
+  };
+  return args.flatMap((arg, idx) => (idx === 0 ? arg : [commaTok, ...arg]));
+};
+
+const normalizeHelperArgs = (
+  name: string,
+  args: Tok[][],
+  refTok: Tok,
+): Tok[][] => {
+  if (twoArgPreludeFns.has(name)) {
+    const normalizeFirst = containerChildrenPreludeFns.has(name)
+      ? (a: Tok[]) => ensureArrayArg(a, refTok)
+      : (a: Tok[]) => a;
+    if (args.length === 0) {
+      return [normalizeFirst(strArg("", refTok)), strArg("", refTok)];
+    }
+    if (args.length === 1) return [normalizeFirst(args[0]), strArg("", refTok)];
+    return [normalizeFirst(args[0]), args[1]];
+  }
+  if (name === "badge") {
+    if (args.length === 0) {
+      return [strArg("", refTok), strArg("primary", refTok)];
+    }
+    if (args.length === 1) return [args[0], strArg("primary", refTok)];
+    return [args[0], args[1]];
+  }
+  if (name === "button") {
+    if (args.length === 0) {
+      return [
+        strArg("", refTok),
+        strArg("click", refTok),
+        strArg("", refTok),
+      ];
+    }
+    if (args.length === 1) {
+      return [args[0], strArg("click", refTok), strArg("", refTok)];
+    }
+    if (args.length === 2) return [args[0], args[1], strArg("", refTok)];
+    return [args[0], args[1], args[2]];
+  }
+  if (name === "card") {
+    if (args.length === 0) {
+      return [
+        strArg("", refTok),
+        ensureArrayArg(strArg("", refTok), refTok),
+        strArg("", refTok),
+      ];
+    }
+    if (args.length === 1) {
+      return [
+        strArg("", refTok),
+        ensureArrayArg(args[0], refTok),
+        strArg("", refTok),
+      ];
+    }
+    if (args.length === 2) {
+      return [args[0], ensureArrayArg(args[1], refTok), strArg("", refTok)];
+    }
+    return [args[0], ensureArrayArg(args[1], refTok), args[2]];
+  }
+  if (name === "form") {
+    if (args.length === 0) {
+      return [
+        strArg("submit", refTok),
+        ensureArrayArg(strArg("", refTok), refTok),
+        strArg("", refTok),
+      ];
+    }
+    if (args.length === 1) {
+      return [
+        strArg("submit", refTok),
+        ensureArrayArg(args[0], refTok),
+        strArg("", refTok),
+      ];
+    }
+    if (args.length === 2) {
+      return [args[0], ensureArrayArg(args[1], refTok), strArg("", refTok)];
+    }
+    return [args[0], ensureArrayArg(args[1], refTok), args[2]];
+  }
+  if (threeArgInputPreludeFns.has(name)) {
+    if (args.length === 0) {
+      return [strArg("", refTok), strArg("", refTok), strArg("", refTok)];
+    }
+    if (args.length === 1) {
+      return [args[0], strArg("", refTok), strArg("", refTok)];
+    }
+    if (args.length === 2) return [args[0], args[1], strArg("", refTok)];
+    return [args[0], args[1], args[2]];
+  }
+  if (linkPreludeFns.has(name)) {
+    if (args.length === 0) {
+      return [strArg("", refTok), strArg("#", refTok), strArg("", refTok)];
+    }
+    if (args.length === 1) {
+      return [args[0], strArg("#", refTok), strArg("", refTok)];
+    }
+    if (args.length === 2) return [args[0], args[1], strArg("", refTok)];
+    return [args[0], args[1], args[2]];
+  }
+  if (voidTagPreludeFns.has(name)) {
+    return args.length === 0 ? [strArg("", refTok)] : [args[0]];
+  }
+  return args;
+};
+
+const normalizeCallTokens = (
+  tokens: readonly Tok[],
+  shadowed: ReadonlySet<string>,
+  idx = 0,
+): Tok[] => {
+  if (idx >= tokens.length) return [];
+  const tok = tokens[idx];
+  const next = tokens[idx + 1];
+  const prev = idx > 0 ? tokens[idx - 1] : undefined;
+  if (
+    tok.kind === "ident" &&
+    next?.kind === "(" &&
+    prev?.kind !== "." &&
+    isPreludeHelper(tok.value) &&
+    !shadowed.has(tok.value)
+  ) {
+    const closeIdx = findCloseParen(tokens, idx + 1, 0);
+    if (closeIdx > idx + 1) {
+      const inner = normalizeCallTokens(
+        tokens.slice(idx + 2, closeIdx),
+        shadowed,
+      );
+      const args = splitTopLevelArgs(inner);
+      const normalizedInner = isNamedArgCall(args)
+        ? inner
+        : joinArgsWithCommas(normalizeHelperArgs(tok.value, args, tok), tok);
+      return [
+        tok,
+        next,
+        ...normalizedInner,
+        tokens[closeIdx],
+        ...normalizeCallTokens(tokens, shadowed, closeIdx + 1),
+      ];
+    }
+  }
+  return [tok, ...normalizeCallTokens(tokens, shadowed, idx + 1)];
+};
+
+const normalizeViewNode = (node: unknown): unknown => {
+  if (!isViewElement(node)) return node;
+  if (!Array.isArray(node.children)) return node;
+  const flatChildren = node.children
+    .flatMap((child: unknown) => (Array.isArray(child) ? child : [child]))
+    .map(normalizeViewNode);
+  return { ...node, children: flatChildren };
+};
+
 const prepare = (
   body: string,
   sink: CanvasEvent[],
@@ -182,7 +506,23 @@ const prepare = (
   try {
     // The prelude goes after the body: function order does not matter, and this
     // keeps line numbers in parse errors pointing at the author's own code.
-    program = parse(tokenize(`${body}\n${canvasPrelude}`), unary);
+    const bodyLineCount = body.split("\n").length;
+    const allTokens = tokenize(`${body}\n${canvasPrelude}`);
+    const bodyTokens = allTokens.filter(
+      (t) => t.kind !== "eof" && t.line <= bodyLineCount,
+    );
+    const preludeTokens = allTokens.filter(
+      (t) => t.kind === "eof" || t.line > bodyLineCount,
+    );
+    const shadowed = new Set(
+      bodyTokens.flatMap((t, i) =>
+        t.kind === "ident" && bodyTokens[i + 1]?.kind === "=" ? [t.value] : []
+      ),
+    );
+    program = parse(
+      [...normalizeCallTokens(bodyTokens, shadowed), ...preludeTokens],
+      unary,
+    );
   } catch (error) {
     return { ok: false, problems: [problem("parse", error)] };
   }
@@ -233,7 +573,8 @@ export const renderCanvas = async (
       problems: [problem(isTimeout(error) ? "timeout" : "render", error)],
     };
   }
-  const validation = validateView(rendered);
+  const normalized = normalizeViewNode(rendered);
+  const validation = validateView(normalized);
   if (!validation.ok) {
     return {
       ok: false,
@@ -243,13 +584,13 @@ export const renderCanvas = async (
       })),
     };
   }
-  if (!isViewElement(rendered)) {
+  if (!isViewElement(normalized)) {
     return {
       ok: false,
       problems: [{ stage: "view", message: "root: must be an element" }],
     };
   }
-  return { ok: true, view: rendered, emitted };
+  return { ok: true, view: normalized, emitted };
 };
 
 export const actOnCanvas = async ({
@@ -298,8 +639,9 @@ export const actOnCanvas = async ({
       }],
     };
   }
-  if (!isViewElement(result)) return { ok: true, emitted };
-  const validation = validateView(result);
+  const normalized = normalizeViewNode(result);
+  if (!isViewElement(normalized)) return { ok: true, emitted };
+  const validation = validateView(normalized);
   if (!validation.ok) {
     return {
       ok: false,
@@ -309,5 +651,5 @@ export const actOnCanvas = async ({
       })),
     };
   }
-  return { ok: true, emitted, view: result };
+  return { ok: true, emitted, view: normalized };
 };
