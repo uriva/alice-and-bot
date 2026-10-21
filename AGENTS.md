@@ -1,69 +1,32 @@
-Keep comments to a minimum. Be concise, use functional programming style. Put
-css and design in module level constants. Use regular naming for constants, e.g.
-likeThis. Prefer putting logic outside the components, so they have relatively
-small bodies, use currying if needed.
+# General & Coding Style
 
-When you make UI changes, make sure you design for both light and dark mode.
+- Minimal comments and no JSDoc unless necessary; rely on types and naming.
+- Functional style with `gamla` (`pipe`, `map`, `filter`, `empty`, `nonempty`).
+  Avoid `class`, `for`/`while` loops, `let`, and `switch`/`case` (prefer `if`
+  with early return or ternaries).
+- Use arrow functions, destructure in function signatures when clean, and inline
+  single-use variables (or extract a well-named module-level function).
+- Avoid nested functions; keep logic at the module level (using currying if
+  needed) so function and component bodies stay small.
+- Avoid `as` type assertions; prefer type guards or inference. Omit inferrable
+  type annotations.
+- Never make a breaking change without consulting the user first.
 
-Avoid using `as`, prefer type guards or figuring out the type another way.
+# UI & Components
 
-Don't use commenting or jsdoc unless instructed or in extreme cases. Typings and
-names of variables should do most of the documenting.
+- Put CSS and design constants at the module level (camelCase naming).
+- Support both light and dark mode on all UI changes.
+- Frontend (landing page, chat UI, docs) uses Lit web components with a History
+  API router, built with Vite and deployed to static hosting (separate from Deno
+  Deploy).
 
-Prefer destructuring in the signature of functions, e.g. `const f = ({a, b}) =>`
-instead of `const f = (x) =>` and then `x.a`, `x.b`.
+# Testing & Deployment
 
-Avoid duplication by creating small reusable functions or components. Never copy
-nontrivial portions of code.
-
-Don't use `case`, prefer an `if` with early return.
-
-Avoid try/catch in tests unless explicitly approved by user.
-
-Avoid nested functions, unless necessary. Consider currying if you need to
-inject dependencies.
-
-If a variable is used only once, consider inlining it. If it is too complex,
-factor it into a well-named function instead.
-
-Prefer gamla's `empty` than length checks - more readable.
-
-Use arrow functions instead of `function` keyword.
-
-Use a functional style, prefer `map`, `filter`, `pipe` from Gamla instead of
-loops and mutable variables. Don't use `class` or `for`/`while` loops unless
-absolutely necessary.
-
-When writing tests that verify a behaviour against the api, actually call the
-api instead of mocking it. Only mock when given explicit permission by the user.
-
-When running the tests after changes, first run only the tests that were
-affected by the changes. Only in your final verification run the full test
-suite.
-
-Backend deploys automatically from GitHub on Deno Deploy. Do not run manual
-deploy commands unless the user explicitly asks for a manual deploy.
-
-Package publishing is handled by CI. Do not run `deno publish` manually unless
-the user explicitly asks for a manual publish.
-
-Frontend (landing page, chat UI, docs) is a static site that deploys separately.
-It uses Lit web components with a vanilla History API router and is built with
-Vite. The frontend deploys to a static hosting service (not Deno Deploy).
-
-When adding logic, function bodies typically should not enlarge. New logic can
-be encapsulated in a new function. Or, one can refactor such that the old
-functions are even smaller than before. The added benefit is that there are less
-diffs hard to review.
-
-Typically it's better to "solve for the single case" then use functions like
-`map` and `filter` to handle the more complex cases. To prevent indent, one can
-define the single case and use `map` or similar functions in the call site.
-
-If a type is inferrable from the function, prefer not to annotate it. This is
-the common case.
-
-Never make a breaking change without consulting with the user first.
-
-When fixing bugs, always write a failing test first that reproduces the bug,
-then fix the code to make the test pass. Do not skip this step.
+- Always write a failing test that reproduces a bug before fixing it.
+- Call real APIs in behavioral tests instead of mocking, and avoid `try`/`catch`
+  in tests unless explicitly approved.
+- Run only affected tests while iterating, then run the full test suite for
+  final verification.
+- Backend deploys to Deno Deploy and JSR packages publish automatically via CI
+  on push to `main`. Never run `deno deploy` or `deno publish` manually unless
+  explicitly asked.
