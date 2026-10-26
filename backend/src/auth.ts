@@ -1,27 +1,24 @@
 import { verify } from "../../protocol/src/crypto.ts";
 import { canonicalStringForAuthSign } from "./api.ts";
 
-export const kv = await Deno.openKv();
-
 const NONCE_TTL_MS = 2 * 60 * 1000;
 
-const nonceKey = (publicSignKey: string, nonce: string) => [
-  "nonce",
-  publicSignKey,
-  nonce,
-];
+const nonces = new Map<string, number>();
 
-export const issueNonceHelper = async (
-  publicSignKey: string,
-): Promise<string> => {
-  const nonce = crypto.randomUUID();
-  await kv.set(nonceKey(publicSignKey, nonce), { createdAt: Date.now() }, {
-    expireIn: NONCE_TTL_MS,
+const nonceKey = (publicSignKey: string, nonce: string) =>
+  `${publicSignKey}:${nonce}`;
+
+export const issueNonceHelper = (publicSignKey: string): Promise<string> => {
+  const now = Date.now();
+  nonces.forEach((expiresAt, k) => {
+    if (now > expiresAt) nonces.delete(k);
   });
-  return nonce;
+  const nonce = crypto.randomUUID();
+  nonces.set(nonceKey(publicSignKey, nonce), now + NONCE_TTL_MS);
+  return Promise.resolve(nonce);
 };
 
-export const verifyAuthToken = async <T>({ authToken, ...params }: {
+export const verifyAuthToken = <T>({ authToken, ...params }: {
   payload: T;
   publicSignKey: string;
   nonce: string;
@@ -29,9 +26,12 @@ export const verifyAuthToken = async <T>({ authToken, ...params }: {
   action: string;
 }): Promise<boolean> => {
   const k = nonceKey(params.publicSignKey, params.nonce);
-  const { value } = await kv.get<string>(k);
-  if (!value) return false;
-  await kv.delete(k);
+  const expiresAt = nonces.get(k);
+  if (!expiresAt || Date.now() > expiresAt) {
+    nonces.delete(k);
+    return Promise.resolve(false);
+  }
+  nonces.delete(k);
   return verify(
     authToken,
     params.publicSignKey,

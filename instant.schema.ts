@@ -80,6 +80,16 @@ const _schema = i.schema({
       updatedAt: i.number().indexed(),
       updatedBy: i.string().optional(),
     }),
+    cryptoPayments: i.entity({
+      address: i.string().unique().indexed(),
+      identityId: i.string().indexed(),
+      publicSignKey: i.string().indexed(),
+      usdAmount: i.number(),
+      index: i.number().indexed(),
+      btcAmount: i.number(),
+      claimedTxid: i.string().optional().indexed(),
+      createdAt: i.number().indexed(),
+    }),
   },
   links: {
     conversationMessages: {

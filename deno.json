@@ -56,8 +56,7 @@
     "os": "node:os"
   },
   "unstable": [
-    "cron",
-    "kv"
+    "cron"
   ],
   "compilerOptions": {
     "lib": [

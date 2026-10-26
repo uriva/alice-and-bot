@@ -9,7 +9,7 @@ import {
 } from "../../protocol/src/shortId.ts";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
-import { issueNonceHelper, kv, verifyAuthToken } from "./auth.ts";
+import { issueNonceHelper, verifyAuthToken } from "./auth.ts";
 import {
   chooseOptimalParticipantKey,
   conversationHasExactParticipants,
@@ -77,7 +77,10 @@ const handleLookups = (handle: string) => {
   ];
 };
 
-const transferKey = (relayId: string) => ["transfer", relayId];
+const transferPayloads = new Map<
+  string,
+  { encryptedPayload: string; expiresAt: number }
+>();
 
 export const endpoints: BackendApiImpl = {
   authenticate: (token: string) => auth.verifyToken(token),
@@ -533,19 +536,29 @@ export const endpoints: BackendApiImpl = {
       const identityId = identityMatches[0].id;
       const amount = payload.amount;
 
-      // Get next index
-      const { value } = await kv.get<number>(["btc-index"]);
-      const index = value ?? 0;
-      await kv.set(["btc-index"], index + 1);
+      // Get next index from InstantDB cryptoPayments
+      const { cryptoPayments: existingPayments } = await query({
+        cryptoPayments: {},
+      });
+      const index = existingPayments.reduce(
+        (max, p) => Math.max(max, (p.index ?? -1) + 1),
+        0,
+      );
 
       const address = deriveBtcAddress(xpub, index);
       const btcPrice = await getBtcPriceUsd();
       const btcAmount = Number((amount / btcPrice).toFixed(8));
 
-      await kv.set(
-        ["btc-addr", address],
-        { identityId, publicSignKey, usdAmount: amount, index, btcAmount },
-        { expireIn: 60 * 60 * 24 * 30 * 1000 },
+      await transact(
+        tx.cryptoPayments[id()].update({
+          address,
+          identityId,
+          publicSignKey,
+          usdAmount: amount,
+          index,
+          btcAmount,
+          createdAt: Date.now(),
+        }),
       );
 
       const bitcoinUri = `bitcoin:${address}?amount=${btcAmount}`;
@@ -572,22 +585,18 @@ export const endpoints: BackendApiImpl = {
       if (!xpub) return { success: false, error: "missing-secret" };
 
       const { paymentAddress } = payload;
-      const { value: addressData } = await kv.get<
-        {
-          identityId: string;
-          publicSignKey: string;
-          usdAmount: number;
-          index: number;
-          btcAmount: number;
-        }
-      >(["btc-addr", paymentAddress]);
+      const { cryptoPayments } = await query({
+        cryptoPayments: { $: { where: { address: paymentAddress } } },
+      });
+      const addressData = cryptoPayments[0];
       if (!addressData) return { success: false, error: "not-found" };
       if (addressData.publicSignKey !== publicSignKey) {
         return { success: false, error: "invalid-auth" };
       }
 
-      const { value: claimed } = await kv.get(["btc-claimed", paymentAddress]);
-      if (claimed) return { success: false, error: "already-claimed" };
+      if (addressData.claimedTxid) {
+        return { success: false, error: "already-claimed" };
+      }
 
       const txs = await getAddressTransactions(paymentAddress);
       for (const t of txs) {
@@ -598,9 +607,9 @@ export const endpoints: BackendApiImpl = {
         const btcAmount = satoshis / 1e8;
         const usdAmount = Math.round(btcAmount * btcPrice * 100) / 100;
 
-        await kv.set(["btc-claimed", paymentAddress], t.txid, {
-          expireIn: 60 * 60 * 24 * 365 * 1000,
-        });
+        await transact(
+          tx.cryptoPayments[addressData.id].update({ claimedTxid: t.txid }),
+        );
 
         // Credit the wallet
         const { identities: identityMatches } = await query({
@@ -842,18 +851,25 @@ export const endpoints: BackendApiImpl = {
       );
       return { success: true };
     },
-    storeTransferPayload: async ({ encryptedPayload }) => {
-      const relayId = crypto.randomUUID();
-      await kv.set(transferKey(relayId), encryptedPayload, {
-        expireIn: TRANSFER_TTL_MS,
+    storeTransferPayload: ({ encryptedPayload }) => {
+      const now = Date.now();
+      transferPayloads.forEach((entry, k) => {
+        if (now > entry.expiresAt) transferPayloads.delete(k);
       });
-      return { relayId };
+      const relayId = crypto.randomUUID();
+      transferPayloads.set(relayId, {
+        encryptedPayload,
+        expiresAt: now + TRANSFER_TTL_MS,
+      });
+      return Promise.resolve({ relayId });
     },
-    retrieveTransferPayload: async ({ relayId }) => {
-      const k = transferKey(relayId);
-      const { value } = await kv.get<string>(k, { consistency: "strong" });
-      if (!value) return { error: "not-found" };
-      return { encryptedPayload: value };
+    retrieveTransferPayload: ({ relayId }) => {
+      const entry = transferPayloads.get(relayId);
+      if (!entry || Date.now() > entry.expiresAt) {
+        if (entry) transferPayloads.delete(relayId);
+        return Promise.resolve({ error: "not-found" });
+      }
+      return Promise.resolve({ encryptedPayload: entry.encryptedPayload });
     },
     getUploadUrl: async ({ payload, publicSignKey, nonce, authToken }) => {
       const authed = await verifyAuthToken<{
@@ -891,19 +907,31 @@ export const endpoints: BackendApiImpl = {
   },
 };
 
-const relaySockets = new Map<string, WebSocket[]>();
+const relaySockets = new Map<string, Set<WebSocket>>();
+const relayQueue = new Map<
+  string,
+  { body: unknown; expiresAt: number }[]
+>();
 
 const RELAY_MSG_TTL_MS = 3600_000;
 
-const relayStoreMessage = async (token: string, body: unknown) => {
-  await kv.set(["relay", token, crypto.randomUUID()], body, {
-    expireIn: RELAY_MSG_TTL_MS,
-  });
-
-  // Trigger cross-region kv.watch
-  await kv.set(["relay_channel", token], Date.now(), {
-    expireIn: RELAY_MSG_TTL_MS,
-  });
+const relayStoreMessage = (token: string, body: unknown) => {
+  const sockets = relaySockets.get(token);
+  const openSockets = sockets
+    ? [...sockets].filter((s) => s.readyState === WebSocket.OPEN)
+    : [];
+  if (openSockets.length > 0) {
+    const serialized = JSON.stringify(body);
+    openSockets.forEach((s) => s.send(serialized));
+    return Promise.resolve();
+  }
+  const now = Date.now();
+  const existing = (relayQueue.get(token) ?? []).filter(
+    (m) => now <= m.expiresAt,
+  );
+  existing.push({ body, expiresAt: now + RELAY_MSG_TTL_MS });
+  relayQueue.set(token, existing);
+  return Promise.resolve();
 };
 
 const relayStore = async (token: string, req: Request) => {
@@ -911,15 +939,13 @@ const relayStore = async (token: string, req: Request) => {
   return { ok: true };
 };
 
-const relayDrain = async (token: string) => {
-  const entries: Deno.KvEntry<unknown>[] = [];
-  for await (const entry of kv.list({ prefix: ["relay", token] })) {
-    entries.push(entry);
-  }
-  const op = kv.atomic();
-  entries.forEach(({ key }) => op.delete(key));
-  await op.commit();
-  return { messages: entries.map(({ value }) => value) };
+const relayDrain = (token: string) => {
+  const now = Date.now();
+  const entries = (relayQueue.get(token) ?? []).filter(
+    (m) => now <= m.expiresAt,
+  );
+  relayQueue.delete(token);
+  return Promise.resolve({ messages: entries.map(({ body }) => body) });
 };
 
 const corsHeaders = {
@@ -964,32 +990,17 @@ Deno.serve(async (req: Request) => {
         const { socket, response } = Deno.upgradeWebSocket(req);
 
         socket.onopen = () => {
-          const triggerDrain = async () => {
-            if (socket.readyState !== WebSocket.OPEN) return;
-            const pending = await relayDrain(relay!.token);
-            for (const msg of pending.messages) {
+          const set = relaySockets.get(relay.token) ?? new Set<WebSocket>();
+          set.add(socket);
+          relaySockets.set(relay.token, set);
+
+          relayDrain(relay.token).then((pending) => {
+            pending.messages.forEach((msg) => {
               if (socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify(msg));
               }
-            }
-          };
-
-          // Drain initially
-          triggerDrain();
-
-          // Watch for cross-region triggers
-          const stream = kv.watch([["relay_channel", relay.token]]);
-          (async () => {
-            let first = true;
-            for await (const _ of stream) {
-              if (socket.readyState !== WebSocket.OPEN) break;
-              if (first) {
-                first = false;
-                continue;
-              }
-              await triggerDrain();
-            }
-          })();
+            });
+          });
         };
 
         socket.onmessage = (event) => {
@@ -1004,7 +1015,11 @@ Deno.serve(async (req: Request) => {
         };
 
         socket.onclose = () => {
-          // cleanup if needed
+          const set = relaySockets.get(relay.token);
+          if (set) {
+            set.delete(socket);
+            if (set.size === 0) relaySockets.delete(relay.token);
+          }
         };
 
         return response;
