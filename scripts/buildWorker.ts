@@ -44,6 +44,10 @@ code = code.replaceAll(
 // Zod v4 jitless mode for Cloudflare Workers
 code = code.replaceAll(/![a-zA-Z0-9_$]+\.jitless/g, "false");
 
+// Force Gaxios (@google-cloud/storage) to use native Worker fetch instead of node-fetch
+code = code.replaceAll("window.fetch", "globalThis.fetch");
+code = code.replaceAll('typeof window<"u"&&!!window', "true");
+
 code = code.replaceAll(
   `throw Error('Dynamic require of "'+t+'" is not supported')`,
   `return __cf_safe_require(t)`,
@@ -105,6 +109,15 @@ if (typeof globalThis.crypto !== "undefined" && globalThis.crypto.getRandomValue
       return arr;
     }
   };
+}
+if (typeof globalThis.fetch === "function") {
+  globalThis.fetch = globalThis.fetch.bind(globalThis);
+}
+if (typeof globalThis.clearTimeout === "function") {
+  globalThis.clearTimeout = globalThis.clearTimeout.bind(globalThis);
+}
+if (typeof globalThis.clearInterval === "function") {
+  globalThis.clearInterval = globalThis.clearInterval.bind(globalThis);
 }
 if (typeof globalThis.setTimeout !== "undefined") {
   const __orig_setTimeout = globalThis.setTimeout.bind(globalThis);
