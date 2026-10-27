@@ -107,7 +107,7 @@ if (typeof globalThis.crypto !== "undefined" && globalThis.crypto.getRandomValue
   };
 }
 if (typeof globalThis.setTimeout !== "undefined") {
-  const __orig_setTimeout = globalThis.setTimeout;
+  const __orig_setTimeout = globalThis.setTimeout.bind(globalThis);
   globalThis.setTimeout = function(fn, ms, ...args) {
     try {
       return __orig_setTimeout(fn, ms, ...args);
@@ -117,7 +117,7 @@ if (typeof globalThis.setTimeout !== "undefined") {
   };
 }
 if (typeof globalThis.setInterval !== "undefined") {
-  const __orig_setInterval = globalThis.setInterval;
+  const __orig_setInterval = globalThis.setInterval.bind(globalThis);
   globalThis.setInterval = function(fn, ms, ...args) {
     try {
       return __orig_setInterval(fn, ms, ...args);
