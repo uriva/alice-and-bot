@@ -5,3 +5,5 @@ deno.lock
 **/dist/**
 .env
 .worktrees/
+dist
+.wrangler

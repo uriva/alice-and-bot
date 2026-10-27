@@ -98,23 +98,26 @@ export const callWebhooks = async (
 type Participant = { publicSignKey: string; webhook?: string };
 type Conversation = { id: string; title: string; participants: Participant[] };
 
-export const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
+export const getVapidPublicKey = () => Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
+export const vapidPublicKey = getVapidPublicKey();
 
-const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
-try {
-  if (vapidPublicKey && vapidPrivateKey) {
-    webpush.setVapidDetails(
-      "mailto:support@aliceandbot.com",
-      vapidPublicKey,
-      vapidPrivateKey,
+let lastVapidConfigured = "";
+
+const ensureVapidConfigured = () => {
+  const pub = getVapidPublicKey();
+  const priv = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
+  const pair = `${pub}:${priv}`;
+  if (!pub || !priv || pair === lastVapidConfigured) return;
+  try {
+    webpush.setVapidDetails("mailto:support@aliceandbot.com", pub, priv);
+    lastVapidConfigured = pair;
+  } catch (e) {
+    console.warn(
+      "VAPID details registration skipped:",
+      e instanceof Error ? e.message : e,
     );
   }
-} catch (e) {
-  console.warn(
-    "VAPID details registration skipped:",
-    e instanceof Error ? e.message : e,
-  );
-}
+};
 
 export const sendPushToParticipants = async (
   { messageId: _messageId, conversationId, timestamp }: {
@@ -123,6 +126,7 @@ export const sendPushToParticipants = async (
     timestamp: number;
   },
 ) => {
+  ensureVapidConfigured();
   const { conversations } = await query({
     conversations: {
       participants: {},

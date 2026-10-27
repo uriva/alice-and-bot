@@ -3,12 +3,20 @@ import { getEncryptedFileSizeLimitByExtension } from "../../protocol/src/attachm
 
 const bucketName = "alice-and-bot-attachments";
 
-const gcpCredentials = Deno.env.get("GCP_CREDENTIALS");
+let bucketInstance: ReturnType<Storage["bucket"]> | null = null;
+let lastGcpCredentials = "";
 
-const storage = new Storage(
-  gcpCredentials ? { credentials: JSON.parse(gcpCredentials) } : {},
-);
-const bucket = storage.bucket(bucketName);
+const getBucket = () => {
+  const gcpCredentials = Deno.env.get("GCP_CREDENTIALS") ?? "";
+  if (!bucketInstance || gcpCredentials !== lastGcpCredentials) {
+    lastGcpCredentials = gcpCredentials;
+    const storage = new Storage(
+      gcpCredentials ? { credentials: JSON.parse(gcpCredentials) } : {},
+    );
+    bucketInstance = storage.bucket(bucketName);
+  }
+  return bucketInstance;
+};
 
 const getExtension = (fileName: string) => {
   const dot = fileName.lastIndexOf(".");
@@ -28,7 +36,7 @@ export const generateUploadUrl = async ({
 }): Promise<{ uploadUrl: string; fileUrl: string; maxSize: number }> => {
   const ext = getExtension(fileName);
   const filePath = `attachments/${conversationId}/${contentHash}${ext}`;
-  const file = bucket.file(filePath);
+  const file = getBucket().file(filePath);
   const maxSize = getEncryptedFileSizeLimitByExtension(fileName);
 
   const [uploadUrl] = await file.getSignedUrl({

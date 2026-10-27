@@ -27,6 +27,6 @@
   in tests unless explicitly approved.
 - Run only affected tests while iterating, then run the full test suite for
   final verification.
-- Backend deploys to Deno Deploy and JSR packages publish automatically via CI
-  on push to `main`. Never run `deno deploy` or `deno publish` manually unless
-  explicitly asked.
+- Backend deploys to Cloudflare Workers (`alice-and-bot`,
+  `https://api.aliceandbot.com`) and JSR packages publish automatically via CI
+  on push to `main`. Never run `deno publish` manually unless explicitly asked.

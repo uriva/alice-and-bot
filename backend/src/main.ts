@@ -18,8 +18,8 @@ import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import {
   callWebhooks,
+  getVapidPublicKey,
   sendPushToParticipants,
-  vapidPublicKey,
 } from "./notificationService.ts";
 import { generateUploadUrl } from "./storage.ts";
 import { handleUiUpdate } from "./uiUpdate.ts";
@@ -734,7 +734,8 @@ export const endpoints: BackendApiImpl = {
         hasMore: msgs.length > limit,
       };
     },
-    getVapidPublicKey: () => Promise.resolve({ publicKey: vapidPublicKey }),
+    getVapidPublicKey: () =>
+      Promise.resolve({ publicKey: getVapidPublicKey() }),
     registerPushSubscription: async (
       { payload, publicSignKey, nonce, authToken },
     ) => {
@@ -977,7 +978,7 @@ const readme = Deno.readTextFileSync(
   new URL("../../README.md", import.meta.url),
 );
 
-Deno.serve(async (req: Request) => {
+export const handleRequest = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return respondCors(null, { status: 204 });
   try {
     const url = new URL(req.url);
@@ -989,7 +990,7 @@ Deno.serve(async (req: Request) => {
         }
         const { socket, response } = Deno.upgradeWebSocket(req);
 
-        socket.onopen = () => {
+        const attachRelaySocket = () => {
           const set = relaySockets.get(relay.token) ?? new Set<WebSocket>();
           set.add(socket);
           relaySockets.set(relay.token, set);
@@ -1002,6 +1003,12 @@ Deno.serve(async (req: Request) => {
             });
           });
         };
+
+        if (socket.readyState === WebSocket.OPEN) {
+          attachRelaySocket();
+        } else {
+          socket.onopen = attachRelaySocket;
+        }
 
         socket.onmessage = (event) => {
           try {
@@ -1057,4 +1064,8 @@ Deno.serve(async (req: Request) => {
       500,
     );
   }
-});
+};
+
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}

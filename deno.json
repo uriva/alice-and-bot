@@ -15,6 +15,7 @@
     "pre-commit": "check"
   },
   "imports": {
+    "cloudflare:workers": "./backend/src/cloudflareStub.ts",
     "@std/testing": "jsr:@std/testing@^1.0.17",
     "@std/testing/time": "jsr:@std/testing@^1.0.17/time",
     "@uri/anomalisa": "jsr:@uri/anomalisa@^0.0.24",
@@ -55,9 +56,6 @@
     "path": "node:path",
     "os": "node:os"
   },
-  "unstable": [
-    "cron"
-  ],
   "compilerOptions": {
     "lib": [
       "dom",
@@ -102,9 +100,5 @@
     ".": "./mod.ts",
     "./canvas": "./canvas/server.ts",
     "./components": "./components.ts"
-  },
-  "deploy": {
-    "org": "uriva",
-    "app": "alice-and-bot"
   }
 }
