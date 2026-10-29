@@ -7,6 +7,7 @@ type RejectionEventLike = {
 type ErrorEventLike = {
   message?: unknown;
   error?: unknown;
+  filename?: unknown;
   preventDefault?: unknown;
   stopImmediatePropagation?: unknown;
 };
@@ -19,11 +20,13 @@ type EventTargetLike = {
   ) => void;
 };
 
+const isRecord = (val: unknown): val is Record<string, unknown> =>
+  typeof val === "object" && val !== null;
+
 const extractMessage = (input: unknown): string =>
   typeof input === "string"
     ? input
-    : typeof input === "object" && input !== null && "message" in input &&
-        typeof input.message === "string"
+    : isRecord(input) && typeof input.message === "string"
     ? input.message
     : "";
 
@@ -34,6 +37,8 @@ const extensionPrefixes = [
   "safari-web-extension://",
   "ms-browser-extension://",
   "extension://",
+  "webkit-masked-url://",
+  "user-script:",
 ];
 
 const extensionMessages = [
@@ -42,6 +47,12 @@ const extensionMessages = [
   "message channel closed before a response was received",
   "Could not establish connection. Receiving end does not exist",
   "Extension context invalidated",
+  "Invalid call to runtime.sendMessage()",
+  "No Listener: tabs:",
+  "Can't find variable: EmptyRanges",
+  'Policy with name "default" already exists',
+  "The provider is disconnected from all chains",
+  "Failed to connect to MetaMask",
 ];
 
 const abortMessages = [
@@ -50,7 +61,38 @@ const abortMessages = [
   "The operation was aborted",
   "Fetch is aborted",
   "The user aborted a request",
+  "AbortError",
+  "Failed to fetch",
+  "Load failed",
+  "NetworkError when attempting to fetch resource",
 ];
+
+const translationMessages = [
+  "String contained an illegal UTF-16 sequence",
+];
+
+const translationKeywords = [
+  "translate",
+];
+
+const scriptExtensions = [
+  ".js",
+  ".mjs",
+  ".ts",
+  ".tsx",
+];
+
+const litDomMethods = [
+  "nextSibling",
+  "insertBefore",
+  "removeChild",
+  "parentNode",
+  "firstChild",
+  "setting 'data'",
+];
+
+const hasScriptExtension = (text: string): boolean =>
+  scriptExtensions.some((ext) => text.includes(ext));
 
 const extractStrings = (input: unknown): string[] => {
   if (typeof input === "string") return [input];
@@ -59,6 +101,11 @@ const extractStrings = (input: unknown): string[] => {
     .map((k) => input[k])
     .filter((v): v is string => typeof v === "string");
 };
+
+const extractEventStrings = (event: unknown): string[] =>
+  isRecord(event)
+    ? [...extractStrings(event.error), ...extractStrings(event)]
+    : extractStrings(event);
 
 export const isBrowserExtensionError = (reasonOrEvent: unknown): boolean =>
   extractStrings(reasonOrEvent).some(
@@ -81,13 +128,38 @@ export const isScriptError = (event: ErrorEventLike): boolean =>
 export const isExtensionHostObjectRejection = (reason: unknown): boolean =>
   isBrowserExtensionError(reason);
 
-export const isNextSiblingNullError = (reasonOrEvent: unknown): boolean =>
-  extractMessage(reasonOrEvent).includes(
-    "Cannot read properties of null (reading 'nextSibling')",
+const matchesNextSiblingNullStrings = (strings: string[]): boolean => {
+  const combined = strings.join("\n");
+  return (
+    litDomMethods.some((method) => combined.includes(method)) &&
+    (combined.includes("null") || combined.includes("undefined"))
   );
+};
 
-const isRecord = (val: unknown): val is Record<string, unknown> =>
-  typeof val === "object" && val !== null;
+export const isNextSiblingNullError = (reasonOrEvent: unknown): boolean =>
+  matchesNextSiblingNullStrings(extractEventStrings(reasonOrEvent));
+
+const matchesTranslationStrings = (strings: string[]): boolean => {
+  const combined = strings.join("\n");
+  const isInlineInjectedCallStackOverflow =
+    combined.includes("Maximum call stack size exceeded") &&
+    (combined.includes("http://") || combined.includes("https://")) &&
+    !hasScriptExtension(combined);
+  return (
+    isInlineInjectedCallStackOverflow ||
+    strings.some(
+      (str) =>
+        translationMessages.some((msg) => str.includes(msg)) ||
+        (translationKeywords.some((kw) => str.includes(kw)) &&
+          (str.includes("encodeURIComponent") ||
+            str.includes("URI malformed") ||
+            str.includes("URIError"))),
+    )
+  );
+};
+
+export const isBrowserTranslationError = (reasonOrEvent: unknown): boolean =>
+  matchesTranslationStrings(extractEventStrings(reasonOrEvent));
 
 const constructorName = (obj: Record<string, unknown>): string =>
   typeof obj.constructor === "function" ? obj.constructor.name : "";
@@ -116,53 +188,59 @@ export const isEventRejection = (reason: unknown): boolean => {
 export const isNullRejection = (reason: unknown): boolean =>
   reason === null || reason === undefined;
 
+const isErrorEventLike = (event: unknown): event is ErrorEventLike =>
+  isRecord(event);
+
+const isRejectionEventLike = (event: unknown): event is RejectionEventLike =>
+  isRecord(event);
+
 export const suppressClientErrorEvent = (event: unknown): void => {
-  if (typeof event !== "object" || event === null) return;
-  const e = event as ErrorEventLike;
+  if (!isErrorEventLike(event)) return;
   if (
-    typeof e.preventDefault !== "function" ||
-    typeof e.stopImmediatePropagation !== "function"
+    typeof event.preventDefault !== "function" ||
+    typeof event.stopImmediatePropagation !== "function"
   ) {
     return;
   }
   if (
-    !isResizeObserverError(e.message) &&
-    !isResizeObserverError(e.error) &&
-    !isScriptError(e) &&
-    !isNextSiblingNullError(e.message) &&
-    !isNextSiblingNullError(e.error) &&
-    !isBrowserExtensionError(e.message) &&
-    !isBrowserExtensionError(e.error) &&
-    !isMediaOrNetworkAbortError(e.message) &&
-    !isMediaOrNetworkAbortError(e.error)
+    !isResizeObserverError(event.message) &&
+    !isResizeObserverError(event.error) &&
+    !isScriptError(event) &&
+    !isNextSiblingNullError(event) &&
+    !isBrowserExtensionError(event.message) &&
+    !isBrowserExtensionError(event.error) &&
+    !isBrowserExtensionError(event.filename) &&
+    !isMediaOrNetworkAbortError(event.message) &&
+    !isMediaOrNetworkAbortError(event.error) &&
+    !isBrowserTranslationError(event)
   ) {
     return;
   }
-  e.preventDefault();
-  e.stopImmediatePropagation();
+  event.preventDefault();
+  event.stopImmediatePropagation();
 };
 
 export const suppressClientRejectionEvent = (event: unknown): void => {
-  if (typeof event !== "object" || event === null) return;
-  const e = event as RejectionEventLike;
+  if (!isRejectionEventLike(event)) return;
   if (
-    typeof e.preventDefault !== "function" ||
-    typeof e.stopImmediatePropagation !== "function"
+    typeof event.preventDefault !== "function" ||
+    typeof event.stopImmediatePropagation !== "function"
   ) {
     return;
   }
   if (
-    !isResizeObserverError(e.reason) &&
-    !isEventRejection(e.reason) &&
-    !isBrowserExtensionError(e.reason) &&
-    !isNextSiblingNullError(e.reason) &&
-    !isMediaOrNetworkAbortError(e.reason) &&
-    !isNullRejection(e.reason)
+    !isResizeObserverError(event.reason) &&
+    !isEventRejection(event.reason) &&
+    !isBrowserExtensionError(event.reason) &&
+    !isNextSiblingNullError(event.reason) &&
+    !isMediaOrNetworkAbortError(event.reason) &&
+    !isBrowserTranslationError(event.reason) &&
+    !isNullRejection(event.reason)
   ) {
     return;
   }
-  e.preventDefault();
-  e.stopImmediatePropagation();
+  event.preventDefault();
+  event.stopImmediatePropagation();
 };
 
 export const installClientErrorSuppression = (
