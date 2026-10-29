@@ -12,16 +12,8 @@ const relayWebhookPattern = /\/relay\/webhook\/([^/]+)$/;
 
 const extractRelayToken = (url: string) => url.match(relayWebhookPattern)?.[1];
 
-export const callWebhooks = async (
-  { messageId, conversationId, payload, timestamp, storeLocalRelay }: {
-    messageId: string;
-    conversationId: string;
-    payload: EncryptedMessage;
-    timestamp: number;
-    storeLocalRelay: (token: string, body: unknown) => Promise<void>;
-  },
-) => {
-  const { conversations } = await query({
+export const fetchWebhookConversation = (conversationId: string) =>
+  query({
     conversations: {
       participants: {
         keys: {
@@ -32,6 +24,26 @@ export const callWebhooks = async (
       $: { where: { id: conversationId } },
     },
   });
+
+export const callWebhooks = async (
+  {
+    messageId,
+    conversationId,
+    payload,
+    timestamp,
+    storeLocalRelay,
+    prefetchedConversations,
+  }: {
+    messageId: string;
+    conversationId: string;
+    payload: EncryptedMessage;
+    timestamp: number;
+    storeLocalRelay: (token: string, body: unknown) => Promise<void>;
+    prefetchedConversations?: ReturnType<typeof fetchWebhookConversation>;
+  },
+) => {
+  const { conversations } = await (prefetchedConversations ??
+    fetchWebhookConversation(conversationId));
   if (!conversations.length) return {};
   const conversation = conversations[0];
   console.log(

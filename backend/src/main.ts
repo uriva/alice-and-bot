@@ -18,6 +18,7 @@ import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import {
   callWebhooks,
+  fetchWebhookConversation,
   getVapidPublicKey,
   sendPushToParticipants,
 } from "./notificationService.ts";
@@ -82,6 +83,21 @@ const transferPayloads = new Map<
   { encryptedPayload: string; expiresAt: number }
 >();
 
+let activeWaitUntil: ((promise: Promise<unknown>) => void) | undefined;
+
+export const setRequestWaitUntil = (
+  fn: ((promise: Promise<unknown>) => void) | undefined,
+) => {
+  activeWaitUntil = fn;
+};
+
+const registerBackgroundTask = (promise: Promise<unknown>) => {
+  const safe = promise.catch((e) => console.error("background task failed", e));
+  if (activeWaitUntil) {
+    activeWaitUntil(safe);
+  }
+};
+
 export const endpoints: BackendApiImpl = {
   authenticate: (token: string) => auth.verifyToken(token),
   handlers: {
@@ -107,6 +123,8 @@ export const endpoints: BackendApiImpl = {
       );
       const messageId = id();
       const timestamp = Date.now();
+      const prefetchedConversations = fetchWebhookConversation(conversation);
+      prefetchedConversations.catch(() => {});
       // Persist the message first; do not block on side effects (webhooks/push)
       await transact([
         tx.messages[messageId]
@@ -119,40 +137,45 @@ export const endpoints: BackendApiImpl = {
         tx.conversations[conversation].update({ updatedAt: timestamp }),
       ]);
       // Fire-and-forget side effects outside request tracing context
-      setTimeout(() => {
-        callWebhooks({
-          messageId,
-          conversationId: conversation,
-          payload: encryptedMessage as EncryptedMessage,
-          timestamp,
-          storeLocalRelay: relayStoreMessage,
-        }).catch((e) => console.error("webhook dispatch failed", e));
-        if (silent !== true) {
-          sendPushToParticipants({
-            messageId,
-            conversationId: conversation,
-            timestamp,
-          }).catch((e) => console.error("push dispatch failed", e));
-        }
-      }, 0);
+      const dispatchPromise = new Promise<void>((resolve) => {
+        setTimeout(() => {
+          Promise.all([
+            callWebhooks({
+              messageId,
+              conversationId: conversation,
+              payload: encryptedMessage as EncryptedMessage,
+              timestamp,
+              storeLocalRelay: relayStoreMessage,
+              prefetchedConversations,
+            }).catch((e) => console.error("webhook dispatch failed", e)),
+            ...(silent !== true
+              ? [
+                sendPushToParticipants({
+                  messageId,
+                  conversationId: conversation,
+                  timestamp,
+                }).catch((e) => console.error("push dispatch failed", e)),
+              ]
+              : []),
+          ]).then(() => resolve());
+        }, 0);
+      });
+      registerBackgroundTask(dispatchPromise);
       return { messageId };
     },
     sendTyping: async ({ conversation, isTyping, publicSignKey }) => {
-      // Validate conversation & identity exist
-      const { conversations, identities } = await query({
+      // Validate conversation & identity exist and fetch existing typingState in one query
+      const { conversations, identities, typingStates } = await query({
         conversations: { $: { where: { id: conversation } } },
         identities: { $: { where: { publicSignKey } } },
+        typingStates: {
+          $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
+        },
       });
       if (conversations.length === 0 || identities.length === 0) {
         return { success: true };
       }
       const identityId = identities[0].id;
-      // Find existing typingState for (owner, conversation)
-      const { typingStates } = await query({
-        typingStates: {
-          $: { where: { "owner.id": identityId, conversation } },
-        },
-      });
       await transact(
         tx.typingStates[typingStates.length > 0 ? typingStates[0].id : id()]
           .update({ updatedAt: isTyping ? Date.now() : 0 })
@@ -160,17 +183,22 @@ export const endpoints: BackendApiImpl = {
       );
       // Opportunistic cleanup: occasionally prune stale typingStates for this conversation
       if (Math.random() < 0.15) {
-        const now = Date.now();
-        const { typingStates: allStates } = await query({
-          typingStates: { $: { where: { conversation } } },
-        });
-        const stale = allStates.filter((t: { id: string; updatedAt: number }) =>
-          t.updatedAt === 0 || now - t.updatedAt > 20_000
-        );
-        await Promise.all(
-          stale.map((t: { id: string }) =>
-            transact(tx.typingStates[t.id].delete())
-          ),
+        registerBackgroundTask(
+          (async () => {
+            const now = Date.now();
+            const { typingStates: allStates } = await query({
+              typingStates: { $: { where: { conversation } } },
+            });
+            const stale = allStates.filter(
+              (t: { id: string; updatedAt: number }) =>
+                t.updatedAt === 0 || now - t.updatedAt > 20_000,
+            );
+            await Promise.all(
+              stale.map((t: { id: string }) =>
+                transact(tx.typingStates[t.id].delete())
+              ),
+            );
+          })(),
         );
       }
       return { success: true };
