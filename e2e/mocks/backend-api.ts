@@ -83,6 +83,10 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
       await delay(200);
       return route.fulfill(json({ conversationId: data.conversationId }));
     }
+    if (endpoint === "renameConversation") {
+      await delay(50);
+      return route.fulfill(json({ success: true }));
+    }
     if (endpoint === "getConversationInfo") {
       await delay(50);
       return route.fulfill(json({

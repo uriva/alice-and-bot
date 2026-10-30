@@ -8,6 +8,7 @@
     "@instantdb/admin": "npm:@instantdb/admin@1.0.65",
     "@instantdb/core": "npm:@instantdb/core@1.0.65",
     "@uri/gamla": "jsr:@uri/gamla@0.0.14",
+    "@uri/silly-nlp": "jsr:@uri/silly-nlp@^0.2.11",
     "@uri/crypto-utils": "jsr:@uri/crypto-utils@^0.0.2",
     "buffer": "npm:buffer@6.0.3",
     "typed-api": "jsr:@uri/typed-api@0.0.10",

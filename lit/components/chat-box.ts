@@ -24,6 +24,7 @@ import {
   faMicrophoneSlash,
   faPaperclip,
   faPaperPlane,
+  faPen,
   faReply,
   faStop,
 } from "./icons.ts";
@@ -769,6 +770,14 @@ export class ChatBox extends LitElement {
     this.onStartCall?.();
   }
 
+  private _handleMenuRenameConversation = (e: Event) => {
+    e.stopPropagation();
+    this._showMenu = false;
+    this.dispatchEvent(
+      new CustomEvent("rename-conversation", { bubbles: true, composed: true }),
+    );
+  };
+
   private _handleMenuNewThread = (e: Event) => {
     e.stopPropagation();
     this._showMenu = false;
@@ -814,6 +823,13 @@ export class ChatBox extends LitElement {
         `
         : nothing} ${this.credentials
         ? html`
+          <div
+            class="menu-item"
+            data-testid="menu-rename-chat"
+            @click="${this._handleMenuRenameConversation}"
+          >
+            Rename Chat
+          </div>
           <div
             class="menu-item"
             @click="${this._handleMenuNewThread}"
@@ -1563,6 +1579,29 @@ export class ChatBox extends LitElement {
       .menu-item:hover {
         background: ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)"};
       }
+      .title-editable {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 2px 10px;
+        border-radius: 6px;
+        max-width: 100%;
+        transition: background 0.15s;
+      }
+      .title-editable:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+      .title-editable .title-edit-icon {
+        opacity: 0;
+        font-size: 12px;
+        transition: opacity 0.15s;
+        flex-shrink: 0;
+      }
+      .title-editable:hover .title-edit-icon {
+        opacity: 0.8;
+      }
       .scroll-down-btn {
         position: absolute;
         right: 20px;
@@ -1619,8 +1658,21 @@ export class ChatBox extends LitElement {
                   ? "16px"
                   : "44px"} 0 16px"
               >
-                <div data-testid="title-text" style="flex:1;text-align:center">
-                  ${this.title}
+                <div style="flex:1;display:flex;justify-content:center;min-width:0;overflow:hidden">
+                  <div
+                    data-testid="title-text"
+                    class="${this.credentials ? "title-editable" : ""}"
+                    title="${this.credentials ? "Rename chat" : ""}"
+                    @click="${this.credentials
+                      ? this._handleMenuRenameConversation
+                      : undefined}"
+                    style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                  >
+                    <span style="overflow:hidden;text-overflow:ellipsis">${this
+                      .title}</span>${this.credentials
+                      ? html`<span class="title-edit-icon">${faPen}</span>`
+                      : nothing}
+                  </div>
                 </div>
                 ${this._renderHeaderMenu()} ${this.onClose
                   ? html`

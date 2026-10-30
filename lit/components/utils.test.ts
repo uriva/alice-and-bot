@@ -269,22 +269,29 @@ Deno.test("resolveConversationDisplayName uses identityDetails when nameCache is
   assertEquals(name, "Bot One");
 });
 
-Deno.test("resolveConversationDisplayName prioritizes cached other participant name over stale 1:1 conversation title", () => {
-  const conv = {
+Deno.test("resolveConversationDisplayName uses custom 1:1 conversation title when renamed and falls back to participant name for default Chat title", () => {
+  const renamedConv = {
     id: "c1",
-    title: "Old Bot Name",
+    title: "Q4 Roadmap",
+    participants: [{ publicSignKey: "pk-bot1" }, { publicSignKey: "pk-me" }],
+  };
+  const defaultConv = {
+    id: "c2",
+    title: "Chat",
     participants: [{ publicSignKey: "pk-bot1" }, { publicSignKey: "pk-me" }],
   };
   const nameCache = new Map<string, string | null>([[
     "pk-bot1",
-    "New Bot Name",
+    "Bot Name",
   ]]);
-  const name = resolveConversationDisplayName(
-    conv,
-    "pk-me",
-    nameCache,
+  assertEquals(
+    resolveConversationDisplayName(renamedConv, "pk-me", nameCache),
+    "Q4 Roadmap",
   );
-  assertEquals(name, "New Bot Name");
+  assertEquals(
+    resolveConversationDisplayName(defaultConv, "pk-me", nameCache),
+    "Bot Name",
+  );
 });
 
 Deno.test("resolveConversationDisplayName preserves group conversation title", () => {

@@ -415,15 +415,28 @@ export const endpoints: BackendApiImpl = {
         return { success: false, error: "invalid-name" };
       }
       const { identities: identityMatches } = await query({
-        identities: { wallet: {}, $: { where: { publicSignKey } } },
+        identities: {
+          wallet: {},
+          conversations: {},
+          $: { where: { publicSignKey } },
+        },
       });
       if (identityMatches.length === 0) {
         return { success: false, error: "not-found" };
       }
       if (!authOk) return { success: false, error: "invalid-auth" };
-      await transact(
+      const oldName = identityMatches[0].name;
+      const convUpdates = oldName && oldName !== trimmed
+        ? (identityMatches[0].conversations ?? [])
+          .filter((c: { title: string }) => c.title === oldName)
+          .map((c: { id: string }) =>
+            tx.conversations[c.id].update({ title: trimmed })
+          )
+        : [];
+      await transact([
         tx.identities[identityMatches[0].id].update({ name: trimmed }),
-      );
+        ...convUpdates,
+      ]);
       return { success: true };
     },
     setAvatar: async ({ payload, publicSignKey, nonce, authToken }) => {
@@ -698,13 +711,11 @@ export const endpoints: BackendApiImpl = {
       if (conversations.length === 0) {
         return { success: false, error: "not-found" };
       }
-      const isAdmin = conversations[0].admins.length > 0
-        ? conversations[0].admins.some(
-          (a: { publicSignKey: string }) => a.publicSignKey === publicSignKey,
-        )
-        : conversations[0].participants.some(
-          (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
-        );
+      const isAdmin = conversations[0].admins.some(
+        (a: { publicSignKey: string }) => a.publicSignKey === publicSignKey,
+      ) || conversations[0].participants.some(
+        (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+      );
       if (!isAdmin) return { success: false, error: "not-admin" };
       await transact(
         tx.conversations[conversationId].update({ title: trimmed }),

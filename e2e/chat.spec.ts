@@ -182,6 +182,43 @@ test.describe("Chat (full encryption pipeline)", () => {
     );
   });
 
+  test("renaming conversation via menu updates title-text", async ({ page }) => {
+    await setupChatMocks(page, data);
+    await page.goto("/");
+    await waitForChat(page);
+    await expect(page.locator(tid("title-text"))).toContainText(
+      "Test Conversation",
+      { timeout: 15_000 },
+    );
+    await page.locator(tid("menu-button")).click();
+    await page.locator(tid("menu-rename-chat")).click();
+    const renameInput = page.locator(tid("rename-conversation-input"));
+    await expect(renameInput).toBeVisible();
+    await renameInput.fill("Renamed Project Thread");
+    await page.locator(tid("rename-conversation-save")).click();
+    await expect(page.locator(tid("title-text"))).toContainText(
+      "Renamed Project Thread",
+    );
+  });
+
+  test("renaming conversation by clicking title-text and pressing Enter", async ({ page }) => {
+    await setupChatMocks(page, data);
+    await page.goto("/");
+    await waitForChat(page);
+    await expect(page.locator(tid("title-text"))).toContainText(
+      "Test Conversation",
+      { timeout: 15_000 },
+    );
+    await page.locator(tid("title-text")).click();
+    const renameInput = page.locator(tid("rename-conversation-input"));
+    await expect(renameInput).toBeVisible();
+    await renameInput.fill("Inline Header Rename");
+    await renameInput.press("Enter");
+    await expect(page.locator(tid("title-text"))).toContainText(
+      "Inline Header Rename",
+    );
+  });
+
   test("empty conversation shows no messages", async ({ page }) => {
     await setupChatMocks(page, data, { dataOverride: { messages: [] } });
     await page.goto("/");

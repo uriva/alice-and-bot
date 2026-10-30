@@ -277,6 +277,17 @@ export const setupInstantWsMock = async (
                 publicEncryptKey: data.bob.publicEncryptKey,
                 name: "Bob",
               }, tx),
+              ...fieldTriples(data.keyId, "keys", {
+                key: data.aliceEncryptedKey,
+              }, tx),
+              link(
+                "conversations",
+                "keys",
+                data.conversationId,
+                data.keyId,
+                tx,
+              ),
+              link("identities", "keys", data.aliceIdentityId, data.keyId, tx),
             ];
             ws.send(queryResponse(msg.q, tid, wrapResult(ns, triples)));
             return;

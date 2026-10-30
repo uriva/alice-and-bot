@@ -17,6 +17,7 @@ import {
   getBalanceAndTransactionsSigned,
   getProfile,
   prepareCryptoPaymentSigned,
+  renameConversation,
   resolveHandle,
   setAlias,
   setName,
@@ -116,6 +117,10 @@ let qrScanAnimationId: number | null = null;
 let newChatInput = "";
 
 let showArchived = false;
+
+let renameModalConvId: string | null = null;
+let renameModalInput = "";
+let renameModalSaving = false;
 
 // Touch/Swipe state for conversation list items on mobile
 let activeSwipeConvId: string | null = null;
@@ -932,6 +937,140 @@ const unarchiveSvg = html`
   </svg>
 `;
 
+const renameSvg = html`
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-4 h-4"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+    />
+  </svg>
+`;
+
+const openRenameModal = (convId: string, currentTitle: string) => {
+  renameModalConvId = convId;
+  renameModalInput = currentTitle;
+  renameModalSaving = false;
+  rerenderChat();
+  requestAnimationFrame(() => {
+    const input = document.getElementById(
+      "landing-rename-input",
+    ) as HTMLInputElement | null;
+    input?.focus();
+    input?.select();
+  });
+};
+
+const closeRenameModal = () => {
+  renameModalConvId = null;
+  renameModalSaving = false;
+  rerenderChat();
+};
+
+const submitRenameModal = async () => {
+  const trimmed = renameModalInput.trim();
+  const convId = renameModalConvId;
+  if (!trimmed || !convId || !credentials || renameModalSaving) return;
+  renameModalSaving = true;
+  rerenderChat();
+  const prevConversations = conversations;
+  if (conversations) {
+    conversations = conversations.map((c) =>
+      c.id === convId ? { ...c, title: trimmed } : c
+    );
+  }
+  try {
+    await toastPromise(
+      (async () => {
+        const res = await renameConversation({
+          conversationId: convId,
+          title: trimmed,
+          credentials: credentials!,
+        });
+        if (!res.success) throw new Error(res.error);
+        return res;
+      })(),
+      {
+        loading: "Renaming chat\u2026",
+        success: "Chat renamed",
+        error: "Failed to rename chat",
+      },
+    );
+    renameModalConvId = null;
+  } catch (_e) {
+    conversations = prevConversations;
+  } finally {
+    renameModalSaving = false;
+    rerenderChat();
+  }
+};
+
+const renameModalTemplate = () =>
+  renameModalConvId
+    ? html`
+      <div
+        class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+        @click="${closeRenameModal}"
+      >
+        <div
+          class="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col gap-4"
+          @click="${(e: Event) => e.stopPropagation()}"
+        >
+          <h3
+            class="text-lg font-bold text-center text-gray-900 dark:text-gray-100"
+          >
+            Rename Chat
+          </h3>
+          <input
+            id="landing-rename-input"
+            type="text"
+            maxlength="100"
+            class="${inputStyle + " w-full"}"
+            placeholder="Chat name"
+            .value="${renameModalInput}"
+            @input="${(e: Event) => {
+              renameModalInput = (e.target as HTMLInputElement).value;
+              rerenderChat();
+            }}"
+            @keydown="${(e: KeyboardEvent) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submitRenameModal();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                closeRenameModal();
+              }
+            }}"
+          />
+          <div class="flex gap-2 justify-end">
+            <button
+              type="button"
+              class="${buttonClass("secondary", "default", "flex-1")}"
+              @click="${closeRenameModal}"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="${buttonClass("default", "default", "flex-1")}"
+              ?disabled="${renameModalSaving || !renameModalInput.trim()}"
+              @click="${submitRenameModal}"
+            >
+              ${renameModalSaving ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </div>
+      </div>
+    `
+    : nothing;
+
 // --- Sub-templates ---
 
 const setView_ = (v: View) => {
@@ -1050,7 +1189,7 @@ const conversationListItem = (conv: Conversation) => {
             name: displayName,
             baseColor: avatarColor(otherKey, currentDark),
           })}
-          <div class="flex-grow overflow-hidden min-w-0 pr-8">
+          <div class="flex-grow overflow-hidden min-w-0 pr-16">
             <div class="${`font-medium ${textColorStyle} truncate`}">
               ${displayName === null ? shimmerText() : displayName}
             </div>
@@ -1058,21 +1197,38 @@ const conversationListItem = (conv: Conversation) => {
         </button>
         ${displayName !== null && !currentIsMobile
           ? html`
-            <button
-              type="button"
-              class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] hover:text-gray-800 dark:hover:text-gray-200"
-              title="${isCurrentlyArchived ? "Unarchive Chat" : "Archive Chat"}"
-              @click="${(e: Event) => {
-                e.stopPropagation();
-                if (isCurrentlyArchived) {
-                  unarchiveConversation(conv.id);
-                } else {
-                  archiveConversation(conv.id);
-                }
-              }}"
+            <div
+              class="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center gap-1"
             >
-              ${isCurrentlyArchived ? unarchiveSvg : archiveSvg}
-            </button>
+              <button
+                type="button"
+                class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] hover:text-gray-800 dark:hover:text-gray-200"
+                title="Rename Chat"
+                @click="${(e: Event) => {
+                  e.stopPropagation();
+                  openRenameModal(conv.id, displayName);
+                }}"
+              >
+                ${renameSvg}
+              </button>
+              <button
+                type="button"
+                class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] hover:text-gray-800 dark:hover:text-gray-200"
+                title="${isCurrentlyArchived
+                  ? "Unarchive Chat"
+                  : "Archive Chat"}"
+                @click="${(e: Event) => {
+                  e.stopPropagation();
+                  if (isCurrentlyArchived) {
+                    unarchiveConversation(conv.id);
+                  } else {
+                    archiveConversation(conv.id);
+                  }
+                }}"
+              >
+                ${isCurrentlyArchived ? unarchiveSvg : archiveSvg}
+              </button>
+            </div>
           `
           : nothing}
       </div>
@@ -2293,6 +2449,17 @@ const chatPanelTemplate = () => {
       .onChatWith="${handleChatWith}"
       .onNewThread="${handleNewThread}"
       .enableVoiceCall="${true}"
+      @conversation-renamed="${(e: Event) => {
+        const detail = (e as CustomEvent).detail as
+          | { conversationId?: string; title?: string }
+          | undefined;
+        if (detail?.conversationId && detail?.title && conversations) {
+          conversations = conversations.map((c) =>
+            c.id === detail.conversationId ? { ...c, title: detail.title! } : c
+          );
+          rerenderChat();
+        }
+      }}"
     ></alice-connected-chat>
   `;
 };
@@ -2585,7 +2752,7 @@ const chatTemplate = (): TemplateResult =>
         : html`
         `} ${credentialsChecked && !credentials ? messengerLogin() : html`
       `} ${credentialsChecked && credentials ? loggedInMessenger() : html`
-      `}
+      `} ${renameModalTemplate()}
     </div>
   `;
 

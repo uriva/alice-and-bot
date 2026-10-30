@@ -435,3 +435,15 @@ Deno.test(
     assertEquals(guardsNullMessages, true);
   },
 );
+
+Deno.test("chat-box renders Rename Chat option and dispatches rename-conversation event", async () => {
+  const code = await Deno.readTextFile("./lit/components/chat-box.ts");
+  assertEquals(code.includes("Rename Chat"), true);
+  assertEquals(code.includes("rename-conversation"), true);
+});
+
+Deno.test("connected-chat connects rename-conversation event and calls renameConversation", async () => {
+  const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+  assertEquals(code.includes("@rename-conversation"), true);
+  assertEquals(code.includes("renameConversation("), true);
+});
