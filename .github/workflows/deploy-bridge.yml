@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "bridge/**"
+      - ".github/workflows/deploy-bridge.yml"
 
 jobs:
   deploy:
@@ -32,7 +33,7 @@ jobs:
           gcloud compute ssh webrtc-bridge \
             --zone=us-central1-a \
             --project=alice-and-bot \
-            --command="docker-credential-gcr configure-docker --registries=gcr.io && docker pull gcr.io/alice-and-bot/webrtc-bridge:latest && docker stop bridge || true && docker rm bridge || true && docker run -d --name bridge --network host --restart always gcr.io/alice-and-bot/webrtc-bridge:latest"
+            --command="sudo docker container prune -f && sudo docker image prune -af && docker-credential-gcr configure-docker --registries=gcr.io && docker pull gcr.io/alice-and-bot/webrtc-bridge:latest && (docker rm -f bridge || true) && docker run -d --name bridge --network host --restart always gcr.io/alice-and-bot/webrtc-bridge:latest"
 
       - name: Sync Caddyfile
         run: |
@@ -46,4 +47,4 @@ jobs:
           gcloud compute ssh webrtc-bridge \
             --zone=us-central1-a \
             --project=alice-and-bot \
-            --command="sudo docker pull caddy:2 && sudo docker stop caddy || true && sudo docker rm caddy || true && sudo docker run -d --name caddy --network host --restart always -v caddy_data:/data -v caddy_config:/config -v /tmp/twilio.Caddyfile:/etc/caddy/Caddyfile:ro caddy:2 caddy run --config /etc/caddy/Caddyfile"
+            --command="sudo docker pull caddy:2 && (sudo docker rm -f caddy || true) && sudo docker run -d --name caddy --network host --restart always -v caddy_data:/data -v caddy_config:/config -v /tmp/twilio.Caddyfile:/etc/caddy/Caddyfile:ro caddy:2 caddy run --config /etc/caddy/Caddyfile && sudo docker image prune -f"
