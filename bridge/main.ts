@@ -8,7 +8,18 @@ import {
 import { Decoder, Encoder } from "@evan/opus";
 import NodeWebSocket from "ws";
 
-const handleRequest = (req: Request): Response => {
+const ensureCandidatesInSdp = (sdp: string, candidates: string[]): string => {
+  const missing = candidates.filter((c) => !sdp.includes(c));
+  if (missing.length === 0) return sdp;
+  const candidateLines = missing.map((c) => c.startsWith("a=") ? c : `a=${c}`);
+  const marker = "\r\na=ice-ufrag:";
+  const idx = sdp.indexOf(marker);
+  return idx !== -1
+    ? `${sdp.slice(0, idx)}\r\n${candidateLines.join("\r\n")}${sdp.slice(idx)}`
+    : `${sdp.trimEnd()}\r\n${candidateLines.join("\r\n")}\r\n`;
+};
+
+export const handleRequest = (req: Request): Response => {
   const url = new URL(req.url);
   if (req.headers.get("upgrade") !== "websocket") {
     return new Response("Not a websocket request", { status: 400 });
@@ -28,6 +39,8 @@ const handleRequest = (req: Request): Response => {
   });
 
   let outTrack: MediaStreamTrack | null = null;
+  let mediaReady = false;
+  let mediaReadyFallbackTimer: ReturnType<typeof setTimeout> | null = null;
   let outSequenceNumber = 0;
   let outTimestamp = 0;
 
@@ -37,7 +50,7 @@ const handleRequest = (req: Request): Response => {
   let pacingInterval: ReturnType<typeof setInterval> | null = null;
 
   const sendOneFrame = () => {
-    if (!outTrack || pcmBuffer.length < FRAME_SIZE) {
+    if (!outTrack || !mediaReady || pcmBuffer.length < FRAME_SIZE) {
       if (pacingInterval) {
         clearInterval(pacingInterval);
         pacingInterval = null;
@@ -64,8 +77,23 @@ const handleRequest = (req: Request): Response => {
   };
 
   const processPcmBuffer = () => {
-    if (!outTrack || pcmBuffer.length < FRAME_SIZE || pacingInterval) return;
+    if (
+      !outTrack || !mediaReady || pcmBuffer.length < FRAME_SIZE ||
+      pacingInterval
+    ) {
+      return;
+    }
     pacingInterval = setInterval(sendOneFrame, 20);
+  };
+
+  const markMediaReady = () => {
+    if (mediaReady) return;
+    mediaReady = true;
+    if (mediaReadyFallbackTimer) {
+      clearTimeout(mediaReadyFallbackTimer);
+      mediaReadyFallbackTimer = null;
+    }
+    processPcmBuffer();
   };
 
   socket.onopen = () => {
@@ -96,8 +124,17 @@ const handleRequest = (req: Request): Response => {
         ],
       });
 
+      mediaReady = false;
+      if (mediaReadyFallbackTimer) {
+        clearTimeout(mediaReadyFallbackTimer);
+        mediaReadyFallbackTimer = null;
+      }
+      const gatheredCandidates: string[] = [];
+      let onPublicCandidateReady: (() => void) | null = null;
+
       pc.connectionStateChange.subscribe((state) => {
         console.log("Connection state:", state);
+        if (state === "connected") markMediaReady();
       });
       pc.iceConnectionStateChange.subscribe((state) => {
         console.log("ICE state:", state);
@@ -107,6 +144,15 @@ const handleRequest = (req: Request): Response => {
       });
       pc.onIceCandidate.subscribe((candidate) => {
         if (candidate) {
+          if (candidate.candidate) {
+            gatheredCandidates.push(candidate.candidate);
+            if (
+              candidate.candidate.includes("typ srflx") ||
+              candidate.candidate.includes("typ relay")
+            ) {
+              onPublicCandidateReady?.();
+            }
+          }
           socket.send(JSON.stringify({ type: "candidate", candidate }));
         }
       });
@@ -182,19 +228,47 @@ const handleRequest = (req: Request): Response => {
       await new Promise<void>((resolve) => {
         if (pc!.iceGatheringState === "complete") {
           resolve();
-        } else {
-          const timeout = setTimeout(() => resolve(), 2000);
-          const sub = pc!.iceGatheringStateChange.subscribe((state) => {
-            if (state === "complete") {
-              clearTimeout(timeout);
-              sub.unSubscribe();
-              resolve();
-            }
-          });
+          return;
         }
+        let settled = false;
+        let settleTimer: ReturnType<typeof setTimeout> | null = null;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          if (settleTimer) clearTimeout(settleTimer);
+          onPublicCandidateReady = null;
+          sub.unSubscribe();
+          resolve();
+        };
+        const scheduleQuickSettle = () => {
+          const hasSrflx = gatheredCandidates.some((c) =>
+            c.includes("typ srflx")
+          );
+          const hasRelay = gatheredCandidates.some((c) =>
+            c.includes("typ relay")
+          );
+          if (hasSrflx && hasRelay) {
+            finish();
+            return;
+          }
+          if ((hasSrflx || hasRelay) && !settleTimer) {
+            settleTimer = setTimeout(finish, 120);
+          }
+        };
+        onPublicCandidateReady = scheduleQuickSettle;
+        const timeout = setTimeout(finish, 2000);
+        const sub = pc!.iceGatheringStateChange.subscribe((state) => {
+          if (state === "complete") finish();
+        });
+        scheduleQuickSettle();
       });
 
-      const answerSdp = pc!.localDescription!.sdp;
+      const answerSdp = ensureCandidatesInSdp(
+        pc!.localDescription!.sdp,
+        gatheredCandidates,
+      );
+      mediaReadyFallbackTimer = setTimeout(markMediaReady, 1500);
       console.log("Full answer SDP:\n" + answerSdp);
       console.log(
         "Post-gathering ICE:",
@@ -269,6 +343,7 @@ const handleRequest = (req: Request): Response => {
   socket.onclose = () => {
     console.log("WebSocket closed");
     if (pacingInterval) clearInterval(pacingInterval);
+    if (mediaReadyFallbackTimer) clearTimeout(mediaReadyFallbackTimer);
     if (pc) pc.close();
   };
 

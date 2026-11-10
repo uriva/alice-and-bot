@@ -1,5 +1,11 @@
+import { Buffer } from "node:buffer";
 import { assert, assertEquals } from "@std/assert";
-import { pipeProxyEndpoints, type ProxyEndpoint } from "./main.ts";
+import { MediaStreamTrack, RTCPeerConnection } from "werift";
+import {
+  handleRequest,
+  pipeProxyEndpoints,
+  type ProxyEndpoint,
+} from "./main.ts";
 
 type FakeSocket = {
   endpoint: ProxyEndpoint;
@@ -84,3 +90,69 @@ Deno.test("closing one side closes the other", () => {
   b.terminate();
   assert(a.closed, "peer should be closed when one side closes");
 });
+
+Deno.test(
+  "pre-buffered greeting audio sent before WebRTC peer connects is held until transport connects and not dropped",
+  { sanitizeOps: false, sanitizeResources: false },
+  async () => {
+    const server = Deno.serve({ port: 0, onListen: () => {} }, handleRequest);
+    const port = server.addr.port;
+    const callerPc = new RTCPeerConnection();
+    const callerTrack = new MediaStreamTrack({ kind: "audio" });
+    const transceiver = callerPc.addTransceiver(callerTrack, {
+      direction: "sendrecv",
+    });
+    const receivedRtpCount = { count: 0 };
+    transceiver.onTrack.subscribe((remoteTrack) => {
+      remoteTrack.onReceiveRtp.subscribe(() => {
+        receivedRtpCount.count++;
+      });
+    });
+
+    const offer = await callerPc.createOffer();
+    await callerPc.setLocalDescription(offer);
+
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/webrtc-bridge`);
+    await new Promise<void>((resolve) => {
+      ws.onopen = () => resolve();
+    });
+
+    const answerPromise = new Promise<string>((resolve) => {
+      ws.addEventListener("message", (evt) => {
+        const msg = JSON.parse(String(evt.data));
+        if (msg.type === "answer") resolve(msg.sdp.sdp || msg.sdp);
+      });
+    });
+
+    ws.send(
+      JSON.stringify({ type: "offer", sdp: { type: "offer", sdp: offer.sdp } }),
+    );
+
+    const samples24k = new Int16Array(2400);
+    samples24k.fill(4000);
+    ws.send(
+      JSON.stringify({
+        type: "audio",
+        chunks: [{
+          mimeType: "audio/pcm;rate=24000",
+          dataBase64: Buffer.from(samples24k.buffer).toString("base64"),
+        }],
+      }),
+    );
+
+    const answerSdp = await answerPromise;
+    await new Promise((r) => setTimeout(r, 180));
+
+    await callerPc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+    await new Promise((r) => setTimeout(r, 350));
+
+    assert(
+      receivedRtpCount.count >= 4,
+      `Expected caller to receive >= 4 buffered greeting RTP frames after WebRTC connects, got ${receivedRtpCount.count}`,
+    );
+
+    ws.close();
+    await callerPc.close();
+    await server.shutdown();
+  },
+);
