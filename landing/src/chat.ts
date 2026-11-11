@@ -36,7 +36,13 @@ import {
   storeTransferPayload,
 } from "../../backend/src/api.ts";
 import { registerPush } from "../../protocol/src/pushClient.ts";
-import { isIosDevice, isStandaloneApp } from "./pwaInstall.ts";
+import {
+  canInstallPwa,
+  isIosDevice,
+  isStandaloneApp,
+  subscribePwaInstall,
+  triggerPwaInstall,
+} from "./pwaInstall.ts";
 import { copyToClipboard } from "../../lit/components/utils.ts";
 import { chatPath, homePath } from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
@@ -80,6 +86,9 @@ subscribeDarkMode((d) => {
 });
 subscribeIsMobile((m) => {
   currentIsMobile = m;
+  if (chatInitialized) rerenderChat();
+});
+subscribePwaInstall(() => {
   if (chatInitialized) rerenderChat();
 });
 
@@ -1926,6 +1935,19 @@ const yourKey = () => {
         </div>
       </div>
 
+      ${!isStandaloneApp()
+        ? html`
+          <div class="mb-3">
+            <button
+              type="button"
+              class="${buttonClass("default", "default", "w-full")}"
+              @click="${handleChatInstallClick}"
+            >
+              Install App
+            </button>
+          </div>
+        `
+        : nothing}
       <div>
         <button type="button" class="${buttonClass(
           "secondary",
@@ -2436,6 +2458,25 @@ const handleChatWith = async (publicSignKey: string) => {
   }
 };
 
+const installHeaderPillStyle =
+  "px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-black dark:hover:bg-emerald-400 transition-colors";
+
+const handleChatInstallClick = () => {
+  triggerPwaInstall({ stayOnPage: true }).then((res) => {
+    if (res === "ios-instructions") {
+      showToast(
+        "Tap Share → Add to Home Screen to install Alice&Bot",
+        "success",
+      );
+    } else if (res === "browser-menu") {
+      showToast(
+        "Tap browser menu (⋮) → Install app / Add to Home screen",
+        "success",
+      );
+    }
+  });
+};
+
 const pushBannerContainerStyle =
   "flex items-center justify-between gap-2 px-3 py-2 text-xs border-b bg-emerald-50 text-emerald-950 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-900/60 flex-shrink-0";
 const pushBannerEnableBtnStyle =
@@ -2610,9 +2651,21 @@ const mobileChatsListView = () => {
     <div class="flex flex-col w-full h-full overflow-hidden">
       ${view === "chats"
         ? html`
-          <div class="p-4 bg-white dark:bg-black flex-shrink-0">${logoTemplate(
-            goHome,
-          )}</div>
+          <div
+            class="p-4 bg-white dark:bg-black flex items-center justify-between gap-2 flex-shrink-0"
+          >
+            ${logoTemplate(goHome)} ${canInstallPwa()
+              ? html`
+                <button
+                  type="button"
+                  class="${installHeaderPillStyle}"
+                  @click="${handleChatInstallClick}"
+                >
+                  Install App
+                </button>
+              `
+              : nothing}
+          </div>
         `
         : html`
         `} ${view === "new_chat"
