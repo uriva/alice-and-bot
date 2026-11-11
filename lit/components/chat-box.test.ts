@@ -46,3 +46,20 @@ Deno.test(
     );
   },
 );
+
+Deno.test(
+  "chat-box header menu and close buttons share headerButtonStyle and centered SVG icons",
+  () => {
+    const code = Deno.readTextFileSync(
+      new URL("./chat-box.ts", import.meta.url).pathname,
+    );
+    assertMatch(
+      code,
+      /headerButtonStyle[\s\S]*?font-size:16px;line-height:1;flex-shrink:0/,
+    );
+    assertMatch(
+      code,
+      /data-testid="widget-close-button"[\s\S]*?style="\$\{headerButtonStyle\}"[\s\S]*?\$\{faTimes\}/,
+    );
+  },
+);

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { generateTestData, type TestData } from "./mocks/test-data.ts";
-import { setupWidgetMocks, tid } from "./helpers.ts";
+import { elementInkBounds, setupWidgetMocks, tid } from "./helpers.ts";
 
 let data: TestData;
 
@@ -306,5 +306,34 @@ test.describe("Widget", () => {
 
     // Viewport width is 375
     expect(box!.width).toBeLessThanOrEqual(375);
+  });
+
+  test("mobile header three dots and close x are vertically aligned", async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+    const { injectMessengerCredentials } = await import("./helpers.ts");
+    await injectMessengerCredentials(page, data, "aliceAndBotCredentials");
+    await setupWidgetMocks(page, data, { startOpen: true });
+    await page.goto("/widget-harness.html");
+
+    const menuBtn = page.locator(tid("menu-button"));
+    const closeBtn = page.locator(tid("widget-close-button"));
+    await expect(menuBtn).toBeVisible({ timeout: 10_000 });
+    await expect(closeBtn).toBeVisible({ timeout: 10_000 });
+    await page.evaluate(() => document.fonts.ready);
+
+    const menuInk = await elementInkBounds(page, menuBtn);
+    const closeInk = await elementInkBounds(page, closeBtn);
+    expect(Math.abs(closeInk.centerY - menuInk.centerY)).toBeLessThanOrEqual(
+      0.5,
+    );
+    expect(menuInk.height).toBeGreaterThanOrEqual(14);
+
+    await context.close();
   });
 });

@@ -184,8 +184,7 @@ export const widgetBaseCss = ({
 
 [data-testid="widget-close-button"] {
   color: ${headerColor} !important;
-  font-size: 22px !important;
-  font-weight: 700 !important;
+  font-size: 16px !important;
   line-height: 1 !important;
   transition: background 0.2s, color 0.2s !important;
 }
@@ -247,6 +246,8 @@ const spinnerKeyframes =
   `@keyframes widget-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`;
 const spinnerCss =
   "width:24px;height:24px;border:3px solid #e5e7eb;border-top-color:#6366f1;border-radius:50%;animation:widget-spin 0.8s linear infinite";
+const closeIconSvg =
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 512" fill="currentColor" style="width:1em;height:1em"><path d="M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"/></svg>`;
 
 export type WidgetParams = {
   participants: string[];
@@ -753,7 +754,7 @@ export const createWidget = (
           closeBtn.style.cssText = closeButtonCss({
             colors: app.colors,
           });
-          closeBtn.textContent = "\u00d7";
+          closeBtn.innerHTML = closeIconSvg;
           closeBtn.addEventListener("click", () => setChatOpen(false));
           containerEl.appendChild(closeBtn);
 

@@ -27,6 +27,7 @@ import {
   faPen,
   faReply,
   faStop,
+  faTimes,
 } from "./icons.ts";
 import "./chat-message.ts";
 import "./chat-typing-indicator.ts";
@@ -343,7 +344,7 @@ const renderReplyBar = (
   `;
 
 const headerButtonStyle =
-  "background:transparent;border:none;cursor:pointer;color:inherit;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;padding:0";
+  "background:transparent;border:none;cursor:pointer;color:inherit;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;padding:0;font-size:16px;line-height:1;flex-shrink:0";
 
 const messageContainerStyle = (isDark: boolean, custom?: CustomColors) =>
   `flex-grow:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-color:${
@@ -858,7 +859,7 @@ export class ChatBox extends LitElement {
   private _renderHeaderMenu() {
     const isDark = this.isDark;
     return html`
-      <div style="position:relative;display:flex;align-items:center">
+      <div style="position:relative;display:flex;align-items:center;flex-shrink:0">
         <button
           data-testid="menu-button"
           type="button"
@@ -1666,11 +1667,11 @@ export class ChatBox extends LitElement {
                       data-testid="widget-close-button"
                       @click="${this.onClose}"
                       title="Close chat"
-                      style="${headerButtonStyle};font-size:22px;font-weight:700"
+                      style="${headerButtonStyle}"
                       @mouseover="${this._hoverBtnIn}"
                       @mouseout="${this._hoverBtnOut}"
                     >
-                      &times;
+                      ${faTimes}
                     </button>
                   `
                   : nothing}

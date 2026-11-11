@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { generateTestData, type TestData } from "./mocks/test-data.ts";
 import {
   clearStorage,
+  elementInkBounds,
   injectMessengerCredentials,
   pollLocalStorage,
   pollLocalStorageNull,
@@ -321,5 +322,42 @@ test.describe("Messenger (landing /chat)", () => {
 
     // Eventually, it should time out / fail and recover to the name input screen
     await expect(nameInput).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("mobile header three dots and close x are vertically aligned in light and dark mode", async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+    await setupMessengerMocks(page, data);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+    const convo = page.getByText("Test Conversation").first();
+    await expect(convo).toBeVisible({ timeout: 15_000 });
+    await convo.click();
+    const menuBtn = page.getByTestId("menu-button");
+    const closeBtn = page.getByTestId("widget-close-button");
+    await expect(menuBtn).toBeVisible({ timeout: 10_000 });
+    await expect(closeBtn).toBeVisible({ timeout: 10_000 });
+    await page.evaluate(() => document.fonts.ready);
+
+    const lightMenu = await elementInkBounds(page, menuBtn);
+    const lightClose = await elementInkBounds(page, closeBtn);
+    expect(Math.abs(lightClose.centerY - lightMenu.centerY))
+      .toBeLessThanOrEqual(
+        0.5,
+      );
+
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    const darkMenu = await elementInkBounds(page, menuBtn);
+    const darkClose = await elementInkBounds(page, closeBtn);
+    expect(Math.abs(darkClose.centerY - darkMenu.centerY)).toBeLessThanOrEqual(
+      0.5,
+    );
+
+    await context.close();
   });
 });
