@@ -791,7 +791,13 @@ export class ChatMessage extends LitElement {
     const displayedText = this.streamActive || isRevealing
       ? this._visibleText
       : text;
-    const markdownHtml = renderMarkdown(displayedText, textColor, isDark);
+    const primaryColor = attachmentPrimaryColor(isDark, customColors);
+    const markdownHtml = renderMarkdown(
+      displayedText,
+      textColor,
+      isDark,
+      primaryColor,
+    );
     const canSave = !!this._editText.trim() &&
       this._editText !== text;
 
@@ -801,6 +807,7 @@ export class ChatMessage extends LitElement {
         isDark,
       )}
       .msg-wrap .msg-reply-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-reply-trigger{opacity:1}
+      .chat-quick-reply-btn:hover{filter:brightness(1.08)}
       [data-testid="message-text"]{unicode-bidi:plaintext;text-align:start}
       [data-testid="message-text"] span{unicode-bidi:plaintext;text-align:start}
       [data-testid="message-text"] > :last-child { margin-bottom: 0 !important; }
@@ -939,10 +946,7 @@ export class ChatMessage extends LitElement {
                           .attachment="${att}"
                           .isDark="${isDark}"
                           .textColor="${textColor}"
-                          .primaryColor="${attachmentPrimaryColor(
-                            isDark,
-                            customColors,
-                          )}"
+                          .primaryColor="${primaryColor}"
                           .isOwn="${isOwn}"
                           .messageTimestamp="${timestamp}"
                           .sessionStart="${this.sessionStart}"

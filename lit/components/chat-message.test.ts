@@ -268,17 +268,23 @@ Deno.test(
 );
 
 Deno.test(
-  "renderMarkdown renders <button> tags as styled quick-reply buttons",
+  "renderMarkdown renders <button> tags as styled quick-reply buttons themed with primary color",
   () => {
     const input =
       'Would you like weekly updates?\n<button id="yes">Yes</button>\n<button id="no">No</button>';
-    const html = renderMarkdown(input, "#fff", true);
+    const html = renderMarkdown(input, "#fff", true, "#16a34a");
     assertEquals(html.includes('class="chat-quick-replies"'), true);
     assertEquals(html.includes('class="chat-quick-reply-btn"'), true);
     assertEquals(html.includes('data-button-id="yes"'), true);
     assertEquals(html.includes(">Yes</button>"), true);
     assertEquals(html.includes('data-button-id="no"'), true);
     assertEquals(html.includes(">No</button>"), true);
+    assertEquals(html.includes("#16a34a"), true);
+    assertEquals(html.includes("#93c5fd"), false);
+
+    const defaultLightHtml = renderMarkdown(input, "#222", false);
+    assertEquals(defaultLightHtml.includes(defaultPrimary(false)), true);
+    assertEquals(defaultLightHtml.includes("#1d4ed8"), false);
   },
 );
 

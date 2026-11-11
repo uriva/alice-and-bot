@@ -12,6 +12,8 @@ const depRepos = [
   "/home/uri/uriva/find-scene/deno.json",
   "/home/uri/uriva/prompt2bot/deno.json",
   "/home/uri/uriva/sally/deno.json",
+  "/home/uri/uriva/supergreen/deno.json",
+  "/home/uri/uriva/mediator/package.json",
 ];
 
 const newCacheVersion = Deno.args[0];
@@ -35,10 +37,15 @@ const jsrVersion = ownDenoJson.version;
 for (const path of depRepos) {
   try {
     const text = await Deno.readTextFile(path);
-    const updated = text.replace(
-      /"@alice-and-bot\/core(\/components)?":\s*"jsr:@alice-and-bot\/core@\^?[\d.]+(\/components)?"/g,
-      `"@alice-and-bot/core$1": "jsr:@alice-and-bot/core@^${jsrVersion}$2"`,
-    );
+    const updated = text
+      .replace(
+        /"@alice-and-bot\/core(\/components)?":\s*"jsr:@alice-and-bot\/core@\^?[\d.]+(\/components)?"/g,
+        `"@alice-and-bot/core$1": "jsr:@alice-and-bot/core@^${jsrVersion}$2"`,
+      )
+      .replace(
+        /"@alice-and-bot\/core":\s*"npm:@jsr\/alice-and-bot__core@\^?[\d.]+"/g,
+        `"@alice-and-bot/core": "npm:@jsr/alice-and-bot__core@^${jsrVersion}"`,
+      );
     if (updated !== text) {
       await Deno.writeTextFile(path, updated);
       console.log(`Bumped dep in ${path}`);

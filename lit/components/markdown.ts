@@ -1,5 +1,6 @@
 import { Marked, type Token, type Tokens } from "marked";
 import "./chat-video-player.ts";
+import { defaultPrimary, quickReplyButtonStyle } from "./design.ts";
 import { isAudioUrl, isVideoUrl, preprocessText } from "./utils.ts";
 import { blurSecretsInHtml, secretBlurCss } from "./secrets.ts";
 import hljs from "highlight.js/lib/core";
@@ -202,16 +203,24 @@ const createMarked = (textColor: string, isDark: boolean) => {
 const buttonTagRegex =
   /<button(?:\s+[^>]*\bid=["']([^"']+)["'])?[^>]*>([\s\S]*?)<\/button>|<button(?:\s+[^>]*\bid=["']([^"']+)["'])?[^>]*\btitle=["']([^"']+)["'][^>]*\/?>/gi;
 
-const quickReplyButtonHtml = (title: string, id: string, isDark: boolean) =>
-  `<button class="chat-quick-reply-btn" data-button-id="${id}" type="button" style="display:inline-flex;align-items:center;justify-content:center;padding:6px 14px;margin:4px 4px 4px 0;border-radius:18px;border:1px solid ${
-    isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)"
-  };background:${
-    isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
-  };color:${
-    isDark ? "#93c5fd" : "#1d4ed8"
-  };font-size:13px;font-weight:500;cursor:pointer;line-height:1.4;transition:all .15s ease;-webkit-tap-highlight-color:transparent">${title}</button>`;
+const quickReplyButtonHtml = (
+  title: string,
+  id: string,
+  isDark: boolean,
+  primaryColor: string,
+) =>
+  `<button class="chat-quick-reply-btn" data-button-id="${id}" type="button" style="${
+    quickReplyButtonStyle(
+      isDark,
+      primaryColor,
+    )
+  }">${title}</button>`;
 
-const processButtons = (text: string, isDark: boolean) => {
+const processButtons = (
+  text: string,
+  isDark: boolean,
+  primaryColor: string,
+) => {
   const renderedButtons: string[] = [];
   const textWithoutButtons = text.replace(
     buttonTagRegex,
@@ -220,7 +229,9 @@ const processButtons = (text: string, isDark: boolean) => {
       const rawTitle = content !== undefined ? content : titleAttr || "";
       const title = rawTitle.replace(/<[^>]+>/g, "").trim();
       if (title) {
-        renderedButtons.push(quickReplyButtonHtml(title, id || title, isDark));
+        renderedButtons.push(
+          quickReplyButtonHtml(title, id || title, isDark, primaryColor),
+        );
       }
       return "";
     },
@@ -241,8 +252,13 @@ export const renderMarkdown = (
   text: string,
   textColor: string,
   isDark: boolean,
+  primaryColor = defaultPrimary(isDark),
 ): string => {
-  const { text: cleanText, buttonsHtml } = processButtons(text, isDark);
+  const { text: cleanText, buttonsHtml } = processButtons(
+    text,
+    isDark,
+    primaryColor,
+  );
   const html = createMarked(textColor, isDark).parse(
     escapeHtmlTags(preprocessText(cleanText)),
     { async: false },

@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { elementInkBounds, tid } from "./helpers.ts";
 
+const parseRgbChannels = (cssColor: string) => {
+  const scale = cssColor.startsWith("color(") ? 255 : 1;
+  return (cssColor.match(/[\d.]+/g) ?? []).slice(0, 3).map((v) =>
+    Number(v) * scale
+  );
+};
+
 test.describe("AbstractChatBox (example app)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
@@ -940,4 +947,105 @@ test("input row buttons have matching icon sizes and compact spacing without emp
   });
 
   expect(gapWithoutMic).toBeLessThanOrEqual(8);
+});
+
+test("suggestion text buttons use primary color theme in light and dark mode", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    Object.assign(chatBox, {
+      messages: [],
+      activeSpinners: [],
+      activeProgress: [],
+      activeStreams: [],
+      suggestedMessages: ["Check disconnected lines", "Set up a chatbot"],
+      darkModeOverride: true,
+      customColors: {
+        primary: "#16a34a",
+        background: "#0a0d0c",
+        text: "#eef3f0",
+        inputBackground: "#131816",
+      },
+    });
+  });
+
+  const suggestedBtn = page.locator(tid("suggested-message")).first();
+  await expect(suggestedBtn).toBeVisible();
+
+  const darkColors = await suggestedBtn.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return {
+      color: cs.color,
+      border: cs.borderTopColor,
+      background: cs.backgroundColor,
+    };
+  });
+
+  const [dr, dg, db] = parseRgbChannels(darkColors.color);
+  expect(dg).toBeGreaterThan(dr + 40);
+  expect(dg).toBeGreaterThan(db + 20);
+
+  const [dbr, dbg, dbb] = parseRgbChannels(darkColors.border);
+  expect(dbg).toBeGreaterThan(dbr);
+  expect(dbg).toBeGreaterThan(dbb);
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    Object.assign(chatBox, {
+      darkModeOverride: false,
+      customColors: {
+        primary: "#16a34a",
+        background: "#f8faf9",
+        text: "#0f1714",
+        inputBackground: "#ffffff",
+      },
+    });
+  });
+
+  const lightColors = await suggestedBtn.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return {
+      color: cs.color,
+      border: cs.borderTopColor,
+      background: cs.backgroundColor,
+    };
+  });
+
+  const [lr, lg, lb] = parseRgbChannels(lightColors.color);
+  expect(lg).toBeGreaterThan(lr + 60);
+  expect(lg).toBeGreaterThan(lb + 40);
+
+  const [lbgR, lbgG, lbgB] = parseRgbChannels(lightColors.background);
+  expect(lbgG).toBeGreaterThan(lbgR);
+  expect(lbgG).toBeGreaterThan(lbgB);
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    Object.assign(chatBox, {
+      messages: [
+        {
+          id: "qr-1",
+          authorId: "bot",
+          authorName: "Bot",
+          text:
+            "Choose an option:\n<buttons><button>Enable alerts</button></buttons>",
+          timestamp: Date.now(),
+        },
+      ],
+    });
+  });
+
+  const quickReplyBtn = page.locator(".chat-quick-reply-btn").first();
+  await expect(quickReplyBtn).toBeVisible();
+  const qrColor = await quickReplyBtn.evaluate((el) =>
+    getComputedStyle(el).color
+  );
+  const [qrR, qrG, qrB] = parseRgbChannels(qrColor);
+  expect(qrG).toBeGreaterThan(qrR + 60);
+  expect(qrG).toBeGreaterThan(qrB + 40);
 });
