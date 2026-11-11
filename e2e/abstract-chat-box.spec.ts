@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { tid } from "./helpers.ts";
+import { elementInkBounds, tid } from "./helpers.ts";
 
 test.describe("AbstractChatBox (example app)", () => {
   test.beforeEach(async ({ page }) => {
@@ -873,4 +873,71 @@ test("spinner with English text renders with LTR direction and left alignment", 
 
   expect(textRect.left - indicatorRect.left).toBeLessThan(60);
   expect(indicatorRect.right - textRect.right).toBeGreaterThan(50);
+});
+
+test("input row buttons have matching icon sizes and compact spacing without empty send button gap", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+
+  const sizesWithMic = await page.evaluate(() => {
+    const attachSvg = document.querySelector(
+      '[data-testid="attach-button"] svg',
+    )!.getBoundingClientRect();
+    const sendSvg = document.querySelector('[data-testid="send-button"] svg')!
+      .getBoundingClientRect();
+    const menuSvg = document.querySelector('[data-testid="menu-button"] svg')!
+      .getBoundingClientRect();
+    return {
+      attach: { width: attachSvg.width, height: attachSvg.height },
+      send: { width: sendSvg.width, height: sendSvg.height },
+      menu: { width: menuSvg.width, height: menuSvg.height },
+    };
+  });
+
+  expect(Math.round(sizesWithMic.attach.width)).toBe(18);
+  expect(Math.round(sizesWithMic.attach.height)).toBe(18);
+  expect(Math.round(sizesWithMic.send.width)).toBe(18);
+  expect(Math.round(sizesWithMic.send.height)).toBe(18);
+  expect(Math.round(sizesWithMic.menu.width)).toBe(18);
+  expect(Math.round(sizesWithMic.menu.height)).toBe(18);
+
+  const attachInk = await elementInkBounds(
+    page,
+    page.locator(tid("attach-button")),
+  );
+  const sendInk = await elementInkBounds(
+    page,
+    page.locator(tid("send-button")),
+  );
+  const menuInk = await elementInkBounds(
+    page,
+    page.locator(tid("menu-button")),
+  );
+  expect(Math.abs(attachInk.height - menuInk.height)).toBeLessThanOrEqual(2);
+  expect(Math.abs(attachInk.centerY - menuInk.centerY)).toBeLessThanOrEqual(1);
+  expect(Math.abs(sendInk.centerY - menuInk.centerY)).toBeLessThanOrEqual(1);
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box") as
+      & HTMLElement
+      & Record<string, unknown>;
+    chatBox.enableAudioRecording = false;
+    chatBox.customColors = {
+      ...(chatBox.customColors as Record<string, unknown>),
+      inputBackground: "transparent",
+      hideTitle: true,
+    };
+  });
+
+  await expect(page.locator(tid("send-button"))).not.toBeVisible();
+
+  const gapWithoutMic = await page.evaluate(() => {
+    const attachRect = document.querySelector('[data-testid="attach-button"]')!
+      .getBoundingClientRect();
+    const menuRect = document.querySelector('[data-testid="menu-button"]')!
+      .getBoundingClientRect();
+    return menuRect.left - attachRect.right;
+  });
+
+  expect(gapWithoutMic).toBeLessThanOrEqual(8);
 });

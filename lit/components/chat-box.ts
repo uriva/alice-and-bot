@@ -351,10 +351,20 @@ const messageContainerStyle = (isDark: boolean, custom?: CustomColors) =>
     custom?.scrollbarColor ?? (isDark ? "#2a2a2a #111" : "#cbd5e1 #e2e8f0")
   };scrollbar-width:thin`;
 
-const sendButtonStyle = (isDark: boolean, custom?: CustomColors) =>
-  `width:44px;height:44px;min-width:44px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:background 0.2s,color 0.2s;flex-shrink:0;background:${
+const isTransparentInput = (custom?: CustomColors) =>
+  custom?.inputBackground === "transparent";
+
+const sendButtonStyle = (isDark: boolean, custom?: CustomColors) => {
+  const width = isTransparentInput(custom) ? "36px" : "44px";
+  return `width:${width};height:44px;min-width:${width};border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;padding:0;transition:background 0.2s,color 0.2s;flex-shrink:0;background:${
     custom?.inputBackground ?? (isDark ? "#111" : "#ffffff")
   };color:${isDark ? "#fff" : "#222"}`;
+};
+
+const attachButtonStyle = (isDark: boolean) =>
+  `background:none;border:none;cursor:pointer;color:${
+    isDark ? "#6b7280" : "#94a3b8"
+  };width:36px;height:36px;padding:0;border-radius:50%;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center`;
 
 const recordingIndicatorStyle = (isDark: boolean) =>
   `background:${
@@ -412,7 +422,7 @@ const textareaStyle = (
   overflow: string = "hidden",
 ) =>
   `width:100%;box-sizing:border-box;padding:${
-    enableAttachments ? "10px 36px 10px 16px" : "10px 16px"
+    enableAttachments ? "10px 40px 10px 16px" : "10px 16px"
   };border:none;border-radius:22px;background:${
     custom?.inputBackground ?? (isDark ? "#111" : "#ffffff")
   };color:${
@@ -857,7 +867,7 @@ export class ChatBox extends LitElement {
   }
 
   private _renderHeaderMenu() {
-    const isDark = this.isDark;
+    const isDark = this._effectiveDark;
     return html`
       <div style="position:relative;display:flex;align-items:center;flex-shrink:0">
         <button
@@ -896,7 +906,7 @@ export class ChatBox extends LitElement {
   }
 
   private _renderBottomMenu() {
-    const isDark = this.isDark;
+    const isDark = this._effectiveDark;
     const customColors = this.customColors;
     return html`
       <div style="position:relative;display:flex">
@@ -1478,6 +1488,7 @@ export class ChatBox extends LitElement {
     const showStop = this._isRecording && !this._isRecordingLocked;
     const showSendBtn = hasContent ||
       (this._isRecording && this._isRecordingLocked);
+    const showActionBtn = showMic || showStop || showSendBtn;
     const inputBgColor = customColors?.inputBackground ??
       (isDark ? "#111" : "#ffffff");
 
@@ -1951,7 +1962,11 @@ export class ChatBox extends LitElement {
             : nothing}
 
           <div>
-            <div style="display:flex;align-items:flex-end;gap:8px;${customColors
+            <div style="display:flex;align-items:flex-end;gap:${isTransparentInput(
+                customColors,
+              )
+              ? "0px"
+              : "4px"};${customColors
                 ?.inputMaxWidth
               ? `max-width:${customColors.inputMaxWidth};margin:0 auto;width:100%`
               : contentMaxWidthStyle(customColors)}">
@@ -2032,15 +2047,17 @@ export class ChatBox extends LitElement {
                   ? html`
                     <div
                       data-attach-wrapper
-                      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:100"
+                      style="position:absolute;right:${isTransparentInput(
+                          customColors,
+                        )
+                        ? "0px"
+                        : "4px"};top:50%;transform:translateY(-50%);z-index:100"
                     >
                       <button
                         data-testid="attach-button"
                         type="button"
                         @click="${this._toggleAttachMenu}"
-                        style="background:none;border:none;cursor:pointer;color:${isDark
-                          ? "#6b7280"
-                          : "#94a3b8"};padding:4px;display:flex;align-items:center;justify-content:center"
+                        style="${attachButtonStyle(isDark)}"
                         title="Attach"
                       >
                         ${faPaperclip}
@@ -2129,7 +2146,9 @@ export class ChatBox extends LitElement {
                 style="${sendButtonStyle(
                   isDark,
                   customColors,
-                )};background:${showStop
+                )};display:${showActionBtn
+                  ? "flex"
+                  : "none"};background:${showStop
                   ? "#dc2626"
                   : inputBgColor};color:${showStop
                   ? "#fff"

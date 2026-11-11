@@ -63,3 +63,31 @@ Deno.test(
     );
   },
 );
+
+Deno.test(
+  "chat-box input row buttons share 18px icon sizing and hide send-button when inactive",
+  () => {
+    const chatBoxCode = Deno.readTextFileSync(
+      new URL("./chat-box.ts", import.meta.url).pathname,
+    );
+    const iconsCode = Deno.readTextFileSync(
+      new URL("./icons.ts", import.meta.url).pathname,
+    );
+    assertMatch(
+      iconsCode,
+      /faPaperclip = icon\(\s*"[^"]+",\s*"0 61 450 450"/,
+    );
+    assertMatch(
+      chatBoxCode,
+      /attachButtonStyle[\s\S]*?font-size:18px;line-height:1/,
+    );
+    assertMatch(
+      chatBoxCode,
+      /showActionBtn = showMic \|\| showStop \|\| showSendBtn/,
+    );
+    assertMatch(
+      chatBoxCode,
+      /data-testid="send-button"[\s\S]*?display:\$\{showActionBtn\s*\?\s*"flex"\s*:\s*"none"\}/,
+    );
+  },
+);
