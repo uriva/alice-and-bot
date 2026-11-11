@@ -1,6 +1,6 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { repeat } from "lit/directives/repeat.js";
-import { empty } from "@uri/gamla";
+import { empty, map, nonempty } from "@uri/gamla";
 import { maxTextLength } from "../../protocol/src/attachmentLimits.ts";
 import {
   avatarColor,
@@ -8,9 +8,13 @@ import {
   chatContainerStyle,
   contentMaxWidthStyle,
   defaultPrimary,
+  emptyHeadingStyle,
+  emptySuggestionsWrapStyle,
   isLightColor,
   loadingStyle,
   quoteBarColor,
+  suggestedGridStyle,
+  suggestedMessageButtonStyle,
   titleStyle,
 } from "./design.ts";
 import {
@@ -40,6 +44,7 @@ import type {
   ActiveSpinner,
   ActiveStream,
   CustomColors,
+  SuggestedMessage,
   TimelineEntry,
 } from "./types.ts";
 import {
@@ -61,6 +66,7 @@ import {
   playNotificationSound,
   recordingExtension,
   recordingMimeType,
+  resolveSuggestedMessage,
   sendingStatusText,
   shouldShowScrollDownButton,
   showAuthorName,
@@ -432,7 +438,7 @@ const textareaStyle = (
   };scrollbar-width:thin`;
 
 const kebabHoverCss =
-  `.msg-bubble .msg-kebab{opacity:0;transition:opacity .15s}.msg-bubble:hover .msg-kebab,.msg-kebab[data-open]{opacity:.7}`;
+  `.msg-bubble .msg-kebab{opacity:0;transition:opacity .15s}.msg-bubble:hover .msg-kebab,.msg-kebab[data-open]{opacity:.7}.suggested-message-btn:hover{transform:translateY(-1px);filter:brightness(1.06)}.suggested-message-btn:active{transform:translateY(0)}`;
 
 const isMobileCheck = () =>
   typeof globalThis.matchMedia === "function" &&
@@ -492,6 +498,7 @@ export class ChatBox extends LitElement {
     onClose: { attribute: false },
     title: {},
     emptyMessage: { attribute: false },
+    suggestedMessages: { attribute: false },
     typingUsers: { type: Array },
     onInputActivity: { attribute: false },
     isLoading: { type: Boolean },
@@ -560,6 +567,7 @@ export class ChatBox extends LitElement {
   declare onClose: (() => void) | undefined;
   declare title: string;
   declare emptyMessage: string | undefined;
+  declare suggestedMessages: SuggestedMessage[] | undefined;
   declare typingUsers: string[];
   declare onInputActivity: (() => void) | undefined;
   declare isLoading: boolean;
@@ -1072,6 +1080,26 @@ export class ChatBox extends LitElement {
     if (text) {
       this.onSend(text);
     }
+  };
+
+  private _sendSuggestedMessage = async (rawText: string) => {
+    const text = rawText.trim();
+    if (!text || estimateSerializedLength(text) > maxTextLength) return;
+    this._optimisticMessages = [
+      ...this._optimisticMessages,
+      {
+        id: `optimistic-${Date.now()}`,
+        authorId: this.userId,
+        authorName: "",
+        text,
+        timestamp: Date.now(),
+      },
+    ];
+    await this.updateComplete;
+    await nextFrame();
+    this.onSend(text);
+    this._scrollToBottom();
+    requestAnimationFrame(() => this._scrollToBottom());
   };
 
   private async _handleSend() {
@@ -1788,7 +1816,46 @@ export class ChatBox extends LitElement {
                   this.activeStreams.length === 0
               ? html`
                 <div style="${centerFillStyle(isDark)}">
-                  ${this.emptyMessage
+                  ${nonempty(this.suggestedMessages ?? [])
+                    ? html`
+                      <div style="${emptySuggestionsWrapStyle}">
+                        <span
+                          data-testid="empty-state"
+                          style="${emptyHeadingStyle(
+                            isDark,
+                            customColors?.text,
+                          )}"
+                        >${this.emptyMessage ||
+                          "How can I help you today?"}</span>
+                        <div
+                          data-testid="suggested-messages"
+                          style="${suggestedGridStyle}"
+                        >
+                          ${map((item: SuggestedMessage) => {
+                            const { label, text } = resolveSuggestedMessage(
+                              item,
+                            );
+                            return html`
+                              <button
+                                type="button"
+                                class="suggested-message-btn"
+                                data-testid="suggested-message"
+                                dir="${textDirection(label)}"
+                                style="${suggestedMessageButtonStyle(
+                                  isDark,
+                                  customColors,
+                                )}"
+                                @click="${() =>
+                                  this._sendSuggestedMessage(text)}"
+                              >
+                                ${label}
+                              </button>
+                            `;
+                          })(this.suggestedMessages ?? [])}
+                        </div>
+                      </div>
+                    `
+                    : this.emptyMessage
                     ? html`
                       <span data-testid="empty-state">${this
                         .emptyMessage}</span>

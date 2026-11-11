@@ -7,3 +7,4 @@ export {
   Chat,
   Widget,
 } from "./lit/react-components.ts";
+export type { SuggestedMessage } from "./lit/components/types.ts";

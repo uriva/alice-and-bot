@@ -89,6 +89,7 @@ export {
 } from "./lit/react-hooks.ts";
 export type { DarkModeOverride } from "./lit/core/dark-mode.ts";
 export type { EphemeralStreamEvent } from "./lit/core/room.ts";
+export type { SuggestedMessage } from "./lit/components/types.ts";
 
 export const publicSignKeyToAlias = (publicSignKey: string): Promise<
   { alias: string } | { error: "no-such-identity" | "no-alias" }

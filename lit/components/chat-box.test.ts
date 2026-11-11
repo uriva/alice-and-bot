@@ -1,4 +1,6 @@
-import { assertMatch } from "@std/assert";
+import { assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
+import { suggestedMessageButtonStyle } from "./design.ts";
+import { resolveSuggestedMessage } from "./utils.ts";
 
 Deno.test(
   "chat-box template assigns dir to spinner indicator container and text span based on textDirection",
@@ -88,6 +90,46 @@ Deno.test(
     assertMatch(
       chatBoxCode,
       /data-testid="send-button"[\s\S]*?display:\$\{showActionBtn\s*\?\s*"flex"\s*:\s*"none"\}/,
+    );
+  },
+);
+
+Deno.test(
+  "chat-box and connected-chat render suggestedMessages in empty state with light and dark mode support",
+  () => {
+    assertEquals(resolveSuggestedMessage("Hello!"), {
+      label: "Hello!",
+      text: "Hello!",
+    });
+    assertEquals(
+      resolveSuggestedMessage({
+        label: "Check status",
+        text: "Are any of my lines disconnected?",
+      }),
+      {
+        label: "Check status",
+        text: "Are any of my lines disconnected?",
+      },
+    );
+
+    const lightStyle = suggestedMessageButtonStyle(false);
+    const darkStyle = suggestedMessageButtonStyle(true);
+    assertStringIncludes(lightStyle, "rgba(255,255,255,0.88)");
+    assertStringIncludes(darkStyle, "rgba(255,255,255,0.04)");
+
+    const chatBoxCode = Deno.readTextFileSync(
+      new URL("./chat-box.ts", import.meta.url).pathname,
+    );
+    const connectedChatCode = Deno.readTextFileSync(
+      new URL("./connected-chat.ts", import.meta.url).pathname,
+    );
+    assertMatch(
+      chatBoxCode,
+      /data-testid="suggested-messages"[\s\S]*?data-testid="suggested-message"[\s\S]*?this\._sendSuggestedMessage\(text\)/,
+    );
+    assertMatch(
+      connectedChatCode,
+      /\.suggestedMessages="\$\{this\.suggestedMessages\}"/,
     );
   },
 );

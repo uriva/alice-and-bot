@@ -10,8 +10,14 @@ import type {
   ActiveStream,
   DiffPart,
   EditHistoryEntry,
+  SuggestedMessage,
   TimelineEntry,
 } from "./types.ts";
+
+export const resolveSuggestedMessage = (
+  item: SuggestedMessage,
+): { label: string; text: string } =>
+  typeof item === "string" ? { label: item, text: item } : item;
 
 export type IdentityDetails = Record<string, { name: string; avatar?: string }>;
 

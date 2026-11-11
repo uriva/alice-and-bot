@@ -4,6 +4,7 @@ import { ConnectedChat as ConnectedChatElement } from "./components/connected-ch
 import { ChatBox as ChatBoxElement } from "./components/chat-box.ts";
 import { CanvasView as CanvasViewElement } from "../canvas/canvas-view.ts";
 import type { Credentials } from "../protocol/src/clientApi.ts";
+import type { SuggestedMessage } from "./components/types.ts";
 import {
   createWidget,
   type WidgetColorScheme,
@@ -48,6 +49,7 @@ type WidgetProps = {
   defaultName?: string;
   colorScheme?: WidgetColorScheme;
   enableVoiceCall?: boolean;
+  suggestedMessages?: SuggestedMessage[];
 };
 
 export const Widget = ({
@@ -59,6 +61,7 @@ export const Widget = ({
   defaultName,
   colorScheme,
   enableVoiceCall,
+  suggestedMessages,
 }: WidgetProps): null => {
   const destroyRef = React.useRef<(() => void) | null>(null);
 
@@ -72,6 +75,7 @@ export const Widget = ({
       ...(defaultName !== undefined && { defaultName }),
       ...(colorScheme !== undefined && { colorScheme }),
       ...(enableVoiceCall !== undefined && { enableVoiceCall }),
+      ...(suggestedMessages !== undefined && { suggestedMessages }),
     };
     const { element, destroy } = createWidget(params);
     document.body.appendChild(element);

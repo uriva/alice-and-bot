@@ -138,3 +138,40 @@ export const titleStyle = (isDark: boolean, custom?: CustomColors) => {
     isLightColor(primary, isDark) ? "#222" : "#fff"
   };transition:background 0.2s,color 0.2s`;
 };
+
+export const emptySuggestionsWrapStyle =
+  "max-width:680px;width:100%;padding:20px 12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:20px";
+
+export const emptyHeadingStyle = (isDark: boolean, textColor?: string) =>
+  `font-size:15px;font-weight:500;line-height:1.5;max-width:520px;color:${
+    textColor ?? (isDark ? "#cbd5e1" : "#475569")
+  }`;
+
+export const suggestedGridStyle =
+  "display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;width:100%";
+
+export const suggestedMessageButtonStyle = (
+  isDark: boolean,
+  custom?: CustomColors,
+) =>
+  [
+    "padding:12px 15px",
+    "border-radius:12px",
+    `border:1px solid ${
+      isDark ? "rgba(255,255,255,0.1)" : "rgba(15,23,42,0.1)"
+    }`,
+    `background:${
+      custom?.inputBackground ??
+        (isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.88)")
+    }`,
+    `color:${custom?.text ?? (isDark ? "#e2e8f0" : "#1e293b")}`,
+    `box-shadow:${
+      isDark ? "0 1px 2px rgba(0,0,0,0.25)" : "0 1px 2px rgba(0,0,0,0.04)"
+    }`,
+    "font-size:13.5px",
+    "line-height:1.4",
+    "text-align:start",
+    "cursor:pointer",
+    "font-family:inherit",
+    "transition:transform 0.14s ease,border-color 0.14s ease,filter 0.14s ease",
+  ].join(";");

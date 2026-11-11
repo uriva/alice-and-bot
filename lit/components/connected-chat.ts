@@ -60,6 +60,7 @@ import type {
   CustomColors,
   EditHistoryEntry,
   Reaction,
+  SuggestedMessage,
 } from "./types.ts";
 import {
   isPast,
@@ -653,6 +654,7 @@ export class ConnectedChat extends LitElement {
     enableChatSwitching: { type: Boolean },
     isDark: { type: Boolean },
     emptyMessage: { attribute: false },
+    suggestedMessages: { attribute: false },
     onChatWith: { attribute: false },
     onNewThread: { attribute: false },
     onConversationChange: { attribute: false },
@@ -669,6 +671,7 @@ export class ConnectedChat extends LitElement {
   declare enableChatSwitching: boolean;
   declare isDark: boolean;
   declare emptyMessage: string | undefined;
+  declare suggestedMessages: SuggestedMessage[] | undefined;
   declare onChatWith: ((publicSignKey: string) => void) | undefined;
   declare onNewThread: ((conversationId: string) => void) | undefined;
   declare onConversationChange: ((conversationId: string) => void) | undefined;
@@ -1730,6 +1733,7 @@ export class ConnectedChat extends LitElement {
         .isGroupChat="${this._isGroupChat}"
         .isDark="${isDark}"
         .emptyMessage="${this.emptyMessage}"
+        .suggestedMessages="${this.suggestedMessages}"
         @new-thread="${this._handleNewThread}"
         @rename-conversation="${this._handleOpenRename}"
         @show-participants="${this._handleShowParticipants}"

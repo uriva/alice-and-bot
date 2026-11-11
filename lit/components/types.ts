@@ -66,6 +66,8 @@ export type TimelineEntry =
   | { kind: "stream"; stream: ActiveStream; prevMsg?: AbstracChatMessage }
   | { kind: "typing"; timestamp: number };
 
+export type SuggestedMessage = string | { label: string; text: string };
+
 export type CustomColors = {
   background?: string;
   text?: string;

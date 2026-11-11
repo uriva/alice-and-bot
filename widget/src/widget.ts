@@ -17,6 +17,7 @@ import { subscribeIsMobile } from "../../lit/core/responsive.ts";
 import { getOrCreateConversation } from "../../lit/core/subscriptions.ts";
 import "../../lit/components/connected-chat.ts";
 import { isLightColor } from "../../lit/components/design.ts";
+import type { SuggestedMessage } from "../../lit/components/types.ts";
 import { copyToClipboard } from "../../lit/components/utils.ts";
 
 const fontStack = [
@@ -257,6 +258,7 @@ export type WidgetParams = {
   defaultName?: string;
   colorScheme?: WidgetColorScheme;
   enableVoiceCall?: boolean;
+  suggestedMessages?: SuggestedMessage[];
 };
 
 const showToast = (text: string) => {
@@ -698,6 +700,7 @@ export const createWidget = (
           chat.darkModeOverride = app.mode === "dark";
           chat.isDark = app.mode === "dark";
           chat.enableVoiceCall = params.enableVoiceCall ?? false;
+          chat.suggestedMessages = params.suggestedMessages;
           chat.customColors = {
             background: app.colors.background,
             text: app.colors.text,
@@ -730,6 +733,7 @@ export const createWidget = (
           chat.darkModeOverride = app.mode === "dark";
           chat.isDark = app.mode === "dark";
           chat.enableVoiceCall = params.enableVoiceCall ?? false;
+          chat.suggestedMessages = params.suggestedMessages;
           chat.customColors = {
             background: app.colors.background,
             text: app.colors.text,
