@@ -116,7 +116,9 @@ export const endpoints: BackendApiImpl = {
         : { conversationKey: keys[0].key };
     },
     createConversation,
-    sendMessage: async ({ encryptedMessage, conversation, silent }) => {
+    sendMessage: async (
+      { encryptedMessage, conversation, silent, senderPublicSignKey },
+    ) => {
       console.log(
         "[DEBUG sendMessage] received for conversation",
         conversation,
@@ -154,6 +156,7 @@ export const endpoints: BackendApiImpl = {
                   messageId,
                   conversationId: conversation,
                   timestamp,
+                  senderPublicSignKey,
                 }).catch((e) => console.error("push dispatch failed", e)),
               ]
               : []),

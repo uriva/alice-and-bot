@@ -65,10 +65,6 @@ import {
   showAuthorName,
 } from "./utils.ts";
 
-declare const AndroidNotificationBridge: {
-  showNotification(title: string, body: string): void;
-} | undefined;
-
 const indicatorColor = (isDark: boolean, color?: string, stale?: boolean) =>
   stale
     ? (isDark ? "#f87171" : "#b91c1c")
@@ -1456,17 +1452,6 @@ export class ChatBox extends LitElement {
     });
     if (document.hidden && newIncoming.length > 0) {
       playNotificationSound();
-      if (
-        typeof AndroidNotificationBridge !== "undefined" &&
-        AndroidNotificationBridge
-      ) {
-        newIncoming.forEach((m) => {
-          AndroidNotificationBridge.showNotification(
-            m.authorName || "New message",
-            m.text || "Sent an attachment",
-          );
-        });
-      }
     }
   }
 

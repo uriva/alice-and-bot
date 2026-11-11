@@ -36,6 +36,7 @@ import {
   storeTransferPayload,
 } from "../../backend/src/api.ts";
 import { registerPush } from "../../protocol/src/pushClient.ts";
+import { isIosDevice, isStandaloneApp } from "./pwaInstall.ts";
 import { copyToClipboard } from "../../lit/components/utils.ts";
 import { chatPath, homePath } from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
@@ -2435,11 +2436,101 @@ const handleChatWith = async (publicSignKey: string) => {
   }
 };
 
+const pushBannerContainerStyle =
+  "flex items-center justify-between gap-2 px-3 py-2 text-xs border-b bg-emerald-50 text-emerald-950 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-900/60 flex-shrink-0";
+const pushBannerEnableBtnStyle =
+  "px-2.5 py-1 rounded-md font-semibold bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-black dark:hover:bg-emerald-400 transition-colors";
+const pushBannerDismissBtnStyle =
+  "px-1.5 py-0.5 rounded text-emerald-800 hover:bg-emerald-200/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition-colors";
+const pushDismissStorageKey = "alicebot_push_dismissed";
+const pushNudgeState = { triggered: false };
+
+const isPushBannerDismissed = () => {
+  try {
+    return globalThis.localStorage?.getItem(pushDismissStorageKey) === "1";
+  } catch {
+    return false;
+  }
+};
+
+const dismissPushBanner = () => {
+  pushNudgeState.triggered = false;
+  try {
+    globalThis.localStorage?.setItem(pushDismissStorageKey, "1");
+  } catch {
+    // ignore storage errors
+  }
+  rerenderChat();
+};
+
+const enablePushFromBanner = () => {
+  if (!credentials) return;
+  toastPromise(registerPush(credentials), {
+    loading: "Enabling notifications\u2026",
+    success: "Notifications enabled",
+    error: "Failed to enable notifications",
+  }).then(() => {
+    pushNudgeState.triggered = false;
+    rerenderChat();
+  }).catch(() => {
+    rerenderChat();
+  });
+};
+
+const pushPromptBanner = () => {
+  if (!pushNudgeState.triggered || !credentials || isPushBannerDismissed()) {
+    return nothing;
+  }
+  const canWebPush = "serviceWorker" in navigator &&
+    "PushManager" in globalThis && "Notification" in globalThis;
+  if (canWebPush && globalThis.Notification.permission === "default") {
+    return html`
+      <div class="${pushBannerContainerStyle}" data-testid="push-prompt-banner">
+        <span>Get notified when replies arrive</span>
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            type="button"
+            class="${pushBannerEnableBtnStyle}"
+            @click="${enablePushFromBanner}"
+          >
+            Enable
+          </button>
+          <button
+            type="button"
+            class="${pushBannerDismissBtnStyle}"
+            aria-label="Dismiss notification prompt"
+            @click="${dismissPushBanner}"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    `;
+  }
+  if (isIosDevice() && !isStandaloneApp() && !canWebPush) {
+    return html`
+      <div class="${pushBannerContainerStyle}" data-testid="ios-push-hint-banner">
+        <span>Tap Share → Add to Home Screen to enable push notifications</span>
+        <button
+          type="button"
+          class="${pushBannerDismissBtnStyle}"
+          aria-label="Dismiss notification hint"
+          @click="${dismissPushBanner}"
+        >
+          ✕
+        </button>
+      </div>
+    `;
+  }
+  return nothing;
+};
+
 const chatPanelTemplate = () => {
   if (!credentials || !selectedConversation) {
     return emptyChatsView(undefined, () => setView_("new_chat"));
   }
   return html`
+    ${pushPromptBanner()}
     <alice-connected-chat
       style="${"display:flex;flex-direction:column;flex-grow:1;min-height:0"}"
       .credentials="${credentials}"
@@ -2449,6 +2540,12 @@ const chatPanelTemplate = () => {
       .onChatWith="${handleChatWith}"
       .onNewThread="${handleNewThread}"
       .enableVoiceCall="${true}"
+      @message-sent="${() => {
+        if (!pushNudgeState.triggered && !isPushBannerDismissed()) {
+          pushNudgeState.triggered = true;
+          rerenderChat();
+        }
+      }}"
       @conversation-renamed="${(e: Event) => {
         const detail = (e as CustomEvent).detail as
           | { conversationId?: string; title?: string }
@@ -2779,9 +2876,12 @@ const initLoggedInState = () => {
   // Subscribe to profile
   subscribeYourKeyProfile(credentials.publicSignKey);
   fetchBalance();
-  // Active reporting
+  // Active reporting & silent push subscription refresh when already granted
   if (activeReportCleanup) activeReportCleanup();
   activeReportCleanup = startActiveReporting(credentials);
+  if (globalThis.Notification?.permission === "granted") {
+    registerPush(credentials).catch(() => {});
+  }
 };
 
 const cleanup = () => {

@@ -75,14 +75,9 @@
       "opencode-plugin/index.test.ts"
     ]
   },
-  "fmt": {
-    "exclude": [
-      "android/**"
-    ]
-  },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "1.0.42",
+  "version": "1.0.43",
   "publish": {
     "include": [
       "mod.ts",

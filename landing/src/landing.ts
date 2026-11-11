@@ -12,6 +12,10 @@ import {
   opencodePath,
 } from "./paths.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
+import { triggerPwaInstall } from "./pwaInstall.ts";
+
+const installButtonSecondaryStyle =
+  "px-5 py-3 bg-white hover:bg-gray-50 dark:bg-[#151816] dark:hover:bg-[#1c201d] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] shadow-xs";
 
 const skillInstallCommand = `mkdir -p ~/.agents/skills/alice-and-bot
 curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
@@ -533,14 +537,14 @@ const humansTab = () =>
           </ol>
           <div class="w-full border-t border-gray-200 dark:border-gray-800 my-3">
           </div>
-          <a
-            href="https://storage.googleapis.com/alice-and-bot/android/app-debug.apk"
+          <button
+            type="button"
             class="${buttonClass(
               "default",
               "default",
               "w-full text-center flex items-center justify-center gap-2",
             )}"
-            download="alice-and-bot.apk"
+            @click="${() => triggerPwaInstall()}"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -556,8 +560,8 @@ const humansTab = () =>
                 d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
               />
             </svg>
-            Download Native APK
-          </a>
+            Install App (1 Tap)
+          </button>
         </div>
         <div
           class="flex flex-col items-center p-6 bg-white dark:bg-[#121413] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm"
@@ -822,10 +826,10 @@ const heroSection = () =>
               </svg>
               Open Messenger
             </a>
-            <a
-              href="https://storage.googleapis.com/alice-and-bot/android/app-debug.apk"
-              class="px-5 py-3 bg-white hover:bg-gray-50 dark:bg-[#151816] dark:hover:bg-[#1c201d] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] shadow-xs"
-              download="alice-and-bot.apk"
+            <button
+              type="button"
+              class="${installButtonSecondaryStyle}"
+              @click="${() => triggerPwaInstall()}"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -841,8 +845,8 @@ const heroSection = () =>
                   d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
                 />
               </svg>
-              Download Android App
-            </a>
+              Install App
+            </button>
           </div>
 
           <div

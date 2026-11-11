@@ -1092,6 +1092,9 @@ export class ConnectedChat extends LitElement {
   private _handleSend = (text: string, replyTo?: string) => {
     const targetId = this._activeConversationId || this.conversationId;
     if (!this._conversationKey || !this.credentials || !targetId) return;
+    this.dispatchEvent(
+      new CustomEvent("message-sent", { bubbles: true, composed: true }),
+    );
     sendMessageWithKey({
       conversationKey: this._conversationKey,
       credentials: this.credentials,

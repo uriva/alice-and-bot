@@ -5,6 +5,7 @@ import { setErrorReporter } from "../../lit/core/error-reporter.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { initRouter } from "./router.ts";
+import { initPwaInstall } from "./pwaInstall.ts";
 import { chat } from "./chat.ts";
 import { guide } from "./guide.ts";
 import { landing } from "./landing.ts";
@@ -31,6 +32,7 @@ const anomalisaReporter = captureClientErrors({
 });
 
 if (typeof window !== "undefined") {
+  initPwaInstall();
   posthog.init("phc_C5kWoUuyR7D4qa5Cgw5aQGQx5zkhu92EUpTJ69ES5yJL", {
     api_host: "https://us.posthog.com",
   });

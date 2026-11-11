@@ -5,7 +5,10 @@ export const startActiveReportingWith = (
   reportActiveFn: (creds: Credentials) => Promise<unknown>,
 ) =>
 (creds: Credentials) => {
-  const fire = () => reportActiveFn(creds).catch(() => {});
+  const fire = () => {
+    if (globalThis.document?.visibilityState === "hidden") return;
+    reportActiveFn(creds).catch(() => {});
+  };
   const onVisibility = () => {
     if (globalThis.document?.visibilityState !== "visible") return;
     fire();

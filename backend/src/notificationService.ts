@@ -131,11 +131,47 @@ const ensureVapidConfigured = () => {
   }
 };
 
+const pushUrgencyOptions = { urgency: "high" as const, TTL: 86400 };
+
+const toFetchHeaders = (headers: Record<string, string | number>) =>
+  Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => [k, String(v)]),
+  );
+
+const deliverPushSubscription = (payloadJson: string) =>
+async (sub: {
+  id: string;
+  subscription: webpush.PushSubscription;
+}) => {
+  const details = webpush.generateRequestDetails(
+    sub.subscription,
+    payloadJson,
+    pushUrgencyOptions,
+  );
+  const res = await fetch(details.endpoint, {
+    method: details.method,
+    headers: toFetchHeaders(details.headers),
+    body: details.body ? new Uint8Array(details.body) : undefined,
+  }).catch((err) => {
+    console.error("Failed to send web push", err);
+    return null;
+  });
+  if (res && (res.status === 404 || res.status === 410)) {
+    await transact(tx.pushSubscriptions[sub.id].delete());
+  }
+};
+
 export const sendPushToParticipants = async (
-  { messageId: _messageId, conversationId, timestamp }: {
+  {
+    messageId: _messageId,
+    conversationId,
+    timestamp,
+    senderPublicSignKey,
+  }: {
     messageId?: string;
     conversationId: string;
     timestamp: number;
+    senderPublicSignKey?: string;
   },
 ) => {
   ensureVapidConfigured();
@@ -147,46 +183,42 @@ export const sendPushToParticipants = async (
   });
   if (!conversations.length) return {};
   const conversation = coerce<Conversation>(conversations[0]);
-  const participantKeys = conversation.participants.map((p) => p.publicSignKey);
+  const allKeys = conversation.participants.map((p) => p.publicSignKey);
+  const recipientKeys = senderPublicSignKey
+    ? allKeys.filter((k) => k !== senderPublicSignKey)
+    : allKeys;
+  if (recipientKeys.length === 0) return {};
   const { identities } = await query({
-    identities: { $: { where: { publicSignKey: { $in: participantKeys } } } },
+    identities: { $: { where: { publicSignKey: { $in: allKeys } } } },
   });
-  const activeThreshold = Date.now() - 60_000;
-  const inactiveIdentities = identities.filter(
-    (i: { lastActiveAt?: number }) =>
-      !i.lastActiveAt || i.lastActiveAt < activeThreshold,
-  );
-  if (inactiveIdentities.length === 0) return {};
+  const senderName = senderPublicSignKey
+    ? identities.find((i) => i.publicSignKey === senderPublicSignKey)?.name
+    : undefined;
+  const recipientIds = identities
+    .filter((i) => recipientKeys.includes(i.publicSignKey))
+    .map((i) => i.id);
+  if (recipientIds.length === 0) return {};
   const { pushSubscriptions } = await query({
     pushSubscriptions: {
       owner: {},
       conversation: {},
       $: {
-        where: { "owner.id": { $in: inactiveIdentities.map((i) => i.id) } },
+        where: { "owner.id": { $in: recipientIds } },
       },
     },
   });
-  const payload = {
+  const payloadJson = JSON.stringify({
     type: "message",
     conversationId: conversation.id,
     conversationTitle: conversation.title,
+    ...(senderName ? { senderName } : {}),
     timestamp,
-  };
-  for (
-    const sub of pushSubscriptions.filter((s) =>
-      !s.conversation || s.conversation.id === conversation.id
-    )
-  ) {
-    try {
-      await webpush.sendNotification(sub.subscription, JSON.stringify(payload));
-    } catch (err) {
-      const status = (err && (err as { statusCode?: number }).statusCode) ?? 0;
-      if (status === 404 || status === 410) {
-        await transact(tx.pushSubscriptions[sub.id].delete());
-      } else {
-        console.error("Failed to send web push", status, err);
-      }
-    }
-  }
+  });
+  const matchingSubscriptions = pushSubscriptions.filter((s) =>
+    !s.conversation || s.conversation.id === conversation.id
+  );
+  await Promise.all(
+    matchingSubscriptions.map(deliverPushSubscription(payloadJson)),
+  );
   return {};
 };

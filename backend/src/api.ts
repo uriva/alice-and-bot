@@ -227,6 +227,7 @@ export const backendApiSchema = {
       // The payload is encrypted, so the server cannot tell a canvas event
       // from a chat message. The sender declares that it should not notify.
       silent: z.boolean().optional(),
+      senderPublicSignKey: z.string().optional(),
     }),
     output: z.object({ messageId: z.string() }),
   }),

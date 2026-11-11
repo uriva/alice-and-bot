@@ -256,6 +256,7 @@ export const sendMessageWithKey = async ({
       // A canvas event is not something a participant should be notified
       // about, and the server cannot see inside the payload to know.
       silent: message.type === "event" ? true : undefined,
+      senderPublicSignKey: credentials.publicSignKey,
       encryptedMessage: await encryptAndSign(
         conversationKey,
         credentials,

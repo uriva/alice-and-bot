@@ -1,16 +1,18 @@
 import { assertEquals } from "@std/assert";
+import { FakeTime } from "@std/testing/time";
 import { startActiveReportingWith } from "./activeReporting.ts";
 import type { Credentials } from "../../protocol/src/clientApi.ts";
 
-const dummyCredentials = {
+const dummyCredentials: Credentials = {
   publicSignKey: "pub-key-123",
   privateSignKey: "priv-key-456",
-} as unknown as Credentials;
+  privateEncryptKey: "enc-key-789",
+};
 
 Deno.test("startActiveReporting - catches reportActive errors", async () => {
-  let callCount = 0;
+  const calls: number[] = [];
   const failingReportActive = () => {
-    callCount++;
+    calls.push(1);
     return Promise.reject(new TypeError("Failed to fetch"));
   };
 
@@ -21,5 +23,40 @@ Deno.test("startActiveReporting - catches reportActive errors", async () => {
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   cleanup();
-  assertEquals(callCount, 1);
+  assertEquals(calls.length, 1);
 });
+
+Deno.test(
+  "startActiveReporting - skips periodic heartbeats while document is hidden",
+  () => {
+    const time = new FakeTime();
+    const calls: number[] = [];
+    const origDoc = globalThis.document;
+    const state = { visibilityState: "hidden" };
+    Object.defineProperty(globalThis, "document", {
+      value: {
+        get visibilityState() {
+          return state.visibilityState;
+        },
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      },
+      configurable: true,
+    });
+
+    const cleanup = startActiveReportingWith(() => {
+      calls.push(1);
+      return Promise.resolve();
+    })(dummyCredentials);
+
+    time.tick(90_000);
+    cleanup();
+    Object.defineProperty(globalThis, "document", {
+      value: origDoc,
+      configurable: true,
+    });
+    time.restore();
+
+    assertEquals(calls.length, 0);
+  },
+);
