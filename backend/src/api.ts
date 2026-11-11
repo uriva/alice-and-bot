@@ -317,7 +317,9 @@ export const backendApiSchema = {
     z.object({
       subscription: z.object({
         endpoint: z.string(),
-        expirationTime: z.number().nullable(),
+        expirationTime: z.number().nullable().optional().transform((v) =>
+          v ?? null
+        ),
         keys: z.object({ p256dh: z.string(), auth: z.string() }),
       }),
       conversationId: z.string().optional(),

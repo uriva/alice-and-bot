@@ -12,11 +12,59 @@ const urlBase64ToUint8Array = (base64String: string) => {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = globalThis.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+  return Uint8Array.from(rawData, (ch) => ch.charCodeAt(0));
+};
+
+const ensureNotificationPermission = async () => {
+  if (typeof globalThis.Notification === "undefined") return;
+  if (globalThis.Notification.permission === "denied") {
+    throw new Error(
+      "Notifications are blocked — allow them in App Info → Notifications",
+    );
   }
-  return outputArray;
+  if (globalThis.Notification.permission === "default") {
+    const perm = await globalThis.Notification.requestPermission();
+    if (perm !== "granted") {
+      throw new Error("Notification permission was not granted");
+    }
+  }
+};
+
+const subscribeWithKeyRetry = async (
+  reg: ServiceWorkerRegistration,
+  applicationServerKey: Uint8Array<ArrayBuffer>,
+) => {
+  try {
+    return await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey,
+    });
+  } catch (err) {
+    const existing = await reg.pushManager.getSubscription();
+    if (!existing) throw err;
+    await existing.unsubscribe();
+    return reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey,
+    });
+  }
+};
+
+const toNormalizedSubscription = (
+  sub: PushSubscription,
+): PushSubscriptionJSON => {
+  const raw = sub.toJSON();
+  const endpoint = raw.endpoint ?? sub.endpoint;
+  const p256dh = raw.keys?.p256dh ?? "";
+  const auth = raw.keys?.auth ?? "";
+  if (!endpoint || !p256dh || !auth) {
+    throw new Error("Push subscription missing encryption keys");
+  }
+  return {
+    endpoint,
+    expirationTime: raw.expirationTime ?? null,
+    keys: { p256dh, auth },
+  };
 };
 
 type RegisterOptions = { conversationId?: string; swPath?: string };
@@ -26,17 +74,19 @@ export const registerPush = async (
   options: RegisterOptions = {},
 ) => {
   if (!("serviceWorker" in navigator) || !("PushManager" in globalThis)) {
-    return { supported: false } as const;
+    throw new Error("Push notifications are not supported in this browser");
   }
+  await ensureNotificationPermission();
   const swPath = options.swPath ?? "/sw.js";
-  const reg = await navigator.serviceWorker.register(swPath);
+  await navigator.serviceWorker.register(swPath);
+  const reg = await navigator.serviceWorker.ready;
   const { publicKey } = await getVapidPublicKey();
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicKey),
-  });
+  const sub = await subscribeWithKeyRetry(
+    reg,
+    urlBase64ToUint8Array(publicKey),
+  );
   const payload = {
-    subscription: sub.toJSON() as PushSubscriptionJSON,
+    subscription: toNormalizedSubscription(sub),
     conversationId: options.conversationId,
   };
   await registerPushSubscription(

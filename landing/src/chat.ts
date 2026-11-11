@@ -1957,7 +1957,7 @@ const yourKey = () => {
           toastPromise(registerPush(credentials!), {
             loading: "Enabling notifications\u2026",
             success: "Notifications enabled",
-            error: "Failed to enable notifications",
+            error: formatPushError,
           }).catch(() => {})}">
           Enable push notifications
         </button>
@@ -2504,12 +2504,17 @@ const dismissPushBanner = () => {
   rerenderChat();
 };
 
+const formatPushError = (e: unknown) =>
+  e instanceof Error && e.message
+    ? e.message
+    : "Failed to enable notifications";
+
 const enablePushFromBanner = () => {
   if (!credentials) return;
   toastPromise(registerPush(credentials), {
     loading: "Enabling notifications\u2026",
     success: "Notifications enabled",
-    error: "Failed to enable notifications",
+    error: formatPushError,
   }).then(() => {
     pushNudgeState.triggered = false;
     rerenderChat();
