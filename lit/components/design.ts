@@ -1,23 +1,24 @@
 import type { CustomColors } from "./types.ts";
 
 const chatBackgroundPattern = (isDarkMode: boolean) =>
-  `url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='p' x='0' y='0' width='40' height='40' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='20' cy='20' r='1' fill='${
-    isDarkMode ? "%23222" : "%23e8e8e0"
-  }'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='200' height='200' fill='${
-    isDarkMode ? "%230a0a0a" : "%23f8f7f4"
-  }'/%3E%3Crect width='200' height='200' fill='url(%23p)'/%3E%3C/svg%3E")`;
+  `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='p' x='0' y='0' width='36' height='36' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='18' cy='18' r='1' fill='${
+    isDarkMode ? "%231f1e1b" : "%23e2ded3"
+  }'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='180' height='180' fill='${
+    isDarkMode ? "%230c0c0b" : "%23f6f4ee"
+  }'/%3E%3Crect width='180' height='180' fill='url(%23p)'/%3E%3C/svg%3E")`;
 
 export const widgetColors = (isDarkMode: boolean, custom?: CustomColors) => ({
   background: custom?.background ?? chatBackgroundPattern(isDarkMode),
-  backgroundColor: custom?.background ?? (isDarkMode ? "#0a0a0a" : "#f8f7f4"),
-  color: custom?.text ?? (isDarkMode ? "#f4f4f4" : "#222"),
+  backgroundColor: custom?.background ?? (isDarkMode ? "#0c0c0b" : "#f6f4ee"),
+  color: custom?.text ?? (isDarkMode ? "#f3f1ea" : "#181715"),
 });
 
 export const chatContainerStyle = (
   isDarkMode: boolean,
   custom?: CustomColors,
-) =>
-  [
+) => {
+  const w = widgetColors(isDarkMode, custom);
+  return [
     "position:relative",
     "display:flex",
     "overflow:hidden",
@@ -26,41 +27,39 @@ export const chatContainerStyle = (
     "min-height:0",
     "min-width:0",
     "transition:background 0.2s,color 0.2s,border-color 0.2s",
-    ...(() => {
-      const w = widgetColors(isDarkMode, custom);
-      return [
-        `background:${w.background}`,
-        `background-color:${w.backgroundColor}`,
-        `color:${w.color}`,
-      ];
-    })(),
+    `background:${w.background}`,
+    `background-color:${w.backgroundColor}`,
+    `color:${w.color}`,
   ].join(";");
+};
 
 export const contentMaxWidthStyle = (custom?: CustomColors) =>
   `max-width:${
-    custom?.chatMaxWidth || "900px"
+    custom?.chatMaxWidth || "860px"
   };margin:0 auto;width:100%;box-sizing:border-box`;
 
-export const loadingStyle = "font-size:12px;color:#bbb";
+export const loadingStyle = "font-size:12px;color:#9c968c";
 
 export const centerFillStyle = (isDarkMode: boolean) =>
   `display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;color:${
-    isDarkMode ? "#9ca3af" : "#888"
+    isDarkMode ? "#9c968c" : "#78736a"
   }`;
 
 export const defaultOtherBubble = (isDark: boolean) =>
-  isDark ? "#1e1e22" : "#ffffff";
+  isDark ? "#171614" : "#ffffff";
 
-export const primaryHue = 170;
-const avatarHues = [primaryHue, 105, 30, 300, 270, 0, 210, 150];
+export const primaryHue = 215;
+const avatarHues = [primaryHue, 16, 36, 258, 342, 198, 28, 236];
+
+const hashString = (str: string) =>
+  Array.from(str).reduce(
+    (hash, ch) => ch.charCodeAt(0) + ((hash << 5) - hash),
+    0,
+  );
 
 export const avatarColor = (str: string, isDark: boolean) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const h = avatarHues[Math.abs(hash) % avatarHues.length];
-  return `hsl(${h}, 65%, ${isDark ? 65 : 35}%)`;
+  const h = avatarHues[Math.abs(hashString(str)) % avatarHues.length];
+  return `hsl(${h}, ${isDark ? 48 : 44}%, ${isDark ? 56 : 42}%)`;
 };
 
 const hexLightness = (hex: string) => {
@@ -80,7 +79,7 @@ export const isLightColor = (color: string, isDark?: boolean) => {
 };
 
 export const defaultPrimary = (isDark: boolean) =>
-  isDark ? `hsl(${primaryHue}, 42%, 24%)` : `hsl(${primaryHue}, 55%, 45%)`;
+  isDark ? `hsl(${primaryHue}, 34%, 28%)` : `hsl(${primaryHue}, 38%, 36%)`;
 
 export const attachmentPrimaryColor = (
   isDark: boolean,
@@ -133,10 +132,15 @@ export const shouldShowName = (
 ) => isStartOfSequence && !isOwn && !hideNames && isGroupChat;
 
 export const titleStyle = (isDark: boolean, custom?: CustomColors) => {
-  const primary = custom?.primary ?? defaultPrimary(isDark);
-  return `display:flex;align-items:center;justify-content:center;font-weight:bold;padding:12px 0;font-size:16px;background:${primary};color:${
-    isLightColor(primary, isDark) ? "#222" : "#fff"
-  };transition:background 0.2s,color 0.2s`;
+  if (custom?.primary) {
+    return `display:flex;align-items:center;justify-content:center;font-weight:600;padding:12px 0;font-size:15px;letter-spacing:-0.01em;background:${custom.primary};color:${
+      isLightColor(custom.primary, isDark) ? "#222" : "#fff"
+    };transition:background 0.2s,color 0.2s`;
+  }
+  const bg = isDark ? "#141412" : "#faf9f5";
+  const fg = isDark ? "#f3f1ea" : "#181715";
+  const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(24,23,21,0.08)";
+  return `display:flex;align-items:center;justify-content:center;font-weight:600;padding:12px 0;font-size:15px;letter-spacing:-0.01em;background:${bg};color:${fg};border-bottom:1px solid ${border};transition:background 0.2s,color 0.2s,border-color 0.2s`;
 };
 
 export const emptySuggestionsWrapStyle =
@@ -144,7 +148,7 @@ export const emptySuggestionsWrapStyle =
 
 export const emptyHeadingStyle = (isDark: boolean, textColor?: string) =>
   `font-size:15px;font-weight:500;line-height:1.5;max-width:520px;color:${
-    textColor ?? (isDark ? "#cbd5e1" : "#475569")
+    textColor ?? (isDark ? "#d6d3cb" : "#57534e")
   }`;
 
 export const suggestedGridStyle =
@@ -153,7 +157,7 @@ export const suggestedGridStyle =
 export const suggestionTextColor = (primary: string, isDark: boolean) =>
   isDark
     ? `color-mix(in srgb, ${primary} 60%, #ffffff)`
-    : `color-mix(in srgb, ${primary} 78%, #0f172a)`;
+    : `color-mix(in srgb, ${primary} 78%, #181715)`;
 
 export const suggestionBorderColor = (primary: string, isDark: boolean) =>
   isDark
@@ -174,14 +178,14 @@ export const suggestedMessageButtonStyle = (
   const primary = custom?.primary ?? defaultPrimary(isDark);
   return [
     "padding:12px 15px",
-    "border-radius:12px",
+    "border-radius:14px",
     `border:1px solid ${suggestionBorderColor(primary, isDark)}`,
     `background:color-mix(in srgb, ${primary} ${isDark ? "14%" : "8%"}, ${
       suggestionSurfaceBase(isDark, custom)
     })`,
     `color:${suggestionTextColor(primary, isDark)}`,
     `box-shadow:${
-      isDark ? "0 1px 2px rgba(0,0,0,0.25)" : "0 1px 2px rgba(0,0,0,0.04)"
+      isDark ? "0 1px 2px rgba(0,0,0,0.25)" : "0 1px 2px rgba(24,23,21,0.04)"
     }`,
     "font-size:13.5px",
     "font-weight:500",

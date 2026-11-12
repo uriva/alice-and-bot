@@ -1,6 +1,6 @@
 import { html, nothing, render, type TemplateResult } from "lit";
 import "../../lit/components/connected-chat.ts";
-import { buttonClass, copyableString } from "./components.ts";
+import { buttonClass } from "./components.ts";
 import {
   avatarColor,
   chatAvatar,
@@ -62,17 +62,18 @@ import {
 
 // --- Styles ---
 
-const textColorStyle = "text-gray-900 dark:text-gray-200";
-const sectionSpacing = "mb-6";
+const textColorStyle = "text-[#181715] dark:text-[#f3f1ea]";
+const sectionSpacing = "mb-5";
 const labelStyle =
-  "block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300";
-const labelSmallStyle = "block text-xs text-gray-700 dark:text-gray-400";
+  "block mb-2 text-sm font-medium text-[#181715] dark:text-[#e7e5df]";
+const labelSmallStyle = "block text-xs text-[#66625b] dark:text-[#9c968c]";
 const inputRowStyle = "flex gap-2 mb-2";
 const inputStyle =
-  "border px-3 py-2 rounded-lg bg-gray-50 dark:bg-[#1a1a1a] border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-gray-500 focus:border-gray-500 dark:focus:ring-gray-500 dark:focus:border-gray-500 max-w-md";
-const hintStyle = "text-xs text-gray-600 dark:text-gray-400 mt-1";
-const tagline = "Encrypted chat for the AI era";
-const storeCredentialsLabel = "This is my device, so store my credentials here";
+  "border px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#191815] border-[#dcd8cc] dark:border-[#2e2d28] text-[#181715] dark:text-[#f3f1ea] placeholder-[#8c867c] focus:outline-none focus:ring-2 focus:ring-[#39587f]/35 focus:border-[#39587f] dark:focus:border-[#6b93c4] transition-colors max-w-md";
+const settingsCardClass =
+  "bg-white dark:bg-[#151513] border border-[#e7e4dc] dark:border-[#252420] rounded-2xl p-5 space-y-4";
+const hintStyle = "text-xs text-[#78736a] dark:text-[#8c867c] mt-1";
+const storeCredentialsLabel = "Remember on this device";
 
 // --- Module-level reactive state ---
 
@@ -116,8 +117,6 @@ let loginShowForm: null | "existing" = null;
 let loginDisplayName = "";
 let loginCreatingIdentity = false;
 let loginStoreInBrowser = true;
-let loginShowWhat = false;
-let loginShowNoEmail = false;
 let loginExistingInput = "";
 let loginIsScanningQr = false;
 let qrScanVideoElement: HTMLVideoElement | null = null;
@@ -281,8 +280,10 @@ let yourKeyDepositData: {
   qrUrl: string;
 } | null = null;
 let yourKeyDepositInterval: number | null = null;
+let paidInboxOpen = false;
 let dangerZoneOpen = false;
 let copiedCredentials = false;
+let copiedPublicKey = false;
 let qrDataUrl: string | null = null;
 let qrTransferUrl: string | null = null;
 let qrLoading = false;
@@ -298,12 +299,12 @@ const showToast = (
   const bg = variant === "error"
     ? "#dc2626"
     : variant === "success"
-    ? "#16a34a"
-    : "#333";
+    ? "#39587f"
+    : "#181715";
   const el = Object.assign(document.createElement("div"), {
     textContent: message,
     style:
-      `position:fixed;top:16px;left:50%;transform:translateX(-50%);background:${bg};color:#fff;padding:8px 20px;border-radius:8px;z-index:9999;font-size:14px;transition:opacity 0.3s`,
+      `position:fixed;top:16px;left:50%;transform:translateX(-50%);background:${bg};color:#fff;padding:8px 20px;border-radius:999px;z-index:9999;font-size:13px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,0.18);transition:opacity 0.3s`,
   });
   document.body.appendChild(el);
   setTimeout(() => {
@@ -804,12 +805,11 @@ const chevron = (up: boolean) =>
 
 const logoTemplate = (onClick?: () => void) => {
   const content = html`
-    <div class="flex items-center gap-2">
-      <img src="/icon.png" alt="Alice&Bot" class="w-8 h-8" />
-      <div class="text-left">
-        <div class="text-sm font-semibold">Alice&Bot</div>
-        <div class="text-xs text-gray-600 dark:text-gray-400">${tagline}</div>
-      </div>
+    <div class="flex items-center gap-2.5">
+      <img src="/icon.png" alt="Alice&Bot" class="w-7 h-7" />
+      <span
+        class="text-base font-bold tracking-tight text-[#181715] dark:text-[#f3f1ea]"
+      >Alice&Bot</span>
     </div>
   `;
   return onClick
@@ -1026,15 +1026,15 @@ const renameModalTemplate = () =>
   renameModalConvId
     ? html`
       <div
-        class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4"
         @click="${closeRenameModal}"
       >
         <div
-          class="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col gap-4"
+          class="anim-rise bg-white dark:bg-[#171614] border border-[#e7e4dc] dark:border-[#292824] rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col gap-4"
           @click="${(e: Event) => e.stopPropagation()}"
         >
           <h3
-            class="text-lg font-bold text-center text-gray-900 dark:text-gray-100"
+            class="text-lg font-bold text-center text-[#181715] dark:text-[#f3f1ea]"
           >
             Rename Chat
           </h3>
@@ -1109,7 +1109,7 @@ const toggleDark = () => {
 };
 
 const scrollbarStyle = () =>
-  `scrollbar-color:${currentDark ? "#2a2a2a #0a0a0a" : "#d1d5db #f3f4f6"}`;
+  `scrollbar-color:${currentDark ? "#292824 #141412" : "#d6d2c7 #faf9f5"}`;
 
 // --- Conversation list item ---
 
@@ -1134,12 +1134,12 @@ const conversationListItem = (conv: Conversation) => {
     : swipeTransition;
 
   return html`
-    <li class="relative group overflow-hidden">
+    <li class="relative group overflow-hidden px-2 py-0.5">
       <!-- Swipe background reveal on mobile -->
       ${activeSwipeConvId === conv.id && activeSwipeOffset < 0
         ? html`
           <div
-            class="absolute inset-0 bg-blue-600 dark:bg-blue-700 text-white flex items-center justify-end pr-6 pointer-events-none rounded-lg"
+            class="absolute inset-x-2 inset-y-0.5 bg-[#39587f] text-white flex items-center justify-end pr-5 pointer-events-none rounded-xl"
           >
             <div
               class="flex flex-col items-center justify-center gap-0.5"
@@ -1187,10 +1187,10 @@ const conversationListItem = (conv: Conversation) => {
         @touchmove="${(e: TouchEvent) => handleTouchMove(e, conv.id)}"
         @touchend="${(e: TouchEvent) => handleTouchEnd(e, conv.id)}"
       >
-        <button type="button" class="${`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-300 dark:border-gray-700 transition-colors ${
+        <button type="button" class="${`w-full text-left px-3 py-2.5 flex items-center gap-3 rounded-xl transition-colors ${
           isSelected
-            ? "bg-gray-100 dark:bg-black/50 border-l-4 border-l-gray-500"
-            : "hover:bg-gray-50 dark:hover:bg-[#1a1a1a]/50"
+            ? "bg-[#ebe7dc] dark:bg-[#24231f]"
+            : "hover:bg-[#f0ede4] dark:hover:bg-[#1c1b18]"
         }`}" @click="${() => {
           if (wasSwiping) return;
           selectConversation(conv.id);
@@ -1199,8 +1199,10 @@ const conversationListItem = (conv: Conversation) => {
             name: displayName,
             baseColor: avatarColor(otherKey, currentDark),
           })}
-          <div class="flex-grow overflow-hidden min-w-0 pr-16">
-            <div class="${`font-medium ${textColorStyle} truncate`}">
+          <div class="flex-grow overflow-hidden min-w-0 pr-14">
+            <div class="${`${
+              isSelected ? "font-semibold" : "font-medium"
+            } text-sm ${textColorStyle} truncate`}">
               ${displayName === null ? shimmerText() : displayName}
             </div>
           </div>
@@ -1208,11 +1210,11 @@ const conversationListItem = (conv: Conversation) => {
         ${displayName !== null && !currentIsMobile
           ? html`
             <div
-              class="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center gap-1"
+              class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center gap-0.5"
             >
               <button
                 type="button"
-                class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] hover:text-gray-800 dark:hover:text-gray-200"
+                class="p-1.5 rounded-lg text-[#78736a] hover:bg-black/6 dark:hover:bg-white/10 hover:text-[#181715] dark:hover:text-[#f3f1ea]"
                 title="Rename Chat"
                 @click="${(e: Event) => {
                   e.stopPropagation();
@@ -1223,7 +1225,7 @@ const conversationListItem = (conv: Conversation) => {
               </button>
               <button
                 type="button"
-                class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] hover:text-gray-800 dark:hover:text-gray-200"
+                class="p-1.5 rounded-lg text-[#78736a] hover:bg-black/6 dark:hover:bg-white/10 hover:text-[#181715] dark:hover:text-[#f3f1ea]"
                 title="${isCurrentlyArchived
                   ? "Unarchive Chat"
                   : "Archive Chat"}"
@@ -1252,21 +1254,31 @@ const emptyChatsView = (sq?: string, onNewChat?: () => void) => {
   const isEmpty = !sq?.trim();
   return html`
     <div
-      style="display:flex;flex-direction:column;flex-grow:1;align-items:center;justify-content:center;padding:16px"
+      class="anim-rise"
+      style="display:flex;flex-direction:column;flex-grow:1;align-items:center;justify-content:center;padding:24px"
     >
       ${isEmpty
         ? html`
-          <div class="mb-6 text-center">${logoTemplate()}</div>
+          <img
+            src="/icon.png"
+            alt="Alice&Bot"
+            class="w-12 h-12 mb-3 anim-float opacity-90"
+          />
+          <p class="text-sm text-[#78736a] dark:text-[#8c867c] mb-5">
+            Start a conversation
+          </p>
           <button
             type="button"
-            class="px-6 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-[#2a2a2a] dark:hover:bg-[#333] text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors"
+            class="${buttonClass("default", "default", "px-6")}"
             @click="${onNewChat}"
           >
             + New Chat
           </button>
         `
         : html`
-          <div class="text-gray-600 dark:text-gray-400">No matching chats</div>
+          <div class="text-sm text-[#78736a] dark:text-[#8c867c]">
+            No matching chats
+          </div>
         `}
     </div>
   `;
@@ -1323,13 +1335,13 @@ const newChatScreen = (onChatCreated?: () => void) => {
         showToast("Failed to start conversation", "error");
       });
   return html`
-    <div class="flex flex-col items-center px-4 py-8">
-      <div class="w-full max-w-md">
-        <div class="flex flex-col gap-3 mb-4">
+    <div class="anim-rise flex flex-col items-center px-4 py-8">
+      <div class="${settingsCardClass + " w-full max-w-md"}">
+        <div class="flex flex-col gap-3">
           <input
             id="newChatInput"
             class="${inputStyle + " w-full"}"
-            placeholder="Recipient @alias or public key"
+            placeholder="@alias or public key"
             .value="${newChatInput}"
             aria-label="Recipient alias or public key"
             @input="${(e: Event) => {
@@ -1342,21 +1354,26 @@ const newChatScreen = (onChatCreated?: () => void) => {
               }
             }}"
           />
-          <div class="${hintStyle}">Use comma to add multiple recipients.</div>
-          <div>
-            <button type="button" class="${buttonClass()}" @click="${onStart}">
-              Start New Conversation
-            </button>
-          </div>
+          <div class="${hintStyle}">Separate multiple handles with commas.</div>
+          <button
+            type="button"
+            class="${buttonClass("default", "default", "w-full")}"
+            @click="${onStart}"
+          >
+            Start Chat
+          </button>
         </div>
       </div>
     </div>
   `;
 };
 
-// --- Copy invite link ---
+// --- Settings helpers ---
 
-const copyInviteLinkButton = (publicSignKey: string) => {
+const settingsRowClass =
+  "flex items-center justify-between gap-3 py-3.5 first:pt-0 last:pb-0";
+
+const copyInvitePill = (publicSignKey: string) => {
   const onClick = async () => {
     try {
       const link = await chatWithMeLink(publicSignKey);
@@ -1368,22 +1385,43 @@ const copyInviteLinkButton = (publicSignKey: string) => {
     }
   };
   return html`
-    <div class="mb-4">
-      <button type="button" class="${buttonClass(
-        "secondary",
-      )}" @click="${onClick}">
-        Copy invite link
-      </button>
-      <div class="${hintStyle}">
-        Share this link so others can start a chat with you.
-      </div>
-    </div>
+    <button
+      type="button"
+      class="${buttonClass("default", "sm", "px-4")}"
+      @click="${onClick}"
+    >
+      Copy Invite Link
+    </button>
   `;
 };
 
-// --- Copy credentials button ---
+const copyPublicKeyPill = (publicSignKey: string) => {
+  const onClick = async () => {
+    try {
+      if (!(await copyToClipboard(publicSignKey))) return;
+      copiedPublicKey = true;
+      rerenderChat();
+      setTimeout(() => {
+        copiedPublicKey = false;
+        rerenderChat();
+      }, 2000);
+    } catch (e) {
+      console.error("Failed to copy public key", e);
+    }
+  };
+  return html`
+    <button
+      type="button"
+      class="${buttonClass("secondary", "sm", "px-4")}"
+      title="Copy public key"
+      @click="${onClick}"
+    >
+      ${copiedPublicKey ? "Copied!" : "Copy Public Key"}
+    </button>
+  `;
+};
 
-const copyCredentialsButton = () => {
+const copyCredentialsRow = () => {
   const onClick = async () => {
     try {
       const creds = getCredentialsToCopy("alicebot_credentials", credentials);
@@ -1399,86 +1437,83 @@ const copyCredentialsButton = () => {
     }
   };
   return html`
-    <div class="mb-4">
-      <button type="button" class="${buttonClass(
-        "secondary",
-      )}" @click="${onClick}">
-        Copy secret credentials ${copiedCredentials
-          ? html`
-            <span class="text-sm ml-1">Copied!</span>
-          `
-          : html`
-          `}
-      </button>
-      <div class="${hintStyle}">
-        Warning: Never share your credentials. Anyone with them has access to all
-        your chats forever.
+    <div class="${settingsRowClass}">
+      <div>
+        <div class="text-sm font-medium">Secret recovery key</div>
+        <div class="text-xs text-[#78736a] dark:text-[#8c867c]">
+          Save offline to restore your account anywhere
+        </div>
       </div>
+      <button
+        type="button"
+        class="${buttonClass("secondary", "sm", "shrink-0")}"
+        @click="${onClick}"
+      >
+        ${copiedCredentials ? "Copied!" : "Copy Key"}
+      </button>
     </div>
   `;
 };
 
-// --- Delete credentials ---
-
-const deleteCredentialsButton = () =>
+const deleteCredentialsRow = () =>
   html`
-    <div class="mb-4">
-      <button type="button" class="${buttonClass(
-        "destructive",
-      )}" @click="${() => {
-        if (
-          confirm(
-            "Are you sure? If you delete your credentials from this browser, you will lose access unless you have saved them elsewhere.",
-          )
-        ) {
-          localStorage.removeItem("alicebot_credentials");
-          globalThis.location.reload();
-        }
-      }}">
-        Delete credentials and sign out
-      </button>
-      <div class="${hintStyle}">
-        Warning: Your key is not stored anywhere else. If you delete it and haven't
-        saved it, you will lose access to your identity.
+    <div class="${settingsRowClass}">
+      <div>
+        <div class="text-sm font-medium">Sign out</div>
+        <div class="text-xs text-[#78736a] dark:text-[#8c867c]">
+          Removes stored credentials from this browser
+        </div>
       </div>
+      <button
+        type="button"
+        class="${buttonClass("destructive", "sm", "shrink-0")}"
+        @click="${() => {
+          if (
+            confirm(
+              "Sign out and delete your key from this browser? Make sure you backed up your secret key first.",
+            )
+          ) {
+            localStorage.removeItem("alicebot_credentials");
+            globalThis.location.reload();
+          }
+        }}"
+      >
+        Sign Out
+      </button>
     </div>
   `;
-
-// --- Danger zone ---
 
 const dangerZone = () =>
   html`
     <div
-      class="mt-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 overflow-hidden"
+      class="bg-white dark:bg-[#151513] border border-[#e7e4dc] dark:border-[#252420] rounded-2xl overflow-hidden"
     >
-      <button type="button" class="${buttonClass(
-        "ghost",
-        "default",
-        "w-full flex justify-between items-center py-2 px-3 text-left hover:bg-red-100/70 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300",
-      )}" @click="${() => {
-        dangerZoneOpen = !dangerZoneOpen;
-        rerenderChat();
-      }}">
-        <span class="text-lg font-semibold text-red-700 dark:text-red-300"
-        >Danger zone</span>
-        <span class="ml-2 text-red-600/80 dark:text-red-300/80">${chevron(
+      <button
+        type="button"
+        class="w-full flex justify-between items-center px-5 py-4 text-left hover:bg-[#faf9f5] dark:hover:bg-[#1b1a17] transition-colors cursor-pointer"
+        @click="${() => {
+          dangerZoneOpen = !dangerZoneOpen;
+          rerenderChat();
+        }}"
+      >
+        <span class="text-sm font-semibold">Backup key & sign out</span>
+        <span class="text-[#78736a] dark:text-[#8c867c]">${chevron(
           dangerZoneOpen,
         )}</span>
       </button>
       ${dangerZoneOpen
         ? html`
-          <div class="px-3 py-2 border-t border-red-200 dark:border-red-800">
-            ${copyCredentialsButton()}${deleteCredentialsButton()}
+          <div
+            class="px-5 pb-4 pt-2 border-t border-[#ece8df] dark:border-[#24231f] divide-y divide-[#ece8df] dark:divide-[#24231f]"
+          >
+            ${copyCredentialsRow()}${deleteCredentialsRow()}
           </div>
         `
-        : html`
-        `}
+        : nothing}
     </div>
   `;
 
-// --- QR code transfer ---
-
-const qrCodeTransfer = () => {
+const qrCodeTransferRow = () => {
   if (!credentials) {
     return html`
     `;
@@ -1511,50 +1546,52 @@ const qrCodeTransfer = () => {
     }
   };
   return html`
-    <div class="flex flex-col gap-2">
-      <button
-        type="button"
-        class="${buttonClass("secondary", "default", "w-full")}"
-        ?disabled="${qrLoading}"
-        @click="${onGenerate}"
-      >
-        ${qrLoading
-          ? "Generating..."
-          : qrDataUrl
-          ? "Regenerate QR code"
-          : "Connect another device"}
-      </button>
-      <div class="${hintStyle}">
-        Scan the QR code with your phone camera to sign in with the same identity.
-        The code expires in 5 minutes and can only be used once.
+    <div class="py-3.5 first:pt-0 last:pb-0">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="text-sm font-medium">Connect another device</div>
+          <div class="text-xs text-[#78736a] dark:text-[#8c867c]">
+            One-time QR code · valid 5 min
+          </div>
+        </div>
+        <button
+          type="button"
+          class="${buttonClass("secondary", "sm", "shrink-0")}"
+          ?disabled="${qrLoading}"
+          @click="${onGenerate}"
+        >
+          ${qrLoading ? "Generating..." : qrDataUrl ? "New QR" : "Show QR"}
+        </button>
       </div>
       ${qrError
         ? html`
-          <div class="text-xs text-red-600 dark:text-red-400">${qrError}</div>
+          <div class="text-xs text-red-600 dark:text-red-400 mt-2">${qrError}</div>
         `
-        : html`
-        `} ${qrDataUrl
+        : nothing} ${qrDataUrl
         ? html`
-          <div class="flex justify-center p-4 bg-white rounded-lg">
-            <img src="${qrDataUrl}" alt="Transfer QR code" width="256" height="256" />
+          <div class="mt-3 flex flex-col items-center gap-2">
+            <div class="p-3 bg-white rounded-2xl border border-[#e7e4dc]">
+              <img
+                src="${qrDataUrl}"
+                alt="Transfer QR code"
+                width="200"
+                height="200"
+              />
+            </div>
+            ${qrTransferUrl
+              ? html`
+                <button
+                  type="button"
+                  class="${buttonClass("link", "sm", "px-0 h-auto text-xs")}"
+                  @click="${onCopy}"
+                >
+                  ${qrCopied ? "Copied!" : "Copy transfer link instead"}
+                </button>
+              `
+              : nothing}
           </div>
         `
-        : html`
-        `} ${qrTransferUrl
-        ? html`
-          <div class="flex flex-col gap-1 items-center">
-            <div class="${hintStyle}">No camera? Copy the link instead:</div>
-            <button type="button" class="${buttonClass(
-              "link",
-              "sm",
-              "px-0 h-auto text-xs",
-            )}" @click="${onCopy}">
-              ${qrCopied ? "Copied!" : "Copy link"}
-            </button>
-          </div>
-        `
-        : html`
-        `}
+        : nothing}
     </div>
   `;
 };
@@ -1731,239 +1768,312 @@ const yourKey = () => {
       ? html`
         <div class="${`text-xs ${
           status.type === "success"
-            ? "text-green-600 dark:text-green-400"
+            ? "text-[#39587f] dark:text-[#7da2cf]"
             : "text-red-600 dark:text-red-400"
         }`}">${status.message}</div>
       `
       : html`
       `;
 
+  const displayTitle = yourKeyNameInput.trim() || "Anonymous";
+  const currentPriceNum = parseFloat(yourKeyPriceTagInput);
+  const priceBadgeText = !isNaN(currentPriceNum) && currentPriceNum > 0
+    ? `$${currentPriceNum.toFixed(2)} / chat`
+    : "Free";
+  const showPaidDetails = paidInboxOpen || Boolean(yourKeyDepositData);
+
   return html`
-    <div style="display:flex;flex-direction:column" class="${textColorStyle} mb-2 gap-24">
-      <!-- Profile -->
-      <div class="space-y-4">
-        <div
-          class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
-        >
-          Profile
-        </div>
-        <div class="flex flex-col gap-1 max-w-md">
-          <label class="${labelSmallStyle}">Display name</label>
-          <div class="flex gap-2 items-center">
-            <input
-              class="${inputStyle + " flex-grow"}"
-              placeholder="Your name"
-              .value="${yourKeyNameInput}"
-              @input="${(e: Event) => {
-                yourKeyNameInput = (e.target as HTMLInputElement).value.slice(
-                  0,
-                  50,
-                );
-              }}"
-              ?disabled="${yourKeySavingName}"
-            />
-            <button
-              type="button"
-              class="${buttonClass("default", "default", "w-24")}"
-              ?disabled="${yourKeySavingName}"
-              @click="${onSaveName}"
-            >
-              ${yourKeySavingName ? "Saving..." : "Save"}
-            </button>
+    <div style="display:flex;flex-direction:column" class="${textColorStyle} mb-2 gap-4">
+      <!-- Profile & Quick Share -->
+      <div class="${settingsCardClass}">
+        <div class="flex flex-col items-center text-center gap-2.5 pb-2">
+          <div class="scale-125 my-1">
+            ${chatAvatar({
+              image: yourKeyProfile?.avatar,
+              name: displayTitle,
+              baseColor: avatarColor(publicSignKey, currentDark),
+            })}
           </div>
-          ${statusBadge(yourKeyNameStatus)}
-        </div>
-        <div class="flex flex-col gap-1 max-w-md">
-          <label class="${labelSmallStyle}">Public alias (optional)</label>
-          <div class="flex gap-2 items-center">
-            <input
-              class="${inputStyle + " flex-grow"}"
-              placeholder="choose-alias"
-              .value="${yourKeyAliasInput}"
-              @input="${(e: Event) => {
-                yourKeyAliasInput = (e.target as HTMLInputElement).value
-                  .toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 15);
-              }}"
-              ?disabled="${yourKeySavingAlias}"
-            />
-            <button
-              type="button"
-              class="${buttonClass("default", "default", "w-24")}"
-              ?disabled="${yourKeySavingAlias}"
-              @click="${onSaveAlias}"
-            >
-              ${yourKeySavingAlias
-                ? "Saving..."
-                : yourKeyProfile?.alias
-                ? "Update"
-                : "Set"}
-            </button>
-          </div>
-          <div class="${hintStyle}">
-            Lowercase letters, numbers, underscore. Max 15 chars. Public &
-            shareable.
-          </div>
-          ${statusBadge(yourKeyAliasStatus)} ${yourKeyProfile?.alias
-            ? html`
-              <div class="${hintStyle}">
-                Current alias:&nbsp;<span class="font-mono">@${yourKeyProfile
-                  .alias}</span>
-              </div>
-            `
-            : html`
-            `}
-        </div>
-      </div>
-
-      <!-- Identity -->
-      <div class="space-y-4">
-        <div
-          class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
-        >
-          Identity
-        </div>
-        <div>Your public key is ${copyableString(publicSignKey)}</div>
-        <div>${copyInviteLinkButton(publicSignKey)}</div>
-      </div>
-
-      <!-- Wallet -->
-      ${yourKeyBalanceData
-        ? html`
-          <div class="space-y-4">
-            <div
-              class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
-            >
-              Wallet
-            </div>
-            <div
-              class="flex flex-row justify-between items-center p-4 bg-black/5 dark:bg-white/5 rounded-lg"
-            >
-              <div>
-                <div class="font-semibold text-sm opacity-70">Account Balance</div>
-                <div class="text-2xl font-bold">$${(yourKeyBalanceData.balance /
-                  100).toFixed(2)}</div>
-              </div>
-              <div class="flex gap-2">
-                <button type="button" class="${buttonClass()}" @click="${onDeposit}">
-                  Deposit
-                </button>
-                ${yourKeyBalanceData.balance > 0
-                  ? html`
-                    <button type="button" class="${buttonClass()}" @click="${() =>
-                      showToast(
-                        "Please email support@aliceandbot.com to withdraw your funds.",
-                      )}">Withdraw</button>
-                  `
-                  : html`
-                  `}
-              </div>
-            </div>
-            ${yourKeyDepositData
+          <div>
+            <div class="text-base font-bold tracking-tight">${displayTitle}</div>
+            ${yourKeyProfile?.alias
               ? html`
-                <div class="flex flex-col gap-2 p-4 bg-black/5 dark:bg-white/5 rounded-lg">
-                  <div class="font-semibold text-lg">Deposit Bitcoin</div>
-                  <div class="text-sm">
-                    Send exactly <b>${yourKeyDepositData
-                      .btcAmount} BTC</b> ($${yourKeyDepositData
-                      .usdAmount}) to the following address:
-                  </div>
-                  <div class="font-mono text-sm break-all bg-white dark:bg-black p-2 rounded">
-                    ${yourKeyDepositData.address}
-                  </div>
-                  <img src="${yourKeyDepositData
-                    .qrUrl}" alt="Bitcoin QR Code" class="w-48 h-48 mx-auto" />
-                  <button type="button" class="${buttonClass(
-                    "secondary",
-                  )}" @click="${onCheckPayment}">
-                    I've Paid (we check automatically)
-                  </button>
-                  <button type="button" class="${buttonClass(
-                    "link",
-                    "sm",
-                    "px-0 h-auto text-sm opacity-70",
-                  )}" @click="${() => {
-                    yourKeyDepositData = null;
-                    stopDepositPolling();
-                    rerenderChat();
-                  }}">Cancel</button>
+                <div class="text-xs font-mono text-[#78736a] dark:text-[#8c867c]">
+                  @${yourKeyProfile.alias}
                 </div>
               `
-              : html`
-              `}
+              : nothing}
           </div>
-        `
-        : html`
-        `}
+          <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+            ${copyInvitePill(publicSignKey)} ${copyPublicKeyPill(publicSignKey)}
+          </div>
+        </div>
 
-      <!-- Monetization -->
-      <div class="space-y-4">
-        <div
-          class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+        <div class="border-t border-[#ece8df] dark:border-[#24231f] pt-4 space-y-3">
+          <div class="flex flex-col gap-1">
+            <label class="${labelSmallStyle}">Display name</label>
+            <div class="flex gap-2 items-center">
+              <input
+                class="${inputStyle + " flex-1 max-w-none py-2 text-sm"}"
+                placeholder="Your name"
+                .value="${yourKeyNameInput}"
+                @input="${(e: Event) => {
+                  yourKeyNameInput = (e.target as HTMLInputElement).value.slice(
+                    0,
+                    50,
+                  );
+                }}"
+                @keydown="${(e: KeyboardEvent) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onSaveName();
+                  }
+                }}"
+                ?disabled="${yourKeySavingName}"
+              />
+              <button
+                type="button"
+                class="${buttonClass("secondary", "sm", "px-4 shrink-0")}"
+                ?disabled="${yourKeySavingName}"
+                @click="${onSaveName}"
+              >
+                ${yourKeySavingName ? "Saving..." : "Save"}
+              </button>
+            </div>
+            ${statusBadge(yourKeyNameStatus)}
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="${labelSmallStyle}">Public handle</label>
+            <div class="flex gap-2 items-center">
+              <div class="relative flex-1">
+                <span
+                  class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-mono text-[#8c867c] select-none"
+                >@</span>
+                <input
+                  class="${inputStyle +
+                    " w-full max-w-none pl-8 py-2 text-sm font-mono"}"
+                  placeholder="handle"
+                  .value="${yourKeyAliasInput}"
+                  @input="${(e: Event) => {
+                    yourKeyAliasInput = (e.target as HTMLInputElement).value
+                      .toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 15);
+                  }}"
+                  @keydown="${(e: KeyboardEvent) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onSaveAlias();
+                    }
+                  }}"
+                  ?disabled="${yourKeySavingAlias}"
+                />
+              </div>
+              <button
+                type="button"
+                class="${buttonClass("secondary", "sm", "px-4 shrink-0")}"
+                ?disabled="${yourKeySavingAlias}"
+                @click="${onSaveAlias}"
+              >
+                ${yourKeySavingAlias
+                  ? "Saving..."
+                  : yourKeyProfile?.alias
+                  ? "Update"
+                  : "Set"}
+              </button>
+            </div>
+            ${statusBadge(yourKeyAliasStatus)}
+          </div>
+        </div>
+      </div>
+
+      <!-- Devices & Notifications -->
+      <div
+        class="bg-white dark:bg-[#151513] border border-[#e7e4dc] dark:border-[#252420] rounded-2xl px-5 py-4 divide-y divide-[#ece8df] dark:divide-[#24231f]"
+      >
+        ${qrCodeTransferRow()}
+        <div class="${settingsRowClass}">
+          <div>
+            <div class="text-sm font-medium">Push notifications</div>
+            <div class="text-xs text-[#78736a] dark:text-[#8c867c]">
+              Alerts when agents or people reply
+            </div>
+          </div>
+          <button
+            type="button"
+            class="${buttonClass("secondary", "sm", "shrink-0")}"
+            @click="${() =>
+              toastPromise(registerPush(credentials!), {
+                loading: "Enabling notifications\u2026",
+                success: "Notifications enabled",
+                error: formatPushError,
+              }).catch(() => {})}"
+          >
+            Enable
+          </button>
+        </div>
+        ${!isStandaloneApp()
+          ? html`
+            <div class="${settingsRowClass}">
+              <div>
+                <div class="text-sm font-medium">Install app</div>
+                <div class="text-xs text-[#78736a] dark:text-[#8c867c]">
+                  Add Alice&Bot to your home screen
+                </div>
+              </div>
+              <button
+                type="button"
+                class="${buttonClass("default", "sm", "shrink-0")}"
+                @click="${handleChatInstallClick}"
+              >
+                Install
+              </button>
+            </div>
+          `
+          : nothing}
+      </div>
+
+      <!-- Paid Inbox & Wallet (Collapsible) -->
+      <div
+        class="bg-white dark:bg-[#151513] border border-[#e7e4dc] dark:border-[#252420] rounded-2xl overflow-hidden"
+      >
+        <button
+          type="button"
+          class="w-full flex justify-between items-center px-5 py-4 text-left hover:bg-[#faf9f5] dark:hover:bg-[#1b1a17] transition-colors cursor-pointer"
+          @click="${() => {
+            paidInboxOpen = !paidInboxOpen;
+            rerenderChat();
+          }}"
         >
-          Monetization
-        </div>
-        <div class="flex flex-col gap-2">
-          <label class="font-bold text-sm text-gray-700 dark:text-gray-300"
-          >Message Price (USD)</label>
-          <div class="flex gap-2">
-            <span class="self-center">$</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              .value="${yourKeyPriceTagInput}"
-              @input="${(e: Event) => {
-                yourKeyPriceTagInput = (e.target as HTMLInputElement).value;
-              }}"
-              class="${inputStyle}"
-              style="flex:1"
-              placeholder="0.00"
-            />
-            <button
-              type="button"
-              class="${buttonClass()}"
-              ?disabled="${yourKeySavingPrice}"
-              @click="${onSavePrice}"
-            >
-              ${yourKeySavingPrice ? "Saving..." : "Save"}
-            </button>
-          </div>
-          <div class="${hintStyle}">
-            Cost for new users to start a conversation with you.
-          </div>
-          ${statusBadge(yourKeyPriceStatus)}
-        </div>
-      </div>
-
-      ${!isStandaloneApp()
-        ? html`
-          <div class="mb-3">
-            <button
-              type="button"
-              class="${buttonClass("default", "default", "w-full")}"
-              @click="${handleChatInstallClick}"
-            >
-              Install App
-            </button>
-          </div>
-        `
-        : nothing}
-      <div>
-        <button type="button" class="${buttonClass(
-          "secondary",
-          "default",
-          "w-full",
-        )}" @click="${() =>
-          toastPromise(registerPush(credentials!), {
-            loading: "Enabling notifications\u2026",
-            success: "Notifications enabled",
-            error: formatPushError,
-          }).catch(() => {})}">
-          Enable push notifications
+          <span class="text-sm font-semibold">Paid inbox & wallet</span>
+          <span class="flex items-center gap-2 text-xs text-[#78736a] dark:text-[#8c867c]">
+            <span class="px-2 py-0.5 rounded-full bg-[#efede6] dark:bg-[#22211d]"
+            >${priceBadgeText}</span>
+            ${chevron(showPaidDetails)}
+          </span>
         </button>
+        ${showPaidDetails
+          ? html`
+            <div
+              class="px-5 pb-5 pt-3 border-t border-[#ece8df] dark:border-[#24231f] space-y-4"
+            >
+              <div class="flex flex-col gap-1.5">
+                <label class="${labelSmallStyle}"
+                >Price for strangers to message you (USD)</label>
+                <div class="flex gap-2 items-center">
+                  <span class="text-sm text-[#78736a]">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    .value="${yourKeyPriceTagInput}"
+                    @input="${(e: Event) => {
+                      yourKeyPriceTagInput =
+                        (e.target as HTMLInputElement).value;
+                    }}"
+                    class="${inputStyle + " flex-1 max-w-none py-2 text-sm"}"
+                    placeholder="0.00"
+                  />
+                  <button
+                    type="button"
+                    class="${buttonClass("secondary", "sm", "px-4 shrink-0")}"
+                    ?disabled="${yourKeySavingPrice}"
+                    @click="${onSavePrice}"
+                  >
+                    ${yourKeySavingPrice ? "Saving..." : "Save"}
+                  </button>
+                </div>
+                ${statusBadge(yourKeyPriceStatus)}
+              </div>
+
+              ${yourKeyBalanceData
+                ? html`
+                  <div
+                    class="flex items-center justify-between p-3.5 bg-[#f6f4ee] dark:bg-[#1c1b18] rounded-xl"
+                  >
+                    <div>
+                      <div class="text-xs text-[#78736a] dark:text-[#8c867c]">
+                        Balance
+                      </div>
+                      <div class="text-lg font-bold">$${(yourKeyBalanceData
+                        .balance / 100).toFixed(2)}</div>
+                    </div>
+                    <div class="flex gap-2">
+                      <button
+                        type="button"
+                        class="${buttonClass("default", "sm")}"
+                        @click="${onDeposit}"
+                      >
+                        Deposit
+                      </button>
+                      ${yourKeyBalanceData.balance > 0
+                        ? html`
+                          <button
+                            type="button"
+                            class="${buttonClass("secondary", "sm")}"
+                            @click="${() =>
+                              showToast(
+                                "Please email support@aliceandbot.com to withdraw your funds.",
+                              )}"
+                          >
+                            Withdraw
+                          </button>
+                        `
+                        : nothing}
+                    </div>
+                  </div>
+                `
+                : nothing} ${yourKeyDepositData
+                ? html`
+                  <div
+                    class="flex flex-col gap-2 p-4 bg-[#f6f4ee] dark:bg-[#1c1b18] rounded-xl"
+                  >
+                    <div class="font-semibold text-sm">Deposit Bitcoin</div>
+                    <div class="text-xs text-[#66625b] dark:text-[#9c968c]">
+                      Send <b>${yourKeyDepositData
+                        .btcAmount} BTC</b> ($${yourKeyDepositData
+                        .usdAmount}) to:
+                    </div>
+                    <div
+                      class="font-mono text-xs break-all bg-white dark:bg-[#141412] p-2.5 rounded-lg border border-[#e7e4dc] dark:border-[#262521]"
+                    >
+                      ${yourKeyDepositData.address}
+                    </div>
+                    <img
+                      src="${yourKeyDepositData.qrUrl}"
+                      alt="Bitcoin QR Code"
+                      class="w-40 h-40 mx-auto rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      class="${buttonClass("secondary", "sm")}"
+                      @click="${onCheckPayment}"
+                    >
+                      I've Paid
+                    </button>
+                    <button
+                      type="button"
+                      class="${buttonClass(
+                        "link",
+                        "sm",
+                        "px-0 h-auto text-xs",
+                      )}"
+                      @click="${() => {
+                        yourKeyDepositData = null;
+                        stopDepositPolling();
+                        rerenderChat();
+                      }}"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                `
+                : nothing}
+            </div>
+          `
+          : nothing}
       </div>
 
-      ${qrCodeTransfer()} ${dangerZone()}
+      ${dangerZone()}
     </div>
   `;
 };
@@ -2115,23 +2225,23 @@ const existingUserForm = () => {
           </div>
         `
         : html`
-          <label class="${labelStyle}">Paste your credentials string</label>
+          <label class="${labelStyle}">Paste your credentials</label>
           <div class="${inputRowStyle}">
             <input
-              class="${inputStyle}"
-              placeholder="Paste credentials string here"
+              class="${inputStyle + " flex-1"}"
+              placeholder="Paste credentials JSON"
               .value="${loginExistingInput}"
               @input="${(e: Event) => {
                 loginExistingInput = (e.target as HTMLInputElement).value;
               }}"
             />
             <button type="button" class="${buttonClass(
-              "secondary",
+              "default",
             )}" @click="${identify}">
               Sign in
             </button>
           </div>
-          <div class="flex items-center mt-1">
+          <div class="flex items-center mt-2">
             <input
               id="storeInBrowser2"
               type="checkbox"
@@ -2139,17 +2249,17 @@ const existingUserForm = () => {
               @change="${(e: Event) => {
                 loginStoreInBrowser = (e.target as HTMLInputElement).checked;
               }}"
-              class="mr-2"
+              class="mr-2 accent-[#181715] dark:accent-[#f3f1ea]"
             />
             <label for="storeInBrowser2" class="${labelSmallStyle}">${storeCredentialsLabel}</label>
           </div>
 
           ${currentIsMobile
             ? html`
-              <div class="w-full border-t border-gray-200 dark:border-gray-800 my-4"></div>
-              <div class="flex flex-col gap-3">
+              <div class="w-full border-t border-[#e7e4dc] dark:border-[#262521] my-4"></div>
+              <div class="flex flex-col gap-2">
                 <button type="button" class="${buttonClass(
-                  "default",
+                  "secondary",
                   "default",
                   "w-full flex items-center justify-center gap-2",
                 )}" @click="${startQrScan}">
@@ -2172,33 +2282,11 @@ const existingUserForm = () => {
                       d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
                     />
                   </svg>
-                  Scan Transfer QR Code
+                  Scan Transfer QR
                 </button>
-                <div
-                  class="p-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-lg text-left"
-                >
-                  <span class="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1"
-                  >To get the QR code from your other device:</span>
-                  <ol
-                    class="text-[11px] text-gray-500 dark:text-gray-400 space-y-1.5 list-decimal list-inside"
-                  >
-                    <li>
-                      Open <strong>Alice&Bot Chat</strong> on your other device (e.g.,
-                      computer).
-                    </li>
-                    <li>
-                      Navigate to the settings screen by clicking your profile name/avatar, or
-                      go to <span
-                        class="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]"
-                      >aliceandbot.com/chat?view=identity</span>.
-                    </li>
-                    <li>Click the <strong>\\"Connect another device\\"</strong> button.</li>
-                    <li>
-                      Click the button above to open the camera and scan the generated QR
-                      code!
-                    </li>
-                  </ol>
-                </div>
+                <p class="text-xs text-center text-[#78736a] dark:text-[#8c867c]">
+                  On your other device: Settings → Connect another device
+                </p>
               </div>
             `
             : html`
@@ -2267,115 +2355,116 @@ const messengerLogin = () => {
     loginShowForm = null;
   }
 
+  const goToNewIdentity = () => {
+    const params = new URLSearchParams(globalThis.location.search);
+    params.delete("login");
+    navigate(
+      `${chatPath}${params.toString() ? `?${params.toString()}` : ""}`,
+    );
+    loginShowForm = null;
+    rerenderChat();
+  };
+
   return html`
-    <div class="flex flex-col flex-grow">
+    <div class="surface-dots flex flex-col flex-grow relative overflow-y-auto">
+      <div class="flex items-center justify-between px-5 py-4">
+        ${logoTemplate(goHome)}
+        <button
+          type="button"
+          class="${buttonClass("ghost", "icon", "w-9 h-9")}"
+          title="${currentDark
+            ? "Switch to light mode"
+            : "Switch to dark mode"}"
+          @click="${toggleDark}"
+        >
+          ${currentDark ? sunSvg : moonSvg}
+        </button>
+      </div>
       ${loginShowForm === null
         ? html`
           <div
-            class="flex flex-col items-center gap-4 mb-6 flex-grow justify-center text-center px-4"
+            class="flex flex-col items-center flex-grow justify-center text-center px-4 pb-12"
           >
-            <div class="text-lg font-semibold max-w-xl">
-              We don't know you yet. What's your name?
-            </div>
-            <div class="w-full max-w-md flex flex-col gap-3">
-              <input
-                class="${inputStyle}"
-                placeholder="Display name"
-                .value="${loginDisplayName}"
-                @input="${(e: Event) => {
-                  loginDisplayName = (e.target as HTMLInputElement).value;
-                }}"
-                @keydown="${(e: KeyboardEvent) => {
-                  if (
-                    e.key === "Enter" && loginDisplayName.trim()
-                  ) createIdentityWithName(loginDisplayName);
-                }}"
+            <div
+              class="anim-rise w-full max-w-sm bg-white/90 dark:bg-[#151513]/95 backdrop-blur-xs border border-[#e7e4dc] dark:border-[#262521] rounded-3xl p-7 sm:p-8 shadow-[0_18px_45px_rgba(24,23,21,0.06)] dark:shadow-[0_18px_45px_rgba(0,0,0,0.45)] flex flex-col items-center gap-4"
+            >
+              <img
+                src="/icon.png"
+                alt="Alice&Bot"
+                class="w-12 h-12 anim-float"
               />
-              <div class="flex items-center">
-                <input
-                  id="storeInBrowser0"
-                  type="checkbox"
-                  .checked="${loginStoreInBrowser}"
-                  @change="${(e: Event) => {
-                    loginStoreInBrowser =
-                      (e.target as HTMLInputElement).checked;
-                  }}"
-                  class="mr-2"
-                />
-                <label for="storeInBrowser0" class="${labelSmallStyle}">${storeCredentialsLabel}</label>
+              <div>
+                <h1 class="text-xl font-bold tracking-tight">
+                  What's your name?
+                </h1>
+                <p class="text-xs text-[#78736a] dark:text-[#8c867c] mt-1">
+                  Local keypair · No email or phone
+                </p>
               </div>
-              <div class="flex justify-center">
+              <div class="w-full flex flex-col gap-3 mt-1">
+                <input
+                  class="${inputStyle + " w-full text-center"}"
+                  placeholder="Display name"
+                  .value="${loginDisplayName}"
+                  @input="${(e: Event) => {
+                    loginDisplayName = (e.target as HTMLInputElement).value;
+                  }}"
+                  @keydown="${(e: KeyboardEvent) => {
+                    if (
+                      e.key === "Enter" && loginDisplayName.trim()
+                    ) createIdentityWithName(loginDisplayName);
+                  }}"
+                />
                 <button
                   type="button"
-                  class="${buttonClass("default", "default", "px-8")}"
+                  class="${buttonClass("default", "default", "w-full h-11")}"
                   ?disabled="${loginCreatingIdentity}"
                   @click="${() => createIdentityWithName(loginDisplayName)}"
                 >
                   ${loginCreatingIdentity ? "Creating..." : "Continue"}
                 </button>
+                <div class="flex items-center justify-center pt-0.5">
+                  <input
+                    id="storeInBrowser0"
+                    type="checkbox"
+                    .checked="${loginStoreInBrowser}"
+                    @change="${(e: Event) => {
+                      loginStoreInBrowser =
+                        (e.target as HTMLInputElement).checked;
+                    }}"
+                    class="mr-2 accent-[#181715] dark:accent-[#f3f1ea]"
+                  />
+                  <label for="storeInBrowser0" class="${labelSmallStyle}">${storeCredentialsLabel}</label>
+                </div>
               </div>
               <button type="button" class="${buttonClass(
                 "link",
                 "sm",
+                "h-auto py-0 text-xs",
               )}" @click="${goToExisting}">
                 I already have an account
               </button>
             </div>
           </div>
-          <div class="pt-2 self-center max-w-md w-full">
-            <button
-              type="button"
-              class="w-full flex justify-between items-center py-2 px-3 rounded-md hover:bg-gray-100 dark:hover:bg-[#2a2a2a] text-left"
-              @click="${() => {
-                loginShowWhat = !loginShowWhat;
-                rerenderChat();
-              }}"
-            >
-              <span class="text-lg font-semibold">What is Alice&Bot?</span>
-              <span class="ml-2 text-gray-500">${chevron(loginShowWhat)}</span>
-            </button>
-            ${loginShowWhat
-              ? html`
-                <div class="px-3 mt-2 text-base">
-                  An end-to-end encrypted messenger for people and bots. Create a self-owned
-                  cryptographic identity and chat using a public key or an @alias.
-                </div>
-              `
-              : html`
-              `}
-            <div class="mt-3"></div>
-            <button
-              type="button"
-              class="w-full flex justify-between items-center py-2 px-3 rounded-md hover:bg-gray-100 dark:hover:bg-[#2a2a2a] text-left"
-              @click="${() => {
-                loginShowNoEmail = !loginShowNoEmail;
-                rerenderChat();
-              }}"
-            >
-              <span class="text-lg font-semibold"
-              >Do I need to give out my email or phone?</span>
-              <span class="ml-2 text-gray-500">${chevron(
-                loginShowNoEmail,
-              )}</span>
-            </button>
-            ${loginShowNoEmail
-              ? html`
-                <div class="px-3 mt-2 text-base">
-                  No. You create a self-owned identity right here\\u2014no email, phone number,
-                  or personal info required. Your keys are generated locally in your browser.
-                  You can keep the credentials in this browser or copy the credentials string to
-                  store safely elsewhere.
-                </div>
-              `
-              : html`
-              `}
-          </div>
         `
         : html`
         `} ${loginShowForm === "existing"
         ? html`
-          <div class="flex flex-col items-center flex-grow justify-center px-4">
-            <div class="w-full max-w-md">${existingUserForm()}</div>
+          <div class="flex flex-col items-center flex-grow justify-center px-4 pb-12">
+            <div
+              class="anim-rise w-full max-w-md bg-white/90 dark:bg-[#151513]/95 backdrop-blur-xs border border-[#e7e4dc] dark:border-[#262521] rounded-3xl p-6 sm:p-7 shadow-[0_18px_45px_rgba(24,23,21,0.06)] dark:shadow-[0_18px_45px_rgba(0,0,0,0.45)]"
+            >
+              ${existingUserForm()}
+              <div class="text-center">
+                <button type="button" class="${buttonClass(
+                  "link",
+                  "sm",
+                  "h-auto py-0 text-xs",
+                )}" @click="${goToNewIdentity}">
+                  ← Create new identity
+                </button>
+              </div>
+            </div>
           </div>
         `
         : html`
@@ -2388,14 +2477,14 @@ const messengerLogin = () => {
 
 const desktopSidebar = () => {
   const sidebarButtonClass = (v: View) =>
-    `w-12 h-12 rounded-lg font-bold transition-colors flex items-center justify-center ${
+    `w-11 h-11 rounded-2xl font-bold transition-all duration-150 flex items-center justify-center ${
       view === v
-        ? "bg-gray-200 text-gray-800 dark:bg-[#2a2a2a] dark:text-gray-200"
-        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
+        ? "bg-white text-[#181715] dark:bg-[#24231f] dark:text-[#f3f1ea] shadow-2xs"
+        : "text-[#66625b] dark:text-[#9c968c] hover:bg-[#e9e5dc]/80 dark:hover:bg-[#1c1b18] hover:text-[#181715] dark:hover:text-[#f3f1ea]"
     }`;
   return html`
     <div
-      class="w-20 border-r border-gray-300 dark:border-gray-700 bg-[#f8f7f4] dark:bg-[#111] flex flex-col items-center py-6 gap-4 shrink-0 overflow-hidden"
+      class="w-16 border-r border-[#e5e1d6] dark:border-[#24231f] bg-[#f2efe8] dark:bg-[#111110] flex flex-col items-center py-5 gap-2.5 shrink-0 overflow-hidden"
     >
       <button
         type="button"
@@ -2416,7 +2505,7 @@ const desktopSidebar = () => {
       <div class="flex-grow"></div>
       <button
         type="button"
-        class="${buttonClass("ghost", "icon", "w-12 h-12")}"
+        class="${buttonClass("ghost", "icon", "w-11 h-11")}"
         title="${currentDark ? "Switch to light mode" : "Switch to dark mode"}"
         @click="${toggleDark}"
       >
@@ -2459,7 +2548,7 @@ const handleChatWith = async (publicSignKey: string) => {
 };
 
 const installHeaderPillStyle =
-  "px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-black dark:hover:bg-emerald-400 transition-colors";
+  "px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#181715] text-[#faf9f5] hover:bg-[#2c2a26] dark:bg-[#f3f1ea] dark:text-[#181715] dark:hover:bg-white transition-colors";
 
 const handleChatInstallClick = () => {
   triggerPwaInstall({ stayOnPage: true }).then((res) => {
@@ -2478,11 +2567,11 @@ const handleChatInstallClick = () => {
 };
 
 const pushBannerContainerStyle =
-  "flex items-center justify-between gap-2 px-3 py-2 text-xs border-b bg-emerald-50 text-emerald-950 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-900/60 flex-shrink-0";
+  "flex items-center justify-between gap-2 px-3.5 py-2 text-xs border-b bg-[#efede6] text-[#181715] border-[#e2ded3] dark:bg-[#1b1a17] dark:text-[#f3f1ea] dark:border-[#292824] flex-shrink-0";
 const pushBannerEnableBtnStyle =
-  "px-2.5 py-1 rounded-md font-semibold bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-black dark:hover:bg-emerald-400 transition-colors";
+  "px-3 py-1 rounded-full font-semibold bg-[#181715] text-[#faf9f5] hover:bg-[#2c2a26] dark:bg-[#f3f1ea] dark:text-[#181715] dark:hover:bg-white transition-colors";
 const pushBannerDismissBtnStyle =
-  "px-1.5 py-0.5 rounded text-emerald-800 hover:bg-emerald-200/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition-colors";
+  "px-1.5 py-0.5 rounded-full text-[#66625b] hover:bg-black/6 dark:text-[#9c968c] dark:hover:bg-white/10 transition-colors";
 const pushDismissStorageKey = "alicebot_push_dismissed";
 const pushNudgeState = { triggered: false };
 
@@ -2573,7 +2662,11 @@ const pushPromptBanner = () => {
 
 const chatPanelTemplate = () => {
   if (!credentials || !selectedConversation) {
-    return emptyChatsView(undefined, () => setView_("new_chat"));
+    return html`
+      <div class="surface-dots flex flex-col flex-grow min-h-0">
+        ${emptyChatsView(undefined, () => setView_("new_chat"))}
+      </div>
+    `;
   }
   return html`
     ${pushPromptBanner()}
@@ -2617,14 +2710,14 @@ const renderChatPanel = (container: HTMLElement) => {
 
 const mobileBottomNav = () => {
   const btnClass = (v: View) =>
-    `flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
+    `flex-1 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
       view === v
-        ? "bg-gray-200 text-gray-800 dark:bg-[#2a2a2a] dark:text-gray-200"
-        : "bg-gray-100 dark:bg-[#141414] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#2a2a2a]"
+        ? "bg-[#181715] text-[#faf9f5] dark:bg-[#f3f1ea] dark:text-[#181715]"
+        : "text-[#66625b] dark:text-[#9c968c] hover:bg-[#efede6] dark:hover:bg-[#1f1e1b]"
     }`;
   return html`
     <div
-      class="border-t border-gray-300 dark:border-gray-700 p-4 bg-white dark:bg-black flex gap-2 flex-shrink-0"
+      class="border-t border-[#e5e1d6] dark:border-[#24231f] px-3 py-2.5 bg-[#faf9f5] dark:bg-[#141412] flex items-center gap-1.5 flex-shrink-0"
     >
       <button type="button" class="${btnClass("chats")}" @click="${() =>
         setView_("chats")}">Chats</button>
@@ -2636,7 +2729,7 @@ const mobileBottomNav = () => {
       </button>
       <button
         type="button"
-        class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-[#141414] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#2a2a2a] transition-colors"
+        class="p-2 rounded-full text-[#66625b] dark:text-[#9c968c] hover:bg-[#efede6] dark:hover:bg-[#1f1e1b] transition-colors"
         title="${currentDark ? "Switch to light mode" : "Switch to dark mode"}"
         @click="${toggleDark}"
       >
@@ -2653,11 +2746,12 @@ const mobileChatsListView = () => {
     `;
   }
   return html`
-    <div class="flex flex-col w-full h-full overflow-hidden">
+    <div
+      class="flex flex-col w-full h-full overflow-hidden bg-[#faf9f5] dark:bg-[#141412]">
       ${view === "chats"
         ? html`
           <div
-            class="p-4 bg-white dark:bg-black flex items-center justify-between gap-2 flex-shrink-0"
+            class="px-4 pt-4 pb-2 bg-[#faf9f5] dark:bg-[#141412] flex items-center justify-between gap-2 flex-shrink-0"
           >
             ${logoTemplate(goHome)} ${canInstallPwa()
               ? html`
@@ -2676,24 +2770,24 @@ const mobileChatsListView = () => {
         `} ${view === "new_chat"
         ? html`
           <div
-            class="p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-black flex-shrink-0"
+            class="px-4 py-3.5 border-b border-[#e5e1d6] dark:border-[#24231f] bg-[#faf9f5] dark:bg-[#141412] flex-shrink-0"
           >
-            <h2 class="text-lg font-semibold">Start a new chat</h2>
+            <h2 class="text-base font-semibold tracking-tight">New Chat</h2>
           </div>
         `
         : html`
         `} ${view === "identity"
         ? html`
           <div
-            class="p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-black flex-shrink-0"
+            class="px-4 py-3.5 border-b border-[#e5e1d6] dark:border-[#24231f] bg-[#faf9f5] dark:bg-[#141412] flex-shrink-0"
           >
-            <h2 class="text-lg font-semibold">Account Settings</h2>
+            <h2 class="text-base font-semibold tracking-tight">Settings</h2>
           </div>
         `
         : html`
         `} ${view === "chats"
         ? html`
-          <div class="p-3 bg-white dark:bg-black flex-shrink-0">
+          <div class="px-3 py-2 bg-[#faf9f5] dark:bg-[#141412] flex-shrink-0">
             <input
               type="text"
               placeholder="Search chats..."
@@ -2702,14 +2796,16 @@ const mobileChatsListView = () => {
                 searchQuery = (e.target as HTMLInputElement).value;
                 rerenderChat();
               }}"
-              class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-[#141414] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 text-sm"
+              class="w-full px-3.5 py-2 rounded-full bg-[#efede6] dark:bg-[#1e1d1a] text-[#181715] dark:text-[#f3f1ea] placeholder-[#8c867c] focus:outline-none focus:ring-2 focus:ring-[#39587f]/30 text-sm"
             />
           </div>
         `
         : html`
         `}
       <div
-        class="flex-1 overflow-y-auto min-h-0 bg-white dark:bg-black"
+        class="flex-1 overflow-y-auto min-h-0 ${view === "chats"
+          ? "bg-[#faf9f5] dark:bg-[#141412]"
+          : "surface-dots"}"
         style="${scrollbarStyle()}"
       >
         ${view === "chats"
@@ -2728,17 +2824,17 @@ const mobileChatsListView = () => {
       ${view === "chats"
         ? html`
           <div
-            class="p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-black flex justify-center"
+            class="py-2.5 px-3 border-t border-[#ece8df] dark:border-[#22211d] bg-[#faf9f5] dark:bg-[#141412] flex justify-center"
           >
             <button
               type="button"
-              class="text-xs font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors flex items-center gap-1.5"
+              class="text-xs font-medium text-[#78736a] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition-colors flex items-center gap-1.5"
               @click="${() => {
                 showArchived = !showArchived;
                 rerenderChat();
               }}"
             >
-              ${showArchived ? "← Show Active Chats" : "Show Archived Chats"}
+              ${showArchived ? "← Active Chats" : "Archived"}
             </button>
           </div>
         `
@@ -2765,19 +2861,19 @@ const mobileChatView = () => {
 const desktopChatsView = () =>
   html`
     <div
-      style="display:flex;flex:0 0 380px;flex-direction:column;overflow:hidden"
-      class="border-r border-gray-300 dark:border-gray-700"
+      style="display:flex;flex:0 0 320px;flex-direction:column;overflow:hidden"
+      class="border-r border-[#e5e1d6] dark:border-[#24231f] bg-[#faf9f5] dark:bg-[#141412]"
     >
-      <div class="p-4 bg-white dark:bg-black">
+      <div class="px-4 pt-4 pb-2">
         <div
-          style="display:flex;align-items:flex-start;gap:8px;justify-content:space-between"
+          style="display:flex;align-items:center;gap:8px;justify-content:space-between"
         >
           <div style="display:flex;align-items:center">${logoTemplate(
             goHome,
           )}</div>
           <button
             type="button"
-            class="w-10 h-10 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-[#2a2a2a] dark:hover:bg-[#333] text-gray-800 dark:text-gray-200 rounded-lg transition-colors flex-shrink-0"
+            class="w-9 h-9 flex items-center justify-center bg-[#eae7de] hover:bg-[#dfd9cc] dark:bg-[#24231f] dark:hover:bg-[#2e2d28] text-[#181715] dark:text-[#f3f1ea] rounded-full transition-colors flex-shrink-0"
             @click="${() => setView_("new_chat")}"
             title="New Chat"
           >
@@ -2785,7 +2881,7 @@ const desktopChatsView = () =>
           </button>
         </div>
       </div>
-      <div class="p-3 bg-white dark:bg-black">
+      <div class="px-3 py-2">
         <input
           type="text"
           placeholder="Search chats..."
@@ -2794,27 +2890,26 @@ const desktopChatsView = () =>
             searchQuery = (e.target as HTMLInputElement).value;
             rerenderChat();
           }}"
-          class="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-[#141414] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 text-sm"
+          class="w-full px-3.5 py-2 rounded-full bg-[#efede6] dark:bg-[#1e1d1a] text-[#181715] dark:text-[#f3f1ea] placeholder-[#8c867c] focus:outline-none focus:ring-2 focus:ring-[#39587f]/30 text-sm"
         />
       </div>
       <div
-        class="bg-white dark:bg-black"
-        style="display:flex;flex-grow:1;flex-direction:column;overflow-y:auto;${scrollbarStyle()}"
+        style="display:flex;flex-grow:1;flex-direction:column;overflow-y:auto;padding-top:4px;${scrollbarStyle()}"
       >
         ${openChats(searchQuery, () => setView_("new_chat"))}
       </div>
       <div
-        class="p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-black flex justify-center"
+        class="py-2.5 px-3 border-t border-[#ece8df] dark:border-[#22211d] flex justify-center"
       >
         <button
           type="button"
-          class="text-xs font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors flex items-center gap-1.5"
+          class="text-xs font-medium text-[#78736a] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition-colors flex items-center gap-1.5"
           @click="${() => {
             showArchived = !showArchived;
             rerenderChat();
           }}"
         >
-          ${showArchived ? "← Show Active Chats" : "Show Archived Chats"}
+          ${showArchived ? "← Active Chats" : "Archived"}
         </button>
       </div>
     </div>
@@ -2832,17 +2927,18 @@ const desktopContentArea = () => {
   }
   if (view === "new_chat") {
     return html`
-      <div style="display:flex;flex-grow:1;flex-direction:column">
+      <div style="display:flex;flex-grow:1;flex-direction:column"
+        class="surface-dots">
         <div
-          class="p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-black"
+          class="px-5 py-3.5 border-b border-[#e5e1d6] dark:border-[#24231f] bg-[#faf9f5] dark:bg-[#141412]"
         >
-          <h2 class="text-lg font-semibold">Start a new chat</h2>
+          <h2 class="text-base font-semibold tracking-tight">New Chat</h2>
         </div>
         <div
-          class="p-4 bg-white dark:bg-black"
+          class="p-4"
           style="display:flex;flex-grow:1;flex-direction:column;align-items:center;justify-content:center"
         >
-          <div style="max-width:500px;width:100%">${newChatScreen(() =>
+          <div style="max-width:460px;width:100%">${newChatScreen(() =>
             setView_("chats")
           )}</div>
         </div>
@@ -2850,17 +2946,18 @@ const desktopContentArea = () => {
     `;
   }
   return html`
-    <div style="display:flex;flex-grow:1;flex-direction:column">
+    <div style="display:flex;flex-grow:1;flex-direction:column"
+      class="surface-dots">
       <div
-        class="p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-black"
+        class="px-5 py-3.5 border-b border-[#e5e1d6] dark:border-[#24231f] bg-[#faf9f5] dark:bg-[#141412]"
       >
-        <h2 class="text-lg font-semibold">Account Settings</h2>
+        <h2 class="text-base font-semibold tracking-tight">Settings</h2>
       </div>
       <div
-        class="p-8 overflow-y-auto bg-white dark:bg-black"
+        class="p-6 sm:p-8 overflow-y-auto"
         style="display:flex;flex-grow:1;flex-direction:column;align-items:center;justify-content:flex-start;${scrollbarStyle()}"
       >
-        <div style="max-width:600px;width:100%">${yourKey()}</div>
+        <div class="anim-rise" style="max-width:560px;width:100%">${yourKey()}</div>
       </div>
     </div>
   `;
@@ -2992,7 +3089,9 @@ export const chat = (): TemplateResult => {
   loginStoreInBrowser = true;
   loginExistingInput = "";
   newChatInput = "";
+  paidInboxOpen = false;
   dangerZoneOpen = false;
+  copiedPublicKey = false;
   qrDataUrl = null;
   qrTransferUrl = null;
   qrLoading = false;

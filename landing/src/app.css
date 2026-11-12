@@ -200,3 +200,78 @@
     background: #9ca3af;
   }
 }
+
+.surface-dots {
+  background-color: #f6f4ee;
+  background-image: radial-gradient(#e2ded3 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.dark .surface-dots {
+  background-color: #0c0c0b;
+  background-image: radial-gradient(#1f1e1b 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gentleFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes softPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.anim-rise {
+  animation: riseIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-rise-delay-1 {
+  animation: riseIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
+}
+
+.anim-rise-delay-2 {
+  animation: riseIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
+}
+
+.anim-float {
+  animation: gentleFloat 5s ease-in-out infinite;
+}
+
+.anim-pulse-dot {
+  animation: softPulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise,
+  .anim-rise-delay-1,
+  .anim-rise-delay-2,
+  .anim-float,
+  .anim-pulse-dot {
+    animation: none;
+  }
+}

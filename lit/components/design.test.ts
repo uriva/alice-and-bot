@@ -1,40 +1,60 @@
-import { assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import {
+  assertEquals,
+  assertFalse,
+  assertMatch,
+  assertStringIncludes,
+} from "@std/assert";
+import {
+  avatarColor,
+  defaultOtherBubble,
   defaultPrimary,
   primaryHue,
   quoteBarColor,
   suggestedMessageButtonStyle,
   titleStyle,
+  widgetColors,
 } from "./design.ts";
 
-Deno.test("primary hue is a pleasant teal instead of harsh blue", () => {
-  assertEquals(primaryHue, 170);
+Deno.test("primary hue is a calm dusk slate instead of green/teal", () => {
+  assertEquals(primaryHue, 215);
 });
 
-Deno.test("default primary for light mode is a pleasant teal", () => {
-  assertEquals(defaultPrimary(false), "hsl(170, 55%, 45%)");
+Deno.test("default primary matches warm landing palette in light and dark mode", () => {
+  assertEquals(defaultPrimary(false), "hsl(215, 38%, 36%)");
+  assertEquals(defaultPrimary(true), "hsl(215, 34%, 28%)");
 });
 
-Deno.test("default primary for dark mode is a deep teal", () => {
-  assertEquals(defaultPrimary(true), "hsl(170, 42%, 24%)");
+Deno.test("chat surfaces match warm paper and carbon landing palette", () => {
+  assertEquals(widgetColors(false).backgroundColor, "#f6f4ee");
+  assertEquals(widgetColors(true).backgroundColor, "#0c0c0b");
+  assertEquals(defaultOtherBubble(false), "#ffffff");
+  assertEquals(defaultOtherBubble(true), "#171614");
 });
 
-Deno.test("chat header uses primary color as background", () => {
-  const css = titleStyle(false);
-  assertMatch(css, /background:hsl\(170, 55%, 45%\)/);
+Deno.test("chat header uses clean neutral surface by default and custom primary when specified", () => {
+  const lightCss = titleStyle(false);
+  const darkCss = titleStyle(true);
+  assertStringIncludes(lightCss, "color:#181715");
+  assertStringIncludes(darkCss, "color:#f3f1ea");
+  assertFalse(lightCss.includes(defaultPrimary(false)));
+
+  const customCss = titleStyle(false, { primary: "#181715" });
+  assertMatch(customCss, /background:#181715/);
+  assertMatch(customCss, /color:#fff/);
 });
 
-Deno.test("chat header text contrasts on primary background", () => {
-  const css = titleStyle(false);
-  assertMatch(css, /color:#fff/);
+Deno.test("avatar palette avoids harsh green hues", () => {
+  const sampleColors = ["alice", "bob", "coder", "qa", "deploy", "ops"].map(
+    (name) => avatarColor(name, false),
+  );
+  sampleColors.forEach((c) => {
+    assertFalse(c.startsWith("hsl(105,") || c.startsWith("hsl(150,"));
+  });
 });
 
-Deno.test("quote bar color matches primary in light mode", () => {
-  assertEquals(quoteBarColor(false), "hsl(170, 55%, 45%)");
-});
-
-Deno.test("quote bar color matches primary in dark mode", () => {
-  assertEquals(quoteBarColor(true), "hsl(170, 42%, 24%)");
+Deno.test("quote bar color matches primary in light and dark mode", () => {
+  assertEquals(quoteBarColor(false), "hsl(215, 38%, 36%)");
+  assertEquals(quoteBarColor(true), "hsl(215, 34%, 28%)");
 });
 
 Deno.test("suggested message buttons are themed with primary color in light and dark mode", () => {

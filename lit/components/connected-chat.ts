@@ -442,9 +442,9 @@ const chatSwitcherContainerStyle =
 
 const sidebarContainerStyle = (isDark: boolean, customColors?: CustomColors) =>
   `width:280px;min-width:240px;max-width:320px;flex-shrink:0;display:flex;flex-direction:column;height:100%;min-height:0;background:${
-    customColors?.background ?? (isDark ? "#111111" : "#f8f7f4")
+    customColors?.background ?? (isDark ? "#111110" : "#f6f4ee")
   };border-right:1px solid ${
-    isDark ? "#2a2a2a" : "#e5e7eb"
+    isDark ? "#252420" : "#e7e4dc"
   };font-family:sans-serif;box-sizing:border-box`;
 
 const sidebarHeaderStyle = (isDark: boolean) =>
@@ -506,7 +506,7 @@ const mobileBackButtonStyle = (isDark: boolean, customColors?: CustomColors) =>
 
 const mobileFullListStyle = (isDark: boolean, customColors?: CustomColors) =>
   `display:flex;flex-direction:column;width:100%;height:100%;min-height:0;background:${
-    customColors?.background ?? (isDark ? "#111111" : "#f8f7f4")
+    customColors?.background ?? (isDark ? "#111110" : "#f6f4ee")
   };font-family:sans-serif;box-sizing:border-box`;
 
 const mainChatContainerStyle =

@@ -6,8 +6,8 @@
   "start_url": "/chat",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#059669",
+  "background_color": "#0c0c0b",
+  "theme_color": "#181715",
   "icons": [
     {
       "src": "/icon-192.png",

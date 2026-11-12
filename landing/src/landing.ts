@@ -14,8 +14,11 @@ import {
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import { triggerPwaInstall } from "./pwaInstall.ts";
 
-const installButtonSecondaryStyle =
-  "px-5 py-3 bg-white hover:bg-gray-50 dark:bg-[#151816] dark:hover:bg-[#1c201d] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] shadow-xs";
+const primaryHeroCtaStyle =
+  "px-6 py-3 bg-[#181715] hover:bg-[#2c2a26] dark:bg-[#f3f1ea] dark:hover:bg-white text-[#faf9f5] dark:text-[#181715] font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 shadow-sm";
+
+const secondaryHeroCtaStyle =
+  "px-6 py-3 bg-white/80 hover:bg-white dark:bg-[#171614] dark:hover:bg-[#21201d] text-[#181715] dark:text-[#f3f1ea] border border-[#d6d2c7] dark:border-[#2e2d28] font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0";
 
 const skillInstallCommand = `mkdir -p ~/.agents/skills/alice-and-bot
 curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
@@ -50,7 +53,7 @@ type FeatureItem = {
 };
 
 const featureCardClass =
-  "flex flex-col p-6 sm:p-7 bg-white dark:bg-[#121413] rounded-2xl border border-gray-200/90 dark:border-emerald-950/60 shadow-sm hover:shadow-md hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all duration-200";
+  "flex flex-col p-6 sm:p-7 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)] hover:border-[#cbc6b9] dark:hover:border-[#383630] transition-all duration-200";
 
 const featureBadge = (badge?: string) =>
   !badge
@@ -58,7 +61,7 @@ const featureBadge = (badge?: string) =>
     `
     : html`
       <span
-        class="inline-flex self-start items-center px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide bg-emerald-50 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/60 mb-3"
+        class="inline-flex self-start items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium tracking-wide bg-[#efede6] text-[#57534e] dark:bg-[#22211d] dark:text-[#a8a298] mb-3"
       >${badge}</span>
     `;
 
@@ -67,9 +70,9 @@ const featureCard = ({ badge, title, description }: FeatureItem) =>
     <li class="${featureCardClass}">
       ${featureBadge(badge)}
       <strong
-        class="block text-gray-900 dark:text-gray-100 font-bold text-lg sm:text-xl mb-2 tracking-tight"
+        class="block text-[#181715] dark:text-[#f3f1ea] font-bold text-lg sm:text-xl mb-2 tracking-tight"
       >${title}</strong>
-      <div class="text-gray-600 dark:text-gray-400 text-sm sm:text-base leading-relaxed">
+      <div class="text-[#66625b] dark:text-[#9c968c] text-sm sm:text-base leading-relaxed">
         ${description}
       </div>
     </li>
@@ -77,90 +80,90 @@ const featureCard = ({ badge, title, description }: FeatureItem) =>
 
 const featureGrid = (items: FeatureItem[]) =>
   html`
-    <ul class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-8">
+    <ul class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full mb-8">
       ${map(featureCard)(items)}
     </ul>
   `;
 
 const twoColFeatureGrid = (items: FeatureItem[]) =>
   html`
-    <ul class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8">
+    <ul class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full mb-8">
       ${map(featureCard)(items)}
     </ul>
   `;
 
 const sectionClass =
-  "w-full max-w-6xl px-4 sm:px-6 flex flex-col items-center mb-20 min-w-0";
+  "w-full max-w-6xl px-4 sm:px-6 flex flex-col items-center mb-24 min-w-0";
 
 const corePillars: FeatureItem[] = [
   {
-    badge: "Pay Nobody",
-    title: "100% Free. Zero Per-Message Tax.",
+    badge: "$0 forever",
+    title: "Zero Per-Message Tax",
     description:
-      "WhatsApp Business and Twilio charge per conversation and make you rent phone numbers. Agent SaaS tools charge per seat. Alice&Bot costs $0. Spin up 1 or 1,000 agents and send unlimited messages without paying a cent.",
+      "No rented phone numbers, no Twilio bills, and no per-seat SaaS fees. Spin up 1 or 1,000 agents for $0.",
   },
   {
-    badge: "One Inbox",
-    title: "Chat With Many Agents at Once",
+    badge: "E2E encrypted",
+    title: "Nobody Sees Your Data",
     description:
-      "Stop juggling terminal tabs and custom web UIs for every bot. Keep your coding sessions, research bots, cron monitors, and multi-agent group chats in one familiar WhatsApp-like inbox on web and mobile.",
+      "Keys live on your devices and servers. Every message and file is encrypted end-to-end before leaving the client.",
   },
   {
-    badge: "Zero Bureaucracy",
+    badge: "One function call",
     title: "An Identity Is Just a Keypair",
     description:
-      "One function call creates a new agent or human account. No SIM cards, no phone verification, no email signups, no Meta template approvals, and no surprise account bans.",
+      "No SIM cards, email signups, or template approvals. Call createIdentity() and start messaging immediately.",
   },
 ];
 
 const aiFeatures: FeatureItem[] = [
   {
-    badge: "Multi-Agent Native",
-    title: "Put Multiple Agents in One Group Chat",
+    badge: "Group chats",
+    title: "Humans + Agents in One Room",
     description:
-      "Bots and humans use the exact same protocol. Drop a coder agent, a QA agent, and your teammates into one thread so they can coordinate in real time.",
+      "Drop a coder, a QA bot, and your teammates into one shared thread so everyone coordinates in real time.",
   },
   {
-    badge: "Rich Agent UX",
-    title: "Spinners, Progress Bars & Live Edits",
+    badge: "Agent UX",
+    title: "Spinners, Progress & Live Edits",
     description:
-      "Built for how agents actually work. Stream live thinking spinners, percentage progress bars, markdown replies, attachments, and voice calls out of the box.",
+      "Stream live thinking indicators, progress bars, markdown, files, and voice calls out of the box.",
   },
   {
-    badge: "Instant Webhooks",
-    title: "Receive Messages via Simple POSTs",
+    badge: "Webhooks",
+    title: "Simple Encrypted POSTs",
     description:
-      "Register a webhook URL for any identity and get an encrypted payload on every message. Decrypt and reply in three lines of TypeScript.",
+      "Point any identity at a URL and reply to encrypted messages in three lines of TypeScript.",
   },
 ];
 
 const developerFeatures: FeatureItem[] = [
   {
-    badge: "30-Second Setup",
-    title: "Create Unlimited Agent Identities",
+    badge: "30s setup",
+    title: "Unlimited Agent Identities",
     description:
-      "Call createIdentity() as many times as you want. Every bot gets its own cryptographic keys, handle, avatar, and conversation history with zero rate-limit paywalls.",
+      "Every bot gets its own cryptographic keys, @handle, and history with zero rate-limit paywalls.",
   },
   {
-    badge: "Runs Everywhere",
-    title: "Browser, Server & Embeddable Widget",
+    badge: "Every runtime",
+    title: "Browser, Server & Widget",
     description:
-      "Use the same SDK in Deno, Node.js, Cloudflare Workers, or the browser. Chat in the full messenger or embed a widget on your own site with one script tag.",
+      "Same SDK across Deno, Node.js, Workers, and browsers—or embed a chat widget with one script tag.",
   },
 ];
 
 const editorFeatures: FeatureItem[] = [
   {
-    badge: "Works With Your Stack",
-    title: "Claude Code, OpenCode, Cursor & Windsurf",
+    badge: "Your stack",
+    title: "Claude Code, OpenCode & Cursor",
     description:
-      "Connect as many running coding sessions as you have open. Each session appears as a contact in your Alice&Bot inbox.",
+      "Every running terminal session appears as a contact in your Alice&Bot inbox.",
   },
   {
-    badge: "Instant Pairing",
-    title: "Scan a QR Code and Walk Away",
+    badge: "QR pairing",
+    title: "Scan Once and Walk Away",
     description:
-      "Run one command in your editor, scan the terminal QR code on your phone, and keep guiding your agents while you are away from your desk.",
+      "Pair your phone in seconds and keep steering your coding agents from anywhere.",
   },
 ];
 
@@ -173,28 +176,28 @@ type ComparisonRow = {
 
 const comparisonRows: ComparisonRow[] = [
   {
-    feature: "Cost to chat with 20 agents",
+    feature: "Cost for 20 agents",
     alice: "$0 forever",
-    whatsapp: "SIMs + Twilio/Meta per-message fees",
-    saas: "$20 to $100+/mo per seat or bot",
+    whatsapp: "SIMs + per-message fees",
+    saas: "$20–$100+/mo per seat",
   },
   {
-    feature: "Create a new agent account",
-    alice: "1 function call (keypair)",
-    whatsapp: "Phone number + business verification",
-    saas: "Dashboard signup + API keys",
-  },
-  {
-    feature: "Multi-agent + human group chats",
-    alice: "Built in",
-    whatsapp: "Restricted / brittle bot rules",
-    saas: "Usually isolated 1:1 threads",
-  },
-  {
-    feature: "End-to-end encryption",
-    alice: "Always on (AES-256-GCM + RSA)",
+    feature: "Data privacy",
+    alice: "Always E2E encrypted",
     whatsapp: "Terminated at business API",
     saas: "Plaintext on vendor servers",
+  },
+  {
+    feature: "New agent identity",
+    alice: "1 function call",
+    whatsapp: "Phone + business approval",
+    saas: "Dashboard + API keys",
+  },
+  {
+    feature: "Multi-agent group chats",
+    alice: "Built in",
+    whatsapp: "Restricted bot rules",
+    saas: "Isolated 1:1 threads",
   },
 ];
 
@@ -212,45 +215,37 @@ type SidebarAgent = {
 const sidebarAgents: SidebarAgent[] = [
   {
     initials: "SS",
-    color: "bg-emerald-600 text-white",
+    color: "bg-[#39587f] text-white",
     name: "Ship Squad",
-    tag: "3 agents · you",
+    tag: "3 agents",
     preview: "deploy_bot: Live on production",
     time: "now",
     active: true,
   },
   {
     initials: "OC",
-    color: "bg-amber-600 text-white",
+    color: "bg-[#b06d3b] text-white",
     name: "opencode-laptop",
     tag: "agent",
-    preview: "All 18 tests passing. Ready to push?",
+    preview: "All 18 tests passing. Push?",
     time: "2m",
     unread: 2,
   },
   {
     initials: "RS",
-    color: "bg-sky-600 text-white",
+    color: "bg-[#3f7a8c] text-white",
     name: "research_bot",
     tag: "agent",
-    preview: "Thinking: comparing 12 papers...",
+    preview: "Comparing 12 papers...",
     time: "5m",
   },
   {
     initials: "PR",
-    color: "bg-purple-600 text-white",
+    color: "bg-[#6b568c] text-white",
     name: "pr_reviewer",
     tag: "agent",
     preview: "Left 2 notes on landing.ts",
     time: "14m",
-  },
-  {
-    initials: "CR",
-    color: "bg-rose-600 text-white",
-    name: "prod_watchdog",
-    tag: "agent",
-    preview: "Latency p99 steady at 42ms",
-    time: "1h",
   },
 ];
 
@@ -260,11 +255,11 @@ const renderSidebarItem = (
   html`
     <div
       class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${active
-        ? "bg-emerald-50/90 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800/60"
-        : "hover:bg-gray-100/70 dark:hover:bg-white/5 border border-transparent"}"
+        ? "bg-[#ebe7dc] dark:bg-[#22211d]"
+        : "hover:bg-[#efede6]/70 dark:hover:bg-white/5"}"
     >
       <div
-        class="w-9 h-9 rounded-full ${color} flex items-center justify-center text-xs font-bold shrink-0 shadow-xs"
+        class="w-8 h-8 rounded-full ${color} flex items-center justify-center text-[11px] font-bold shrink-0"
       >
         ${initials}
       </div>
@@ -272,23 +267,22 @@ const renderSidebarItem = (
         <div class="flex items-center justify-between gap-1">
           <div class="flex items-center gap-1.5 min-w-0">
             <span
-              class="text-xs font-bold text-gray-900 dark:text-gray-100 truncate"
+              class="text-xs font-semibold text-[#181715] dark:text-[#f3f1ea] truncate"
             >${name}</span>
             <span
-              class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-gray-200/80 dark:bg-gray-800 text-gray-600 dark:text-gray-400 shrink-0"
+              class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/5 dark:bg-white/8 text-[#66625b] dark:text-[#9c968c] shrink-0"
             >${tag}</span>
           </div>
-          <span class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0"
-          >${time}</span>
+          <span class="text-[10px] text-[#8c867c] shrink-0">${time}</span>
         </div>
         <div class="flex items-center justify-between gap-2 mt-0.5">
-          <p class="text-xs text-gray-600 dark:text-gray-400 truncate">
+          <p class="text-xs text-[#66625b] dark:text-[#9c968c] truncate">
             ${preview}
           </p>
           ${unread
             ? html`
               <span
-                class="inline-flex items-center justify-center px-1.5 min-w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] font-bold shrink-0"
+                class="inline-flex items-center justify-center px-1.5 min-w-4 h-4 rounded-full bg-[#39587f] text-white text-[10px] font-bold shrink-0"
               >${unread}</span>
             `
             : html`
@@ -301,56 +295,57 @@ const renderSidebarItem = (
 const heroMessengerPreview = () =>
   html`
     <div
-      class="w-full rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-[#111312] shadow-2xl overflow-hidden"
+      class="anim-rise-delay-2 w-full rounded-2xl border border-[#e3dfd4] dark:border-[#262521] bg-[#faf9f5] dark:bg-[#141412] shadow-[0_20px_50px_rgba(24,23,21,0.09)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
     >
       <div
-        class="flex items-center justify-between px-4 py-2.5 bg-gray-100/90 dark:bg-[#171a18] border-b border-gray-200 dark:border-gray-800"
+        class="flex items-center justify-between px-4 py-2.5 bg-[#f2efe8] dark:bg-[#181715] border-b border-[#e5e1d6] dark:border-[#252420]"
       >
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
-          <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+        <div class="flex items-center gap-1.5 min-w-0">
           <span
-            class="ml-2 text-xs font-mono text-gray-500 dark:text-gray-400"
+            class="w-2.5 h-2.5 rounded-full bg-[#d6d2c7] dark:bg-[#33312c] shrink-0"></span>
+          <span
+            class="w-2.5 h-2.5 rounded-full bg-[#d6d2c7] dark:bg-[#33312c] shrink-0"></span>
+          <span
+            class="w-2.5 h-2.5 rounded-full bg-[#d6d2c7] dark:bg-[#33312c] shrink-0"></span>
+          <span
+            class="ml-1.5 text-xs font-mono text-[#78736a] dark:text-[#8c867c] truncate"
           >aliceandbot.com/chat</span>
         </div>
         <span
-          class="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/80 px-2 py-0.5 rounded-full"
-        >5 agents online · $0/mo</span>
+          class="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#57534e] dark:text-[#a8a298] bg-white/80 dark:bg-[#22211d] border border-[#e3dfd4] dark:border-[#2e2d28] px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+        >
+          <span class="w-1.5 h-1.5 rounded-full bg-[#39587f] dark:bg-[#6b93c4] anim-pulse-dot"></span>
+          E2E · $0
+        </span>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-12 min-h-[380px]">
+      <div class="grid grid-cols-1 sm:grid-cols-12 min-h-[360px]">
         <div
-          class="sm:col-span-5 border-b sm:border-b-0 sm:border-r border-gray-200 dark:border-gray-800 p-2.5 bg-gray-50/60 dark:bg-[#0d0f0e] flex flex-col gap-1"
+          class="sm:col-span-5 border-b sm:border-b-0 sm:border-r border-[#e7e4dc] dark:border-[#24231f] p-2.5 bg-[#faf9f5] dark:bg-[#141412] flex flex-col gap-1"
         >
-          <div class="px-2 py-1 flex items-center justify-between">
+          <div class="px-2.5 py-1.5 flex items-center justify-between">
             <span
-              class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
-            >Your Agents & Groups</span>
+              class="text-[11px] font-semibold uppercase tracking-wider text-[#8c867c]"
+            >Chats</span>
             <span
-              class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400"
+              class="text-[11px] font-mono text-[#57534e] dark:text-[#a8a298]"
             >+ new</span>
           </div>
           ${map(renderSidebarItem)(sidebarAgents)}
         </div>
 
         <div
-          class="sm:col-span-7 flex flex-col justify-between bg-[#f4f1ea]/70 dark:bg-[#0b0d0c] p-3.5 sm:p-4"
+          class="sm:col-span-7 flex flex-col justify-between surface-dots p-3.5 sm:p-4"
         >
           <div>
             <div
-              class="flex items-center justify-between pb-3 mb-3 border-b border-gray-200/80 dark:border-gray-800"
+              class="flex items-center justify-between pb-2.5 mb-3 border-b border-[#e5e1d6] dark:border-[#24231f]"
             >
               <div>
-                <div class="flex items-center gap-2">
-                  <span
-                    class="text-sm font-bold text-gray-900 dark:text-gray-100"
-                  >Ship Squad</span>
-                  <span
-                    class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
-                  >E2E encrypted</span>
-                </div>
-                <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                <span
+                  class="text-sm font-semibold text-[#181715] dark:text-[#f3f1ea]"
+                >Ship Squad</span>
+                <p class="text-[11px] text-[#78736a] dark:text-[#8c867c]">
                   coder_bot, qa_bot, deploy_bot, you
                 </p>
               </div>
@@ -359,24 +354,20 @@ const heroMessengerPreview = () =>
             <div class="space-y-2.5 text-xs">
               <div class="flex justify-end">
                 <div
-                  class="max-w-[85%] rounded-2xl rounded-tr-xs px-3 py-2 bg-emerald-600 text-white shadow-xs"
+                  class="max-w-[85%] rounded-2xl rounded-tr-xs px-3.5 py-2 bg-[#39587f] dark:bg-[#2f445f] text-white shadow-xs"
                 >
-                  @coder_bot @qa_bot update the hero copy to explain it's like
-                  WhatsApp for agents, then run e2e tests.
+                  @coder_bot @qa_bot ship the simplified hero and run e2e checks.
                 </div>
               </div>
 
               <div class="flex justify-start">
                 <div
-                  class="max-w-[88%] rounded-2xl rounded-tl-xs px-3 py-2 bg-white dark:bg-[#171a18] border border-gray-200/80 dark:border-gray-800 text-gray-800 dark:text-gray-200 shadow-xs"
+                  class="max-w-[88%] rounded-2xl rounded-tl-xs px-3.5 py-2 bg-white dark:bg-[#171614] border border-[#e7e4dc] dark:border-[#262521] text-[#181715] dark:text-[#f3f1ea] shadow-2xs"
                 >
                   <div class="flex items-center gap-1.5 mb-0.5">
                     <span
-                      class="font-bold text-emerald-700 dark:text-emerald-400"
+                      class="font-semibold text-[#39587f] dark:text-[#7da2cf]"
                     >coder_bot</span>
-                    <span
-                      class="text-[10px] font-mono px-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-500"
-                    >agent</span>
                   </div>
                   Updated <code class="font-mono text-[11px]">landing.ts</code>.
                   Handing off to <span class="font-mono">@qa_bot</span>.
@@ -385,14 +376,11 @@ const heroMessengerPreview = () =>
 
               <div class="flex justify-start">
                 <div
-                  class="max-w-[88%] rounded-2xl rounded-tl-xs px-3 py-2 bg-white dark:bg-[#171a18] border border-gray-200/80 dark:border-gray-800 text-gray-800 dark:text-gray-200 shadow-xs"
+                  class="max-w-[88%] rounded-2xl rounded-tl-xs px-3.5 py-2 bg-white dark:bg-[#171614] border border-[#e7e4dc] dark:border-[#262521] text-[#181715] dark:text-[#f3f1ea] shadow-2xs"
                 >
                   <div class="flex items-center gap-1.5 mb-0.5">
-                    <span class="font-bold text-sky-700 dark:text-sky-400"
+                    <span class="font-semibold text-[#b06d3b] dark:text-[#d99564]"
                     >qa_bot</span>
-                    <span
-                      class="text-[10px] font-mono px-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-500"
-                    >agent</span>
                   </div>
                   Mobile & desktop checks passed. Zero layout overflow.
                 </div>
@@ -400,27 +388,23 @@ const heroMessengerPreview = () =>
 
               <div class="flex justify-start">
                 <div
-                  class="w-full max-w-[88%] rounded-2xl rounded-tl-xs px-3 py-2 bg-white dark:bg-[#171a18] border border-gray-200/80 dark:border-gray-800 text-gray-800 dark:text-gray-200 shadow-xs"
+                  class="w-full max-w-[88%] rounded-2xl rounded-tl-xs px-3.5 py-2 bg-white dark:bg-[#171614] border border-[#e7e4dc] dark:border-[#262521] text-[#181715] dark:text-[#f3f1ea] shadow-2xs"
                 >
                   <div class="flex items-center justify-between mb-1">
-                    <div class="flex items-center gap-1.5">
-                      <span
-                        class="font-bold text-purple-700 dark:text-purple-400"
-                      >deploy_bot</span>
-                      <span
-                        class="text-[10px] font-mono px-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-500"
-                      >agent</span>
-                    </div>
                     <span
-                      class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400"
+                      class="font-semibold text-[#6b568c] dark:text-[#a992cc]"
+                    >deploy_bot</span>
+                    <span
+                      class="text-[10px] font-mono text-[#66625b] dark:text-[#9c968c]"
                     >100%</span>
                   </div>
                   <div
-                    class="w-full h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden mb-1"
+                    class="w-full h-1.5 bg-[#ece9e0] dark:bg-[#262521] rounded-full overflow-hidden mb-1"
                   >
-                    <div class="h-full w-full bg-emerald-500 rounded-full"></div>
+                    <div
+                      class="h-full w-full bg-[#39587f] dark:bg-[#5c82b0] rounded-full"></div>
                   </div>
-                  <span class="text-[11px] text-gray-600 dark:text-gray-400"
+                  <span class="text-[11px] text-[#66625b] dark:text-[#9c968c]"
                   >Live on production.</span>
                 </div>
               </div>
@@ -428,16 +412,16 @@ const heroMessengerPreview = () =>
           </div>
 
           <div
-            class="mt-3 pt-2.5 border-t border-gray-200/80 dark:border-gray-800 flex items-center gap-2"
+            class="mt-3 pt-2.5 flex items-center gap-2"
           >
             <div
-              class="flex-1 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-[#171a18] border border-gray-200 dark:border-gray-800 rounded-full px-3 py-1.5"
+              class="flex-1 text-xs text-[#8c867c] bg-white dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] rounded-full px-3.5 py-2 shadow-2xs"
             >
-              Message Ship Squad or @mention an agent...
+              Type a message...
             </div>
             <a
               href="${chatPath}"
-              class="px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors"
+              class="px-3.5 py-2 rounded-full bg-[#181715] hover:bg-[#2b2926] dark:bg-[#f3f1ea] dark:hover:bg-white text-[#faf9f5] dark:text-[#181715] text-xs font-semibold transition-colors"
             >Try it</a>
           </div>
         </div>
@@ -449,19 +433,19 @@ type Tab = "coders" | "agents" | "editors" | "humans";
 const state: { activeTab: Tab } = { activeTab: "coders" };
 
 const tabButtonClass = (isActive: boolean) =>
-  `px-3 sm:px-6 py-3 text-sm transition-all duration-200 border-b-2 rounded-t-lg cursor-pointer whitespace-nowrap ${
+  `px-4 py-2 text-sm rounded-full transition-all duration-150 cursor-pointer whitespace-nowrap ${
     isActive
-      ? "border-emerald-600 dark:border-emerald-400 text-gray-900 dark:text-white bg-white dark:bg-[#141715] font-semibold"
-      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-[#141715]/40 font-medium"
+      ? "bg-[#181715] text-[#faf9f5] dark:bg-[#f3f1ea] dark:text-[#181715] font-semibold shadow-2xs"
+      : "text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] hover:bg-[#ebe7dc]/70 dark:hover:bg-[#1f1e1b] font-medium"
   }`;
 
 const androidSvg = html`
   <svg
-    width="40"
-    height="40"
+    width="36"
+    height="36"
     viewBox="0 0 24 24"
     fill="currentColor"
-    class="text-emerald-500 mb-3"
+    class="text-[#39587f] dark:text-[#7da2cf] mb-3"
   >
     <path
       d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24a11.463 11.463 0 0 0-8.94 0L5.65 5.67c-.19-.29-.55-.38-.84-.22-.31.16-.43.54-.27.85L6.4 9.48A10.78 10.78 0 0 0 1 18h22a10.78 10.78 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"
@@ -471,11 +455,11 @@ const androidSvg = html`
 
 const appleSvg = html`
   <svg
-    width="40"
-    height="40"
+    width="36"
+    height="36"
     viewBox="0 0 24 24"
     fill="currentColor"
-    class="text-gray-700 dark:text-gray-300 mb-3"
+    class="text-[#181715] dark:text-[#f3f1ea] mb-3"
   >
     <path
       d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
@@ -496,90 +480,66 @@ const codersTab = () =>
         lang: "typescript",
         filename: "multi-agent-chat.ts",
       })}
-      <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-3 mb-2">
-        Create as many agent identities as you want. Put them in 1:1 chats or group
-        threads with zero config and zero fees.
-      </p>
     </div>
   `;
 
 const humansTab = () =>
   html`
     <div class="w-full flex flex-col items-center">
-      <h3 class="text-2xl font-bold mb-2 text-center">
-        Carry all your agents in your pocket
-      </h3>
       <p
-        class="text-base text-gray-600 dark:text-gray-400 text-center mb-8 max-w-xl"
+        class="text-base text-[#66625b] dark:text-[#9c968c] text-center mb-8 max-w-md"
       >
-        Use Alice&Bot in any browser or install it on your phone like WhatsApp. No
-        phone number or email required.
+        Install Alice&Bot on your phone with zero phone number or email.
       </p>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-2xl">
         <div
-          class="flex flex-col items-center p-6 bg-white dark:bg-[#121413] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm"
+          class="flex flex-col items-center p-6 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420]"
         >
           ${androidSvg}
           <strong
-            class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2"
+            class="text-lg font-semibold text-[#181715] dark:text-[#f3f1ea] mb-2"
           >Android</strong>
           <ol
-            class="text-gray-700 dark:text-gray-300 text-sm space-y-1 list-decimal list-inside mb-4"
+            class="text-[#57534e] dark:text-[#a8a298] text-sm space-y-1 list-decimal list-inside mb-4"
           >
             <li>
               Open <a
                 href="${chatPath}"
-                class="underline text-emerald-700 dark:text-emerald-400"
+                class="underline text-[#181715] dark:text-[#f3f1ea]"
               >aliceandbot.com/chat</a> in Chrome
             </li>
             <li>Tap the menu (three dots)</li>
             <li>Tap "Add to Home screen"</li>
           </ol>
-          <div class="w-full border-t border-gray-200 dark:border-gray-800 my-3">
-          </div>
           <button
             type="button"
             class="${buttonClass(
               "default",
               "default",
-              "w-full text-center flex items-center justify-center gap-2",
+              "w-full text-center flex items-center justify-center gap-2 mt-auto",
             )}"
             @click="${() => triggerPwaInstall()}"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="2"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-              />
-            </svg>
             Install App (1 Tap)
           </button>
         </div>
         <div
-          class="flex flex-col items-center p-6 bg-white dark:bg-[#121413] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm"
+          class="flex flex-col items-center p-6 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420]"
         >
           ${appleSvg}
           <strong
-            class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2"
+            class="text-lg font-semibold text-[#181715] dark:text-[#f3f1ea] mb-2"
           >iPhone / iPad</strong>
           <ol
-            class="text-gray-700 dark:text-gray-300 text-sm space-y-1 list-decimal list-inside"
+            class="text-[#57534e] dark:text-[#a8a298] text-sm space-y-1 list-decimal list-inside"
           >
             <li>
               Open <a
                 href="${chatPath}"
-                class="underline text-emerald-700 dark:text-emerald-400"
+                class="underline text-[#181715] dark:text-[#f3f1ea]"
               >aliceandbot.com/chat</a> in Safari
             </li>
-            <li>Tap the share button</li>
+            <li>Tap Share</li>
             <li>Tap "Add to Home Screen"</li>
           </ol>
         </div>
@@ -590,32 +550,20 @@ const humansTab = () =>
 const agentsTab = () =>
   html`
     <div class="w-full">
-      <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
-        First-class support for bots and multi-agent teams.
-      </p>
       ${featureGrid(aiFeatures)}
-      <div class="w-full max-w-4xl mx-auto flex flex-col items-center mb-8">
-        <h3 class="text-2xl font-bold mb-3 text-center">
-          Teach Your Coding Agent to Build Bots
+      <div class="w-full max-w-3xl mx-auto flex flex-col items-center">
+        <h3 class="text-xl font-bold mb-2 text-center">
+          Give Your Coding Agent the Skill
         </h3>
-        <p class="text-base text-gray-600 dark:text-gray-400 text-center mb-4">
-          Install the Alice&Bot skill and your coding agent will know how to create
-          identities, join group chats, send messages, and wire webhooks on its own.
+        <p class="text-sm text-[#66625b] dark:text-[#9c968c] text-center mb-3">
+          One file teaches any coding agent to create identities, join threads,
+          and wire webhooks.
         </p>
         ${shellCode(skillInstallCommand)}
-        <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
-          Works with any agent that supports <a
-            href="https://github.com/anomalyco/opencode"
-            class="underline text-gray-700 dark:text-gray-300"
-          >OpenCode</a>-style skills.
-        </p>
-      </div>
-      <div class="w-full max-w-4xl mx-auto flex flex-col items-center">
-        <h3 class="text-2xl font-bold mb-4 text-center">MCP Server</h3>
-        <div class="flex flex-wrap justify-center gap-4">
+        <div class="mt-4">
           <a href="${mcpGuidePath}" class="${buttonClass(
+            "secondary",
             "default",
-            "lg",
           )}">MCP Setup Guide</a>
         </div>
       </div>
@@ -625,23 +573,20 @@ const agentsTab = () =>
 const editorsTab = () =>
   html`
     <div class="w-full">
-      <p class="text-lg text-gray-700 dark:text-gray-300 text-center mb-8">
-        Message all your active coding sessions from your phone for free.
-      </p>
       ${twoColFeatureGrid(editorFeatures)}
-      <div class="flex flex-wrap justify-center gap-4 mt-8">
+      <div class="flex flex-wrap justify-center gap-3 mt-6">
         <a href="${claudeCodePath}" class="${buttonClass(
           "secondary",
           "lg",
-        )}">Claude Code Guide</a>
+        )}">Claude Code</a>
         <a href="${opencodePath}" class="${buttonClass(
           "secondary",
           "lg",
-        )}">OpenCode Guide</a>
+        )}">OpenCode</a>
         <a href="${mcpGuidePath}" class="${buttonClass(
           "outline",
           "lg",
-        )}">Cursor / Windsurf (MCP)</a>
+        )}">Cursor / Windsurf</a>
       </div>
     </div>
   `;
@@ -654,10 +599,10 @@ const tabContent = (): TemplateResult => {
 };
 
 const tabs: { id: Tab; label: string }[] = [
-  { id: "coders", label: "For Coders" },
-  { id: "agents", label: "For AI Agents" },
-  { id: "editors", label: "For Code Editors" },
-  { id: "humans", label: "Mobile & Web App" },
+  { id: "coders", label: "Coders" },
+  { id: "agents", label: "AI Agents" },
+  { id: "editors", label: "Editors" },
+  { id: "humans", label: "Mobile App" },
 ];
 
 const renderTabButton = ({ id, label }: { id: Tab; label: string }) =>
@@ -675,19 +620,20 @@ const renderComparisonRow = (
   { feature, alice, whatsapp, saas }: ComparisonRow,
 ) =>
   html`
-    <tr class="border-t border-gray-200/80 dark:border-gray-800/80">
-      <td class="py-4 px-4 sm:px-6 font-medium text-gray-900 dark:text-gray-100">
+    <tr class="border-t border-[#ece8df] dark:border-[#24231f]">
+      <td
+        class="py-3.5 px-4 sm:px-6 font-medium text-[#181715] dark:text-[#f3f1ea]">
         ${feature}
       </td>
       <td
-        class="py-4 px-4 sm:px-6 font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20"
+        class="py-3.5 px-4 sm:px-6 font-semibold text-[#181715] dark:text-[#f3f1ea] bg-[#f7f5ef] dark:bg-[#1c1b18]"
       >
         ${alice}
       </td>
-      <td class="py-4 px-4 sm:px-6 text-gray-600 dark:text-gray-400">
+      <td class="py-3.5 px-4 sm:px-6 text-[#66625b] dark:text-[#9c968c]">
         ${whatsapp}
       </td>
-      <td class="py-4 px-4 sm:px-6 text-gray-600 dark:text-gray-400">
+      <td class="py-3.5 px-4 sm:px-6 text-[#66625b] dark:text-[#9c968c]">
         ${saas}
       </td>
     </tr>
@@ -696,38 +642,36 @@ const renderComparisonRow = (
 const comparisonSection = () =>
   html`
     <section class="${sectionClass}">
-      <div class="text-center max-w-3xl mb-10">
+      <div class="text-center max-w-2xl mb-10">
         <h2
-          class="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-3"
+          class="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
         >
-          The easiest way to chat with many agents without paying anyone
+          Zero fees. Zero data middlemen.
         </h2>
-        <p class="text-base sm:text-lg text-gray-600 dark:text-gray-400">
-          Connecting agents to traditional chat apps means renting phone numbers,
-          waiting for business approvals, and paying per message. Alice&Bot removes
-          every middleman.
+        <p class="text-base text-[#66625b] dark:text-[#9c968c]">
+          Direct end-to-end encrypted rooms for humans and agents.
         </p>
       </div>
 
       ${featureGrid(corePillars)}
 
       <div
-        class="w-full overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#121413] shadow-sm"
+        class="w-full overflow-x-auto rounded-2xl border border-[#e7e4dc] dark:border-[#252420] bg-white dark:bg-[#151513]"
       >
         <table class="w-full text-left border-collapse text-sm">
           <thead>
-            <tr class="bg-gray-50 dark:bg-[#171a18] text-gray-500 dark:text-gray-400">
-              <th class="py-3.5 px-4 sm:px-6 font-semibold">What you need</th>
+            <tr class="bg-[#faf9f5] dark:bg-[#191815] text-[#78736a] dark:text-[#8c867c]">
+              <th class="py-3.5 px-4 sm:px-6 font-medium"></th>
               <th
-                class="py-3.5 px-4 sm:px-6 font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-950/40"
+                class="py-3.5 px-4 sm:px-6 font-bold text-[#181715] dark:text-[#f3f1ea] bg-[#f2efe8] dark:bg-[#21201c]"
               >
                 Alice&Bot
               </th>
-              <th class="py-3.5 px-4 sm:px-6 font-semibold">
+              <th class="py-3.5 px-4 sm:px-6 font-medium">
                 WhatsApp / Twilio
               </th>
-              <th class="py-3.5 px-4 sm:px-6 font-semibold">
-                Paid Agent Platforms
+              <th class="py-3.5 px-4 sm:px-6 font-medium">
+                Agent SaaS
               </th>
             </tr>
           </thead>
@@ -742,19 +686,15 @@ const comparisonSection = () =>
 const audienceTabs = () =>
   html`
     <section class="${sectionClass}">
-      <div class="text-center max-w-2xl mb-8">
+      <div class="text-center max-w-xl mb-7">
         <h2
-          class="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-3"
+          class="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
         >
           Built for every agent you run
         </h2>
-        <p class="text-base sm:text-lg text-gray-600 dark:text-gray-400">
-          Spin up custom bots with the TypeScript SDK, connect your terminal coding
-          agents via QR code, or open the messenger on your phone.
-        </p>
       </div>
       <div
-        class="flex sm:justify-center mb-8 border-b border-gray-200 dark:border-gray-800 max-w-full overflow-x-auto"
+        class="inline-flex items-center gap-1 p-1 mb-8 rounded-full bg-[#eae7de]/80 dark:bg-[#1a1916] border border-[#e2ded3] dark:border-[#262521] max-w-full overflow-x-auto"
       >
         ${map(renderTabButton)(tabs)}
       </div>
@@ -764,97 +704,47 @@ const audienceTabs = () =>
 
 const heroSection = () =>
   html`
-    <section
-      class="w-full py-12 sm:py-20 bg-gradient-to-b from-white via-[#f8f7f2] to-[#f4f2ec] dark:from-[#0a0c0b] dark:via-[#0d100e] dark:to-[#0a0a0a] border-b border-gray-200/80 dark:border-gray-800/80 mb-16"
-    >
+    <section class="w-full py-14 sm:py-24 mb-12">
       <div
-        class="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center"
+        class="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center"
       >
         <div
           class="lg:col-span-5 flex flex-col items-center lg:items-start text-center lg:text-left"
         >
           <div
-            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/90 dark:bg-emerald-950/80 border border-emerald-300/60 dark:border-emerald-800/70 text-emerald-900 dark:text-emerald-300 text-xs font-semibold mb-5"
+            class="anim-rise inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] text-[#57534e] dark:text-[#a8a298] text-xs font-medium mb-6"
           >
-            <img src="icon.png" alt="Alice&Bot logo" class="w-4 h-4" />
-            <span>Alice&Bot · Free & End-to-End Encrypted</span>
+            <img src="icon.png" alt="Alice&Bot logo" class="w-4 h-4 anim-float" />
+            <span>Open source · End-to-end encrypted</span>
           </div>
 
           <h1
-            class="text-4xl sm:text-5xl xl:text-6xl font-extrabold tracking-tight text-gray-950 dark:text-white leading-[1.08] mb-5"
+            class="anim-rise text-4xl sm:text-5xl xl:text-6xl font-extrabold tracking-[-0.035em] text-[#181715] dark:text-[#f3f1ea] leading-[1.04] mb-5"
           >
-            WhatsApp for <span
-              class="text-emerald-600 dark:text-emerald-400"
-            >AI agents.</span>
+            <span class="text-[#1ea952] dark:text-[#25d366]">WhatsApp</span> for AI
+            agents.
           </h1>
 
           <p
-            class="text-xl sm:text-2xl text-gray-800 dark:text-gray-200 font-semibold leading-snug mb-4"
+            class="anim-rise-delay-1 text-lg sm:text-xl text-[#4a4740] dark:text-[#b8b2a7] font-medium leading-relaxed mb-8 max-w-md"
           >
-            The easiest way to chat with many agents in one place, without paying
-            anyone.
-          </p>
-
-          <p
-            class="text-base text-gray-600 dark:text-gray-400 leading-relaxed mb-7"
-          >
-            Put all your coding sessions, custom bots, and multi-agent group chats
-            into a single messenger on web and mobile. No SIM cards, no Meta
-            approvals, no Twilio bills, and $0 per message.
+            The easiest way to chat with many agents in one place — without paying
+            anyone, and without giving anyone access to your data.
           </p>
 
           <div
-            class="flex flex-wrap justify-center lg:justify-start gap-3.5 w-full sm:w-auto"
+            class="anim-rise-delay-2 flex flex-wrap justify-center lg:justify-start gap-3 w-full sm:w-auto"
           >
-            <a
-              href="${chatPath}"
-              class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-emerald-600/20"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="2"
-                stroke="currentColor"
-                class="w-5 h-5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"
-                />
-              </svg>
+            <a href="${chatPath}" class="${primaryHeroCtaStyle}">
               Open Messenger
             </a>
             <button
               type="button"
-              class="${installButtonSecondaryStyle}"
+              class="${secondaryHeroCtaStyle}"
               @click="${() => triggerPwaInstall()}"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.8"
-                stroke="currentColor"
-                class="w-5 h-5 text-gray-500 dark:text-gray-400"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-                />
-              </svg>
               Install App
             </button>
-          </div>
-
-          <div
-            class="flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 mt-6 text-xs text-gray-500 dark:text-gray-400 font-medium"
-          >
-            <span>✓ Unlimited free bots</span>
-            <span>✓ Multi-agent group chats</span>
-            <span>✓ No phone number needed</span>
           </div>
         </div>
 
@@ -869,35 +759,35 @@ const landingTemplate = (): TemplateResult =>
   html`
     ${header()}
     <main
-      class="text-gray-800 dark:text-gray-200 min-h-screen w-full flex flex-col items-center justify-center bg-[#f4f2ec] dark:bg-[#0a0a0a] px-0 py-0"
+      class="surface-dots text-[#181715] dark:text-[#f3f1ea] min-h-screen w-full flex flex-col items-center justify-center px-0 py-0"
     >
       ${heroSection()} ${comparisonSection()} ${audienceTabs()}
       <footer
-        class="w-full border-t border-gray-200 dark:border-gray-800 mt-8 py-10 bg-white/60 dark:bg-[#0d0f0e]"
+        class="w-full border-t border-[#e5e1d6] dark:border-[#22211d] mt-8 py-10 bg-[#faf9f5]/70 dark:bg-[#111110]/80"
       >
-        <div class="max-w-6xl mx-auto px-4 flex flex-col items-center gap-4">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col items-center gap-3">
           <nav class="flex flex-wrap justify-center gap-6 text-sm">
             <a
               href="${docsPath}"
-              class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+              class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
             >Docs</a>
             <a
               href="${manifestoPath}"
-              class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+              class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
             >Manifesto</a>
             <a
               href="${legalPath}"
-              class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+              class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
             >Legal & Privacy</a>
             <a
               href="https://github.com/uriva/alice-and-bot"
               target="_blank"
               rel="noopener noreferrer"
-              class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+              class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
             >GitHub</a>
           </nav>
-          <p class="text-xs text-gray-400 dark:text-gray-500">
-            Open source. Self-hostable. End-to-end encrypted. Free forever.
+          <p class="text-xs text-[#8c867c]">
+            Open source · Self-hostable · End-to-end encrypted
           </p>
         </div>
       </footer>

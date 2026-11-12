@@ -78,17 +78,17 @@ const navLinks = [
 ];
 
 const navLinkClass = (isActive: boolean) =>
-  `text-sm font-medium px-2 py-1 rounded-md transition-colors ${
+  `text-sm font-medium px-2.5 py-1 rounded-full transition-colors ${
     isActive
-      ? "text-gray-900 dark:text-white bg-gray-100 dark:bg-[#1a1a1a]"
-      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#1a1a1a]/50"
+      ? "text-[#181715] dark:text-[#f3f1ea] bg-[#e9e5dc] dark:bg-[#22211d]"
+      : "text-[#66625b] dark:text-[#a8a298] hover:text-[#181715] dark:hover:text-[#f3f1ea] hover:bg-[#ece9e0]/70 dark:hover:bg-[#1c1b18]"
   }`;
 
 const messengerLinkClass =
-  "text-sm font-semibold px-3 py-1.5 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-md hover:bg-gray-900 dark:hover:bg-gray-300 transition-colors";
+  "text-sm font-semibold px-4 py-1.5 bg-[#181715] dark:bg-[#f3f1ea] text-[#faf9f5] dark:text-[#181715] rounded-full hover:bg-[#2b2926] dark:hover:bg-white transition-all duration-150";
 
 const iconButtonClass =
-  "p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors";
+  "p-2 rounded-full text-[#66625b] dark:text-[#a8a298] hover:bg-[#e9e5dc]/80 dark:hover:bg-[#1f1e1b] transition-colors";
 
 const currentPath = () =>
   typeof globalThis.location !== "undefined"
@@ -134,7 +134,7 @@ const mobileMenu = (open: boolean) =>
     `
     : html`
       <div
-        class="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-[#111]/95 backdrop-blur-md overflow-y-auto max-h-[calc(100vh-3.5rem)]"
+        class="md:hidden border-t border-[#e7e4dc] dark:border-[#24231f] bg-[#f6f4ee]/95 dark:bg-[#111110]/95 backdrop-blur-md overflow-y-auto max-h-[calc(100vh-3.5rem)]"
       >
         <nav class="flex flex-col px-4 py-3 gap-2">
           <a href="${chatPath}" class="${messengerLinkClass}">Messenger</a>
@@ -170,12 +170,12 @@ let headerContainer: HTMLElement | null = null;
 const headerTemplate = (): TemplateResult =>
   html`
     <header
-      class="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-[#111]/80 backdrop-blur-md"
+      class="sticky top-0 z-50 w-full border-b border-[#e7e4dc]/90 dark:border-[#24231f] bg-[#f6f4ee]/85 dark:bg-[#0c0c0b]/85 backdrop-blur-md"
     >
       <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <a href="${homePath}" class="flex items-center gap-2 shrink-0">
           <img src="/icon.png" alt="Alice&Bot" class="w-7 h-7" />
-          <span class="font-bold text-gray-900 dark:text-gray-100 text-lg"
+          <span class="font-bold tracking-tight text-[#181715] dark:text-[#f3f1ea] text-lg"
           >Alice&Bot</span>
         </a>
         <nav class="hidden md:flex items-center gap-6">

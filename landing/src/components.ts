@@ -21,28 +21,28 @@ type ButtonSize = "default" | "sm" | "lg" | "icon";
 
 const variantClasses: Record<ButtonVariant, string> = {
   default:
-    "bg-gray-800 hover:bg-gray-900 dark:bg-gray-300 dark:hover:bg-gray-400 text-white dark:text-gray-900",
+    "bg-[#181715] hover:bg-[#2b2926] dark:bg-[#f3f1ea] dark:hover:bg-white text-[#faf9f5] dark:text-[#181715]",
   secondary:
-    "bg-gray-200 hover:bg-gray-300 dark:bg-[#2a2a2a] dark:hover:bg-[#333] text-gray-800 dark:text-gray-200",
+    "bg-[#eae7de] hover:bg-[#dfd9cc] dark:bg-[#24231f] dark:hover:bg-[#2e2d28] text-[#181715] dark:text-[#f3f1ea]",
   destructive:
     "bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white",
   outline:
-    "border border-gray-300 dark:border-gray-600 bg-transparent hover:bg-gray-100 dark:hover:bg-[#1a1a1a] text-gray-800 dark:text-gray-200",
+    "border border-[#d6d2c7] dark:border-[#32302b] bg-transparent hover:bg-[#efede6] dark:hover:bg-[#1c1b18] text-[#181715] dark:text-[#f3f1ea]",
   ghost:
-    "bg-transparent hover:bg-gray-100 dark:hover:bg-[#1a1a1a] text-gray-800 dark:text-gray-200",
+    "bg-transparent hover:bg-[#efede6] dark:hover:bg-[#1c1b18] text-[#181715] dark:text-[#f3f1ea]",
   link:
-    "bg-transparent underline-offset-4 hover:underline text-gray-800 dark:text-gray-200",
+    "bg-transparent underline-offset-4 hover:underline text-[#57534e] dark:text-[#a8a298] hover:text-[#181715] dark:hover:text-[#f3f1ea]",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
   default: "h-10 px-4 py-2",
   sm: "h-9 px-3 text-sm",
-  lg: "h-11 px-8 text-lg",
+  lg: "h-11 px-7 text-base",
   icon: "h-10 w-10",
 };
 
 const baseClass =
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer";
+  "inline-flex items-center justify-center whitespace-nowrap rounded-full font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8c867c] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer";
 
 export const buttonClass = (
   variant: ButtonVariant = "default",
@@ -89,13 +89,13 @@ const highlight = (code: string, lang: string) =>
   hljs.highlight(code, { language: lang }).value;
 
 const codeBlockBaseClass =
-  "bg-gray-100 dark:bg-[#1a1a1a] rounded-lg p-4 my-4 text-sm border border-gray-200 dark:border-gray-700 font-mono text-gray-800 dark:text-gray-200";
+  "bg-[#faf9f5] dark:bg-[#141412] rounded-xl p-4 my-4 text-sm border border-[#e7e4dc] dark:border-[#262521] font-mono text-[#181715] dark:text-[#e7e5df]";
 
 const codeBlockHeaderClass =
-  "flex items-center justify-between px-4 py-2 bg-gray-200 dark:bg-[#2a2a2a] rounded-t-lg border-b border-gray-300 dark:border-gray-600";
+  "flex items-center justify-between px-4 py-2.5 bg-[#efede6] dark:bg-[#1c1b18] rounded-t-xl border-b border-[#e3dfd4] dark:border-[#292824]";
 
 const codeBlockContainerClass =
-  "rounded-lg border border-gray-200 dark:border-gray-700 my-4 min-w-0 w-full";
+  "rounded-xl border border-[#e7e4dc] dark:border-[#262521] my-4 min-w-0 w-full overflow-hidden";
 
 export const inlineCode = (text: string) =>
   html`

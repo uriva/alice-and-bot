@@ -362,9 +362,9 @@ const isTransparentInput = (custom?: CustomColors) =>
 
 const sendButtonStyle = (isDark: boolean, custom?: CustomColors) => {
   const width = isTransparentInput(custom) ? "36px" : "44px";
-  return `width:${width};height:44px;min-width:${width};border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;padding:0;transition:background 0.2s,color 0.2s;flex-shrink:0;background:${
-    custom?.inputBackground ?? (isDark ? "#111" : "#ffffff")
-  };color:${isDark ? "#fff" : "#222"}`;
+  return `width:${width};height:44px;min-width:${width};border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;padding:0;transition:background 0.2s,color 0.2s,transform 0.15s;flex-shrink:0;background:${
+    custom?.inputBackground ?? (isDark ? "#171614" : "#ffffff")
+  };color:${isDark ? "#f3f1ea" : "#181715"}`;
 };
 
 const attachButtonStyle = (isDark: boolean) =>
@@ -426,16 +426,26 @@ const textareaStyle = (
   enableAttachments?: boolean,
   height = minTextareaHeight,
   overflow: string = "hidden",
-) =>
-  `width:100%;box-sizing:border-box;padding:${
+) => {
+  const transparent = isTransparentInput(custom);
+  const border = transparent
+    ? "none"
+    : `1px solid ${isDark ? "rgba(255,255,255,0.09)" : "rgba(24,23,21,0.09)"}`;
+  const shadow = transparent
+    ? "none"
+    : isDark
+    ? "0 2px 10px rgba(0,0,0,0.28)"
+    : "0 2px 10px rgba(24,23,21,0.05)";
+  return `width:100%;box-sizing:border-box;padding:${
     enableAttachments ? "10px 40px 10px 16px" : "10px 16px"
-  };border:none;border-radius:22px;background:${
-    custom?.inputBackground ?? (isDark ? "#111" : "#ffffff")
+  };border:${border};box-shadow:${shadow};border-radius:22px;background:${
+    custom?.inputBackground ?? (isDark ? "#171614" : "#ffffff")
   };color:${
-    isDark ? "#f3f4f6" : "#1e293b"
-  };font-size:16px;outline:none;resize:none;box-sizing:border-box;height:${height}px;min-height:${minTextareaHeight}px;margin:0;overflow-y:${overflow};overflow-x:hidden;max-height:${maxTextareaHeight}px;line-height:1.5;transition:background 0.2s,color 0.2s;font-family:inherit;letter-spacing:0.1px;scrollbar-color:${
-    custom?.scrollbarColor ?? (isDark ? "#2a2a2a #111" : "#cbd5e1 #e2e8f0")
+    isDark ? "#f3f1ea" : "#181715"
+  };font-size:15px;outline:none;resize:none;box-sizing:border-box;height:${height}px;min-height:${minTextareaHeight}px;margin:0;overflow-y:${overflow};overflow-x:hidden;max-height:${maxTextareaHeight}px;line-height:1.5;transition:background 0.2s,color 0.2s,border-color 0.2s,box-shadow 0.2s;font-family:inherit;letter-spacing:0.1px;scrollbar-color:${
+    custom?.scrollbarColor ?? (isDark ? "#2a2824 #141412" : "#d6d2c7 #f6f4ee")
   };scrollbar-width:thin`;
+};
 
 const kebabHoverCss =
   `.msg-bubble .msg-kebab{opacity:0;transition:opacity .15s}.msg-bubble:hover .msg-kebab,.msg-kebab[data-open]{opacity:.7}.suggested-message-btn:hover{transform:translateY(-1px);filter:brightness(1.06)}.suggested-message-btn:active{transform:translateY(0)}`;
@@ -1342,8 +1352,12 @@ export class ChatBox extends LitElement {
   };
 
   private _hoverBtnIn = (e: Event) => {
-    (e.currentTarget as HTMLElement).style.background =
-      "rgba(255,255,255,0.15)";
+    const headerIsLight = this.customColors?.primary
+      ? isLightColor(this.customColors.primary, this._effectiveDark)
+      : !this._effectiveDark;
+    (e.currentTarget as HTMLElement).style.background = headerIsLight
+      ? "rgba(24,23,21,0.06)"
+      : "rgba(255,255,255,0.14)";
   };
 
   private _hoverBtnOut = (e: Event) => {
@@ -1518,7 +1532,11 @@ export class ChatBox extends LitElement {
       (this._isRecording && this._isRecordingLocked);
     const showActionBtn = showMic || showStop || showSendBtn;
     const inputBgColor = customColors?.inputBackground ??
-      (isDark ? "#111" : "#ffffff");
+      (isDark ? "#171614" : "#ffffff");
+    const activePrimary = customColors?.primary ?? defaultPrimary(isDark);
+    const headerIsLight = customColors?.primary
+      ? isLightColor(customColors.primary, isDark)
+      : !isDark;
 
     const handleButtonClick = () => {
       if (showMic) {
@@ -1616,7 +1634,9 @@ export class ChatBox extends LitElement {
         transition: background 0.15s;
       }
       .title-editable:hover {
-        background: rgba(255, 255, 255, 0.15);
+        background: ${headerIsLight
+          ? "rgba(24, 23, 21, 0.05)"
+          : "rgba(255, 255, 255, 0.14)"};
       }
       .title-editable .title-edit-icon {
         opacity: 0;
@@ -2029,13 +2049,17 @@ export class ChatBox extends LitElement {
             : nothing}
 
           <div>
-            <div style="display:flex;align-items:flex-end;gap:${isTransparentInput(
+            <div style="display:flex;align-items:flex-end;padding:${isTransparentInput(
+                customColors,
+              )
+              ? "0"
+              : "8px 12px 12px"};gap:${isTransparentInput(
                 customColors,
               )
               ? "0px"
-              : "4px"};${customColors
+              : "8px"};${customColors
                 ?.inputMaxWidth
-              ? `max-width:${customColors.inputMaxWidth};margin:0 auto;width:100%`
+              ? `max-width:${customColors.inputMaxWidth};margin:0 auto;width:100%;box-sizing:border-box`
               : contentMaxWidthStyle(customColors)}">
               <input
                 data-file-input
@@ -2217,11 +2241,15 @@ export class ChatBox extends LitElement {
                   ? "flex"
                   : "none"};background:${showStop
                   ? "#dc2626"
+                  : showSendBtn
+                  ? activePrimary
                   : inputBgColor};color:${showStop
                   ? "#fff"
+                  : showSendBtn
+                  ? (isLightColor(activePrimary, isDark) ? "#222" : "#fff")
                   : (isDark
-                    ? "#fff"
-                    : "#222")};touch-action:none;position:relative;overflow:hidden"
+                    ? "#f3f1ea"
+                    : "#181715")};touch-action:none;position:relative;overflow:hidden"
                 title="${showMic
                   ? (this._isMobile ? "Hold to record" : "Record audio")
                   : showStop

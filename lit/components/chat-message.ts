@@ -117,7 +117,10 @@ const cancelButtonStyle =
 const quickEmojis = ["👍", "❤️", "😂", "😮", "🙏"];
 
 const longPressHighlightCss =
-  `@keyframes msg-highlight{0%{transform:scale(1);box-shadow:none}100%{transform:scale(1.02);box-shadow:0 0 16px rgba(100,100,255,0.25)}}`;
+  `@keyframes msg-highlight{0%{transform:scale(1);box-shadow:none}100%{transform:scale(1.02);box-shadow:0 0 16px rgba(57,88,127,0.22)}}`;
+
+const msgEntranceCss =
+  `@keyframes msg-enter{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}`;
 
 const liveCursorCss =
   `@keyframes msg-live-cursor{0%,100%{opacity:.35;transform:scaleY(.9)}50%{opacity:1;transform:scaleY(1)}}`;
@@ -197,14 +200,16 @@ export const reactionBtnStyle =
   "background:transparent;border:none;cursor:pointer;font-size:16px;padding:2px 3px;line-height:1;border-radius:4px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;outline:none";
 
 const reactionPillStyle = (isDark: boolean, isActive: boolean) =>
-  `display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:10px;font-size:12px;cursor:pointer;border:1px solid ${
-    isActive ? (isDark ? "#555" : "#bbb") : (isDark ? "#333" : "#e5e7eb")
+  `display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;font-size:12px;cursor:pointer;border:1px solid ${
+    isActive
+      ? (isDark ? "#4a4740" : "#c7c2b6")
+      : (isDark ? "#292824" : "#e7e4dc")
   };background:${
     isActive
-      ? (isDark ? "#2a2a2a" : "#e8e8ff")
-      : (isDark ? "#141414" : "#f9fafb")
+      ? (isDark ? "#262521" : "#ebe8df")
+      : (isDark ? "#171614" : "#faf9f5")
   };color:${
-    isDark ? "#e5e7eb" : "#222"
+    isDark ? "#f3f1ea" : "#181715"
   };user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;outline:none`;
 
 const diffPartStyle = (kind: DiffPart["kind"], isDark: boolean) =>
@@ -801,9 +806,22 @@ export class ChatMessage extends LitElement {
     const canSave = !!this._editText.trim() &&
       this._editText !== text;
 
+    const isLiveNew = this.sessionStart > 0 && timestamp >= this.sessionStart;
+    const bubbleDecoration = noBubble
+      ? ""
+      : isOwn
+      ? `;box-shadow:${
+        isDark ? "0 1px 2px rgba(0,0,0,0.28)" : "0 1px 3px rgba(24,23,21,0.08)"
+      }`
+      : `;border:1px solid ${
+        isDark ? "rgba(255,255,255,0.07)" : "rgba(24,23,21,0.07)"
+      };box-shadow:${
+        isDark ? "0 1px 2px rgba(0,0,0,0.22)" : "0 1px 2px rgba(24,23,21,0.04)"
+      }`;
+
     return html`
       <style>
-      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}${liveCursorCss}${highlightCss}${secretBlurCss(
+      ${kebabHoverCss}${fencedCodeHoverCss}${smileyTriggerCss}${longPressHighlightCss}${msgEntranceCss}${liveCursorCss}${highlightCss}${secretBlurCss(
         isDark,
       )}
       .msg-wrap .msg-reply-trigger{opacity:0;transition:opacity .15s}.msg-wrap:hover .msg-reply-trigger{opacity:1}
@@ -814,9 +832,11 @@ export class ChatMessage extends LitElement {
       </style>
       <div
         data-testid="message"
-        style="display:flex;gap:4px;align-items:flex-start;flex-direction:${isOwn
+        style="display:flex;gap:6px;align-items:flex-start;flex-direction:${isOwn
           ? "row-reverse"
-          : "row"};min-width:0"
+          : "row"};min-width:0${isLiveNew
+          ? ";animation:msg-enter .22s cubic-bezier(0.16, 1, 0.3, 1)"
+          : ""}"
       >
         ${showAvatar
           ? html`
@@ -860,15 +880,15 @@ export class ChatMessage extends LitElement {
               ? "flex-end"
               : "flex-start"};border-radius:${noBubble
               ? "0"
-              : "16px"};padding:${noBubble
+              : "18px"};padding:${noBubble
               ? "2px 0"
-              : "6px 12px"};margin-left:${isOwn
+              : "7px 13px"};margin-left:${isOwn
               ? "0"
               : showAvatar
               ? "0"
               : avatarSpace + "px"};margin-right:${isOwn
               ? (showAvatar ? "0" : avatarSpace + "px")
-              : "0"};overflow-x:hidden;overflow-y:hidden;word-break:break-word;overflow-wrap:anywhere${this
+              : "0"};overflow-x:hidden;overflow-y:hidden;word-break:break-word;overflow-wrap:anywhere${bubbleDecoration}${this
                 ._longPressActive && !this._selectedMedia
               ? ";animation:msg-highlight .3s ease forwards"
               : ""}"
