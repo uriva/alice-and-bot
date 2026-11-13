@@ -244,6 +244,20 @@ const timelineWithTransientEvents = (
   );
 };
 
+const activeQuickReplyEntryId = (
+  timeline: TimelineEntry[],
+  isSending: boolean,
+): string | null =>
+  isSending ? null : timeline.reduce<string | null>(
+    (acc, entry) =>
+      entry.kind === "message"
+        ? entry.msg.id
+        : entry.kind === "stream"
+        ? entry.stream.elementId
+        : acc,
+    null,
+  );
+
 const spinnerKeyframes =
   `@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`;
 const indeterminateKeyframes =
@@ -1523,6 +1537,10 @@ export class ChatBox extends LitElement {
       this.activeStreams,
       this.typingUsers,
     );
+    const quickReplyEntryId = activeQuickReplyEntryId(
+      timeline,
+      this._isSending,
+    );
 
     const hasContent = !!this._input.trim() || this._pendingFiles.length > 0;
     const showMic = this.enableAudioRecording && !hasContent &&
@@ -1905,6 +1923,7 @@ export class ChatBox extends LitElement {
                       allMsgs,
                       customColors,
                       isDark,
+                      quickReplyEntryId,
                     ),
                 )} ${this._isSending
                   ? sendingIndicator(
@@ -2289,6 +2308,7 @@ export class ChatBox extends LitElement {
 
   private _renderMessageEntry(
     entry: { msg: AbstracChatMessage; prevMsg?: AbstracChatMessage },
+    quickReplyEntryId: string | null,
   ) {
     const isDark = this._effectiveDark;
     const { customColors } = this;
@@ -2297,6 +2317,7 @@ export class ChatBox extends LitElement {
         .msg="${entry.msg}"
         .prev="${entry.prevMsg}"
         .isOwn="${entry.msg.authorId === this.userId}"
+        .hideQuickReplies="${entry.msg.id !== quickReplyEntryId}"
         .onDecryptAttachment="${this.onDecryptAttachment}"
         .sessionStart="${this._sessionStart}"
         .onEdit="${this.onEdit
@@ -2324,8 +2345,11 @@ export class ChatBox extends LitElement {
     allMsgs: AbstracChatMessage[],
     customColors: CustomColors | undefined,
     isDark: boolean,
+    quickReplyEntryId: string | null,
   ) {
-    if (entry.kind === "message") return this._renderMessageEntry(entry);
+    if (entry.kind === "message") {
+      return this._renderMessageEntry(entry, quickReplyEntryId);
+    }
     if (entry.kind === "spinner") {
       return renderSpinnerIndicator(
         entry.spinner,
@@ -2364,6 +2388,7 @@ export class ChatBox extends LitElement {
         .prev="${prevMsg}"
         .isOwn="${streamMsg.authorId === this.userId}"
         .streamActive="${entry.stream.active}"
+        .hideQuickReplies="${entry.stream.elementId !== quickReplyEntryId}"
         .onDecryptAttachment="${this.onDecryptAttachment}"
         .sessionStart="${this._sessionStart}"
         .onAvatarClick="${this.onAvatarClick}"

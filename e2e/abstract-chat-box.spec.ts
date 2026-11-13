@@ -8,6 +8,19 @@ const parseRgbChannels = (cssColor: string) => {
   );
 };
 
+const srgbLin = (v: number) => {
+  const c = v / 255;
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+};
+
+const srgbContrast = (fg: number[], bg: number[]) => {
+  const lf = 0.2126 * srgbLin(fg[0]) + 0.7152 * srgbLin(fg[1]) +
+    0.0722 * srgbLin(fg[2]);
+  const lb = 0.2126 * srgbLin(bg[0]) + 0.7152 * srgbLin(bg[1]) +
+    0.0722 * srgbLin(bg[2]);
+  return (Math.max(lf, lb) + 0.05) / (Math.min(lf, lb) + 0.05);
+};
+
 test.describe("AbstractChatBox (example app)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
@@ -1046,6 +1059,142 @@ test("suggestion text buttons use primary color theme in light and dark mode", a
     getComputedStyle(el).color
   );
   const [qrR, qrG, qrB] = parseRgbChannels(qrColor);
-  expect(qrG).toBeGreaterThan(qrR + 60);
-  expect(qrG).toBeGreaterThan(qrB + 40);
+  expect(qrG).toBeGreaterThan(qrR + 40);
+  expect(qrG).toBeGreaterThan(qrB + 30);
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    Object.assign(chatBox, {
+      darkModeOverride: true,
+      customColors: {
+        primary: "#311d2b",
+        background: "#1a1a1a",
+        text: "#cccccc",
+        hideOtherBubble: true,
+        inputBackground: "transparent",
+      },
+    });
+  });
+
+  const darkPlumQrColor = await quickReplyBtn.evaluate((el) =>
+    getComputedStyle(el).color
+  );
+  const [dpR, dpG, dpB] = parseRgbChannels(darkPlumQrColor);
+  expect(srgbContrast([dpR, dpG, dpB], [26, 26, 26])).toBeGreaterThanOrEqual(7);
+  expect(dpR).toBeGreaterThan(dpG + 20);
+});
+
+test("quick-reply suggestion buttons hide on older messages when a new message or stream arrives", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    Object.assign(chatBox, {
+      userId: "user-1",
+      activeSpinners: [],
+      activeProgress: [],
+      activeStreams: [],
+      messages: [
+        {
+          id: "bot-1",
+          authorId: "bot",
+          authorName: "Bot",
+          text:
+            "Here is your clip!\n<buttons><button>Make it 9:16</button><button>Add captions</button></buttons>",
+          timestamp: 1000,
+        },
+      ],
+    });
+  });
+
+  await expect(page.locator(".chat-quick-reply-btn")).toHaveCount(2);
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    Object.assign(chatBox, {
+      messages: [
+        {
+          id: "bot-1",
+          authorId: "bot",
+          authorName: "Bot",
+          text:
+            "Here is your clip!\n<buttons><button>Make it 9:16</button><button>Add captions</button></buttons>",
+          timestamp: 1000,
+        },
+        {
+          id: "user-msg-2",
+          authorId: "user-1",
+          authorName: "Alice",
+          text: "Make it 9:16",
+          timestamp: 2000,
+        },
+      ],
+    });
+  });
+
+  await expect(page.locator(".chat-quick-reply-btn")).toHaveCount(0);
+  const firstMsgText = await page.locator(tid("message-text")).first()
+    .textContent();
+  expect(firstMsgText).toContain("Here is your clip!");
+  expect(firstMsgText).not.toContain("<button>");
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    Object.assign(chatBox, {
+      messages: [
+        {
+          id: "bot-1",
+          authorId: "bot",
+          authorName: "Bot",
+          text:
+            "Here is your clip!\n<buttons><button>Make it 9:16</button><button>Add captions</button></buttons>",
+          timestamp: 1000,
+        },
+        {
+          id: "user-msg-2",
+          authorId: "user-1",
+          authorName: "Alice",
+          text: "Make it 9:16",
+          timestamp: 2000,
+        },
+        {
+          id: "bot-3",
+          authorId: "bot",
+          authorName: "Bot",
+          text:
+            "Done! Cropped to 9:16.\n<buttons><button>Remix with AI</button></buttons>",
+          timestamp: 3000,
+        },
+      ],
+    });
+  });
+
+  await expect(page.locator(".chat-quick-reply-btn")).toHaveCount(1);
+  await expect(page.locator(".chat-quick-reply-btn").first()).toHaveText(
+    "Remix with AI",
+  );
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    Object.assign(chatBox, {
+      activeStreams: [
+        {
+          elementId: "stream-4",
+          authorName: "Bot",
+          authorPublicKey: "bot",
+          text: "Generating preview...",
+          timestamp: 4000,
+          active: true,
+        },
+      ],
+    });
+  });
+
+  await expect(page.locator(".chat-quick-reply-btn")).toHaveCount(0);
 });

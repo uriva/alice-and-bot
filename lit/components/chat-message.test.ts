@@ -15,6 +15,7 @@ import {
   quoteBarColor,
   shouldShowAvatar,
   shouldShowName,
+  suggestionTextColor,
 } from "./design.ts";
 import { renderMarkdown, textDirection } from "./markdown.ts";
 
@@ -279,11 +280,16 @@ Deno.test(
     assertEquals(html.includes(">Yes</button>"), true);
     assertEquals(html.includes('data-button-id="no"'), true);
     assertEquals(html.includes(">No</button>"), true);
-    assertEquals(html.includes("#16a34a"), true);
+    assertEquals(html.includes(suggestionTextColor("#16a34a", true)), true);
     assertEquals(html.includes("#93c5fd"), false);
 
     const defaultLightHtml = renderMarkdown(input, "#222", false);
-    assertEquals(defaultLightHtml.includes(defaultPrimary(false)), true);
+    assertEquals(
+      defaultLightHtml.includes(
+        suggestionTextColor(defaultPrimary(false), false),
+      ),
+      true,
+    );
     assertEquals(defaultLightHtml.includes("#1d4ed8"), false);
   },
 );
@@ -298,6 +304,20 @@ Deno.test(
     assertEquals(html.includes(">כן</button>"), true);
     assertEquals(html.includes(">לא</button>"), true);
     assertEquals(html.includes("&lt;button&gt;"), false);
+  },
+);
+
+Deno.test(
+  "renderMarkdown omits quick-reply buttons and strips tags when showButtons is false",
+  () => {
+    const input =
+      "Here is your clip!\n<buttons><button>Make it 9:16</button><button>Add captions</button></buttons>";
+    const html = renderMarkdown(input, "#fff", true, "#311d2b", false);
+    assertEquals(html.includes("Here is your clip!"), true);
+    assertEquals(html.includes("chat-quick-replies"), false);
+    assertEquals(html.includes("chat-quick-reply-btn"), false);
+    assertEquals(html.includes("Make it 9:16"), false);
+    assertEquals(html.includes("&lt;button"), false);
   },
 );
 

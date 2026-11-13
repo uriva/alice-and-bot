@@ -220,6 +220,7 @@ const processButtons = (
   text: string,
   isDark: boolean,
   primaryColor: string,
+  showButtons: boolean,
 ) => {
   const renderedButtons: string[] = [];
   const textWithoutButtons = text.replace(
@@ -228,7 +229,7 @@ const processButtons = (
       const id = id1 || id2 || "";
       const rawTitle = content !== undefined ? content : titleAttr || "";
       const title = rawTitle.replace(/<[^>]+>/g, "").trim();
-      if (title) {
+      if (title && showButtons) {
         renderedButtons.push(
           quickReplyButtonHtml(title, id || title, isDark, primaryColor),
         );
@@ -237,6 +238,9 @@ const processButtons = (
     },
   ).replace(/<\/?(?:buttons|quick_replies)[^>]*>/gi, "");
 
+  if (!showButtons) {
+    return { text: textWithoutButtons.trim(), buttonsHtml: "" };
+  }
   if (renderedButtons.length === 0) return { text, buttonsHtml: "" };
   const buttonsHtml =
     `<div class="chat-quick-replies" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;margin-bottom:4px">${
@@ -253,11 +257,13 @@ export const renderMarkdown = (
   textColor: string,
   isDark: boolean,
   primaryColor = defaultPrimary(isDark),
+  showButtons = true,
 ): string => {
   const { text: cleanText, buttonsHtml } = processButtons(
     text,
     isDark,
     primaryColor,
+    showButtons,
   );
   const html = createMarked(textColor, isDark).parse(
     escapeHtmlTags(preprocessText(cleanText)),

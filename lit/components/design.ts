@@ -154,15 +154,155 @@ export const emptyHeadingStyle = (isDark: boolean, textColor?: string) =>
 export const suggestedGridStyle =
   "display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;width:100%";
 
-export const suggestionTextColor = (primary: string, isDark: boolean) =>
-  isDark
-    ? `color-mix(in srgb, ${primary} 60%, #ffffff)`
-    : `color-mix(in srgb, ${primary} 78%, #181715)`;
+const parseHexRgb = (hex: string): [number, number, number] | null => {
+  const raw = hex.replace("#", "").trim();
+  if (!/^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(raw)) return null;
+  const full = raw.length === 3
+    ? raw[0] + raw[0] + raw[1] + raw[1] + raw[2] + raw[2]
+    : raw;
+  return [
+    parseInt(full.slice(0, 2), 16),
+    parseInt(full.slice(2, 4), 16),
+    parseInt(full.slice(4, 6), 16),
+  ];
+};
 
-export const suggestionBorderColor = (primary: string, isDark: boolean) =>
-  isDark
-    ? `color-mix(in srgb, ${primary} 45%, rgba(255,255,255,0.12))`
-    : `color-mix(in srgb, ${primary} 32%, transparent)`;
+const hslChannel = (h: number, s: number, l: number) => (n: number) => {
+  const k = (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
+};
+
+const hslToRgb = (
+  h: number,
+  s: number,
+  l: number,
+): [number, number, number] => [
+  hslChannel(h, s / 100, l / 100)(0),
+  hslChannel(h, s / 100, l / 100)(8),
+  hslChannel(h, s / 100, l / 100)(4),
+];
+
+const rgbToHsl = ([r255, g255, b255]: [number, number, number]) => {
+  const r = r255 / 255;
+  const g = g255 / 255;
+  const b = b255 / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return { h: 0, s: 0, l: l * 100 };
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const rawHue = max === r
+    ? ((g - b) / d + (g < b ? 6 : 0))
+    : max === g
+    ? ((b - r) / d + 2)
+    : ((r - g) / d + 4);
+  return { h: Math.round(rawHue * 60) % 360, s: s * 100, l: l * 100 };
+};
+
+const parseCssHsl = (
+  color: string,
+): { h: number; s: number; l: number } | null => {
+  const trimmed = color.trim();
+  if (trimmed.startsWith("#")) {
+    const rgb = parseHexRgb(trimmed);
+    return rgb ? rgbToHsl(rgb) : null;
+  }
+  const hslMatch = trimmed.match(
+    /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/i,
+  );
+  if (hslMatch) {
+    return {
+      h: ((Number(hslMatch[1]) % 360) + 360) % 360,
+      s: Number(hslMatch[2]),
+      l: Number(hslMatch[3]),
+    };
+  }
+  const rgbMatch = trimmed.match(
+    /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i,
+  );
+  return rgbMatch
+    ? rgbToHsl([
+      Number(rgbMatch[1]),
+      Number(rgbMatch[2]),
+      Number(rgbMatch[3]),
+    ])
+    : null;
+};
+
+const linearChannel = (c255: number) => {
+  const c = c255 / 255;
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+};
+
+const relativeLuminance = ([r, g, b]: [number, number, number]) =>
+  0.2126 * linearChannel(r) +
+  0.7152 * linearChannel(g) +
+  0.0722 * linearChannel(b);
+
+const wcagContrast = (
+  a: [number, number, number],
+  b: [number, number, number],
+) => {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+};
+
+const fitContrastLightness = (
+  h: number,
+  s: number,
+  l: number,
+  isDark: boolean,
+): number => {
+  const bg: [number, number, number] = isDark ? [34, 34, 34] : [236, 240, 238];
+  const target = isDark ? 7 : 5.5;
+  if (wcagContrast(hslToRgb(h, s, l), bg) >= target) return l;
+  if (isDark && l >= 96) return 96;
+  if (!isDark && l <= 12) return 12;
+  return fitContrastLightness(h, s, isDark ? l + 2 : l - 2, isDark);
+};
+
+const suggestionAccentColor = (primary: string, isDark: boolean) => {
+  const parsed = parseCssHsl(primary);
+  if (!parsed) return primary;
+  const sat = parsed.s < 6
+    ? 0
+    : Math.round(Math.min(76, Math.max(parsed.s, 38)));
+  const light = isDark
+    ? Math.round(Math.min(72, Math.max(parsed.l, 60)))
+    : Math.round(Math.min(48, Math.max(parsed.l, 32)));
+  return `hsl(${parsed.h}, ${sat}%, ${light}%)`;
+};
+
+export const suggestionTextColor = (primary: string, isDark: boolean) => {
+  const parsed = parseCssHsl(primary);
+  if (!parsed) {
+    return isDark
+      ? `color-mix(in srgb, ${primary} 25%, #f3f1ea)`
+      : `color-mix(in srgb, ${primary} 45%, #181715)`;
+  }
+  const sat = parsed.s < 6 ? 0 : Math.round(
+    isDark
+      ? Math.min(72, Math.max(parsed.s, 38))
+      : Math.min(80, Math.max(parsed.s, 38)),
+  );
+  const initialL = isDark
+    ? Math.min(88, Math.max(parsed.l, 78))
+    : Math.max(16, Math.min(parsed.l, 30));
+  const finalL = Math.round(
+    fitContrastLightness(parsed.h, sat, initialL, isDark),
+  );
+  return `hsl(${parsed.h}, ${sat}%, ${finalL}%)`;
+};
+
+export const suggestionBorderColor = (primary: string, isDark: boolean) => {
+  const accent = suggestionAccentColor(primary, isDark);
+  return isDark
+    ? `color-mix(in srgb, ${accent} 45%, rgba(255,255,255,0.14))`
+    : `color-mix(in srgb, ${accent} 34%, transparent)`;
+};
 
 const suggestionSurfaceBase = (isDark: boolean, custom?: CustomColors) =>
   custom?.inputBackground && custom.inputBackground !== "transparent"
@@ -176,11 +316,12 @@ export const suggestedMessageButtonStyle = (
   custom?: CustomColors,
 ) => {
   const primary = custom?.primary ?? defaultPrimary(isDark);
+  const accent = suggestionAccentColor(primary, isDark);
   return [
     "padding:12px 15px",
     "border-radius:14px",
     `border:1px solid ${suggestionBorderColor(primary, isDark)}`,
-    `background:color-mix(in srgb, ${primary} ${isDark ? "14%" : "8%"}, ${
+    `background:color-mix(in srgb, ${accent} ${isDark ? "14%" : "8%"}, ${
       suggestionSurfaceBase(isDark, custom)
     })`,
     `color:${suggestionTextColor(primary, isDark)}`,
@@ -200,8 +341,9 @@ export const suggestedMessageButtonStyle = (
 export const quickReplyButtonStyle = (
   isDark: boolean,
   primary = defaultPrimary(isDark),
-) =>
-  [
+) => {
+  const accent = suggestionAccentColor(primary, isDark);
+  return [
     "display:inline-flex",
     "align-items:center",
     "justify-content:center",
@@ -209,7 +351,7 @@ export const quickReplyButtonStyle = (
     "margin:4px 4px 4px 0",
     "border-radius:18px",
     `border:1px solid ${suggestionBorderColor(primary, isDark)}`,
-    `background:color-mix(in srgb, ${primary} ${
+    `background:color-mix(in srgb, ${accent} ${
       isDark ? "16%" : "10%"
     }, transparent)`,
     `color:${suggestionTextColor(primary, isDark)}`,
@@ -220,3 +362,4 @@ export const quickReplyButtonStyle = (
     "transition:all .15s ease",
     "-webkit-tap-highlight-color:transparent",
   ].join(";");
+};

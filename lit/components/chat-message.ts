@@ -428,6 +428,7 @@ export class ChatMessage extends LitElement {
     isMobile: { type: Boolean },
     isGroupChat: { type: Boolean },
     streamActive: { type: Boolean },
+    hideQuickReplies: { type: Boolean },
     _isEditing: { state: true },
     _editText: { state: true },
     _showHistory: { state: true },
@@ -457,6 +458,7 @@ export class ChatMessage extends LitElement {
   declare isMobile: boolean;
   declare isGroupChat: boolean;
   declare streamActive: boolean;
+  declare hideQuickReplies: boolean;
 
   declare private _isEditing: boolean;
   declare private _editText: string;
@@ -490,6 +492,7 @@ export class ChatMessage extends LitElement {
     this.isMobile = false;
     this.isGroupChat = false;
     this.streamActive = false;
+    this.hideQuickReplies = false;
     this.userId = "";
     this._isEditing = false;
     this._editText = "";
@@ -802,6 +805,7 @@ export class ChatMessage extends LitElement {
       textColor,
       isDark,
       primaryColor,
+      !this.hideQuickReplies,
     );
     const canSave = !!this._editText.trim() &&
       this._editText !== text;
