@@ -1,10 +1,13 @@
 import { Buffer } from "node:buffer";
-import { assert, assertEquals } from "@std/assert";
+import { createHmac } from "node:crypto";
+import { assert, assertEquals, assertFalse } from "@std/assert";
 import { MediaStreamTrack, RTCPeerConnection } from "werift";
 import {
   handleRequest,
+  isSafeIceCandidate,
   pipeProxyEndpoints,
   type ProxyEndpoint,
+  verifyTwilioStreamRequest,
 } from "./main.ts";
 
 type FakeSocket = {
@@ -156,3 +159,147 @@ Deno.test(
     await server.shutdown();
   },
 );
+
+Deno.test(
+  "[CRITICAL-07] & [CRITICAL-08] bridge survives malformed JSON, missing sdp, bad inputRate, oversized frames, and blocks unauthenticated Twilio stream when TWILIO_AUTH_TOKEN is set",
+  { sanitizeOps: false, sanitizeResources: false },
+  async () => {
+    Deno.env.set("TWILIO_AUTH_TOKEN", "test-twilio-secret-token");
+    const unauthTwilioRes = handleRequest(
+      new Request("http://127.0.0.1:8080/twilio-voice/stream", {
+        headers: { upgrade: "websocket" },
+      }),
+    );
+    Deno.env.delete("TWILIO_AUTH_TOKEN");
+    assertEquals(unauthTwilioRes.status, 403);
+
+    const server = Deno.serve({ port: 0, onListen: () => {} }, handleRequest);
+    const port = server.addr.port;
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/webrtc-bridge`);
+    await new Promise<void>((resolve) => {
+      ws.onopen = () => resolve();
+    });
+
+    ws.send("not-valid-json{{{");
+    ws.send(JSON.stringify({ type: "offer" }));
+    ws.send(JSON.stringify({ type: "offer", sdp: {} }));
+    ws.send(
+      JSON.stringify({
+        type: "audio",
+        chunks: [{ mimeType: "audio/pcm;rate=0", dataBase64: "AAAA" }],
+      }),
+    );
+    ws.send(
+      JSON.stringify({
+        type: "audio",
+        chunks: [{ mimeType: "audio/pcm;rate=24000", dataBase64: "!!!" }],
+      }),
+    );
+    ws.send("x".repeat(1_100_000));
+
+    await new Promise((r) => setTimeout(r, 80));
+    assertEquals(ws.readyState, WebSocket.OPEN);
+
+    ws.close();
+    await server.shutdown();
+  },
+);
+
+Deno.test("[CRITICAL-07] & [CRITICAL-08] isSafeIceCandidate and verifyTwilioStreamRequest block SSRF candidates and forged Twilio signatures", () => {
+  assertEquals(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 34.71.16.134 3478 typ relay raddr 192.168.1.5 rport 50000",
+    ),
+    true,
+  );
+  assertEquals(isSafeIceCandidate(""), true);
+  assertFalse(
+    isSafeIceCandidate("candidate:1 1 udp 2130706431 127.0.0.1 5000 typ host"),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 169.254.169.254 80 typ host",
+    ),
+  );
+  assertFalse(
+    isSafeIceCandidate("candidate:1 1 udp 2130706431 10.0.0.5 5000 typ host"),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 192.168.1.10 5000 typ host",
+    ),
+  );
+  assertFalse(
+    isSafeIceCandidate("candidate:1 1 udp 2130706431 172.16.0.1 5000 typ host"),
+  );
+  assertFalse(
+    isSafeIceCandidate("candidate:1 1 udp 2130706431 100.64.1.1 5000 typ host"),
+  );
+  assertFalse(
+    isSafeIceCandidate("candidate:1 1 udp 2130706431 ::1 5000 typ host"),
+  );
+  assertFalse(
+    isSafeIceCandidate("candidate:1 1 udp 2130706431 fe80::1 5000 typ host"),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 laptop.local 5000 typ host",
+    ),
+  );
+
+  const secret = "twilio-super-secret";
+  const streamUrl = "wss://voice.prompt2bot.com/twilio-voice/stream?callId=abc";
+  const validTwilioSig = createHmac("sha1", secret)
+    .update(streamUrl)
+    .digest("base64");
+
+  assertEquals(
+    verifyTwilioStreamRequest(
+      new Request("http://127.0.0.1:8080/twilio-voice/stream?callId=abc", {
+        headers: {
+          host: "voice.prompt2bot.com",
+          "x-twilio-signature": validTwilioSig,
+        },
+      }),
+      secret,
+    ),
+    true,
+  );
+  assertFalse(
+    verifyTwilioStreamRequest(
+      new Request("http://127.0.0.1:8080/twilio-voice/stream?callId=abc", {
+        headers: {
+          host: "voice.prompt2bot.com",
+          "x-twilio-signature": "forged-sig",
+        },
+      }),
+      secret,
+    ),
+  );
+
+  const nowTs = String(Date.now());
+  const validQuerySig = createHmac("sha256", secret)
+    .update(`/twilio-voice/stream:${nowTs}`)
+    .digest("hex");
+  assertEquals(
+    verifyTwilioStreamRequest(
+      new Request(
+        `http://127.0.0.1:8080/twilio-voice/stream?ts=${nowTs}&sig=${validQuerySig}`,
+      ),
+      secret,
+    ),
+    true,
+  );
+  const expiredTs = String(Date.now() - 10 * 60 * 1000);
+  const expiredSig = createHmac("sha256", secret)
+    .update(`/twilio-voice/stream:${expiredTs}`)
+    .digest("hex");
+  assertFalse(
+    verifyTwilioStreamRequest(
+      new Request(
+        `http://127.0.0.1:8080/twilio-voice/stream?ts=${expiredTs}&sig=${expiredSig}`,
+      ),
+      secret,
+    ),
+  );
+});

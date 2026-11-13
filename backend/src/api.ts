@@ -1,5 +1,6 @@
 import type { User } from "@instantdb/core";
 import { hash } from "@uri/gamla";
+import stringify from "safe-stable-stringify";
 import {
   apiClient as apiClientMaker,
   type ApiImplementation,
@@ -11,6 +12,16 @@ import { buildSignedRequest } from "../../protocol/src/authClient.ts";
 import { serverBaseUrl } from "../../protocol/src/serverUrl.ts";
 import { maxEncryptedMessageLength } from "../../protocol/src/attachmentLimits.ts";
 import type { Credentials } from "../../protocol/src/clientApi.ts";
+
+export type AuthToken = {
+  nonce: string;
+  authToken: string;
+};
+
+const authTokenSchema = z.object({
+  nonce: z.string(),
+  authToken: z.string(),
+});
 
 const authenticatedInput = <T extends z.ZodTypeAny>(payloadSchema: T) =>
   z.object({
@@ -96,7 +107,7 @@ export const backendApiSchema = {
     ]),
   ),
   setPriceTag: authenticatedEndpoint(
-    z.object({ priceTag: z.number().optional() }),
+    z.object({ priceTag: z.number().nonnegative().finite().optional() }),
     z.union([
       z.object({ success: z.literal(true) }),
       z.object({
@@ -122,7 +133,10 @@ export const backendApiSchema = {
     ]),
   ),
   requestPayout: authenticatedEndpoint(
-    z.object({ amount: z.number(), walletAddress: z.string() }),
+    z.object({
+      amount: z.number().positive().finite(),
+      walletAddress: z.string(),
+    }),
     z.union([
       z.object({ success: z.literal(true) }),
       z.object({
@@ -132,7 +146,7 @@ export const backendApiSchema = {
     ]),
   ),
   prepareCryptoPayment: authenticatedEndpoint(
-    z.object({ amount: z.number() }),
+    z.object({ amount: z.number().positive().finite() }),
     z.union([
       z.object({
         address: z.string(),
@@ -245,12 +259,17 @@ export const backendApiSchema = {
     input: z.object({
       url: z.string(),
       publicSignKey: z.string(),
+      auth: authTokenSchema.optional(),
     }),
     output: z.union([
       z.object({ success: z.literal(true) }),
       z.object({
         success: z.literal(false),
-        error: z.literal("identity-does-not-exist"),
+        error: z.enum([
+          "identity-does-not-exist",
+          "invalid-auth",
+          "invalid-url",
+        ]),
       }),
     ]),
   }),
@@ -336,7 +355,7 @@ export const backendApiSchema = {
   ),
   storeTransferPayload: endpoint({
     authRequired: false,
-    input: z.object({ encryptedPayload: z.string() }),
+    input: z.object({ encryptedPayload: z.string().max(32_768) }),
     output: z.object({ relayId: z.string() }),
   }),
   retrieveTransferPayload: endpoint({
@@ -396,6 +415,22 @@ export const backendApiSchema = {
       z.object({ error: z.enum(["not-participant", "invalid-auth"]) }),
     ]),
   ),
+  saveCanvas: authenticatedEndpoint(
+    z.object({
+      conversationId: z.string(),
+      encrypted: z.string(),
+      expectedVersion: z.number().int().min(0),
+    }),
+    z.union([
+      z.object({ ok: z.literal(true), version: z.number() }),
+      z.object({
+        ok: z.literal(false),
+        error: z.enum(["invalid-auth", "not-participant", "conflict"]),
+        currentEncrypted: z.string().optional(),
+        currentVersion: z.number().optional(),
+      }),
+    ]),
+  ),
 } as const;
 
 export const apiClient = apiClientMaker(
@@ -405,17 +440,28 @@ export const apiClient = apiClientMaker(
 
 export type BackendApiImpl = ApiImplementation<User, typeof backendApiSchema>;
 
-export const setWebhook = (
-  { url, credentials: { publicSignKey } }: {
+export const setWebhook = async (
+  { url, credentials }: {
     url: string;
     credentials: Credentials;
   },
 ): Promise<
-  {
+  | {
     success: false;
-    error: "identity-does-not-exist";
-  } | { success: true }
-> => apiClient({ endpoint: "setWebhook", payload: { url, publicSignKey } });
+    error: "identity-does-not-exist" | "invalid-auth" | "invalid-url";
+  }
+  | { success: true }
+> => {
+  const signed = await buildSignedRequest(credentials, "setWebhook", { url });
+  return apiClient({
+    endpoint: "setWebhook",
+    payload: {
+      url,
+      publicSignKey: credentials.publicSignKey,
+      auth: { nonce: signed.nonce, authToken: signed.authToken },
+    },
+  });
+};
 
 export const aliasToPublicSignKey = (
   alias: string,
@@ -452,6 +498,26 @@ export const setAlias = (
 export const canonicalStringForAuthSign = <T>(
   params: { action: string; publicSignKey: string; payload: T; nonce: string },
 ): string => hash(params, 10);
+
+export const canonicalStringForAuthSignV2 = async <T>(
+  params: { action: string; publicSignKey: string; payload: T; nonce: string },
+): Promise<string> => {
+  const serialized = stringify({
+    endpoint: params.action,
+    params: {
+      publicSignKey: params.publicSignKey,
+      payload: params.payload,
+    },
+    nonce: params.nonce,
+  });
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(serialized),
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+};
 
 export const setAliasSigned = async (
   params: { alias: string; credentials: Credentials },
@@ -782,5 +848,25 @@ export const getMessagesSigned = async ({
       conversationId,
       ...(limit !== undefined ? { limit } : {}),
       ...(before !== undefined ? { before } : {}),
+    }),
+  });
+
+export const saveCanvasSigned = async ({
+  conversationId,
+  encrypted,
+  expectedVersion,
+  credentials,
+}: {
+  conversationId: string;
+  encrypted: string;
+  expectedVersion: number;
+  credentials: Credentials;
+}) =>
+  apiClient({
+    endpoint: "saveCanvas",
+    payload: await buildSignedRequest(credentials, "saveCanvas", {
+      conversationId,
+      encrypted,
+      expectedVersion,
     }),
   });

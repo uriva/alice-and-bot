@@ -6,7 +6,11 @@ import {
   ListPromptsRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import os from "node:os";
+import path from "node:path";
+import process from "node:process";
 import QRCode from "qrcode";
+import { setWebhook } from "../backend/src/api.ts";
 import {
   chatWithMeLink,
   createIdentity,
@@ -17,8 +21,12 @@ import {
   sendMessageWithKey,
   type WebhookUpdate,
 } from "../protocol/src/clientApi.ts";
-import { setWebhook } from "../backend/src/api.ts";
-import process from "node:process";
+import {
+  evaluateSenderAuthorization,
+  generatePairingCode,
+  isAllowedAttachmentUrl,
+  sanitizeTempExtension,
+} from "./security.ts";
 
 const configDir = `${Deno.env.get("HOME")}/.config/aliceandbot-mcp`;
 const credentialsPath = `${configDir}/credentials.json`;
@@ -27,7 +35,11 @@ const relayUrl = Deno.env.get("ALICEANDBOT_RELAY_URL") ||
   "https://api.aliceandbot.com/relay";
 const POLL_INTERVAL_MS = 3_000;
 
-type State = { relayToken: string };
+type State = {
+  relayToken: string;
+  pairingCode: string;
+  authorizedPublicSignKey?: string;
+};
 type ConvState = { conversationKey: string };
 
 type DecodedMessage = {
@@ -36,17 +48,17 @@ type DecodedMessage = {
   type: string;
 };
 
-const readJson = async <T>(path: string): Promise<T | null> => {
+const readJson = async <T>(filePath: string): Promise<T | null> => {
   try {
-    return JSON.parse(await Deno.readTextFile(path));
+    return JSON.parse(await Deno.readTextFile(filePath));
   } catch {
     return null;
   }
 };
 
-const writeJson = async <T>(path: string, data: T) => {
-  await Deno.mkdir(configDir, { recursive: true });
-  await Deno.writeTextFile(path, JSON.stringify(data));
+const writeJson = async <T>(filePath: string, data: T) => {
+  await Deno.mkdir(configDir, { recursive: true, mode: 0o700 });
+  await Deno.writeTextFile(filePath, JSON.stringify(data), { mode: 0o600 });
 };
 
 const getCredentials = async (): Promise<Credentials> => {
@@ -58,24 +70,56 @@ const getCredentials = async (): Promise<Credentials> => {
 };
 
 const getState = async (): Promise<State> => {
-  const existing = await readJson<State>(statePath);
-  if (existing) return existing;
-  const s: State = { relayToken: crypto.randomUUID() };
+  const existing = await readJson<Partial<State>>(statePath);
+  if (
+    existing &&
+    typeof existing.relayToken === "string" &&
+    existing.relayToken &&
+    typeof existing.pairingCode === "string" &&
+    existing.pairingCode.length >= 16
+  ) {
+    return {
+      relayToken: existing.relayToken,
+      pairingCode: existing.pairingCode,
+      ...(typeof existing.authorizedPublicSignKey === "string" &&
+          existing.authorizedPublicSignKey
+        ? { authorizedPublicSignKey: existing.authorizedPublicSignKey }
+        : {}),
+    };
+  }
+  const s: State = {
+    relayToken: typeof existing?.relayToken === "string" && existing.relayToken
+      ? existing.relayToken
+      : crypto.randomUUID(),
+    pairingCode: generatePairingCode(),
+    ...(typeof existing?.authorizedPublicSignKey === "string" &&
+        existing.authorizedPublicSignKey
+      ? { authorizedPublicSignKey: existing.authorizedPublicSignKey }
+      : {}),
+  };
   await writeJson(statePath, s);
   return s;
 };
 
-let credentials: Credentials | null = null;
-let state: State | null = null;
+const mcpRuntime: {
+  credentials: Credentials | null;
+  state: State | null;
+  pollTimer: ReturnType<typeof setInterval> | null;
+} = {
+  credentials: null,
+  state: null,
+  pollTimer: null,
+};
+
 const conversations = new Map<string, ConvState>();
 const inbox: DecodedMessage[] = [];
-let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 const textResult = (text: string) => ({
   content: [{ type: "text" as const, text }],
 });
 
 const pollRelay = async () => {
+  const { state, credentials } = mcpRuntime;
   if (!state || !credentials) return;
   try {
     const res = await fetch(`${relayUrl}/poll/${state.relayToken}`);
@@ -84,52 +128,87 @@ const pollRelay = async () => {
     const decoded = (
       await Promise.all(
         messages.map(async (msg) => {
-          const result = await handleWebhookUpdate(msg, credentials!);
+          const result = await handleWebhookUpdate(msg, credentials);
           if (!result) return null;
           const { conversationId, message, conversationKey } = result;
-          conversations.set(conversationId, { conversationKey });
-          let text = message.text;
 
-          if ("attachments" in message && message.attachments) {
-            for (const att of message.attachments) {
-              if (att.type === "location") {
-                text += (text ? "\n" : "") +
-                  `[Location attachment: ${att.latitude}, ${att.longitude}${
-                    att.label ? ` (${att.label})` : ""
-                  }]`;
-                continue;
-              }
-              try {
-                const data = await downloadAttachment({
-                  url: att.url,
-                  conversationKey,
-                });
-                let ext = "bin";
-                if ("mimeType" in att) {
-                  const match = att.mimeType.match(/\/(.*?)(;|$)/);
-                  if (match && match[1]) ext = match[1];
-                }
-                const filename = `/tmp/alice_attachment_${Date.now()}_${
-                  Math.random().toString(36).slice(2, 8)
-                }.${ext}`;
-                await Deno.writeFile(filename, new Uint8Array(data));
-                text += (text ? "\n" : "") +
-                  `[Attachment saved to ${filename}]`;
-              } catch (e) {
-                text += (text ? "\n" : "") +
-                  `[Failed to download attachment: ${e}]`;
-              }
-            }
+          const authDecision = evaluateSenderAuthorization({
+            senderPublicSignKey: message.publicSignKey,
+            botPublicSignKey: credentials.publicSignKey,
+            messageText: message.text ?? "",
+            pairingCode: state.pairingCode,
+            authorizedPublicSignKey: state.authorizedPublicSignKey,
+          });
+          if (authDecision.status === "ignore-self") return null;
+          if (authDecision.status === "rejected") return null;
+          if (authDecision.status === "paired-now") {
+            state.authorizedPublicSignKey =
+              authDecision.authorizedPublicSignKey;
+            await writeJson(statePath, state);
+            conversations.set(conversationId, { conversationKey });
+            await sendMessageWithKey({
+              conversationKey,
+              conversation: conversationId,
+              credentials,
+              message: {
+                type: "text",
+                text: "Device paired with this MCP session.",
+              },
+            }).catch(() => {});
+            return null;
           }
+
+          conversations.set(conversationId, { conversationKey });
+          const attachmentLines =
+            "attachments" in message && message.attachments
+              ? await Promise.all(
+                message.attachments.map(async (att) => {
+                  if (att.type === "location") {
+                    return `[Location attachment: ${att.latitude}, ${att.longitude}${
+                      att.label ? ` (${att.label})` : ""
+                    }]`;
+                  }
+                  if (!isAllowedAttachmentUrl(att.url)) {
+                    return "[Blocked attachment from untrusted URL]";
+                  }
+                  try {
+                    const data = await downloadAttachment({
+                      url: att.url,
+                      conversationKey,
+                    });
+                    const rawExt = "mimeType" in att
+                      ? (att.mimeType.match(/\/([^;]+)/)?.[1] ?? "bin")
+                      : "bin";
+                    const ext = sanitizeTempExtension(rawExt, ".bin");
+                    const filename = path.join(
+                      os.tmpdir(),
+                      `alice_attachment_${Date.now()}_${
+                        crypto.randomUUID().slice(0, 8)
+                      }${ext}`,
+                    );
+                    await Deno.writeFile(filename, new Uint8Array(data), {
+                      mode: 0o600,
+                    });
+                    return `[Attachment saved to ${filename}]`;
+                  } catch (e) {
+                    return `[Failed to download attachment: ${e}]`;
+                  }
+                }),
+              )
+              : [];
+
+          const fullText = [message.text, ...attachmentLines]
+            .filter(Boolean)
+            .join("\n");
 
           return {
             conversationId,
-            text,
+            text: fullText,
             type: message.type,
           };
         }),
       )
-    ).filter((m) => m !== null);
+    ).filter((m): m is NonNullable<typeof m> => m !== null);
     if (decoded.length) {
       inbox.push(...decoded);
       server.sendToolListChanged().catch(() => {});
@@ -140,13 +219,15 @@ const pollRelay = async () => {
 };
 
 const startPolling = () => {
-  if (pollTimer) return;
-  pollTimer = setInterval(pollRelay, POLL_INTERVAL_MS);
+  if (mcpRuntime.pollTimer) return;
+  mcpRuntime.pollTimer = setInterval(pollRelay, POLL_INTERVAL_MS);
 };
 
 const setup = async () => {
-  credentials = await getCredentials();
-  state = await getState();
+  const credentials = await getCredentials();
+  const state = await getState();
+  mcpRuntime.credentials = credentials;
+  mcpRuntime.state = state;
   await setWebhook({
     url: `${relayUrl}/webhook/${state.relayToken}`,
     credentials,
@@ -161,6 +242,10 @@ const setup = async () => {
     [
       qr,
       `Chat with this session: ${link}`,
+      ...(state.authorizedPublicSignKey ? ["Device status: Paired"] : [
+        `Pairing code: ${state.pairingCode}`,
+        `Send "${state.pairingCode}" (or "/pair ${state.pairingCode}") as your first message in Alice&Bot to pair your device.`,
+      ]),
       "",
       "Scan the QR code or open the link in Alice&Bot.",
       "You'll be notified automatically when messages arrive.",
@@ -169,7 +254,9 @@ const setup = async () => {
 };
 
 const readInbox = () => {
-  if (!credentials) return textResult("Run aliceandbot_setup first.");
+  if (!mcpRuntime.credentials) {
+    return textResult("Run aliceandbot_setup first.");
+  }
   if (!inbox.length) return textResult("No new messages.");
   const text = inbox
     .map((m) => `Conversation: ${m.conversationId}\nMessage: ${m.text}`)
@@ -180,6 +267,7 @@ const readInbox = () => {
 };
 
 const reply = async (conversation: string, text: string) => {
+  const { credentials } = mcpRuntime;
   if (!credentials) return textResult("Run aliceandbot_setup first.");
   const conv = conversations.get(conversation);
   if (conv?.conversationKey) {
@@ -199,7 +287,7 @@ const reply = async (conversation: string, text: string) => {
   return textResult("Sent.");
 };
 
-const server = new Server(
+export const server = new Server(
   { name: "aliceandbot", version: "0.2.0" },
   { capabilities: { tools: {}, prompts: {} } },
 );
@@ -242,10 +330,14 @@ server.setRequestHandler(ListToolsRequestSchema, () => {
 
 server.setRequestHandler(CallToolRequestSchema, (request) => {
   const { name } = request.params;
-  const args = (request.params.arguments ?? {}) as Record<string, string>;
+  const rawArgs = request.params.arguments ?? {};
+  const conversation = typeof rawArgs.conversation === "string"
+    ? rawArgs.conversation
+    : "";
+  const text = typeof rawArgs.text === "string" ? rawArgs.text : "";
   if (name === "aliceandbot_setup") return setup();
   if (name === "aliceandbot_read") return readInbox();
-  if (name === "aliceandbot_reply") return reply(args.conversation, args.text);
+  if (name === "aliceandbot_reply") return reply(conversation, text);
   return textResult(`Unknown tool: ${name}`);
 });
 
@@ -274,4 +366,6 @@ server.setRequestHandler(GetPromptRequestSchema, () => ({
   ],
 }));
 
-await server.connect(new StdioServerTransport());
+if (import.meta.main) {
+  await server.connect(new StdioServerTransport());
+}

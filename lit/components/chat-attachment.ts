@@ -55,15 +55,52 @@ const videoPlaceholderStyle = (isDark: boolean) =>
     isDark ? "#1a1a1a" : "#e5e7eb"
   }`;
 
+export const isSafeAttachmentSourceUrl = (rawUrl: string): boolean => {
+  if (!rawUrl || /\p{Cc}/u.test(rawUrl)) return false;
+  try {
+    if (decodeURIComponent(rawUrl).includes("..")) return false;
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:") return false;
+    if (parsed.hostname !== "storage.googleapis.com") return false;
+    return (
+      parsed.pathname.startsWith("/alice-and-bot-attachments/") ||
+      parsed.pathname.startsWith("/fake-bucket/")
+    );
+  } catch {
+    return false;
+  }
+};
+
+export const isSafeDecryptedMediaUrl = (rawUrl: string | null): boolean => {
+  if (!rawUrl) return false;
+  const cleaned = rawUrl.trim().toLowerCase();
+  return cleaned.startsWith("blob:") || cleaned.startsWith("https://");
+};
+
+export const sanitizeDownloadFilename = (name: string): string => {
+  const leaf = name.split(/[/\\]/).pop() ?? "";
+  const base = leaf
+    .replace(/\p{Cc}+/gu, "")
+    .replace(/\.\.+/g, "_")
+    .replace(/^\.+/, "")
+    .trim();
+  const nonEmpty = base || "attachment";
+  return /\.(?:html?|xhtml|svg|js|mjs|xml)$/i.test(nonEmpty)
+    ? `${nonEmpty}.bin`
+    : nonEmpty;
+};
+
 export const decryptAttachmentSafely = (
   decrypt: () => Promise<string>,
   report: (eventName: string) => void,
 ): Promise<string | null> =>
-  decrypt().catch((error) => {
-    console.error("Failed to decrypt attachment:", error);
-    report("attachment_decrypt_failed");
-    return null;
-  });
+  decrypt()
+    .then((url) => (isSafeDecryptedMediaUrl(url) ? url : null))
+    .catch((error) => {
+      console.error("Failed to decrypt attachment:", error);
+      report("attachment_decrypt_failed");
+      return null;
+    });
 
 export class ChatAttachment extends LitElement {
   static override properties = {
@@ -115,7 +152,8 @@ export class ChatAttachment extends LitElement {
   private _handleDecrypt = async () => {
     if (
       !this.onDecrypt || this._decryptedUrl ||
-      this.attachment.type === "location"
+      this.attachment.type === "location" ||
+      !isSafeAttachmentSourceUrl(this.attachment.url)
     ) return;
     const { onDecrypt, attachment } = this;
     this._loading = true;
@@ -262,7 +300,7 @@ export class ChatAttachment extends LitElement {
             await this._handleDecrypt();
           }
         }}"
-        download="${attachment.name}"
+        download="${sanitizeDownloadFilename(attachment.name)}"
         style="${fileStyle(isDark)}"
       >
         <span>${faPaperclip}</span>

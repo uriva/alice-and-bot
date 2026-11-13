@@ -1,7 +1,12 @@
 import { Marked, type Token, type Tokens } from "marked";
 import "./chat-video-player.ts";
 import { defaultPrimary, quickReplyButtonStyle } from "./design.ts";
-import { isAudioUrl, isVideoUrl, preprocessText } from "./utils.ts";
+import {
+  decodeHtmlEntities,
+  isAudioUrl,
+  isVideoUrl,
+  preprocessText,
+} from "./utils.ts";
 import { blurSecretsInHtml, secretBlurCss } from "./secrets.ts";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
@@ -39,6 +44,54 @@ export const highlightCss = `
 .hljs-deletion{color:#ffdcd7;background-color:#67060c}
 `;
 
+export const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+export const sanitizeMarkdownUrl = (
+  rawUrl: string,
+  allowMailto = true,
+): string | null => {
+  const cleaned = rawUrl.replace(/\p{Cc}+/gu, "").trim();
+  if (!cleaned) return null;
+  if (cleaned.startsWith("/")) {
+    return cleaned.startsWith("//") || cleaned.startsWith("/\\")
+      ? null
+      : cleaned;
+  }
+  if (cleaned.startsWith("#") || cleaned.startsWith("?")) {
+    return cleaned;
+  }
+  const compact = cleaned.replace(/\s+/g, "").toLowerCase();
+  if (
+    compact.startsWith("https://") ||
+    compact.startsWith("http://") ||
+    (allowMailto && compact.startsWith("mailto:"))
+  ) {
+    try {
+      const parsed = new URL(cleaned);
+      const proto = parsed.protocol.toLowerCase();
+      if (
+        proto === "https:" ||
+        proto === "http:" ||
+        (allowMailto && proto === "mailto:")
+      ) {
+        return cleaned;
+      }
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const sanitizeCssColor = (color: string): string =>
+  color.replace(/["'<>\\;{}]/g, "");
+
 const monoFont =
   "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
 
@@ -60,6 +113,22 @@ export const textDirection = (text: string): "rtl" | "ltr" | "auto" => {
   return rtlIndex < ltrIndex && rtlCount * 2 >= ltrCount ? "rtl" : "ltr";
 };
 
+const highlightCodeSafely = (rawCode: string, lang: string): string => {
+  const plain = decodeHtmlEntities(rawCode);
+  if (lang && hljs.getLanguage(lang)) {
+    try {
+      return hljs.highlight(plain, { language: lang }).value;
+    } catch {
+      return escapeHtml(plain);
+    }
+  }
+  try {
+    return hljs.highlightAuto(plain).value;
+  } catch {
+    return escapeHtml(plain);
+  }
+};
+
 const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
   const bg = isDark ? "#0a0a0a" : "#1e1e1e";
   const color = "#e5e7eb";
@@ -67,23 +136,12 @@ const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
   const labelColor = "#e5e7eb";
   const btnBorder = isDark ? "#2a2a2a" : "#333";
 
-  let highlighted = code;
-  if (lang && hljs.getLanguage(lang)) {
-    try {
-      highlighted = hljs.highlight(code, { language: lang }).value;
-    } catch (_) {
-      // fallback
-    }
-  } else {
-    try {
-      highlighted = hljs.highlightAuto(code).value;
-    } catch (_) {
-      // fallback
-    }
-  }
+  const cleanLang = decodeHtmlEntities(lang).trim();
+  const highlighted = highlightCodeSafely(code, cleanLang);
+  const safeLangLabel = escapeHtml(cleanLang.toUpperCase());
 
-  const label = lang
-    ? `<div style="font-size:11px;font-family:${monoFont};color:${labelColor};background:${labelBg};padding:4px 12px;border-top-left-radius:8px;border-top-right-radius:8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid ${btnBorder}">${lang.toUpperCase()}
+  const label = cleanLang
+    ? `<div style="font-size:11px;font-family:${monoFont};color:${labelColor};background:${labelBg};padding:4px 12px;border-top-left-radius:8px;border-top-right-radius:8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid ${btnBorder}">${safeLangLabel}
 <button data-testid="copy-code-button" type="button" title="Copy" style="font-size:11px;line-height:1;border-radius:4px;border:none;background:transparent;color:${labelColor};cursor:pointer;padding:2px 4px;opacity:0.7;transition:opacity .15s">Copy</button>
 </div>`
     : `<div style="display:flex;justify-content:flex-end;padding:4px 8px;background:${labelBg};border-top-left-radius:8px;border-top-right-radius:8px;border-bottom:1px solid ${btnBorder}">
@@ -101,23 +159,36 @@ const fencedCodeBlockHtml = (code: string, lang: string, isDark: boolean) => {
 const inlineCodeHtml = (code: string, isDark: boolean) => {
   const bg = isDark ? "#ffffff22" : "#00000012";
   const color = isDark ? "#e5e7eb" : "#111";
-  return `<code style="background:${bg};color:${color};padding:0 4px;border-radius:4px;font-family:${monoFont};font-size:13px;user-select:text;-webkit-user-select:text">${code}</code>`;
+  const safeCode = escapeHtml(decodeHtmlEntities(code));
+  return `<code style="background:${bg};color:${color};padding:0 4px;border-radius:4px;font-family:${monoFont};font-size:13px;user-select:text;-webkit-user-select:text">${safeCode}</code>`;
 };
 
-const videoPlayerHtml = (src: string, isDark: boolean) =>
-  `<chat-video-player src="${src}"${
+const videoPlayerHtml = (src: string, isDark: boolean) => {
+  const safeSrc = sanitizeMarkdownUrl(src, false);
+  if (!safeSrc) return "";
+  return `<chat-video-player src="${escapeHtml(safeSrc)}"${
     isDark ? " isdark" : ""
   }></chat-video-player>`;
+};
 
-const audioInlineHtml = (src: string) =>
-  `<audio src="${src}" controls preload="metadata" style="display:block;width:100%;margin-top:6px"></audio>`;
+const audioInlineHtml = (src: string) => {
+  const safeSrc = sanitizeMarkdownUrl(src, false);
+  if (!safeSrc) return "";
+  return `<audio src="${
+    escapeHtml(safeSrc)
+  }" controls preload="metadata" style="display:block;width:100%;margin-top:6px"></audio>`;
+};
 
 const createMarked = (textColor: string, isDark: boolean) => {
+  const safeTextColor = sanitizeCssColor(textColor);
   const instance = new Marked();
   instance.use({
     gfm: true,
     breaks: true,
     renderer: {
+      html({ text }: Tokens.HTML | Tokens.Tag) {
+        return escapeHtml(text);
+      },
       paragraph(
         this: { parser: { parseInline(t: Token[]): string } },
         { tokens, text }: Tokens.Paragraph,
@@ -133,19 +204,35 @@ const createMarked = (textColor: string, isDark: boolean) => {
       codespan({ text }: Tokens.Codespan) {
         return inlineCodeHtml(text, isDark);
       },
-      image({ href, text }: Tokens.Image) {
-        if (text === "video") return videoPlayerHtml(href, isDark);
-        if (text === "audio") return audioInlineHtml(href);
-        return `<img src="${href}" alt="${text}" style="display:block;max-width:100%;height:auto;border-radius:8px;margin-top:6px" />`;
+      image({ href, text, title }: Tokens.Image) {
+        const decodedHref = decodeHtmlEntities(href);
+        if (text === "video") return videoPlayerHtml(decodedHref, isDark);
+        if (text === "audio") return audioInlineHtml(decodedHref);
+        const safeSrc = sanitizeMarkdownUrl(decodedHref, false);
+        const safeAlt = escapeHtml(decodeHtmlEntities(text));
+        if (!safeSrc) return safeAlt;
+        const titleAttr = title
+          ? ` title="${escapeHtml(decodeHtmlEntities(title))}"`
+          : "";
+        return `<img src="${
+          escapeHtml(safeSrc)
+        }" alt="${safeAlt}"${titleAttr} style="display:block;max-width:100%;height:auto;border-radius:8px;margin-top:6px" />`;
       },
       link(
         this: { parser: { parseInline(t: Token[]): string } },
-        { href, tokens }: Tokens.Link,
+        { href, title, tokens }: Tokens.Link,
       ) {
         const children = this.parser.parseInline(tokens);
-        if (isVideoUrl(href)) return videoPlayerHtml(href, isDark);
-        if (isAudioUrl(href)) return audioInlineHtml(href);
-        return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:${textColor};text-decoration:underline;overflow-wrap:anywhere;word-break:break-word">${children}</a>`;
+        const safeHref = sanitizeMarkdownUrl(decodeHtmlEntities(href), true);
+        if (!safeHref) return children;
+        if (isVideoUrl(safeHref)) return videoPlayerHtml(safeHref, isDark);
+        if (isAudioUrl(safeHref)) return audioInlineHtml(safeHref);
+        const titleAttr = title
+          ? ` title="${escapeHtml(decodeHtmlEntities(title))}"`
+          : "";
+        return `<a href="${
+          escapeHtml(safeHref)
+        }"${titleAttr} target="_blank" rel="noopener noreferrer" style="color:${safeTextColor};text-decoration:underline;overflow-wrap:anywhere;word-break:break-word">${children}</a>`;
       },
       list(
         this: { listitem(t: Tokens.ListItem): string },
@@ -201,7 +288,7 @@ const createMarked = (textColor: string, isDark: boolean) => {
 };
 
 const buttonTagRegex =
-  /<button(?:\s+[^>]*\bid=["']([^"']+)["'])?[^>]*>([\s\S]*?)<\/button>|<button(?:\s+[^>]*\bid=["']([^"']+)["'])?[^>]*\btitle=["']([^"']+)["'][^>]*\/?>/gi;
+  /<button(?:\s+[^>]*\bid=(?:"([^"]*)"|'([^']*)'))?[^>]*>([\s\S]*?)<\/button>|<button(?:\s+[^>]*\bid=(?:"([^"]*)"|'([^']*)'))?[^>]*\btitle=(?:"([^"]*)"|'([^']*)')[^>]*\/?>/gi;
 
 const quickReplyButtonHtml = (
   title: string,
@@ -209,12 +296,14 @@ const quickReplyButtonHtml = (
   isDark: boolean,
   primaryColor: string,
 ) =>
-  `<button class="chat-quick-reply-btn" data-button-id="${id}" type="button" style="${
+  `<button class="chat-quick-reply-btn" data-button-id="${
+    escapeHtml(id)
+  }" type="button" style="${
     quickReplyButtonStyle(
       isDark,
-      primaryColor,
+      sanitizeCssColor(primaryColor),
     )
-  }">${title}</button>`;
+  }">${escapeHtml(title)}</button>`;
 
 const processButtons = (
   text: string,
@@ -225,9 +314,11 @@ const processButtons = (
   const renderedButtons: string[] = [];
   const textWithoutButtons = text.replace(
     buttonTagRegex,
-    (_match, id1, content, id2, titleAttr) => {
-      const id = id1 || id2 || "";
-      const rawTitle = content !== undefined ? content : titleAttr || "";
+    (_match, id1Dq, id1Sq, content, id2Dq, id2Sq, titleDq, titleSq) => {
+      const id = id1Dq ?? id1Sq ?? id2Dq ?? id2Sq ?? "";
+      const rawTitle = content !== undefined
+        ? content
+        : (titleDq ?? titleSq ?? "");
       const title = rawTitle.replace(/<[^>]+>/g, "").trim();
       if (title && showButtons) {
         renderedButtons.push(
@@ -250,7 +341,7 @@ const processButtons = (
 };
 
 const escapeHtmlTags = (text: string) =>
-  text.replace(/<(\/?[a-zA-Z])/g, "&lt;$1");
+  text.replace(/<(\/?[a-zA-Z!])/g, "&lt;$1");
 
 export const renderMarkdown = (
   text: string,

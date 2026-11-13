@@ -10,6 +10,7 @@ import {
   createConversation,
   downloadAttachment,
   generateTransferUrl,
+  getProfile,
   parseChatWithUrl,
   renameConversation,
   resolveHandle,
@@ -83,50 +84,73 @@ const hasAttachments = (
 ): msg is DecipheredMessage & { attachments?: Attachment[] } =>
   msg.type === "text" || msg.type === "edit";
 
-const editsForMessage = (edits: TextOrEditMessage[]) => (msgId: string) =>
-  sortKey((e: TextOrEditMessage) => e.timestamp)(
-    edits.filter((e) => e.type === "edit" && e.editOf === msgId),
-  );
+export const editsForMessage =
+  (edits: TextOrEditMessage[]) => (original: TextOrEditMessage) =>
+    sortKey((e: TextOrEditMessage) => e.timestamp)(
+      edits.filter(
+        (e) =>
+          e.type === "edit" &&
+          e.editOf === original.id &&
+          e.publicSignKey === original.publicSignKey &&
+          e.timestamp >= original.timestamp,
+      ),
+    );
 
-const buildEditHistory =
-  (edits: TextOrEditMessage[]) =>
-  (original: TextOrEditMessage): EditHistoryEntry[] => [
-    ...editsForMessage(edits)(original.id).slice(0, -1).map((e) => ({
-      text: e.text,
-      timestamp: e.timestamp,
-      attachments: e.attachments,
-    })),
-    {
-      text: original.text,
-      timestamp: original.timestamp,
-      attachments: original.attachments,
-    },
-  ];
+const buildEditHistory = (
+  msgEdits: TextOrEditMessage[],
+  original: TextOrEditMessage,
+): EditHistoryEntry[] => [
+  ...msgEdits.slice(0, -1).map((e) => ({
+    text: e.text,
+    timestamp: e.timestamp,
+    attachments: e.attachments,
+  })),
+  {
+    text: original.text,
+    timestamp: original.timestamp,
+    attachments: original.attachments,
+  },
+];
 
-const applyLatestEdit =
-  (edits: TextOrEditMessage[]) =>
-  (original: DecipheredMessage): DecipheredMessage => {
-    if (original.type !== "text") return original;
-    const msgEdits = editsForMessage(edits)(original.id);
-    if (!msgEdits.length) return original;
-    const latest = msgEdits[msgEdits.length - 1];
-    return { ...original, text: latest.text, attachments: latest.attachments };
-  };
-
-const foldEdits = (messages: DecipheredMessage[]) => {
+export const foldEdits = (messages: DecipheredMessage[]) => {
   const edits = messages.filter((m): m is TextOrEditMessage =>
     m.type === "edit"
   );
-  return messages.filter((m) => m.type === "text").map((original) => {
-    const msg = applyLatestEdit(edits)(original);
-    return {
-      msg,
-      editHistory: original.type === "text" &&
-          edits.some((e) => e.type === "edit" && e.editOf === original.id)
-        ? buildEditHistory(edits)(original as TextOrEditMessage)
-        : undefined,
-    };
-  });
+  return messages
+    .filter((m): m is TextOrEditMessage => m.type === "text")
+    .map((original) => {
+      const msgEdits = editsForMessage(edits)(original);
+      if (msgEdits.length === 0) {
+        return { msg: original, editHistory: undefined };
+      }
+      const latest = msgEdits[msgEdits.length - 1];
+      return {
+        msg: {
+          ...original,
+          text: latest.text,
+          attachments: latest.attachments,
+        },
+        editHistory: buildEditHistory(msgEdits, original),
+      };
+    });
+};
+
+export const confirmPaidOutreach = async (
+  targetPublicSignKey: string,
+  myPublicSignKey: string,
+  fetchProfile: (
+    publicSignKey: string,
+  ) => Promise<{ profile: { priceTag?: number } | null }> = getProfile,
+  confirmFn: (message: string) => boolean = (msg) => globalThis.confirm(msg),
+): Promise<boolean> => {
+  if (!targetPublicSignKey || targetPublicSignKey === myPublicSignKey) {
+    return true;
+  }
+  const { profile } = await fetchProfile(targetPublicSignKey);
+  const priceTag = profile?.priceTag ?? 0;
+  if (priceTag <= 0) return true;
+  const costInDollars = (priceTag / 100).toFixed(2);
+  return confirmFn(`This outreach will cost $${costInDollars}. Proceed?`);
 };
 
 const resolveName = (details: IdentityDetails) => (key: string): string =>
@@ -582,12 +606,14 @@ export const processChatState = ({
   uiElements,
   ephemeralStreams,
   progressMax,
+  allowedParticipantKeys,
 }: {
   messages: DecipheredMessage[] | null;
   details: IdentityDetails;
   uiElements: UiElement[];
   ephemeralStreams: EphemeralStreamEvent[];
   progressMax: Map<string, number>;
+  allowedParticipantKeys?: ReadonlySet<string>;
 }) => {
   if (!messages) {
     return {
@@ -598,12 +624,16 @@ export const processChatState = ({
       activeStreams: [],
     };
   }
+  const verifiedMessages =
+    allowedParticipantKeys && allowedParticipantKeys.size > 0
+      ? messages.filter((m) => allowedParticipantKeys.has(m.publicSignKey))
+      : messages;
   const overrides = uiOverridesMap(uiElements);
-  const knownIds = messageElementIds(messages);
-  const messageTimestampFloor = latestTimestamp(messages);
-  const reactions = messages.filter(isReaction);
+  const knownIds = messageElementIds(verifiedMessages);
+  const messageTimestampFloor = latestTimestamp(verifiedMessages);
+  const reactions = verifiedMessages.filter(isReaction);
   const addReactions = aggregateReactions(reactions, details);
-  const withReactions = foldEdits(messages.filter(isTextOrEdit)).map(
+  const withReactions = foldEdits(verifiedMessages.filter(isTextOrEdit)).map(
     msgToUIMessageWithHistory(details),
   ).map((m) => {
     const r = addReactions(m.id);
@@ -615,9 +645,9 @@ export const processChatState = ({
     chatMessages: withReactions.map(resolveReplyTo(msgMap)),
     // Canvas events reach every participant but are never part of the chat
     // transcript; `chatMessages` above is already narrowed to text and edits.
-    canvasEvents: messages.filter(isCanvasEvent),
+    canvasEvents: verifiedMessages.filter(isCanvasEvent),
     activeSpinners: [
-      ...latestSpinners(messages, details, overrides),
+      ...latestSpinners(verifiedMessages, details, overrides),
       ...standaloneSpinnerEntries(
         uiElements,
         knownIds,
@@ -625,7 +655,7 @@ export const processChatState = ({
       ),
     ],
     activeProgress: enforceMonotonic(progressMax, [
-      ...latestProgress(messages, details, overrides),
+      ...latestProgress(verifiedMessages, details, overrides),
       ...standaloneProgressEntries(
         uiElements,
         knownIds,
@@ -1083,12 +1113,16 @@ export class ConnectedChat extends LitElement {
   }
 
   private _processMessages() {
+    const allowedParticipantKeys = this._participants.length > 0
+      ? new Set(this._participants.map((p) => p.publicSignKey))
+      : undefined;
     return processChatState({
       messages: this._messages,
       details: this._identityDetails,
       uiElements: this._uiElements,
       ephemeralStreams: this._ephemeralStreams,
       progressMax: this._progressMax,
+      allowedParticipantKeys,
     });
   }
 
@@ -1436,6 +1470,9 @@ export class ConnectedChat extends LitElement {
       });
       if (existing) {
         this._selectConversation(existing.id);
+        return;
+      }
+      if (!(await confirmPaidOutreach(resolvedKey, myKey))) {
         return;
       }
       const title = topic || "Chat";

@@ -88,27 +88,10 @@ if (typeof globalThis.addEventListener === "undefined") {
 }
 
 if (typeof globalThis.crypto !== "undefined" && globalThis.crypto.randomUUID) {
-  const __orig_randomUUID = globalThis.crypto.randomUUID.bind(globalThis.crypto);
-  let __uuid_counter = 0;
-  globalThis.crypto.randomUUID = function() {
-    try {
-      return __orig_randomUUID();
-    } catch (_err) {
-      __uuid_counter++;
-      return "00000000-0000-4000-8000-" + String(__uuid_counter).padStart(12, "0");
-    }
-  };
+  globalThis.crypto.randomUUID = globalThis.crypto.randomUUID.bind(globalThis.crypto);
 }
 if (typeof globalThis.crypto !== "undefined" && globalThis.crypto.getRandomValues) {
-  const __orig_getRandomValues = globalThis.crypto.getRandomValues.bind(globalThis.crypto);
-  globalThis.crypto.getRandomValues = function(arr) {
-    try {
-      return __orig_getRandomValues(arr);
-    } catch (_err) {
-      for (let i = 0; i < arr.length; i++) arr[i] = (Math.random() * 256) | 0;
-      return arr;
-    }
-  };
+  globalThis.crypto.getRandomValues = globalThis.crypto.getRandomValues.bind(globalThis.crypto);
 }
 if (typeof globalThis.fetch === "function") {
   globalThis.fetch = globalThis.fetch.bind(globalThis);

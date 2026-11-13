@@ -196,8 +196,15 @@ type SignedPayload<T> = {
   payload: T;
 };
 
+type EnvelopeMetadata = {
+  conversationId?: string;
+  sentAt?: number;
+};
+
+type SignedMessagePayload = InternalMessage & EnvelopeMetadata;
+
 export type EncryptedMessage = EncryptedSymmetric<
-  SignedPayload<InternalMessage>
+  SignedPayload<SignedMessagePayload>
 >;
 
 // Canonical serialization: signatures are computed over this, so any code
@@ -233,11 +240,17 @@ const encryptAndSign = async (
     "privateSignKey" | "publicSignKey"
   >,
   message: InternalMessage,
+  conversation?: string,
 ) => {
-  const serialized = msgToStr(message);
-  assertTextLengthOk(serialized);
+  assertTextLengthOk(msgToStr(message));
+  const payloadWithContext: SignedMessagePayload = {
+    ...message,
+    ...(conversation ? { conversationId: conversation } : {}),
+    sentAt: Date.now(),
+  };
+  const serialized = msgToStr(payloadWithContext);
   return encryptSymmetric(conversationKey, {
-    payload: message,
+    payload: payloadWithContext,
     publicSignKey,
     signature: await sign(privateSignKey, serialized),
   });
@@ -261,6 +274,7 @@ export const sendMessageWithKey = async ({
         conversationKey,
         credentials,
         message,
+        conversation,
       ),
     },
   });
@@ -318,7 +332,16 @@ export const handleWebhookUpdate = async (
       whUpdate.conversationKey,
     )
     : await getConversationKey(credentials, whUpdate.conversationId);
-  const message = await decryptMessagePayload(key)(whUpdate);
+  const allowedParticipantKeys =
+    whUpdate.conversationInfo && !whUpdate.conversationInfo.isPartial
+      ? new Set(
+        whUpdate.conversationInfo.participants.map((p) => p.publicSignKey),
+      )
+      : undefined;
+  const message = await decryptMessagePayload(key, {
+    conversationId: whUpdate.conversationId,
+    allowedParticipantKeys,
+  })(whUpdate);
   if (!message) return undefined;
   return {
     conversationId: whUpdate.conversationId,
@@ -467,17 +490,46 @@ const decryptedPayloadToMessage = (
   };
 };
 
-const decryptMessagePayload = (conversationSymmetricKey: string) =>
+export type DecryptMessageOptions = {
+  conversationId?: string;
+  allowedParticipantKeys?: ReadonlySet<string>;
+};
+
+export const decryptMessagePayload = (
+  conversationSymmetricKey: string,
+  options?: DecryptMessageOptions,
+) =>
 async (
   { payload, timestamp }: Omit<DbMessage, "id">,
 ) => {
   try {
     const { signature, payload: decryptedPayload, publicSignKey } =
-      await decryptSymmetric<SignedPayload<InternalMessage>>(
+      await decryptSymmetric<SignedPayload<SignedMessagePayload>>(
         conversationSymmetricKey,
         payload,
       );
+    if (
+      options?.allowedParticipantKeys &&
+      !options.allowedParticipantKeys.has(publicSignKey)
+    ) {
+      return undefined;
+    }
     if (!(await verify(signature, publicSignKey, msgToStr(decryptedPayload)))) {
+      return undefined;
+    }
+    if (
+      options?.conversationId &&
+      decryptedPayload.conversationId !== undefined &&
+      decryptedPayload.conversationId !== options.conversationId
+    ) {
+      return undefined;
+    }
+    if (
+      decryptedPayload.sentAt !== undefined &&
+      (typeof decryptedPayload.sentAt !== "number" ||
+        !Number.isFinite(decryptedPayload.sentAt) ||
+        decryptedPayload.sentAt <= 0)
+    ) {
       return undefined;
     }
     return decryptedPayloadToMessage(
@@ -490,11 +542,14 @@ async (
   }
 };
 
-export const decryptMessage = (conversationSymmetricKey: string) =>
+export const decryptMessage = (
+  conversationSymmetricKey: string,
+  options?: DecryptMessageOptions,
+) =>
 async (
   { id, payload, timestamp }: DbMessage,
 ): Promise<DecipheredMessage | undefined> => {
-  const base = await decryptMessagePayload(conversationSymmetricKey)({
+  const base = await decryptMessagePayload(conversationSymmetricKey, options)({
     payload,
     timestamp,
   });
@@ -502,8 +557,7 @@ async (
   return { id, ...base } as DecipheredMessage;
 };
 
-// deno-lint-ignore ban-types
-type Identity = InstaQLEntity<typeof schema, "identities", { account: {} }>;
+type Identity = InstaQLEntity<typeof schema, "identities">;
 
 export const createConversation = (
   db: () => InstantAdminDatabase<typeof schema>,
@@ -515,7 +569,6 @@ async (
 ) => {
   const { identities } = await db().query({
     identities: {
-      account: {},
       $: { where: { publicSignKey: { $in: publicSignKeys } } },
     },
   });
@@ -594,17 +647,25 @@ export const chatWithMeLink = async (
 export const parseChatWithUrl = (
   href: string,
 ): { chatWith: string; topic?: string } | null => {
+  const trimmed = href.trim();
+  if (
+    !trimmed ||
+    trimmed.startsWith("//") ||
+    trimmed.startsWith("/\\") ||
+    trimmed.startsWith("\\")
+  ) {
+    return null;
+  }
   try {
-    const url = new URL(href, baseUrl);
+    const url = new URL(trimmed, baseUrl);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
     const isAliceAndBotHost = url.hostname === "aliceandbot.com" ||
       url.hostname === "www.aliceandbot.com" ||
       url.hostname === "alice-and-bot.com" ||
       url.hostname === "localhost" ||
       url.hostname === "127.0.0.1";
     const chatWith = url.searchParams.get("chatWith");
-    if (!chatWith) return null;
-    const isRelative = href.startsWith("/") || href.startsWith("?");
-    if (!isAliceAndBotHost && !isRelative) return null;
+    if (!chatWith || !isAliceAndBotHost) return null;
     const topic = url.searchParams.get("topic") || undefined;
     return { chatWith, topic };
   } catch (_) {

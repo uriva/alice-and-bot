@@ -15,7 +15,12 @@ import {
   type CanvasProblem,
   renderCanvas,
 } from "./runtime.ts";
-import { isRenderableTag, type ViewElement, type ViewNode } from "./view.ts";
+import {
+  isRenderableTag,
+  sanitizeViewUrl,
+  type ViewElement,
+  type ViewNode,
+} from "./view.ts";
 import { canvasFromRow, canvasQuery, type StoredCanvas } from "./store.ts";
 
 export const toastLifetimeMs = 5_000;
@@ -265,14 +270,19 @@ const renderNode = (
   }
   if (tag === "a") {
     return html`
-      <a dir="auto" class="canvas-el ${className}" href=${node.attrs?.href ??
-        "#"}
+      <a dir="auto" class="canvas-el ${className}" href=${sanitizeViewUrl(
+        node.attrs?.href,
+        "#",
+      )}
         @click=${clickHandler}>${node.text ?? nothing}${children}</a>
     `;
   }
   if (tag === "img") {
     return html`<img class="canvas-el ${className}" src=${
-      node.attrs?.src ?? ""
+      sanitizeViewUrl(
+        node.attrs?.src,
+        "",
+      )
     } alt=${node.attrs?.alt ?? ""} />`;
   }
   if (tag === "label") {

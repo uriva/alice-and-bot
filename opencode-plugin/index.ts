@@ -41,6 +41,12 @@ import {
   executeTuiAction,
   executeTuiCommand,
 } from "./tui.ts";
+import {
+  evaluateSenderAuthorization,
+  generatePairingCode,
+  isAllowedAttachmentUrl,
+  sanitizeTempExtension,
+} from "./security.ts";
 
 let currentSessionId: string | undefined;
 const aliceCommands = new Set([
@@ -69,6 +75,7 @@ const pendingQuestions = new Map<string, any>();
 const sentReasoningParts = new Set<string>();
 const seenAliceMessageIds = new Set<string>();
 const sentCompletionKeys = new Set<string>();
+const promptedPairingSenders = new Set<string>();
 const recentPromptFingerprints = new Map<string, number>();
 const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const typingSessions = new Set<string>();
@@ -555,18 +562,26 @@ const buildPromptParts = async (message: any) => {
   if (message.attachments && message.attachments.length > 0) {
     for (const att of message.attachments) {
       try {
-        const ext = att.name
-          ? path.extname(att.name)
+        if (!att?.url || !isAllowedAttachmentUrl(String(att.url))) {
+          await logDebug(`Blocked disallowed attachment URL: ${att?.url}`);
+          continue;
+        }
+        const rawExt = att.name
+          ? path.extname(path.basename(String(att.name)))
           : att.mimeType?.includes("audio")
           ? ".m4a"
           : ".bin";
+        const ext = sanitizeTempExtension(rawExt || ".bin", ".bin");
         const tmpPath = path.join(
           os.tmpdir(),
-          `alice_att_${Date.now()}${ext}`,
+          `alice_att_${Date.now()}_${crypto.randomUUID().slice(0, 8)}${ext}`,
         );
-        const res = await fetch(att.url);
+        const res = await fetch(att.url, { redirect: "error" });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
         const buf = await res.arrayBuffer();
-        await fs.writeFile(tmpPath, Buffer.from(buf));
+        await fs.writeFile(tmpPath, Buffer.from(buf), { mode: 0o600 });
         await logDebug(`Downloaded attachment to ${tmpPath}`);
 
         parts.push({
@@ -609,19 +624,58 @@ export default async function plugin(input: unknown) {
     const data = await fs.readFile(credsFile, "utf-8");
     credentials = JSON.parse(data);
   } catch (_e) {
+    await fs.mkdir(configDir, { recursive: true }).catch(() => {});
     credentials = await createIdentity("Opencode Session");
-    await fs.writeFile(credsFile, JSON.stringify(credentials));
+    await fs.writeFile(credsFile, JSON.stringify(credentials), { mode: 0o600 });
   }
 
   let relayToken: string;
+  let pairingCode: string;
+  let authorizedPublicSignKey: string | undefined;
+
+  const persistRelayState = async () => {
+    await fs.mkdir(configDir, { recursive: true }).catch(() => {});
+    await fs.writeFile(
+      stateFile,
+      JSON.stringify({
+        relayToken,
+        pairingCode,
+        ...(authorizedPublicSignKey ? { authorizedPublicSignKey } : {}),
+      }),
+      { mode: 0o600 },
+    );
+  };
+
   try {
     const stateData = JSON.parse(await fs.readFile(stateFile, "utf-8"));
-    relayToken = stateData.relayToken;
+    relayToken =
+      typeof stateData.relayToken === "string" && stateData.relayToken
+        ? stateData.relayToken
+        : crypto.randomUUID();
+    pairingCode = typeof stateData.pairingCode === "string" &&
+        stateData.pairingCode.length >= 16
+      ? stateData.pairingCode
+      : generatePairingCode();
+    authorizedPublicSignKey =
+      typeof stateData.authorizedPublicSignKey === "string" &&
+        stateData.authorizedPublicSignKey
+        ? stateData.authorizedPublicSignKey
+        : undefined;
+    if (
+      relayToken !== stateData.relayToken ||
+      pairingCode !== stateData.pairingCode
+    ) {
+      await persistRelayState();
+    }
   } catch (_e) {
     relayToken = crypto.randomUUID();
-    await fs.writeFile(stateFile, JSON.stringify({ relayToken }));
+    pairingCode = generatePairingCode();
+    authorizedPublicSignKey = undefined;
+    await persistRelayState();
   }
-  await logDebug(`Using relay token: ${relayToken}`);
+  await logDebug(
+    `Using relay token configured (paired=${Boolean(authorizedPublicSignKey)})`,
+  );
 
   const getLink = (sessionTitle?: string) => {
     const dirName = path.basename(process.cwd());
@@ -693,6 +747,64 @@ export default async function plugin(input: unknown) {
           message?.type === "text" &&
           message.publicSignKey !== (credentials as any).publicSignKey
         ) {
+          const authDecision = evaluateSenderAuthorization({
+            senderPublicSignKey: message.publicSignKey,
+            botPublicSignKey: (credentials as any).publicSignKey,
+            messageText: message.text ?? "",
+            pairingCode,
+            authorizedPublicSignKey,
+          });
+          if (authDecision.status === "ignore-self") return;
+          if (authDecision.status === "rejected") {
+            await logDebug(
+              `Rejected message from unauthorized sender ${message.publicSignKey} (${authDecision.reason})`,
+            );
+            if (
+              authDecision.reason === "unpaired" &&
+              rememberOnce(
+                promptedPairingSenders,
+                `${convoId}:${message.publicSignKey}`,
+              )
+            ) {
+              await notifyPhone({
+                conversation: convoId,
+                conversationKey,
+                credentials,
+                text:
+                  "This OpenCode session requires pairing. Send the pairing code shown in OpenCode (or `/pair <code>`) to pair your device.",
+              }).catch(() => {});
+            }
+            return;
+          }
+          if (authDecision.status === "paired-now") {
+            const pairedClaimSeen = rememberOnce(
+              seenAliceMessageIds,
+              messageId,
+            );
+            const pairedClaimFile = pairedClaimSeen
+              ? await claimAliceMessage(messageId)
+              : false;
+            if (!pairedClaimSeen || !pairedClaimFile) return;
+            authorizedPublicSignKey = authDecision.authorizedPublicSignKey;
+            await persistRelayState();
+            if (!convoToSessionId.has(convoId) && currentSessionId) {
+              convoToSessionId.set(convoId, currentSessionId);
+              sessionToConvoKey.set(currentSessionId, {
+                conversation: convoId,
+                conversationKey,
+              });
+              await saveState();
+            }
+            await notifyPhone({
+              conversation: convoId,
+              conversationKey,
+              credentials,
+              text: "Device paired with this OpenCode session.",
+            }).catch(() => {});
+            await logDebug(`Paired sender ${authorizedPublicSignKey}`);
+            return;
+          }
+
           const promptFingerprint = recentPromptFingerprint({
             conversationId: convoId,
             message,
@@ -951,7 +1063,7 @@ export default async function plugin(input: unknown) {
                   sessionId: targetSessionId,
                   text: commandText,
                 });
-                if (commandResult?.handled) {
+                if (commandResult && commandResult.handled) {
                   await logDebug(`Handled phone command: ${commandText}`);
                   if (commandResult.reply) {
                     await notifyPhone({
@@ -1102,10 +1214,11 @@ export default async function plugin(input: unknown) {
       clipboardy.writeSync(link);
     } catch (err) {
       try {
-        const { execSync } = await import("child_process");
-        execSync(
-          `printf "%s" "${link}" | xclip -selection clipboard 2>/dev/null`,
-        );
+        const { spawnSync } = await import("child_process");
+        spawnSync("xclip", ["-selection", "clipboard"], {
+          input: link,
+          stdio: ["pipe", "ignore", "ignore"],
+        });
       } catch {
         await logDebug(`Failed to copy to clipboard: ${err}`);
       }
@@ -1114,9 +1227,11 @@ export default async function plugin(input: unknown) {
     await client.tui.showToast({
       body: {
         title: "Alice&Bot",
-        message: `Link copied! ${link}`,
+        message: authorizedPublicSignKey
+          ? `Link copied! ${link}`
+          : `Link copied! Pair code: ${pairingCode} — ${link}`,
         variant: "success",
-        duration: 5000,
+        duration: 8000,
       },
     }).catch((e: any) => logDebug(`Toast failed: ${e?.message}`));
 
@@ -1234,8 +1349,9 @@ export default async function plugin(input: unknown) {
       ) {
         const link = await showAliceLink(hookInput.sessionID);
         if (textPart) {
-          textPart.text =
-            `Alice&Bot link: ${link}\nOpen this link on your phone to continue chatting on the go.`;
+          textPart.text = authorizedPublicSignKey
+            ? `Alice&Bot link: ${link}\nOpen this link on your phone to continue chatting on the go.`
+            : `Alice&Bot link: ${link}\nPairing code: ${pairingCode}\nOpen this link on your phone and send "${pairingCode}" (or "/pair ${pairingCode}") to pair and continue chatting on the go.`;
           textPart.ignored = true;
         }
         setTimeout(async () => {

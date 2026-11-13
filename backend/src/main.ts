@@ -8,6 +8,7 @@ import {
   shortIdLength,
 } from "../../protocol/src/shortId.ts";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
+import type { EncryptedSymmetric } from "../../protocol/src/crypto.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
 import { issueNonceHelper, verifyAuthToken } from "./auth.ts";
 import {
@@ -22,9 +23,12 @@ import {
   getVapidPublicKey,
   sendPushToParticipants,
 } from "./notificationService.ts";
+import { isSafeWebhookUrl } from "./ssrfGuard.ts";
 import { generateUploadUrl } from "./storage.ts";
 import { handleUiUpdate } from "./uiUpdate.ts";
-import { createHmac } from "node:crypto";
+import { withWalletLock } from "./walletLock.ts";
+import { timingSafeEqual } from "node:crypto";
+import { Buffer } from "node:buffer";
 import {
   deriveBtcAddress,
   getAddressTransactions,
@@ -52,6 +56,8 @@ const createIdentityForAccount = async (
 };
 
 const TRANSFER_TTL_MS = 5 * 60 * 1000;
+const MAX_TRANSFER_PAYLOAD_CHARS = 32_768;
+const MAX_TRANSFER_ENTRIES = 1_000;
 
 const identityPublicSignKeyBy = (
   where: { publicSignKey: string } | { alias: string } | { shortId: string },
@@ -123,10 +129,22 @@ export const endpoints: BackendApiImpl = {
         "[DEBUG sendMessage] received for conversation",
         conversation,
       );
+      const convResult = await fetchWebhookConversation(conversation);
+      if (convResult.conversations.length === 0) {
+        throw new Error("Conversation not found");
+      }
+      if (senderPublicSignKey !== undefined) {
+        const isParticipant = convResult.conversations[0].participants.some(
+          (p: { publicSignKey: string }) =>
+            p.publicSignKey === senderPublicSignKey,
+        );
+        if (!isParticipant) {
+          throw new Error("Not a participant");
+        }
+      }
       const messageId = id();
       const timestamp = Date.now();
-      const prefetchedConversations = fetchWebhookConversation(conversation);
-      prefetchedConversations.catch(() => {});
+      const prefetchedConversations = Promise.resolve(convResult);
       // Persist the message first; do not block on side effects (webhooks/push)
       await transact([
         tx.messages[messageId]
@@ -167,15 +185,24 @@ export const endpoints: BackendApiImpl = {
       return { messageId };
     },
     sendTyping: async ({ conversation, isTyping, publicSignKey }) => {
-      // Validate conversation & identity exist and fetch existing typingState in one query
+      // Validate conversation & participant membership and fetch existing typingState in one query
       const { conversations, identities, typingStates } = await query({
-        conversations: { $: { where: { id: conversation } } },
+        conversations: {
+          participants: {},
+          $: { where: { id: conversation } },
+        },
         identities: { $: { where: { publicSignKey } } },
         typingStates: {
           $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
         },
       });
       if (conversations.length === 0 || identities.length === 0) {
+        return { success: true };
+      }
+      const isParticipant = conversations[0].participants.some(
+        (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+      );
+      if (!isParticipant) {
         return { success: true };
       }
       const identityId = identities[0].id;
@@ -251,17 +278,37 @@ export const endpoints: BackendApiImpl = {
       });
       return { success: true };
     },
-    setWebhook: async ({ url, publicSignKey }) => {
+    setWebhook: async ({ url, publicSignKey, auth }) => {
+      if (auth !== undefined) {
+        const authOk = await verifyAuthToken({
+          action: "setWebhook",
+          payload: { url },
+          publicSignKey,
+          nonce: auth.nonce,
+          authToken: auth.authToken,
+        });
+        if (!authOk) {
+          return { success: false, error: "invalid-auth" as const };
+        }
+      }
+      if (!isSafeWebhookUrl(url, { allowEmpty: true })) {
+        return { success: false, error: "invalid-url" as const };
+      }
       const { identities } = await query({
         identities: { $: { where: { publicSignKey } } },
       });
       if (identities.length === 0) {
         return {
           success: false,
-          error: "identity-does-not-exist",
+          error: "identity-does-not-exist" as const,
         };
       }
       const identity = identities[0];
+      if (!auth) {
+        if (url === "" || (identity.webhook && identity.webhook !== url)) {
+          return { success: false, error: "invalid-auth" as const };
+        }
+      }
       await transact(tx.identities[identity.id].update({ webhook: url }));
       return { success: true };
     },
@@ -270,8 +317,8 @@ export const endpoints: BackendApiImpl = {
         identities: { $: { where: { publicSignKey } } },
       });
       if (identities.length === 0) return { profile: null };
-      const { name, avatar, alias } = identities[0];
-      return { profile: { name, avatar, alias } };
+      const { name, avatar, alias, priceTag } = identities[0];
+      return { profile: { name, avatar, alias, priceTag } };
     },
     getConversations: async ({ publicSignKeys }) => {
       if (publicSignKeys.length === 0) return { conversations: [] };
@@ -467,6 +514,13 @@ export const endpoints: BackendApiImpl = {
       return { success: true };
     },
     setPriceTag: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const { priceTag } = payload;
+      if (
+        priceTag !== undefined &&
+        (!Number.isFinite(priceTag) || priceTag < 0)
+      ) {
+        throw new Error("Invalid priceTag");
+      }
       const authOk = await verifyAuthToken({
         action: "setPriceTag",
         payload,
@@ -475,7 +529,6 @@ export const endpoints: BackendApiImpl = {
         authToken,
       });
       if (!authOk) return { success: false, error: "invalid-auth" };
-      const { priceTag } = payload;
       const { identities: identityMatches } = await query({
         identities: { wallet: {}, $: { where: { publicSignKey } } },
       });
@@ -520,6 +573,10 @@ export const endpoints: BackendApiImpl = {
       };
     },
     requestPayout: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const { amount, walletAddress } = payload;
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error("Invalid amount");
+      }
       const authOk = await verifyAuthToken({
         action: "requestPayout",
         payload,
@@ -528,38 +585,44 @@ export const endpoints: BackendApiImpl = {
         authToken,
       });
       if (!authOk) return { success: false, error: "invalid-auth" };
-      const { amount, walletAddress } = payload;
-      const { identities: identityMatches } = await query({
-        identities: { wallet: {}, $: { where: { publicSignKey } } },
+
+      return withWalletLock(publicSignKey, async () => {
+        const { identities: identityMatches } = await query({
+          identities: { wallet: {}, $: { where: { publicSignKey } } },
+        });
+        if (identityMatches.length === 0) {
+          return { success: false, error: "not-found" as const };
+        }
+
+        const identity = identityMatches[0];
+        const currentBalance = identity.wallet?.balance || 0;
+
+        if (currentBalance < amount) {
+          return { success: false, error: "insufficient-balance" as const };
+        }
+
+        await transact([
+          tx.wallets[identity.wallet?.id || id()].update({
+            balance: currentBalance - amount,
+          }).link({ identity: identity.id }),
+          tx.transactions[id()].update({
+            amount,
+            type: "payout",
+            timestamp: Date.now(),
+            status: "pending",
+            walletAddress,
+          }).link({ sender: identity.id }),
+        ]);
+        return { success: true as const };
       });
-      if (identityMatches.length === 0) {
-        return { success: false, error: "not-found" };
-      }
-
-      const identity = identityMatches[0];
-      const currentBalance = identity.wallet?.balance || 0;
-
-      if (currentBalance < amount) {
-        return { success: false, error: "insufficient-balance" };
-      }
-
-      await transact([
-        tx.wallets[identity.wallet?.id || id()].update({
-          balance: currentBalance - amount,
-        }).link({ identity: identity.id }),
-        tx.transactions[id()].update({
-          amount,
-          type: "payout",
-          timestamp: Date.now(),
-          status: "pending",
-          walletAddress,
-        }).link({ sender: identity.id }),
-      ]);
-      return { success: true };
     },
     prepareCryptoPayment: async (
       { payload, publicSignKey, nonce, authToken },
     ) => {
+      const amount = payload.amount;
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error("Invalid amount");
+      }
       const authOk = await verifyAuthToken({
         action: "prepareCryptoPayment",
         payload,
@@ -578,40 +641,40 @@ export const endpoints: BackendApiImpl = {
       if (identityMatches.length === 0) return { error: "not-found" };
 
       const identityId = identityMatches[0].id;
-      const amount = payload.amount;
 
-      // Get next index from InstantDB cryptoPayments
-      const { cryptoPayments: existingPayments } = await query({
-        cryptoPayments: {},
+      return withWalletLock("__crypto_payment_index__", async () => {
+        const { cryptoPayments: existingPayments } = await query({
+          cryptoPayments: {},
+        });
+        const index = existingPayments.reduce(
+          (max, p) => Math.max(max, (p.index ?? -1) + 1),
+          0,
+        );
+
+        const address = deriveBtcAddress(xpub, index);
+        const btcPrice = await getBtcPriceUsd();
+        const btcAmount = Number((amount / btcPrice).toFixed(8));
+
+        await transact(
+          tx.cryptoPayments[id()].update({
+            address,
+            identityId,
+            publicSignKey,
+            usdAmount: amount,
+            index,
+            btcAmount,
+            createdAt: Date.now(),
+          }),
+        );
+
+        const bitcoinUri = `bitcoin:${address}?amount=${btcAmount}`;
+        const qrUrl =
+          `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${
+            encodeURIComponent(bitcoinUri)
+          }`;
+
+        return { address, btcAmount, usdAmount: amount, qrUrl };
       });
-      const index = existingPayments.reduce(
-        (max, p) => Math.max(max, (p.index ?? -1) + 1),
-        0,
-      );
-
-      const address = deriveBtcAddress(xpub, index);
-      const btcPrice = await getBtcPriceUsd();
-      const btcAmount = Number((amount / btcPrice).toFixed(8));
-
-      await transact(
-        tx.cryptoPayments[id()].update({
-          address,
-          identityId,
-          publicSignKey,
-          usdAmount: amount,
-          index,
-          btcAmount,
-          createdAt: Date.now(),
-        }),
-      );
-
-      const bitcoinUri = `bitcoin:${address}?amount=${btcAmount}`;
-      const qrUrl =
-        `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${
-          encodeURIComponent(bitcoinUri)
-        }`;
-
-      return { address, btcAmount, usdAmount: amount, qrUrl };
     },
     checkCryptoPayment: async (
       { payload, publicSignKey, nonce, authToken },
@@ -628,65 +691,68 @@ export const endpoints: BackendApiImpl = {
       const xpub = Deno.env.get("BITCOIN_XPUB");
       if (!xpub) return { success: false, error: "missing-secret" };
 
-      const { paymentAddress } = payload;
-      const { cryptoPayments } = await query({
-        cryptoPayments: { $: { where: { address: paymentAddress } } },
-      });
-      const addressData = cryptoPayments[0];
-      if (!addressData) return { success: false, error: "not-found" };
-      if (addressData.publicSignKey !== publicSignKey) {
-        return { success: false, error: "invalid-auth" };
-      }
-
-      if (addressData.claimedTxid) {
-        return { success: false, error: "already-claimed" };
-      }
-
-      const txs = await getAddressTransactions(paymentAddress);
-      for (const t of txs) {
-        const satoshis = receivedSatoshis(t, paymentAddress);
-        if (satoshis <= 0) continue;
-
-        const btcPrice = await getBtcPriceUsd();
-        const btcAmount = satoshis / 1e8;
-        const usdAmount = Math.round(btcAmount * btcPrice * 100) / 100;
-
-        await transact(
-          tx.cryptoPayments[addressData.id].update({ claimedTxid: t.txid }),
-        );
-
-        // Credit the wallet
-        const { identities: identityMatches } = await query({
-          identities: {
-            wallet: {},
-            $: { where: { id: addressData.identityId } },
-          },
+      return withWalletLock(publicSignKey, async () => {
+        const { paymentAddress } = payload;
+        const { cryptoPayments } = await query({
+          cryptoPayments: { $: { where: { address: paymentAddress } } },
         });
-
-        if (identityMatches.length > 0) {
-          const identity = identityMatches[0];
-          const currentBalance = identity.wallet?.balance || 0;
-          await transact([
-            tx.wallets[identity.wallet?.id || id()].update({
-              balance: currentBalance + usdAmount,
-            }).link({ identity: identity.id }),
-            tx.transactions[id()].update({
-              amount: usdAmount,
-              type: "deposit",
-              timestamp: Date.now(),
-              status: "completed",
-              walletAddress: t.txid,
-            }).link({ receiver: identity.id }),
-          ]);
+        const addressData = cryptoPayments[0];
+        if (!addressData) {
+          return { success: false, error: "not-found" as const };
+        }
+        if (addressData.publicSignKey !== publicSignKey) {
+          return { success: false, error: "invalid-auth" as const };
         }
 
-        return {
-          success: true,
-          message: `Successfully verified and credited $${usdAmount}`,
-        };
-      }
+        if (addressData.claimedTxid) {
+          return { success: false, error: "already-claimed" as const };
+        }
 
-      return { success: false, error: "not-paid" };
+        const txs = await getAddressTransactions(paymentAddress);
+        for (const t of txs) {
+          const satoshis = receivedSatoshis(t, paymentAddress);
+          if (satoshis <= 0) continue;
+
+          const btcPrice = await getBtcPriceUsd();
+          const btcAmount = satoshis / 1e8;
+          const usdAmount = Math.round(btcAmount * btcPrice * 100) / 100;
+
+          await transact(
+            tx.cryptoPayments[addressData.id].update({ claimedTxid: t.txid }),
+          );
+
+          const { identities: identityMatches } = await query({
+            identities: {
+              wallet: {},
+              $: { where: { id: addressData.identityId } },
+            },
+          });
+
+          if (identityMatches.length > 0) {
+            const identity = identityMatches[0];
+            const currentBalance = identity.wallet?.balance || 0;
+            await transact([
+              tx.wallets[identity.wallet?.id || id()].update({
+                balance: currentBalance + usdAmount,
+              }).link({ identity: identity.id }),
+              tx.transactions[id()].update({
+                amount: usdAmount,
+                type: "deposit",
+                timestamp: Date.now(),
+                status: "completed",
+                walletAddress: t.txid,
+              }).link({ receiver: identity.id }),
+            ]);
+          }
+
+          return {
+            success: true as const,
+            message: `Successfully verified and credited $${usdAmount}`,
+          };
+        }
+
+        return { success: false, error: "not-paid" as const };
+      });
     },
     renameConversation: async (
       { payload, publicSignKey, nonce, authToken },
@@ -714,11 +780,13 @@ export const endpoints: BackendApiImpl = {
       if (conversations.length === 0) {
         return { success: false, error: "not-found" };
       }
-      const isAdmin = conversations[0].admins.some(
-        (a: { publicSignKey: string }) => a.publicSignKey === publicSignKey,
-      ) || conversations[0].participants.some(
-        (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
-      );
+      const isAdmin = conversations[0].admins.length > 0
+        ? conversations[0].admins.some(
+          (a: { publicSignKey: string }) => a.publicSignKey === publicSignKey,
+        )
+        : conversations[0].participants.some(
+          (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+        );
       if (!isAdmin) return { success: false, error: "not-admin" };
       await transact(
         tx.conversations[conversationId].update({ title: trimmed }),
@@ -781,6 +849,9 @@ export const endpoints: BackendApiImpl = {
     registerPushSubscription: async (
       { payload, publicSignKey, nonce, authToken },
     ) => {
+      if (!isSafeWebhookUrl(payload.subscription.endpoint)) {
+        throw new Error("Invalid push subscription endpoint");
+      }
       const authed = await verifyAuthToken<{
         subscription: PushSubscriptionJSON;
         conversationId?: string;
@@ -895,10 +966,21 @@ export const endpoints: BackendApiImpl = {
       return { success: true };
     },
     storeTransferPayload: ({ encryptedPayload }) => {
+      if (encryptedPayload.length > MAX_TRANSFER_PAYLOAD_CHARS) {
+        return Promise.reject(
+          new Error("Transfer payload exceeds maximum size"),
+        );
+      }
       const now = Date.now();
       transferPayloads.forEach((entry, k) => {
         if (now > entry.expiresAt) transferPayloads.delete(k);
       });
+      if (transferPayloads.size >= MAX_TRANSFER_ENTRIES) {
+        const excess = transferPayloads.size - MAX_TRANSFER_ENTRIES + 1;
+        Array.from(transferPayloads.keys())
+          .slice(0, excess)
+          .forEach((k) => transferPayloads.delete(k));
+      }
       const relayId = crypto.randomUUID();
       transferPayloads.set(relayId, {
         encryptedPayload,
@@ -908,8 +990,8 @@ export const endpoints: BackendApiImpl = {
     },
     retrieveTransferPayload: ({ relayId }) => {
       const entry = transferPayloads.get(relayId);
+      transferPayloads.delete(relayId);
       if (!entry || Date.now() > entry.expiresAt) {
-        if (entry) transferPayloads.delete(relayId);
         return Promise.resolve({ error: "not-found" });
       }
       return Promise.resolve({ encryptedPayload: entry.encryptedPayload });
@@ -947,6 +1029,66 @@ export const endpoints: BackendApiImpl = {
         contentType,
       });
     },
+    saveCanvas: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authOk = await verifyAuthToken({
+        action: "saveCanvas",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) {
+        return { ok: false as const, error: "invalid-auth" as const };
+      }
+      const { conversationId, encrypted, expectedVersion } = payload;
+      return withWalletLock(`canvas:${conversationId}`, async () => {
+        const { conversations } = await query({
+          conversations: {
+            participants: {},
+            canvas: {},
+            $: { where: { id: conversationId } },
+          },
+        });
+        if (conversations.length === 0) {
+          return { ok: false as const, error: "not-participant" as const };
+        }
+        const isParticipant = conversations[0].participants.some(
+          (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+        );
+        if (!isParticipant) {
+          return { ok: false as const, error: "not-participant" as const };
+        }
+        const rawCanvas = conversations[0].canvas;
+        const existing = Array.isArray(rawCanvas) ? rawCanvas[0] : rawCanvas;
+        const currentVersion = existing?.version ?? 0;
+        if (currentVersion !== expectedVersion) {
+          return {
+            ok: false as const,
+            error: "conflict" as const,
+            currentEncrypted: typeof existing?.encrypted === "string"
+              ? existing.encrypted
+              : undefined,
+            currentVersion,
+          };
+        }
+        const nextVersion = currentVersion + 1;
+        const canvasId = existing?.id ?? id();
+        const changes = {
+          encrypted: encrypted as EncryptedSymmetric<string>,
+          version: nextVersion,
+          updatedAt: Date.now(),
+          updatedBy: publicSignKey,
+        };
+        await transact(
+          existing ? tx.canvases[canvasId].update(changes) : [
+            tx.canvases[canvasId].update(changes).link({
+              conversation: conversationId,
+            }),
+          ],
+        );
+        return { ok: true as const, version: nextVersion };
+      });
+    },
   },
 };
 
@@ -957,29 +1099,69 @@ const relayQueue = new Map<
 >();
 
 const RELAY_MSG_TTL_MS = 3600_000;
+const MAX_RELAY_BODY_BYTES = 256 * 1024;
+const MAX_RELAY_MESSAGES_PER_TOKEN = 200;
+const MAX_RELAY_TOKEN_QUEUES = 1_000;
+const MAX_UI_UPDATE_BODY_BYTES = 65_536;
 
-const relayStoreMessage = (token: string, body: unknown) => {
+const hasValidRelaySecret = (req: Request): boolean => {
+  const secret = Deno.env.get("RELAY_WEBHOOK_SECRET") ?? "";
+  if (!secret) return false;
+  const header = req.headers.get("authorization") ?? "";
+  const expected = `Bearer ${secret}`;
+  const a = Buffer.from(header);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+};
+
+export const relayStoreMessage = (token: string, body: unknown) => {
+  const serialized = JSON.stringify(body);
+  if (new TextEncoder().encode(serialized).byteLength > MAX_RELAY_BODY_BYTES) {
+    return Promise.reject(new Error("Relay message exceeds maximum size"));
+  }
   const sockets = relaySockets.get(token);
   const openSockets = sockets
     ? [...sockets].filter((s) => s.readyState === WebSocket.OPEN)
     : [];
   if (openSockets.length > 0) {
-    const serialized = JSON.stringify(body);
     openSockets.forEach((s) => s.send(serialized));
     return Promise.resolve();
   }
   const now = Date.now();
-  const existing = (relayQueue.get(token) ?? []).filter(
-    (m) => now <= m.expiresAt,
-  );
+  if (!relayQueue.has(token) && relayQueue.size >= MAX_RELAY_TOKEN_QUEUES) {
+    relayQueue.forEach((msgs, k) => {
+      const live = msgs.filter((m) => now <= m.expiresAt);
+      if (live.length === 0) relayQueue.delete(k);
+      else relayQueue.set(k, live);
+    });
+    if (relayQueue.size >= MAX_RELAY_TOKEN_QUEUES) {
+      const excess = relayQueue.size - MAX_RELAY_TOKEN_QUEUES + 1;
+      Array.from(relayQueue.keys())
+        .slice(0, excess)
+        .forEach((k) => relayQueue.delete(k));
+    }
+  }
+  const existing = (relayQueue.get(token) ?? [])
+    .filter((m) => now <= m.expiresAt)
+    .slice(-(MAX_RELAY_MESSAGES_PER_TOKEN - 1));
   existing.push({ body, expiresAt: now + RELAY_MSG_TTL_MS });
   relayQueue.set(token, existing);
   return Promise.resolve();
 };
 
-const relayStore = async (token: string, req: Request) => {
-  await relayStoreMessage(token, await req.json());
-  return { ok: true };
+const relayStore = async (token: string, req: Request): Promise<Response> => {
+  if (!hasValidRelaySecret(req)) {
+    return jsonCorsResponse(
+      { error: "External relay webhook POST is forbidden" },
+      403,
+    );
+  }
+  const raw = await req.text();
+  if (new TextEncoder().encode(raw).byteLength > MAX_RELAY_BODY_BYTES) {
+    return jsonCorsResponse({ error: "Relay payload too large" }, 413);
+  }
+  await relayStoreMessage(token, JSON.parse(raw));
+  return jsonCorsResponse({ ok: true });
 };
 
 const relayDrain = (token: string) => {
@@ -1073,11 +1255,10 @@ export const handleRequest = async (req: Request): Promise<Response> => {
 
         return response;
       }
-      return jsonCorsResponse(
-        relay.action === "webhook"
-          ? await relayStore(relay.token, req)
-          : await relayDrain(relay.token),
-      );
+      if (relay.action === "webhook") {
+        return await relayStore(relay.token, req);
+      }
+      return jsonCorsResponse(await relayDrain(relay.token));
     }
     if (url.pathname === "/llms.txt") {
       return respondCors(readme, {
@@ -1086,11 +1267,17 @@ export const handleRequest = async (req: Request): Promise<Response> => {
       });
     }
     if (url.pathname === "/ui-update") {
-      const body = await req.json();
+      const raw = await req.text();
+      if (new TextEncoder().encode(raw).byteLength > MAX_UI_UPDATE_BODY_BYTES) {
+        return jsonCorsResponse({ error: "Payload too large" }, 413);
+      }
+      const body = JSON.parse(raw);
       const elementId = body.elementId ||
         url.searchParams.get("elementId");
+      const result = await handleUiUpdate({ ...body, elementId });
       return jsonCorsResponse(
-        await handleUiUpdate({ ...body, elementId }),
+        "error" in result ? { error: result.error } : { success: true },
+        result.status ?? 200,
       );
     }
     if (req.method !== "POST") {

@@ -1,4 +1,5 @@
 import type { Credentials, Json } from "../protocol/src/clientApi.ts";
+import { saveCanvasSigned } from "../backend/src/api.ts";
 import {
   decryptSymmetric,
   type EncryptedSymmetric,
@@ -137,16 +138,28 @@ export const createCanvas = async ({
       message: "this conversation already has a canvas",
     };
   }
-  const canvasId = crypto.randomUUID();
-  await accessAdminDb().transact([
-    accessAdminDb().tx.canvases[canvasId].update({
-      encrypted: await encryptSymmetric(conversationKey, text),
-      version: 1,
-      updatedAt: Date.now(),
-      updatedBy: credentials.publicSignKey,
-    }).link({ conversation: conversationId }),
-  ]);
-  return { ok: true, canvas: { text, version: 1 } };
+  const encrypted = await encryptSymmetric(conversationKey, text);
+  const saved = await saveCanvasSigned({
+    conversationId,
+    encrypted,
+    expectedVersion: 0,
+    credentials,
+  });
+  if (!saved.ok) {
+    if (saved.error === "conflict") {
+      return {
+        ok: false,
+        reason: "conflict",
+        message: "this conversation already has a canvas",
+      };
+    }
+    return {
+      ok: false,
+      reason: "rejected",
+      message: saved.error,
+    };
+  }
+  return { ok: true, canvas: { text, version: saved.version } };
 };
 
 export const writeCanvas = async ({
@@ -194,23 +207,35 @@ export const writeCanvas = async ({
   if (!applied.ok) {
     return { ok: false, reason: "rejected", message: applied.message };
   }
-  const version = current.version + 1;
-  const db = accessAdminDb();
-  const canvasId = row?.id ?? crypto.randomUUID();
-  const changes = {
-    encrypted: await encryptSymmetric(conversationKey, applied.text),
-    version,
-    updatedAt: Date.now(),
-    updatedBy: credentials.publicSignKey,
-  };
-  await db.transact(
-    row ? db.tx.canvases[canvasId].update(changes) : [
-      db.tx.canvases[canvasId].update(changes).link({
-        conversation: conversationId,
-      }),
-    ],
-  );
-  return { ok: true, canvas: { text: applied.text, version } };
+  const encrypted = await encryptSymmetric(conversationKey, applied.text);
+  const saved = await saveCanvasSigned({
+    conversationId,
+    encrypted,
+    expectedVersion: current.version,
+    credentials,
+  });
+  if (!saved.ok) {
+    if (saved.error === "conflict") {
+      const latestText =
+        saved.currentEncrypted && isEncrypted(saved.currentEncrypted)
+          ? await decryptSymmetric<string>(
+            conversationKey,
+            saved.currentEncrypted,
+          ).catch(() => undefined)
+          : undefined;
+      return {
+        ok: false,
+        reason: "conflict",
+        message: `the canvas moved to version ${
+          saved.currentVersion ?? current.version + 1
+        } while you were editing version ${current.version}`,
+        currentText: latestText,
+        currentVersion: saved.currentVersion,
+      };
+    }
+    return { ok: false, reason: "rejected", message: saved.error };
+  }
+  return { ok: true, canvas: { text: applied.text, version: saved.version } };
 };
 
 export const canvasEvent = (action: string, data: Json) => ({ action, data });

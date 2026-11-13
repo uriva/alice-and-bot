@@ -7,6 +7,7 @@ import type {
   WebhookUpdate,
 } from "../../protocol/src/clientApi.ts";
 import { query, transact, tx } from "./db.ts";
+import { isSafeWebhookUrl } from "./ssrfGuard.ts";
 
 const relayWebhookPattern = /\/relay\/webhook\/([^/]+)$/;
 
@@ -48,7 +49,9 @@ export const callWebhooks = async (
   const conversation = conversations[0];
   console.log(
     "callWebhooks: webhooks",
-    conversation.participants.map((p: { webhook?: string }) => p.webhook),
+    conversation.participants.map((p: { webhook?: string }) =>
+      p.webhook ? "[configured]" : null
+    ),
   );
   const rawParticipants = conversation.participants;
   const limited = rawParticipants.slice(0, 10);
@@ -89,11 +92,16 @@ export const callWebhooks = async (
       };
       const relayToken = extractRelayToken(webhook);
       if (relayToken) return storeLocalRelay(relayToken, update);
+      if (!isSafeWebhookUrl(webhook)) {
+        console.warn("Blocked unsafe webhook URL:", webhook);
+        return Promise.resolve();
+      }
       const freshTrace = `00-${
         crypto.randomUUID().replace(/-/g, "")
       }-0000000000000001-01`;
       return fetch(webhook, {
         method: "POST",
+        redirect: "error",
         headers: {
           "Content-Type": "application/json",
           "traceparent": freshTrace,
@@ -113,16 +121,16 @@ type Conversation = { id: string; title: string; participants: Participant[] };
 export const getVapidPublicKey = () => Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
 export const vapidPublicKey = getVapidPublicKey();
 
-let lastVapidConfigured = "";
+const vapidState = { lastConfigured: "" };
 
 const ensureVapidConfigured = () => {
   const pub = getVapidPublicKey();
   const priv = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
   const pair = `${pub}:${priv}`;
-  if (!pub || !priv || pair === lastVapidConfigured) return;
+  if (!pub || !priv || pair === vapidState.lastConfigured) return;
   try {
     webpush.setVapidDetails("mailto:support@aliceandbot.com", pub, priv);
-    lastVapidConfigured = pair;
+    vapidState.lastConfigured = pair;
   } catch (e) {
     console.warn(
       "VAPID details registration skipped:",
@@ -143,13 +151,19 @@ async (sub: {
   id: string;
   subscription: webpush.PushSubscription;
 }) => {
+  if (!isSafeWebhookUrl(sub.subscription.endpoint)) {
+    console.warn("Blocked unsafe push endpoint:", sub.subscription.endpoint);
+    return;
+  }
   const details = webpush.generateRequestDetails(
     sub.subscription,
     payloadJson,
     pushUrgencyOptions,
   );
+  if (!isSafeWebhookUrl(details.endpoint)) return;
   const res = await fetch(details.endpoint, {
     method: details.method,
+    redirect: "error",
     headers: toFetchHeaders(details.headers),
     body: details.body ? new Uint8Array(details.body) : undefined,
   }).catch((err) => {

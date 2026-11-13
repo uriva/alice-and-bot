@@ -1,114 +1,55 @@
-// Docs: https://www.instantdb.com/docs/permissions
 import type { InstantRules } from "@instantdb/core";
+import type { AppSchema } from "./instant.schema.ts";
+
+const lockedAllow = {
+  view: "false",
+  create: "false",
+  update: "false",
+  delete: "false",
+} as const;
+
+const viewOnlyAllow = {
+  view: "true",
+  create: "false",
+  update: "false",
+  delete: "false",
+} as const;
 
 const rules = {
-  $files: {
+  $default: {
     allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
+      $default: "false",
     },
   },
-  $users: {
+  attrs: {
     allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "false",
+      $default: "false",
+      create: "false",
     },
   },
-  accounts: {
-    allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
-    },
-  },
-  messages: {
-    allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
-    },
-  },
+  cryptoPayments: { allow: { ...lockedAllow } },
+  wallets: { allow: { ...lockedAllow } },
+  transactions: { allow: { ...lockedAllow } },
+  accounts: { allow: { ...lockedAllow } },
+  $users: { allow: { ...lockedAllow } },
+  pushSubscriptions: { allow: { ...lockedAllow } },
+  $files: { allow: { ...lockedAllow } },
   identities: {
     allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
+      ...viewOnlyAllow,
+      link: { archivedConversations: "true" },
+      unlink: { archivedConversations: "true" },
+    },
+    fields: {
+      webhook: "false",
     },
   },
-  wallets: {
-    allow: {
-      view: "false",
-      create: "false",
-      update: "false",
-      delete: "false",
-    },
-  },
-  transactions: {
-    allow: {
-      view: "false",
-      create: "false",
-      update: "false",
-      delete: "false",
-    },
-  },
-  pushSubscriptions: {
-    allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
-    },
-  },
-  conversations: {
-    allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
-    },
-  },
-  keys: {
-    allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
-    },
-  },
-  typingStates: {
-    allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
-    },
-  },
-  uiElements: {
-    allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
-    },
-  },
-  // The canvas ciphertext is only readable with the conversation key, so
-  // permissive rules here match the file's existing posture. Editing is
-  // resolved by encrypting with the conversation key, not by these rules.
-  canvases: {
-    allow: {
-      view: "true",
-      create: "true",
-      update: "true",
-      delete: "true",
-    },
-  },
-} satisfies InstantRules;
+  conversations: { allow: { ...viewOnlyAllow } },
+  messages: { allow: { ...viewOnlyAllow } },
+  keys: { allow: { ...viewOnlyAllow } },
+  canvases: { allow: { ...viewOnlyAllow } },
+  typingStates: { allow: { ...viewOnlyAllow } },
+  uiElements: { allow: { ...viewOnlyAllow } },
+} satisfies InstantRules<AppSchema>;
 
 export default rules;

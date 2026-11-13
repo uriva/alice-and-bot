@@ -3,6 +3,7 @@
     "mcp": "deno run -A mcp.ts"
   },
   "imports": {
+    "@std/assert": "jsr:@std/assert@1",
     "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@1.12.1",
     "qrcode": "npm:qrcode@1.5.4",
     "@instantdb/admin": "npm:@instantdb/admin@1.0.65",

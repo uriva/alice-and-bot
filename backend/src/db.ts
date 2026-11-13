@@ -5,22 +5,43 @@ import { instantAppId } from "../../protocol/src/clientApi.ts";
 
 type Db = InstantAdminDatabase<typeof schema>;
 
-let dbInstance: Db | null = null;
-let lastToken = "";
+const dbCache: { instance: Db | null; token: string } = {
+  instance: null,
+  token: "",
+};
+
+const readDotEnvToken = (): string | undefined => {
+  try {
+    const raw = Deno.readTextFileSync(new URL("../../.env", import.meta.url));
+    const line = raw
+      .split(/\r?\n/)
+      .find((l) => l.trim().startsWith("INSTANT_ADMIN_TOKEN="));
+    if (!line) return undefined;
+    return line
+      .slice(line.indexOf("=") + 1)
+      .trim()
+      .replace(/^["']|["']$/g, "");
+  } catch {
+    return undefined;
+  }
+};
+
+const resolveAdminToken = (): string =>
+  Deno.env.get("INSTANT_ADMIN_TOKEN") ||
+  readDotEnvToken() ||
+  "dummy-admin-token";
 
 const getDb = (): Db => {
-  const token = coerce(
-    Deno.env.get("INSTANT_ADMIN_TOKEN") ?? "dummy-admin-token",
-  );
-  if (!dbInstance || token !== lastToken) {
-    lastToken = token;
-    dbInstance = init({
+  const token = coerce(resolveAdminToken());
+  if (!dbCache.instance || token !== dbCache.token) {
+    dbCache.token = token;
+    dbCache.instance = init({
       appId: instantAppId,
       adminToken: token,
       schema,
     });
   }
-  return dbInstance;
+  return dbCache.instance;
 };
 
 const dummyDb: Db = init({
@@ -31,23 +52,14 @@ const dummyDb: Db = init({
 
 export const auth: Db["auth"] = new Proxy(dummyDb.auth, {
   get(_target, prop) {
-    const val = (getDb().auth as unknown as Record<string | symbol, unknown>)[
-      prop
-    ];
-    return typeof val === "function" ? val.bind(getDb().auth) : val;
+    const targetAuth = getDb().auth;
+    const val = Reflect.get(targetAuth, prop);
+    return typeof val === "function" ? val.bind(targetAuth) : val;
   },
 });
 
-export const query: Db["query"] =
-  ((...args: unknown[]) =>
-    (getDb().query as (...a: unknown[]) => unknown)(
-      ...args,
-    )) as unknown as Db["query"];
+export const query: Db["query"] = (q) => getDb().query(q);
 
-export const transact: Db["transact"] =
-  ((...args: unknown[]) =>
-    (getDb().transact as (...a: unknown[]) => unknown)(
-      ...args,
-    )) as unknown as Db["transact"];
+export const transact: Db["transact"] = (chunks) => getDb().transact(chunks);
 
 export const tx: Db["tx"] = dummyDb.tx;

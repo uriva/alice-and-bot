@@ -35,6 +35,7 @@ Deno.test(
     const vapid = webpush.generateVAPIDKeys();
     Deno.env.set("VAPID_PUBLIC_KEY", vapid.publicKey);
     Deno.env.set("VAPID_PRIVATE_KEY", vapid.privateKey);
+    Deno.env.set("ALLOW_LOCAL_WEBHOOKS", "1");
 
     const received: ReceivedPush[] = [];
     const server = Deno.serve({ port: 0, onListen: () => {} }, async (req) => {
@@ -130,6 +131,7 @@ Deno.test(
       tx.identities[botId].delete(),
     ]);
     await server.shutdown();
+    Deno.env.delete("ALLOW_LOCAL_WEBHOOKS");
 
     const paths = received.map((r) => r.path).sort();
     assertEquals(paths, ["/alice", "/stale"]);

@@ -3,8 +3,9 @@ import "./instantCorePolyfill.ts";
 
 import { id } from "@instantdb/admin";
 import { init as coreInit } from "@instantdb/core";
-import { query, transact, tx } from "./db.ts";
 import { instantAppId } from "../../protocol/src/clientApi.ts";
+import { verifyAuthToken } from "./auth.ts";
+import { query, transact, tx } from "./db.ts";
 
 class DummyStorage {
   constructor(_appId: string, _storeName: string) {}
@@ -27,6 +28,15 @@ class DummyStorage {
 
 const coreDb = coreInit({ appId: instantAppId }, DummyStorage);
 
+export const maxUiUpdateTextLength = 32_768;
+const maxElementIdLength = 256;
+
+export type UiUpdateAuth = {
+  publicSignKey: string;
+  nonce: string;
+  authToken: string;
+};
+
 type UiUpdateInput = {
   elementId: string;
   conversationId?: string;
@@ -35,11 +45,32 @@ type UiUpdateInput = {
   active?: boolean;
   percentage?: number;
   authorId?: string;
+  auth?: UiUpdateAuth;
+};
+
+export type UiUpdateResult =
+  | { success: true; status?: 200 }
+  | { error: string; status?: 400 | 401 | 403 };
+
+const verifyParticipant = async (
+  conversationId: string,
+  publicSignKey: string,
+): Promise<boolean> => {
+  const { conversations } = await query({
+    conversations: {
+      participants: {},
+      $: { where: { id: conversationId } },
+    },
+  });
+  if (conversations.length === 0) return false;
+  return conversations[0].participants.some(
+    (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+  );
 };
 
 export const handleUiUpdate = async (
   input: UiUpdateInput,
-): Promise<{ success: true } | { error: string }> => {
+): Promise<UiUpdateResult> => {
   const {
     elementId,
     conversationId,
@@ -48,27 +79,83 @@ export const handleUiUpdate = async (
     active,
     percentage,
     authorId,
+    auth,
   } = input;
-  if (!elementId) return { error: "elementId is required" };
+  if (!elementId || typeof elementId !== "string") {
+    return { error: "elementId is required", status: 400 };
+  }
+  if (elementId.length > maxElementIdLength) {
+    return { error: "elementId exceeds maximum length", status: 400 };
+  }
+  if (text !== undefined && typeof text !== "string") {
+    return { error: "text must be a string", status: 400 };
+  }
+  if (text !== undefined && text.length > maxUiUpdateTextLength) {
+    return { error: "text exceeds maximum length", status: 400 };
+  }
 
-  // For streams, we use ephemeral topics instead of persisting to the database
+  if (auth !== undefined) {
+    if (
+      !auth ||
+      typeof auth.publicSignKey !== "string" ||
+      typeof auth.nonce !== "string" ||
+      typeof auth.authToken !== "string"
+    ) {
+      return { error: "invalid-auth", status: 401 };
+    }
+    const payloadWithoutAuth = {
+      elementId,
+      ...(conversationId !== undefined ? { conversationId } : {}),
+      ...(type !== undefined ? { type } : {}),
+      ...(text !== undefined ? { text } : {}),
+      ...(active !== undefined ? { active } : {}),
+      ...(percentage !== undefined ? { percentage } : {}),
+      ...(authorId !== undefined ? { authorId } : {}),
+    };
+    const authOk = await verifyAuthToken({
+      action: "uiUpdate",
+      payload: payloadWithoutAuth,
+      publicSignKey: auth.publicSignKey,
+      nonce: auth.nonce,
+      authToken: auth.authToken,
+    });
+    if (!authOk) {
+      return { error: "invalid-auth", status: 401 };
+    }
+    if (authorId !== undefined && authorId !== auth.publicSignKey) {
+      return { error: "invalid-auth", status: 401 };
+    }
+    if (conversationId) {
+      const allowed = await verifyParticipant(
+        conversationId,
+        auth.publicSignKey,
+      );
+      if (!allowed) {
+        return { error: "not-participant", status: 403 };
+      }
+    }
+  }
+
   if (type === "stream") {
     if (!conversationId) {
-      return { error: "conversationId is required for stream" };
+      return { error: "conversationId is required for stream", status: 400 };
     }
     const room = coreDb.joinRoom("conversations", conversationId);
     room.publishTopic("stream", {
       elementId,
       text: text ?? "",
       active: active ?? true,
-      authorId,
+      authorId: auth?.publicSignKey ?? authorId,
       updatedAt: Date.now(),
     });
     return { success: true };
   }
 
   const { uiElements } = await query({
-    uiElements: { $: { where: { elementId } } },
+    uiElements: {
+      conversation: {},
+      $: { where: { elementId } },
+    },
   });
   if (uiElements.length === 0) {
     if (active === false) return { success: true };
@@ -76,9 +163,11 @@ export const handleUiUpdate = async (
       return {
         error:
           "element not found (provide conversationId and type to auto-create)",
+        status: 400,
       };
     }
     const newId = id();
+    const resolvedAuthorId = auth?.publicSignKey ?? authorId;
     await transact([
       tx.uiElements[newId].update({
         elementId,
@@ -86,22 +175,34 @@ export const handleUiUpdate = async (
         ...(text !== undefined ? { text } : {}),
         ...(active !== undefined ? { active } : {}),
         ...(percentage !== undefined ? { percentage } : {}),
-        ...(authorId !== undefined ? { authorId } : {}),
+        ...(resolvedAuthorId !== undefined
+          ? { authorId: resolvedAuthorId }
+          : {}),
         updatedAt: Date.now(),
       }),
       tx.uiElements[newId].link({ conversation: conversationId }),
     ]);
   } else {
-    // Clean up old streams that were persisted before the migration to ephemeral topics
+    const existingConvId = uiElements[0].conversation?.id;
+    if (auth && existingConvId) {
+      const allowed = await verifyParticipant(
+        existingConvId,
+        auth.publicSignKey,
+      );
+      if (!allowed) return { error: "not-participant", status: 403 };
+    }
     if (active === false && uiElements[0].type === "stream") {
       await transact(tx.uiElements[uiElements[0].id].delete());
     } else {
+      const resolvedAuthorId = auth?.publicSignKey ?? authorId;
       await transact(
         tx.uiElements[uiElements[0].id].update({
           ...(text !== undefined ? { text } : {}),
           ...(active !== undefined ? { active } : {}),
           ...(percentage !== undefined ? { percentage } : {}),
-          ...(authorId !== undefined ? { authorId } : {}),
+          ...(resolvedAuthorId !== undefined
+            ? { authorId: resolvedAuthorId }
+            : {}),
           updatedAt: Date.now(),
         }),
       );

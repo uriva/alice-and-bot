@@ -100,6 +100,7 @@ export const getProfile = async (publicSignKey: string): Promise<
     name?: string;
     avatar?: string;
     alias?: string;
+    priceTag?: number;
   } | null
 > => {
   const { profile } = await backendGetProfile(publicSignKey);
@@ -170,24 +171,47 @@ export const getDecryptedMessages = async ({
   }
   | { error: "not-participant" | "invalid-auth" }
 > => {
-  const convKey = await getConversationKey(credentials, conversationId);
-  const result = await backendGetMessages({
-    conversationId,
-    limit,
-    before,
-    credentials,
-  });
+  const [convKey, result, infoResult] = await Promise.all([
+    getConversationKey(credentials, conversationId),
+    backendGetMessages({
+      conversationId,
+      limit,
+      before,
+      credentials,
+    }),
+    backendGetConversationInfo(conversationId),
+  ]);
   if ("error" in result) return result;
+  const allowedParticipantKeys =
+    !("error" in infoResult) && !infoResult.conversationInfo.isPartial
+      ? new Set(
+        infoResult.conversationInfo.participants.map((p) => p.publicSignKey),
+      )
+      : undefined;
   const decrypted = await Promise.all(
     result.messages.map((m) =>
-      decryptMessage(convKey)({ ...m, payload: m.payload as EncryptedMessage })
+      decryptMessage(convKey, { conversationId, allowedParticipantKeys })({
+        ...m,
+        payload: m.payload as EncryptedMessage,
+      })
     ),
   );
+  const valid = decrypted.filter((m): m is NonNullable<typeof m> =>
+    m !== undefined
+  );
+  const originals = new Map(
+    valid
+      .filter((m) => m.type === "text")
+      .map((m) => [m.id, m] as const),
+  );
   return {
-    messages: decrypted.filter((m): m is NonNullable<typeof m> =>
-      m !==
-        undefined
-    ),
+    messages: valid.filter((m) => {
+      if (m.type !== "edit") return true;
+      const orig = originals.get(m.editOf);
+      if (!orig) return true;
+      return m.publicSignKey === orig.publicSignKey &&
+        m.timestamp >= orig.timestamp;
+    }),
     hasMore: result.hasMore,
   };
 };

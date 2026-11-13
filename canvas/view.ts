@@ -116,13 +116,58 @@ export const isViewElement = (node: unknown): node is ViewElement =>
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const attrProblem = (path: string, key: string) => {
+const urlAttrs = ["href", "src", "action", "formaction"];
+
+export const isSafeViewUrl = (rawUrl: string): boolean => {
+  const cleaned = rawUrl.replace(/\p{Cc}+/gu, "").trim();
+  if (!cleaned) return true;
+  if (cleaned.startsWith("/")) {
+    return !cleaned.startsWith("//") && !cleaned.startsWith("/\\");
+  }
+  if (cleaned.startsWith("#") || cleaned.startsWith("?")) {
+    return true;
+  }
+  const compact = cleaned.replace(/\s+/g, "").toLowerCase();
+  if (
+    compact.startsWith("https://") ||
+    compact.startsWith("http://") ||
+    compact.startsWith("mailto:")
+  ) {
+    try {
+      const parsed = new URL(cleaned);
+      const proto = parsed.protocol.toLowerCase();
+      return proto === "https:" || proto === "http:" || proto === "mailto:";
+    } catch {
+      return false;
+    }
+  }
+  return false;
+};
+
+export const sanitizeViewUrl = (
+  rawUrl: string | undefined,
+  fallback: string,
+): string => {
+  if (rawUrl === undefined) return fallback;
+  const cleaned = rawUrl.replace(/\p{Cc}+/gu, "").trim();
+  if (!cleaned) return fallback;
+  return isSafeViewUrl(cleaned) ? cleaned : fallback;
+};
+
+const attrProblem = (path: string, key: string, value: unknown) => {
   const lowered = key.toLowerCase();
   if (forbiddenAttrs.includes(lowered)) {
     return `${path}.${key} is not allowed`;
   }
   if (lowered.startsWith("on")) {
     return `${path}.${key} would attach a raw event handler; use on: { event: "action" } instead`;
+  }
+  if (
+    urlAttrs.includes(lowered) &&
+    (typeof value === "string" || typeof value === "number") &&
+    !isSafeViewUrl(String(value))
+  ) {
+    return `${path}.${key} has a disallowed URL protocol`;
   }
   return undefined;
 };
@@ -171,7 +216,7 @@ const collectProblems = (
     } else {
       own.push(
         ...Object.entries(node.attrs).map(([key, value]) => {
-          const problem = attrProblem(`${path}.attrs`, key);
+          const problem = attrProblem(`${path}.attrs`, key, value);
           if (problem !== undefined) {
             return { path: `${path}.attrs`, message: problem };
           }

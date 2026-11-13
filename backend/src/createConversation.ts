@@ -1,21 +1,43 @@
-// deno-lint-ignore-file
 import { id } from "@instantdb/core";
-import { map } from "@uri/gamla";
 import type { EncryptedConversationKey } from "../../protocol/src/clientApi.ts";
 import type { BackendApiImpl } from "./api.ts";
-import { query, transact, tx } from "./db.ts";
-
 import { verifyAuthToken } from "./auth.ts";
+import { query, transact, tx } from "./db.ts";
+import { withMultiWalletLock } from "./walletLock.ts";
+
+const isEncryptedConversationKey = (
+  v: string | undefined,
+): v is EncryptedConversationKey => typeof v === "string";
+
+const hasExistingDirectConversation = async (
+  senderId: string,
+  recipientId: string,
+): Promise<boolean> => {
+  const { conversations } = await query({
+    conversations: {
+      participants: {},
+      $: {
+        where: {
+          "participants.id": senderId,
+        },
+      },
+    },
+  });
+  return conversations.some(
+    (c) =>
+      c.participants.length === 2 &&
+      c.participants.some((p) => p.id === senderId) &&
+      c.participants.some((p) => p.id === recipientId),
+  );
+};
 
 export const createConversation:
-  BackendApiImpl["handlers"]["createConversation"] = async (
-    {
-      payload: { title, publicSignKeyToEncryptedSymmetricKey },
-      publicSignKey,
-      nonce,
-      authToken,
-    },
-  ) => {
+  BackendApiImpl["handlers"]["createConversation"] = async ({
+    payload: { title, publicSignKeyToEncryptedSymmetricKey },
+    publicSignKey,
+    nonce,
+    authToken,
+  }) => {
     const authOk = await verifyAuthToken({
       action: "createConversation",
       payload: { title, publicSignKeyToEncryptedSymmetricKey },
@@ -25,113 +47,115 @@ export const createConversation:
     });
     if (!authOk) return { error: "invalid-auth" as const };
 
-    const { identities } = await query({
-      identities: {
-        wallet: {},
-        account: {},
-        $: {
-          where: {
-            publicSignKey: {
-              $in: Object.keys(publicSignKeyToEncryptedSymmetricKey),
+    const requestedKeys = Object.keys(publicSignKeyToEncryptedSymmetricKey);
+
+    return withMultiWalletLock(requestedKeys, async () => {
+      const { identities } = await query({
+        identities: {
+          wallet: {},
+          $: {
+            where: {
+              publicSignKey: { $in: requestedKeys },
             },
           },
         },
-      },
-    });
+      });
 
-    // Check sender
-    const sender = identities.find((i) => i.publicSignKey === publicSignKey);
-    if (!sender) return { error: "must-own-an-identity" as const };
+      const sender = identities.find((i) => i.publicSignKey === publicSignKey);
+      if (!sender) return { error: "must-own-an-identity" as const };
 
-    // Outreach cost logic
-    let totalCost = 0;
-    const recipients = identities.filter((i) =>
-      i.publicSignKey !== publicSignKey
-    );
-    const targetUpdates = [];
-    const transactions = [];
+      if (identities.length !== requestedKeys.length) {
+        return { error: "invalid-participants" as const };
+      }
 
-    for (const recipient of recipients) {
-      if (recipient.priceTag && recipient.priceTag > 0) {
-        // Check if there is an existing conversation between sender and this recipient
-        const { conversations } = await query({
-          conversations: {
-            participants: {},
-            $: {
-              where: {
-                "participants.id": { $in: [sender.id, recipient.id] },
-              },
-            },
-          },
-        });
+      const recipients = identities.filter(
+        (i) => i.publicSignKey !== publicSignKey,
+      );
 
-        // Find if they share a conversation exactly
-        const sharesConversation = conversations.some((c) =>
-          c.participants.some((p: any) => p.id === sender.id) &&
-          c.participants.some((p: any) => p.id === recipient.id)
-        );
+      const chargeableRecipients = (
+        await Promise.all(
+          recipients.map(async (recipient) => {
+            if (!recipient.priceTag || recipient.priceTag <= 0) return null;
+            const waived = await hasExistingDirectConversation(
+              sender.id,
+              recipient.id,
+            );
+            return waived ? null : recipient;
+          }),
+        )
+      ).filter((r): r is NonNullable<typeof r> => r !== null);
 
-        if (!sharesConversation) {
-          totalCost += recipient.priceTag;
-          targetUpdates.push(
-            tx.wallets[recipient.wallet?.id || id()].update({
-              balance: (recipient.wallet?.balance || 0) + recipient.priceTag,
-            }).link({ identity: recipient.id }),
-          );
-          transactions.push(
-            tx.transactions[id()].update({
-              amount: recipient.priceTag,
-              type: "outreach",
-              timestamp: Date.now(),
-              status: "completed",
-            }).link({ sender: sender.id, receiver: recipient.id }),
-          );
+      const totalCost = chargeableRecipients.reduce(
+        (sum, r) => sum + (r.priceTag ?? 0),
+        0,
+      );
+
+      if (totalCost > 0) {
+        const senderBalance = sender.wallet?.balance ?? 0;
+        if (senderBalance < totalCost) {
+          return { error: "insufficient-balance" as const };
         }
       }
-    }
 
-    if (totalCost > 0) {
-      const senderBalance = sender.wallet?.balance || 0;
-      if (senderBalance < totalCost) {
-        return { error: "insufficient-balance" as const };
-      }
-      targetUpdates.push(
-        tx.wallets[sender.wallet?.id || id()].update({
-          balance: senderBalance - totalCost,
-        }).link({ identity: sender.id }),
-      );
-    }
-
-    if (
-      identities.length !==
-        Object.keys(publicSignKeyToEncryptedSymmetricKey).length
-    ) {
-      return { error: "invalid-participants" as const };
-    }
-
-    const conversationId = id();
-
-    const allTxs = [
-      tx.conversations[conversationId].update({
-        title,
-        updatedAt: Date.now(),
-      }).link({
-        participants: identities.map((x) => x.id),
-        admins: [sender.id],
-      }),
-      ...targetUpdates,
-      ...transactions,
-      ...identities.map((identity) =>
-        tx.keys[id()]
+      const targetUpdates = chargeableRecipients.map((recipient) =>
+        tx.wallets[recipient.wallet?.id || id()]
           .update({
-            key: publicSignKeyToEncryptedSymmetricKey[
-              identity.publicSignKey
-            ] as EncryptedConversationKey,
-          }).link({ conversation: conversationId, owner: identity.id })
-      ),
-    ];
+            balance: (recipient.wallet?.balance ?? 0) +
+              (recipient.priceTag ?? 0),
+          })
+          .link({ identity: recipient.id })
+      );
 
-    await transact(allTxs);
+      const senderDeduction = totalCost > 0
+        ? [
+          tx.wallets[sender.wallet?.id || id()]
+            .update({
+              balance: (sender.wallet?.balance ?? 0) - totalCost,
+            })
+            .link({ identity: sender.id }),
+        ]
+        : [];
 
-    return { conversationId };
+      const outreachTransactions = chargeableRecipients.map((recipient) =>
+        tx.transactions[id()]
+          .update({
+            amount: recipient.priceTag ?? 0,
+            type: "outreach",
+            timestamp: Date.now(),
+            status: "completed",
+          })
+          .link({ sender: sender.id, receiver: recipient.id })
+      );
+
+      const conversationId = id();
+
+      const keyTxs = identities.map((identity) => {
+        const encKey =
+          publicSignKeyToEncryptedSymmetricKey[identity.publicSignKey];
+        if (!isEncryptedConversationKey(encKey)) {
+          throw new Error("Missing encrypted conversation key");
+        }
+        return tx.keys[id()]
+          .update({ key: encKey })
+          .link({ conversation: conversationId, owner: identity.id });
+      });
+
+      await transact([
+        tx.conversations[conversationId]
+          .update({
+            title,
+            updatedAt: Date.now(),
+          })
+          .link({
+            participants: identities.map((x) => x.id),
+            admins: [sender.id],
+          }),
+        ...targetUpdates,
+        ...senderDeduction,
+        ...outreachTransactions,
+        ...keyTxs,
+      ]);
+
+      return { conversationId };
+    });
   };
