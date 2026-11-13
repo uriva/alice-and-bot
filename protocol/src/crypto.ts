@@ -97,6 +97,13 @@ export const generateKeyPair = async (usage: "sign" | "encrypt") =>
     ),
   );
 
+export const canSignWithPrivateKey = (privateKey: string): Promise<boolean> =>
+  /^[A-Za-z0-9+/]+={0,2}$/.test(privateKey) &&
+    privateKey.length % 4 === 0 &&
+    privateKey.length >= 64
+    ? importKey(privateKey, "sign").then(() => true, () => false)
+    : Promise.resolve(false);
+
 export const sign = async (privateKey: string, data: string) =>
   uint8ArrayToBase64(
     await crypto.subtle.sign(

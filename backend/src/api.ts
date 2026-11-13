@@ -9,6 +9,7 @@ import {
 } from "typed-api";
 import { z } from "zod/v4";
 import { buildSignedRequest } from "../../protocol/src/authClient.ts";
+import { canSignWithPrivateKey } from "../../protocol/src/crypto.ts";
 import { serverBaseUrl } from "../../protocol/src/serverUrl.ts";
 import { maxEncryptedMessageLength } from "../../protocol/src/attachmentLimits.ts";
 import type { Credentials } from "../../protocol/src/clientApi.ts";
@@ -452,13 +453,17 @@ export const setWebhook = async (
   }
   | { success: true }
 > => {
-  const signed = await buildSignedRequest(credentials, "setWebhook", { url });
+  const signed = (await canSignWithPrivateKey(credentials.privateSignKey))
+    ? await buildSignedRequest(credentials, "setWebhook", { url })
+    : undefined;
   return apiClient({
     endpoint: "setWebhook",
     payload: {
       url,
       publicSignKey: credentials.publicSignKey,
-      auth: { nonce: signed.nonce, authToken: signed.authToken },
+      ...(signed
+        ? { auth: { nonce: signed.nonce, authToken: signed.authToken } }
+        : {}),
     },
   });
 };

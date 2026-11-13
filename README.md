@@ -737,21 +737,22 @@ To host your own widget:
 
 ## Known security weaknesses
 
-Beyond message encryption, all metadata is currently exposed.
+Message payloads, sender signatures, and conversation symmetric keys are
+end-to-end encrypted, InstantDB client writes are disabled, webhook URLs are
+hidden from InstantDB queries, and `createConversation` / `setWebhook` / message
+envelopes are cryptographically authenticated and bound to their conversation
+and participants.
 
-TODO:
+Remaining metadata limitations (because browser clients subscribe directly via
+keypairs rather than InstantDB `$users` sessions):
 
-1. handle faking the time
-1. handle linking message to a bad conversation id
-1. handle impersonation of the notification server
-1. handle message inserted to the db but endpoint not called
-1. limit editing instant entities
-1. handle a member of the conversation injecting a geniuine signed message from
-   someone outside
-1. createConversation endpoint is public
-1. notify endpoint is public
-1. one can choose not to notify - adding messages
-1. everyone can see all metadata - groups, who sent when
-1. anyone can check if two people has a conversation
-1. webhooks are exposed to anyone seeing participants, so people can send
-   requests at them
+1. Conversation membership (`participants`) and message timestamps are publicly
+   queryable, so anyone knowing two public keys can check whether they share a
+   conversation and see when encrypted messages were posted (though sender
+   `publicSignKey` on individual messages is encrypted inside `payload`, except
+   when transient `typingStates` are active).
+2. Custom webhook endpoints do not yet carry a separate server-origin signature
+   header, so although webhook URLs are hidden from InstantDB reads and
+   `handleWebhookUpdate` verifies the encrypted key + sender RSA signature, a
+   leaked webhook URL could still receive replayed ciphertexts unless the
+   receiver deduplicates `messageId`.
