@@ -38,11 +38,10 @@ import {
 } from "@uri/crypto-utils";
 
 export const enforceStrictMetadataAuth =
-  Deno.env.get("ENFORCE_STRICT_METADATA_AUTH") === "1";
+  Deno.env.get("ENFORCE_STRICT_METADATA_AUTH") !== "0";
 
 const isStrictMetadataAuthActive = (): boolean =>
-  enforceStrictMetadataAuth ||
-  Deno.env.get("ENFORCE_STRICT_METADATA_AUTH") === "1";
+  Deno.env.get("ENFORCE_STRICT_METADATA_AUTH") !== "0";
 
 const resolveAvailableAlias = async (
   alias: string | undefined,

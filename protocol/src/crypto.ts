@@ -97,8 +97,11 @@ export const generateKeyPair = async (usage: "sign" | "encrypt") =>
     ),
   );
 
-export const canSignWithPrivateKey = (privateKey: string): Promise<boolean> =>
-  /^[A-Za-z0-9+/]+={0,2}$/.test(privateKey) &&
+export const canSignWithPrivateKey = (
+  privateKey: unknown,
+): Promise<boolean> =>
+  typeof privateKey === "string" &&
+    /^[A-Za-z0-9+/]+={0,2}$/.test(privateKey) &&
     privateKey.length % 4 === 0 &&
     privateKey.length >= 64
     ? importKey(privateKey, "sign").then(() => true, () => false)

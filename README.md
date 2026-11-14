@@ -735,24 +735,20 @@ To host your own widget:
    gsutil acl ch -u AllUsers:R gs://your-bucket-name/widget/dist/widget.iife.js
    ```
 
-## Known security weaknesses
+## Security & Privacy Model
 
-Message payloads, sender signatures, and conversation symmetric keys are
-end-to-end encrypted, InstantDB client writes are disabled, webhook URLs are
-hidden from InstantDB queries, and `createConversation` / `setWebhook` / message
-envelopes are cryptographically authenticated and bound to their conversation
-and participants.
-
-Remaining metadata limitations (because browser clients subscribe directly via
-keypairs rather than InstantDB `$users` sessions):
-
-1. Conversation membership (`participants`) and message timestamps are publicly
-   queryable, so anyone knowing two public keys can check whether they share a
-   conversation and see when encrypted messages were posted (though sender
-   `publicSignKey` on individual messages is encrypted inside `payload`, except
-   when transient `typingStates` are active).
-2. Custom webhook endpoints do not yet carry a separate server-origin signature
-   header, so although webhook URLs are hidden from InstantDB reads and
-   `handleWebhookUpdate` verifies the encrypted key + sender RSA signature, a
-   leaked webhook URL could still receive replayed ciphertexts unless the
-   receiver deduplicates `messageId`.
+- **End-to-end encryption & envelope binding:** Message payloads, sender RSA
+  signatures, `conversationId`, and `sentAt` timestamps are encrypted under a
+  per-conversation AES-256-GCM key (`keys` rows are RSA-OAEP encrypted per
+  participant), and recipients reject non-participant or cross-conversation
+  signatures.
+- **Participant-only metadata & locked InstantDB rules:** Client writes are
+  disabled across InstantDB, `identities.webhook` is hidden, and
+  `conversations`, `messages`, `keys`, `canvases`, `typingStates`, `uiElements`,
+  and metadata APIs (`getConversations`, `getConversationInfo`,
+  `conversationKey`, `getCanvasRow`) require cryptographic participant
+  authentication (`mintInstantToken` / nonce-signed requests).
+- **Authenticated webhook delivery:** Outgoing `WebhookUpdate` deliveries are
+  signed by the notification server with Ed25519 (`X-Alice-Signature` /
+  `serverSignature`), verified with timestamp freshness and per-message replay
+  deduplication in `handleWebhookUpdate` / `verifyWebhookOrigin`.

@@ -146,34 +146,58 @@ Deno.test("instant.perms.ts locks down sensitive entities, default attrs, writes
       create: "false",
       update: "false",
       delete: "false",
-      link: { archivedConversations: "true" },
-      unlink: { archivedConversations: "true" },
+      link: {
+        archivedConversations:
+          "auth.email != null && auth.email == data.instantEmail",
+      },
+      unlink: {
+        archivedConversations:
+          "auth.email != null && auth.email == data.instantEmail",
+      },
     },
     fields: {
       webhook: "false",
     },
   });
 
-  const readOnlyChatEntities = [
-    "conversations",
+  assertEquals(permsRecord.conversations, {
+    allow: {
+      view:
+        "auth.email != null && auth.email in data.ref('participants.instantEmail')",
+      create: "false",
+      update: "false",
+      delete: "false",
+    },
+  });
+  assertEquals(permsRecord.keys, {
+    allow: {
+      view:
+        "auth.email != null && auth.email in data.ref('owner.instantEmail')",
+      create: "false",
+      update: "false",
+      delete: "false",
+    },
+  });
+
+  const participantScopedChatEntities = [
     "messages",
-    "keys",
     "canvases",
     "typingStates",
     "uiElements",
   ] as const;
-  readOnlyChatEntities.forEach((entity) => {
+  participantScopedChatEntities.forEach((entity) => {
     assertEquals(
       permsRecord[entity],
       {
         allow: {
-          view: "true",
+          view:
+            "auth.email != null && auth.email in data.ref('conversation.participants.instantEmail')",
           create: "false",
           update: "false",
           delete: "false",
         },
       },
-      `Expected ${entity} to allow view only`,
+      `Expected ${entity} to restrict view to conversation participants`,
     );
   });
 });
@@ -1079,7 +1103,7 @@ Deno.test("getConversations, getConversationInfo, conversationKey, and getCanvas
   const savedCanvas = await endpoints.handlers.saveCanvas(saveCanvasReq);
   assertEquals(savedCanvas, { ok: true, version: 1 });
 
-  Deno.env.delete("ENFORCE_STRICT_METADATA_AUTH");
+  Deno.env.set("ENFORCE_STRICT_METADATA_AUTH", "0");
   const pairKeys = [alice.creds.publicSignKey, bob.creds.publicSignKey];
 
   const legacyConvos = await endpoints.handlers.getConversations({
@@ -1154,7 +1178,7 @@ Deno.test("getConversations, getConversationInfo, conversationKey, and getCanvas
     { row: null },
   );
 
-  Deno.env.set("ENFORCE_STRICT_METADATA_AUTH", "1");
+  Deno.env.delete("ENFORCE_STRICT_METADATA_AUTH");
 
   assertEquals(
     await endpoints.handlers.getConversations({ publicSignKeys: pairKeys }),
