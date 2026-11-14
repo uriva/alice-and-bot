@@ -13,6 +13,7 @@ import { canSignWithPrivateKey } from "../../protocol/src/crypto.ts";
 import { serverBaseUrl } from "../../protocol/src/serverUrl.ts";
 import { maxEncryptedMessageLength } from "../../protocol/src/attachmentLimits.ts";
 import type { Credentials } from "../../protocol/src/clientApi.ts";
+import { lookupRegisteredCredentials } from "../../protocol/src/instantAuth.ts";
 
 export type AuthToken = {
   nonce: string;
@@ -20,6 +21,12 @@ export type AuthToken = {
 };
 
 const authTokenSchema = z.object({
+  nonce: z.string(),
+  authToken: z.string(),
+});
+
+const signedCallerAuthSchema = z.object({
+  publicSignKey: z.string(),
   nonce: z.string(),
   authToken: z.string(),
 });
@@ -181,6 +188,7 @@ export const backendApiSchema = {
     input: z.object({
       conversationId: z.string(),
       publicSignKey: z.string(),
+      auth: authTokenSchema.optional(),
     }),
     output: z.union([
       z.object({ conversationKey: z.string() }),
@@ -292,7 +300,10 @@ export const backendApiSchema = {
   }),
   getConversations: endpoint({
     authRequired: false,
-    input: z.object({ publicSignKeys: z.array(z.string()) }),
+    input: z.object({
+      publicSignKeys: z.array(z.string()),
+      auth: signedCallerAuthSchema.optional(),
+    }),
     output: z.object({
       conversations: z.array(
         z.object({
@@ -305,7 +316,10 @@ export const backendApiSchema = {
   }),
   getConversationInfo: endpoint({
     authRequired: false,
-    input: z.object({ conversationId: z.string() }),
+    input: z.object({
+      conversationId: z.string(),
+      auth: signedCallerAuthSchema.optional(),
+    }),
     output: z.union([
       z.object({
         conversationInfo: z.object({
@@ -432,6 +446,29 @@ export const backendApiSchema = {
       }),
     ]),
   ),
+  mintInstantToken: authenticatedEndpoint(
+    z.object({}),
+    z.union([
+      z.object({ token: z.string(), instantEmail: z.string() }),
+      z.object({ error: z.enum(["invalid-auth", "not-found"]) }),
+    ]),
+  ),
+  getCanvasRow: endpoint({
+    authRequired: false,
+    input: z.object({
+      conversationId: z.string(),
+      auth: signedCallerAuthSchema.optional(),
+    }),
+    output: z.object({
+      row: z
+        .object({
+          id: z.string(),
+          encrypted: z.string(),
+          version: z.number(),
+        })
+        .nullable(),
+    }),
+  }),
 } as const;
 
 export const apiClient = apiClientMaker(
@@ -703,8 +740,28 @@ export const getProfile = (
   }
 > => apiClient({ endpoint: "getProfile", payload: { publicSignKey } });
 
-export const getConversations = (
+const buildOptionalCallerAuth = async <T>(
+  credentials: Credentials | undefined,
+  action: string,
+  payload: T,
+) => {
+  if (
+    !credentials ||
+    !(await canSignWithPrivateKey(credentials.privateSignKey))
+  ) {
+    return undefined;
+  }
+  const signed = await buildSignedRequest(credentials, action, payload);
+  return {
+    publicSignKey: credentials.publicSignKey,
+    nonce: signed.nonce,
+    authToken: signed.authToken,
+  };
+};
+
+export const getConversations = async (
   publicSignKeys: string[],
+  credentials?: Credentials,
 ): Promise<
   {
     conversations: {
@@ -713,10 +770,25 @@ export const getConversations = (
       participants: { publicSignKey: string }[];
     }[];
   }
-> => apiClient({ endpoint: "getConversations", payload: { publicSignKeys } });
+> => {
+  const resolved = credentials ??
+    publicSignKeys
+      .map(lookupRegisteredCredentials)
+      .find((c): c is Credentials => Boolean(c));
+  const auth = await buildOptionalCallerAuth(
+    resolved,
+    "getConversations",
+    { publicSignKeys },
+  );
+  return apiClient({
+    endpoint: "getConversations",
+    payload: { publicSignKeys, ...(auth ? { auth } : {}) },
+  });
+};
 
-export const getConversationInfo = (
+export const getConversationInfo = async (
   conversationId: string,
+  credentials?: Credentials,
 ): Promise<
   | {
     conversationInfo: {
@@ -731,8 +803,17 @@ export const getConversationInfo = (
     };
   }
   | { error: "not-found" }
-> =>
-  apiClient({ endpoint: "getConversationInfo", payload: { conversationId } });
+> => {
+  const auth = await buildOptionalCallerAuth(
+    credentials,
+    "getConversationInfo",
+    { conversationId },
+  );
+  return apiClient({
+    endpoint: "getConversationInfo",
+    payload: { conversationId, ...(auth ? { auth } : {}) },
+  });
+};
 
 export const getVapidPublicKey = (): Promise<{ publicKey: string }> =>
   apiClient({ endpoint: "getVapidPublicKey", payload: {} });
@@ -875,3 +956,31 @@ export const saveCanvasSigned = async ({
       expectedVersion,
     }),
   });
+
+export const mintInstantTokenSigned = async (
+  credentials: Credentials,
+): Promise<
+  | { token: string; instantEmail: string }
+  | { error: "invalid-auth" | "not-found" }
+> =>
+  apiClient({
+    endpoint: "mintInstantToken",
+    payload: await buildSignedRequest(credentials, "mintInstantToken", {}),
+  });
+
+export const getCanvasRow = async (
+  conversationId: string,
+  credentials?: Credentials,
+): Promise<{
+  row: { id: string; encrypted: string; version: number } | null;
+}> => {
+  const auth = await buildOptionalCallerAuth(
+    credentials,
+    "getCanvasRow",
+    { conversationId },
+  );
+  return apiClient({
+    endpoint: "getCanvasRow",
+    payload: { conversationId, ...(auth ? { auth } : {}) },
+  });
+};

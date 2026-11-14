@@ -50,8 +50,13 @@ import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
 import { getCredentialsToCopy } from "../../lit/core/credentials.ts";
 import { startActiveReporting } from "../../lit/core/activeReporting.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
+import { registerCredentials } from "../../protocol/src/instantAuth.ts";
 import { subscribeIsMobile } from "../../lit/core/responsive.ts";
-import { accessAdminDb, accessDb } from "../../lit/core/instant-client.ts";
+import {
+  accessAdminDb,
+  accessDb,
+  ensureInstantAuth,
+} from "../../lit/core/instant-client.ts";
 import { tx } from "@instantdb/core";
 import {
   type Conversation,
@@ -213,11 +218,15 @@ const isArchived = (conv: Conversation) => {
 };
 
 const archiveConversation = (conversationId: string) => {
-  if (!yourKeyProfile?.id) return;
-  db.transact(
-    tx.identities[yourKeyProfile.id].link({
-      archivedConversations: conversationId,
-    }),
+  const profileId = yourKeyProfile?.id;
+  if (!profileId) return;
+  const creds = credentials ?? undefined;
+  ensureInstantAuth(creds).then(() =>
+    db.transact(
+      tx.identities[profileId].link({
+        archivedConversations: conversationId,
+      }),
+    )
   );
   if (selectedConversation === conversationId) {
     selectedConversation = null;
@@ -226,11 +235,15 @@ const archiveConversation = (conversationId: string) => {
 };
 
 const unarchiveConversation = (conversationId: string) => {
-  if (!yourKeyProfile?.id) return;
-  db.transact(
-    tx.identities[yourKeyProfile.id].unlink({
-      archivedConversations: conversationId,
-    }),
+  const profileId = yourKeyProfile?.id;
+  if (!profileId) return;
+  const creds = credentials ?? undefined;
+  ensureInstantAuth(creds).then(() =>
+    db.transact(
+      tx.identities[profileId].unlink({
+        archivedConversations: conversationId,
+      }),
+    )
   );
   rerenderChat();
 };
@@ -3012,10 +3025,12 @@ const chatTemplate = (): TemplateResult =>
 
 const initLoggedInState = () => {
   if (!credentials) return;
+  registerCredentials(credentials);
+  ensureInstantAuth(credentials).catch(() => {});
   // Subscribe to conversations
   if (conversationsUnsub) conversationsUnsub();
   conversationsUnsub = subscribeConversations(
-    credentials.publicSignKey,
+    credentials,
     (convs) => {
       conversations = convs;
       convs?.forEach((conv) => {

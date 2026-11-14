@@ -1446,7 +1446,13 @@ export class ChatBox extends LitElement {
       if (changed.has("title")) this._inputEl.focus();
     }
 
-    if (changed.has("title") && !empty(this._optimisticMessages)) {
+    const prevTitle = changed.get("title");
+    if (
+      changed.has("title") &&
+      prevTitle !== undefined &&
+      prevTitle !== "Chat" &&
+      !empty(this._optimisticMessages)
+    ) {
       this._optimisticMessages = [];
     }
 

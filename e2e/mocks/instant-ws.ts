@@ -79,6 +79,7 @@ const buildAttrs = () => [
   blobAttr("identities", "name"),
   blobAttr("identities", "avatar"),
   blobAttr("identities", "alias", { "unique?": true, "index?": true }),
+  blobAttr("identities", "instantEmail", { "unique?": true, "index?": true }),
   blobAttr("identities", "lastActiveAt"),
   blobAttr("identities", "priceTag"),
   blobAttr("identities", "webhook"),
@@ -198,19 +199,57 @@ export const setupInstantWsMock = async (
   const messageQueries: Array<{ q: unknown }> = [];
   const keyQueries: Array<{ q: unknown }> = [];
   const typingQueries: Array<{ q: unknown }> = [];
-  let serverWs: WebSocketRoute | null = null;
-  let txCounter = 100;
+  const state: {
+    serverWs: WebSocketRoute | null;
+    txCounter: number;
+    currentMessages: TestData["messages"];
+    latestTypingUpdatedAt: number | null;
+  } = {
+    serverWs: null,
+    txCounter: 100,
+    currentMessages: [...data.messages],
+    latestTypingUpdatedAt: null,
+  };
+
+  const buildTypingTriples = (updatedAt: number, tx: number): Triple[] => {
+    const typingStateId = randomUUID();
+    return [
+      ...fieldTriples(typingStateId, "typingStates", { updatedAt }, tx),
+      link(
+        "conversations",
+        "typingStates",
+        data.conversationId,
+        typingStateId,
+        tx,
+      ),
+      link(
+        "identities",
+        "typingStates",
+        data.bobIdentityId,
+        typingStateId,
+        tx,
+      ),
+      ...fieldTriples(data.bobIdentityId, "identities", {
+        publicSignKey: data.bob.publicSignKey,
+        publicEncryptKey: data.bob.publicEncryptKey,
+        name: "Bob",
+      }, tx),
+    ];
+  };
 
   await page.routeWebSocket(
     /wss:\/\/api\.instantdb\.com\/runtime\/session/,
     (ws: WebSocketRoute) => {
-      serverWs = ws;
+      state.serverWs = ws;
       const tx = Date.now();
 
       ws.onMessage((raw) => {
         const msg = JSON.parse(String(raw));
 
         if (msg.op === "init") {
+          messageQueries.length = 0;
+          keyQueries.length = 0;
+          typingQueries.length = 0;
           ws.send(JSON.stringify({
             op: "init-ok",
             "session-id": randomUUID(),
@@ -221,7 +260,7 @@ export const setupInstantWsMock = async (
 
         if (msg.op === "add-query") {
           const ns = detectNs(msg.q);
-          const tid = ++txCounter;
+          const tid = ++state.txCounter;
           if (ns === "keys") {
             keyQueries.push({ q: msg.q });
             const triples: Triple[] = [
@@ -248,7 +287,7 @@ export const setupInstantWsMock = async (
 
           if (ns === "messages") {
             messageQueries.push({ q: msg.q });
-            const triples: Triple[] = data.messages.flatMap((m) => [
+            const triples: Triple[] = state.currentMessages.flatMap((m) => [
               ...fieldTriples(m.id, "messages", {
                 payload: m.payload,
                 timestamp: m.timestamp,
@@ -261,7 +300,18 @@ export const setupInstantWsMock = async (
 
           if (ns === "typingStates") {
             typingQueries.push({ q: msg.q });
-            ws.send(queryResponse(msg.q, tid, emptyResult(ns)));
+            ws.send(
+              queryResponse(
+                msg.q,
+                tid,
+                state.latestTypingUpdatedAt !== null
+                  ? wrapResult(
+                    ns,
+                    buildTypingTriples(state.latestTypingUpdatedAt, tx),
+                  )
+                  : emptyResult(ns),
+              ),
+            );
             return;
           }
 
@@ -331,7 +381,9 @@ export const setupInstantWsMock = async (
         }
 
         if (msg.op === "transact") {
-          ws.send(JSON.stringify({ op: "transact-ok", "tx-id": ++txCounter }));
+          ws.send(
+            JSON.stringify({ op: "transact-ok", "tx-id": ++state.txCounter }),
+          );
           return;
         }
       });
@@ -340,36 +392,44 @@ export const setupInstantWsMock = async (
 
   return {
     pushNewMessage: (msg) => {
-      if (!serverWs || !messageQueries.length) return;
-      const tx = Date.now();
-      const triples: Triple[] = [
-        ...fieldTriples(msg.id, "messages", {
-          payload: msg.payload,
-          timestamp: msg.timestamp,
-        }, tx),
-        link("messages", "conversation", msg.id, data.conversationId, tx),
+      state.currentMessages = [
+        ...state.currentMessages,
+        { ...msg, text: "" },
       ];
+      const activeWs = state.serverWs;
+      if (!activeWs || !messageQueries.length) return;
+      const tx = Date.now();
+      const triples: Triple[] = state.currentMessages.flatMap((m) => [
+        ...fieldTriples(m.id, "messages", {
+          payload: m.payload,
+          timestamp: m.timestamp,
+        }, tx),
+        link("messages", "conversation", m.id, data.conversationId, tx),
+      ]);
       messageQueries.forEach(({ q }) => {
-        serverWs!.send(
-          queryResponse(q, ++txCounter, wrapResult("messages", triples)),
+        activeWs.send(
+          queryResponse(q, ++state.txCounter, wrapResult("messages", triples)),
         );
       });
     },
     pushMessageSnapshot: (messages) => {
-      if (!serverWs || !messageQueries.length) return;
+      state.currentMessages = [...messages];
+      const activeWs = state.serverWs;
+      if (!activeWs || !messageQueries.length) return;
       const tx = Date.now();
       messageQueries.forEach(({ q }) => {
-        serverWs!.send(
+        activeWs.send(
           queryResponse(
             q,
-            ++txCounter,
+            ++state.txCounter,
             messageSnapshotResult(data.conversationId, messages, tx),
           ),
         );
       });
     },
     pushConversationKeySnapshot: () => {
-      if (!serverWs || !keyQueries.length) return;
+      const activeWs = state.serverWs;
+      if (!activeWs || !keyQueries.length) return;
       const tx = Date.now();
       const triples: Triple[] = [
         ...fieldTriples(data.keyId, "keys", {
@@ -390,40 +450,24 @@ export const setupInstantWsMock = async (
         }, tx),
       ];
       keyQueries.forEach(({ q }) => {
-        serverWs!.send(
-          queryResponse(q, ++txCounter, wrapResult("keys", triples)),
+        activeWs.send(
+          queryResponse(q, ++state.txCounter, wrapResult("keys", triples)),
         );
       });
     },
     pushTypingSnapshot: (updatedAt) => {
-      if (!serverWs || !typingQueries.length) return;
+      state.latestTypingUpdatedAt = updatedAt;
+      const activeWs = state.serverWs;
+      if (!activeWs || !typingQueries.length) return;
       const tx = Date.now();
-      const typingStateId = randomUUID();
-      const triples: Triple[] = [
-        ...fieldTriples(typingStateId, "typingStates", { updatedAt }, tx),
-        link(
-          "conversations",
-          "typingStates",
-          data.conversationId,
-          typingStateId,
-          tx,
-        ),
-        link(
-          "identities",
-          "typingStates",
-          data.bobIdentityId,
-          typingStateId,
-          tx,
-        ),
-        ...fieldTriples(data.bobIdentityId, "identities", {
-          publicSignKey: data.bob.publicSignKey,
-          publicEncryptKey: data.bob.publicEncryptKey,
-          name: "Bob",
-        }, tx),
-      ];
+      const triples = buildTypingTriples(updatedAt, tx);
       typingQueries.forEach(({ q }) => {
-        serverWs!.send(
-          queryResponse(q, ++txCounter, wrapResult("typingStates", triples)),
+        activeWs.send(
+          queryResponse(
+            q,
+            ++state.txCounter,
+            wrapResult("typingStates", triples),
+          ),
         );
       });
     },

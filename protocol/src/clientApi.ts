@@ -19,6 +19,7 @@ import { buildSignedRequest } from "./authClient.ts";
 import { shortIdFromPublicSignKey } from "./shortId.ts";
 import {
   base64ToBase64Url,
+  canSignWithPrivateKey,
   decryptAsymmetric,
   decryptBinary,
   decryptSymmetric,
@@ -29,6 +30,11 @@ import {
   sign,
   verify,
 } from "./crypto.ts";
+import {
+  registerConversationKeyCredentials,
+  registerCredentials,
+} from "./instantAuth.ts";
+import { claimWebhookMessageOnce, verifyWebhookOrigin } from "./webhookAuth.ts";
 
 export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
 
@@ -188,6 +194,7 @@ export type WebhookUpdate = {
   messageId: string;
   conversationKey?: EncryptedConversationKey;
   conversationInfo?: ConversationInfo;
+  serverSignature?: string;
 };
 
 type SignedPayload<T> = {
@@ -294,29 +301,52 @@ export const sendCanvasEvent = (params: {
 
 type DbMessage = InstaQLEntity<typeof schema, "messages">;
 
+const isEncryptedConversationKey = (
+  value: unknown,
+): value is EncryptedConversationKey => typeof value === "string";
+
 export const getConversationKey = async (
   creds: Credentials,
   convo: string,
 ): Promise<string> => {
+  registerCredentials(creds);
+  const signed = (await canSignWithPrivateKey(creds.privateSignKey))
+    ? await buildSignedRequest(creds, "conversationKey", {
+      conversationId: convo,
+    })
+    : undefined;
   const result = await apiClient({
     endpoint: "conversationKey",
     payload: {
       conversationId: convo,
       publicSignKey: creds.publicSignKey,
+      ...(signed
+        ? { auth: { nonce: signed.nonce, authToken: signed.authToken } }
+        : {}),
     },
   });
-  if ("error" in result) {
+  if (
+    "error" in result || !isEncryptedConversationKey(result.conversationKey)
+  ) {
     throw new Error("No keys found for conversation");
   }
-  return await decryptAsymmetric<string>(
+  const decryptedKey = await decryptAsymmetric<string>(
     creds.privateEncryptKey,
-    result.conversationKey as EncryptedAsymmetric<string>,
+    result.conversationKey,
   );
+  registerConversationKeyCredentials(decryptedKey, creds);
+  return decryptedKey;
 };
 
 export const handleWebhookUpdate = async (
   whUpdate: WebhookUpdate,
   credentials: Credentials,
+  options?: {
+    requireServerSignature?: boolean;
+    webhookServerPublicKey?: string;
+    allowReplay?: boolean;
+    now?: number;
+  },
 ): Promise<
   | {
     conversationId: string;
@@ -326,12 +356,23 @@ export const handleWebhookUpdate = async (
   }
   | undefined
 > => {
+  registerCredentials(credentials);
+  if (
+    whUpdate.serverSignature !== undefined || options?.requireServerSignature
+  ) {
+    const originOk = await verifyWebhookOrigin(whUpdate, {
+      publicKey: options?.webhookServerPublicKey,
+      now: options?.now,
+    });
+    if (!originOk) return undefined;
+  }
   const key = whUpdate.conversationKey
     ? await decryptAsymmetric<string>(
       credentials.privateEncryptKey,
       whUpdate.conversationKey,
     )
     : await getConversationKey(credentials, whUpdate.conversationId);
+  registerConversationKeyCredentials(key, credentials);
   const allowedParticipantKeys =
     whUpdate.conversationInfo && !whUpdate.conversationInfo.isPartial
       ? new Set(
@@ -343,6 +384,12 @@ export const handleWebhookUpdate = async (
     allowedParticipantKeys,
   })(whUpdate);
   if (!message) return undefined;
+  if (
+    !options?.allowReplay &&
+    !claimWebhookMessageOnce(credentials.publicSignKey, whUpdate.messageId)
+  ) {
+    return undefined;
+  }
   return {
     conversationId: whUpdate.conversationId,
     message,
@@ -567,6 +614,7 @@ async (
   conversationTitle: string,
   credentials: Credentials,
 ) => {
+  registerCredentials(credentials);
   const { identities } = await db().query({
     identities: {
       $: { where: { publicSignKey: { $in: publicSignKeys } } },
@@ -625,11 +673,11 @@ export const createIdentity = async (
       ...(alias ? { alias } : {}),
     },
   });
-  return {
+  return registerCredentials({
     publicSignKey: publicKey,
     privateSignKey: privateKey,
     privateEncryptKey: encryptKey.privateKey,
-  };
+  });
 };
 
 export const baseUrl = "https://aliceandbot.com";

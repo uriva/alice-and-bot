@@ -1,16 +1,21 @@
-import { id } from "@instantdb/admin";
+import { id, init as adminInit } from "@instantdb/admin";
 import {
   assert,
   assertEquals,
+  assertExists,
   assertFalse,
   assertMatch,
   assertRejects,
 } from "@std/assert";
 import rules from "../../instant.perms.ts";
+import schema from "../../instant.schema.ts";
 import {
   type Credentials,
   handleWebhookUpdate,
+  instantAppId,
+  type InternalMessage,
   msgToStr,
+  type WebhookUpdate,
 } from "../../protocol/src/clientApi.ts";
 import {
   encryptAsymmetric,
@@ -19,6 +24,8 @@ import {
   generateSymmetricKey,
   sign,
 } from "../../protocol/src/crypto.ts";
+import { instantEmailFromPublicSignKey } from "../../protocol/src/instantAuth.ts";
+import { resetSeenWebhookMessages } from "../../protocol/src/webhookAuth.ts";
 import {
   backendApiSchema,
   canonicalStringForAuthSign,
@@ -30,8 +37,13 @@ import {
   MAX_NONCES,
   verifyAuthToken,
 } from "./auth.ts";
-import { query, transact, tx } from "./db.ts";
-import { endpoints, handleRequest, relayStoreMessage } from "./main.ts";
+import { auth, query, transact, tx } from "./db.ts";
+import {
+  endpoints,
+  handleRequest,
+  relayStoreMessage,
+  setRequestWaitUntil,
+} from "./main.ts";
 import {
   buildSafeAttachmentPath,
   generateUploadUrl,
@@ -762,4 +774,482 @@ Deno.test("[CRITICAL-06] & [HIGH-02] storeTransferPayload and relayStoreMessage 
     Error,
     "Relay message exceeds maximum size",
   );
+});
+
+const exportBytesBase64 = (buffer: ArrayBuffer): string =>
+  btoa(
+    Array.from(new Uint8Array(buffer), (b) => String.fromCharCode(b)).join(""),
+  );
+
+const makeEd25519SigningPair = async () => {
+  const kp = await crypto.subtle.generateKey(
+    { name: "Ed25519" },
+    true,
+    ["sign", "verify"],
+  );
+  if (!("publicKey" in kp)) {
+    throw new Error("Expected Ed25519 keypair");
+  }
+  return {
+    publicKey: exportBytesBase64(
+      await crypto.subtle.exportKey("spki", kp.publicKey),
+    ),
+    privateKey: exportBytesBase64(
+      await crypto.subtle.exportKey("pkcs8", kp.privateKey),
+    ),
+  };
+};
+
+Deno.test("callWebhooks signs HTTP and local-relay webhook updates with Ed25519 origin signature and headers", async () => {
+  resetSeenWebhookMessages();
+  const edKeys = await makeEd25519SigningPair();
+  Deno.env.set("WEBHOOK_SIGNING_PRIVATE_KEY", edKeys.privateKey);
+  Deno.env.set("ALLOW_LOCAL_WEBHOOKS", "1");
+
+  const receivedHttp: {
+    headers: Record<string, string | null>;
+    body: WebhookUpdate;
+  }[] = [];
+  const server = Deno.serve({ port: 0, onListen: () => {} }, async (req) => {
+    const body: WebhookUpdate = await req.json();
+    receivedHttp.push({
+      headers: {
+        timestamp: req.headers.get("x-alice-timestamp"),
+        messageId: req.headers.get("x-alice-message-id"),
+        signature: req.headers.get("x-alice-signature"),
+      },
+      body,
+    });
+    return new Response("ok", { status: 200 });
+  });
+
+  const sender = await makeTestIdentity("WebhookOriginSender");
+  const httpBot = await makeTestIdentity("HttpSignedBot");
+  const relayBot = await makeTestIdentity("RelaySignedBot");
+  const convoId = id();
+  const symKey = await generateSymmetricKey();
+  const httpKeyId = id();
+  const relayKeyId = id();
+  const relayToken = crypto.randomUUID();
+
+  const [httpEncKey, relayEncKey] = await Promise.all([
+    encryptAsymmetric(httpBot.publicEncryptKey, symKey),
+    encryptAsymmetric(relayBot.publicEncryptKey, symKey),
+  ]);
+
+  await transact([
+    tx.identities[httpBot.identityId].update({
+      webhook: `http://127.0.0.1:${server.addr.port}/wh`,
+    }),
+    tx.identities[relayBot.identityId].update({
+      webhook: `https://api.aliceandbot.com/relay/webhook/${relayToken}`,
+    }),
+    tx.conversations[convoId]
+      .update({ title: "Signed Webhook Convo", updatedAt: Date.now() })
+      .link({
+        participants: [
+          sender.identityId,
+          httpBot.identityId,
+          relayBot.identityId,
+        ],
+      }),
+    tx.keys[httpKeyId]
+      .update({ key: httpEncKey })
+      .link({ owner: httpBot.identityId, conversation: convoId }),
+    tx.keys[relayKeyId]
+      .update({ key: relayEncKey })
+      .link({ owner: relayBot.identityId, conversation: convoId }),
+  ]);
+
+  const msgPayload: InternalMessage & {
+    conversationId: string;
+    sentAt: number;
+  } = {
+    type: "text",
+    text: "verified server origin",
+    conversationId: convoId,
+    sentAt: Date.now(),
+  };
+  const encryptedMessage = await encryptSymmetric(symKey, {
+    payload: msgPayload,
+    publicSignKey: sender.creds.publicSignKey,
+    signature: await sign(sender.creds.privateSignKey, msgToStr(msgPayload)),
+  });
+
+  const bgTasks: Promise<unknown>[] = [];
+  setRequestWaitUntil((p) => bgTasks.push(p));
+  const { messageId } = await endpoints.handlers.sendMessage({
+    conversation: convoId,
+    encryptedMessage,
+    senderPublicSignKey: sender.creds.publicSignKey,
+    silent: true,
+  });
+  await Promise.all(bgTasks);
+  setRequestWaitUntil(undefined);
+
+  const pollRes = await handleRequest(
+    new Request(`http://localhost/relay/poll/${relayToken}`, { method: "GET" }),
+  );
+  const pollJson: { messages: WebhookUpdate[] } = await pollRes.json();
+
+  Deno.env.delete("WEBHOOK_SIGNING_PRIVATE_KEY");
+  Deno.env.delete("ALLOW_LOCAL_WEBHOOKS");
+  await server.shutdown();
+
+  await transact([
+    tx.messages[messageId].delete(),
+    tx.keys[httpKeyId].delete(),
+    tx.keys[relayKeyId].delete(),
+    tx.conversations[convoId].delete(),
+    tx.identities[sender.identityId].delete(),
+    tx.identities[httpBot.identityId].delete(),
+    tx.identities[relayBot.identityId].delete(),
+  ]);
+
+  assertEquals(receivedHttp.length, 1);
+  assertEquals(receivedHttp[0].headers.messageId, messageId);
+  assertExists(receivedHttp[0].headers.timestamp);
+  assertExists(receivedHttp[0].headers.signature);
+  assertEquals(
+    receivedHttp[0].body.serverSignature,
+    receivedHttp[0].headers.signature,
+  );
+
+  const verifiedHttp = await handleWebhookUpdate(
+    receivedHttp[0].body,
+    httpBot.creds,
+    {
+      requireServerSignature: true,
+      webhookServerPublicKey: edKeys.publicKey,
+    },
+  );
+  assertExists(verifiedHttp);
+  assertEquals(verifiedHttp.message.text, "verified server origin");
+
+  assertEquals(pollJson.messages.length, 1);
+  assertExists(pollJson.messages[0].serverSignature);
+  const verifiedRelay = await handleWebhookUpdate(
+    pollJson.messages[0],
+    relayBot.creds,
+    {
+      requireServerSignature: true,
+      webhookServerPublicKey: edKeys.publicKey,
+    },
+  );
+  assertExists(verifiedRelay);
+  assertEquals(verifiedRelay.message.text, "verified server origin");
+});
+
+Deno.test("mintInstantToken verifies auth, backfills instantEmail on legacy identities, and mints a working InstantDB user token", async () => {
+  const legacyUser = await makeTestIdentity("LegacyNoInstantEmail");
+  const anonSign = await generateKeyPair("sign");
+  const anonEnc = await generateKeyPair("encrypt");
+  await endpoints.handlers.createAnonymousIdentity({
+    name: "FreshAnonWithInstantEmail",
+    publicSignKey: anonSign.publicKey,
+    publicEncryptKey: anonEnc.publicKey,
+  });
+
+  const expectedAnonEmail = await instantEmailFromPublicSignKey(
+    anonSign.publicKey,
+  );
+  const { identities: anonRows } = await query({
+    identities: { $: { where: { publicSignKey: anonSign.publicKey } } },
+  });
+  assertExists(anonRows[0]);
+  if (anonRows[0].instantEmail !== undefined) {
+    assertEquals(anonRows[0].instantEmail, expectedAnonEmail);
+  }
+
+  const badSigRes = await endpoints.handlers.mintInstantToken({
+    payload: {},
+    publicSignKey: legacyUser.creds.publicSignKey,
+    nonce: "bad-nonce",
+    authToken: "bad-sig",
+  });
+  assertEquals(badSigRes, { error: "invalid-auth" });
+
+  const ghostSign = await generateKeyPair("sign");
+  const ghostEnc = await generateKeyPair("encrypt");
+  const ghostSigned = await signAuthPayload(
+    {
+      publicSignKey: ghostSign.publicKey,
+      privateSignKey: ghostSign.privateKey,
+      privateEncryptKey: ghostEnc.privateKey,
+    },
+    "mintInstantToken",
+    {},
+  );
+  const notFoundRes = await endpoints.handlers.mintInstantToken(ghostSigned);
+  assertEquals(notFoundRes, { error: "not-found" });
+
+  const validSigned = await signAuthPayload(
+    legacyUser.creds,
+    "mintInstantToken",
+    {},
+  );
+  const expectedLegacyEmail = await instantEmailFromPublicSignKey(
+    legacyUser.creds.publicSignKey,
+  );
+  const transactBodies: string[] = [];
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = typeof input === "string"
+      ? input
+      : input instanceof URL
+      ? input.href
+      : input.url;
+    if (url.includes("/admin/transact") && typeof init?.body === "string") {
+      transactBodies.push(init.body);
+    }
+    return origFetch(input, init);
+  };
+  const minted = await endpoints.handlers.mintInstantToken(validSigned).finally(
+    () => {
+      globalThis.fetch = origFetch;
+    },
+  );
+  assert("token" in minted);
+  assertEquals(minted.instantEmail, expectedLegacyEmail);
+  assert(
+    transactBodies.some(
+      (b) =>
+        b.includes(legacyUser.identityId) &&
+        b.includes("instantEmail") &&
+        b.includes(expectedLegacyEmail),
+    ),
+    "Expected mintInstantToken to transact instantEmail backfill onto identity",
+  );
+
+  const { identities: updatedLegacy } = await query({
+    identities: { $: { where: { id: legacyUser.identityId } } },
+  });
+  if (updatedLegacy[0]?.instantEmail !== undefined) {
+    assertEquals(updatedLegacy[0].instantEmail, expectedLegacyEmail);
+  }
+
+  const verifiedUser = await auth.verifyToken(minted.token);
+  assertEquals(verifiedUser.email, expectedLegacyEmail);
+
+  const userScopedDb = adminInit({ appId: instantAppId, schema }).asUser({
+    token: minted.token,
+  });
+  const scopedResult = await userScopedDb.query({
+    identities: { $: { where: { id: legacyUser.identityId } } },
+  });
+  assertEquals(scopedResult.identities[0]?.id, legacyUser.identityId);
+
+  const { $users } = await query({
+    $users: { $: { where: { email: expectedLegacyEmail } } },
+  });
+  await transact([
+    ...$users.map((u: { id: string }) => tx.$users[u.id].delete()),
+    tx.identities[legacyUser.identityId].delete(),
+    ...(anonRows[0] ? [tx.identities[anonRows[0].id].delete()] : []),
+  ]);
+});
+
+Deno.test("getConversations, getConversationInfo, conversationKey, and getCanvasRow enforce participant auth and ENFORCE_STRICT_METADATA_AUTH", async () => {
+  const alice = await makeTestIdentity("MetaAlice");
+  const bob = await makeTestIdentity("MetaBob");
+  const outsider = await makeTestIdentity("MetaOutsider");
+  const convoId = id();
+  const aliceKeyId = id();
+  const symKey = await generateSymmetricKey();
+  const aliceEncKey = await encryptAsymmetric(alice.publicEncryptKey, symKey);
+
+  await transact([
+    tx.conversations[convoId]
+      .update({ title: "Protected Metadata Chat", updatedAt: Date.now() })
+      .link({ participants: [alice.identityId, bob.identityId] }),
+    tx.keys[aliceKeyId]
+      .update({ key: aliceEncKey })
+      .link({ owner: alice.identityId, conversation: convoId }),
+  ]);
+
+  const encryptedCanvas = await encryptSymmetric(
+    symKey,
+    "view = () => div([])",
+  );
+  const saveCanvasReq = await signAuthPayload(alice.creds, "saveCanvas", {
+    conversationId: convoId,
+    encrypted: encryptedCanvas,
+    expectedVersion: 0,
+  });
+  const savedCanvas = await endpoints.handlers.saveCanvas(saveCanvasReq);
+  assertEquals(savedCanvas, { ok: true, version: 1 });
+
+  Deno.env.delete("ENFORCE_STRICT_METADATA_AUTH");
+  const pairKeys = [alice.creds.publicSignKey, bob.creds.publicSignKey];
+
+  const legacyConvos = await endpoints.handlers.getConversations({
+    publicSignKeys: pairKeys,
+  });
+  assertEquals(
+    legacyConvos.conversations.some((c) => c.id === convoId),
+    true,
+  );
+  const legacyInfo = await endpoints.handlers.getConversationInfo({
+    conversationId: convoId,
+  });
+  assert("conversationInfo" in legacyInfo);
+  const legacyKey = await endpoints.handlers.conversationKey({
+    conversationId: convoId,
+    publicSignKey: alice.creds.publicSignKey,
+  });
+  assertEquals(legacyKey, { conversationKey: aliceEncKey });
+  const legacyCanvas = await endpoints.handlers.getCanvasRow({
+    conversationId: convoId,
+  });
+  assertExists(legacyCanvas.row);
+
+  const outsiderConvosSigned = await signAuthPayload(
+    outsider.creds,
+    "getConversations",
+    { publicSignKeys: pairKeys },
+  );
+  assertEquals(
+    await endpoints.handlers.getConversations({
+      publicSignKeys: pairKeys,
+      auth: {
+        publicSignKey: outsider.creds.publicSignKey,
+        nonce: outsiderConvosSigned.nonce,
+        authToken: outsiderConvosSigned.authToken,
+      },
+    }),
+    { conversations: [] },
+  );
+
+  const outsiderInfoSigned = await signAuthPayload(
+    outsider.creds,
+    "getConversationInfo",
+    { conversationId: convoId },
+  );
+  assertEquals(
+    await endpoints.handlers.getConversationInfo({
+      conversationId: convoId,
+      auth: {
+        publicSignKey: outsider.creds.publicSignKey,
+        nonce: outsiderInfoSigned.nonce,
+        authToken: outsiderInfoSigned.authToken,
+      },
+    }),
+    { error: "not-found" },
+  );
+
+  const outsiderCanvasSigned = await signAuthPayload(
+    outsider.creds,
+    "getCanvasRow",
+    { conversationId: convoId },
+  );
+  assertEquals(
+    await endpoints.handlers.getCanvasRow({
+      conversationId: convoId,
+      auth: {
+        publicSignKey: outsider.creds.publicSignKey,
+        nonce: outsiderCanvasSigned.nonce,
+        authToken: outsiderCanvasSigned.authToken,
+      },
+    }),
+    { row: null },
+  );
+
+  Deno.env.set("ENFORCE_STRICT_METADATA_AUTH", "1");
+
+  assertEquals(
+    await endpoints.handlers.getConversations({ publicSignKeys: pairKeys }),
+    { conversations: [] },
+  );
+  assertEquals(
+    await endpoints.handlers.getConversationInfo({ conversationId: convoId }),
+    { error: "not-found" },
+  );
+  assertEquals(
+    await endpoints.handlers.conversationKey({
+      conversationId: convoId,
+      publicSignKey: alice.creds.publicSignKey,
+    }),
+    { error: "no-such-key" },
+  );
+  assertEquals(
+    await endpoints.handlers.getCanvasRow({ conversationId: convoId }),
+    { row: null },
+  );
+
+  const aliceConvosSigned = await signAuthPayload(
+    alice.creds,
+    "getConversations",
+    { publicSignKeys: pairKeys },
+  );
+  const strictConvos = await endpoints.handlers.getConversations({
+    publicSignKeys: pairKeys,
+    auth: {
+      publicSignKey: alice.creds.publicSignKey,
+      nonce: aliceConvosSigned.nonce,
+      authToken: aliceConvosSigned.authToken,
+    },
+  });
+  assertEquals(
+    strictConvos.conversations.some((c) => c.id === convoId),
+    true,
+  );
+
+  const aliceInfoSigned = await signAuthPayload(
+    alice.creds,
+    "getConversationInfo",
+    { conversationId: convoId },
+  );
+  const strictInfo = await endpoints.handlers.getConversationInfo({
+    conversationId: convoId,
+    auth: {
+      publicSignKey: alice.creds.publicSignKey,
+      nonce: aliceInfoSigned.nonce,
+      authToken: aliceInfoSigned.authToken,
+    },
+  });
+  assert("conversationInfo" in strictInfo);
+  assertEquals(strictInfo.conversationInfo.hasCanvas, true);
+
+  const aliceKeySigned = await signAuthPayload(
+    alice.creds,
+    "conversationKey",
+    { conversationId: convoId },
+  );
+  const strictKey = await endpoints.handlers.conversationKey({
+    conversationId: convoId,
+    publicSignKey: alice.creds.publicSignKey,
+    auth: {
+      nonce: aliceKeySigned.nonce,
+      authToken: aliceKeySigned.authToken,
+    },
+  });
+  assertEquals(strictKey, { conversationKey: aliceEncKey });
+
+  const aliceCanvasSigned = await signAuthPayload(
+    alice.creds,
+    "getCanvasRow",
+    { conversationId: convoId },
+  );
+  const strictCanvas = await endpoints.handlers.getCanvasRow({
+    conversationId: convoId,
+    auth: {
+      publicSignKey: alice.creds.publicSignKey,
+      nonce: aliceCanvasSigned.nonce,
+      authToken: aliceCanvasSigned.authToken,
+    },
+  });
+  assertExists(strictCanvas.row);
+  assertEquals(strictCanvas.row.encrypted, encryptedCanvas);
+  assertEquals(strictCanvas.row.version, 1);
+
+  Deno.env.delete("ENFORCE_STRICT_METADATA_AUTH");
+
+  await transact([
+    tx.canvases[strictCanvas.row.id].delete(),
+    tx.keys[aliceKeyId].delete(),
+    tx.conversations[convoId].delete(),
+    tx.identities[alice.identityId].delete(),
+    tx.identities[bob.identityId].delete(),
+    tx.identities[outsider.identityId].delete(),
+  ]);
 });

@@ -6,6 +6,7 @@ import type {
   EncryptedMessage,
   WebhookUpdate,
 } from "../../protocol/src/clientApi.ts";
+import { signWebhookOrigin } from "../../protocol/src/webhookAuth.ts";
 import { query, transact, tx } from "./db.ts";
 import { isSafeWebhookUrl } from "./ssrfGuard.ts";
 
@@ -75,6 +76,15 @@ export const callWebhooks = async (
           : true),
     ),
   };
+  const signingKey = (Deno.env.get("WEBHOOK_SIGNING_PRIVATE_KEY") ?? "").trim();
+  const serverSignature = signingKey
+    ? await signWebhookOrigin(signingKey, {
+      messageId,
+      conversationId,
+      timestamp,
+      payload,
+    })
+    : undefined;
   await Promise.all(
     conversation.participants.map((p: {
       webhook?: string;
@@ -89,6 +99,7 @@ export const callWebhooks = async (
         messageId,
         conversationInfo,
         ...(p.keys?.length ? { conversationKey: p.keys[0].key } : {}),
+        ...(serverSignature ? { serverSignature } : {}),
       };
       const relayToken = extractRelayToken(webhook);
       if (relayToken) return storeLocalRelay(relayToken, update);
@@ -105,6 +116,9 @@ export const callWebhooks = async (
         headers: {
           "Content-Type": "application/json",
           "traceparent": freshTrace,
+          "X-Alice-Timestamp": String(timestamp),
+          "X-Alice-Message-Id": messageId,
+          ...(serverSignature ? { "X-Alice-Signature": serverSignature } : {}),
         },
         body: JSON.stringify(update),
       }).catch((e) => {

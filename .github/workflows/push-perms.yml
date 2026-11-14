@@ -20,6 +20,12 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Push InstantDB schema
+        env:
+          INSTANT_ADMIN_TOKEN: ${{ secrets.INSTANT_ADMIN_TOKEN }}
+          INSTANT_CLI_AUTH_TOKEN: ${{ secrets.INSTANT_ADMIN_TOKEN }}
+        run: npx --yes instant-cli@latest push schema --app 8f3bebac-da7b-44ab-9cf5-46a6cc11557e --token "${INSTANT_ADMIN_TOKEN}" --yes
+
       - name: Push InstantDB permissions
         env:
           INSTANT_ADMIN_TOKEN: ${{ secrets.INSTANT_ADMIN_TOKEN }}

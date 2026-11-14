@@ -7,6 +7,7 @@ import {
   type EncryptedSymmetric,
 } from "../../protocol/src/crypto.ts";
 import { retrieveTransferPayload } from "../../backend/src/api.ts";
+import { registerCredentials } from "../../protocol/src/instantAuth.ts";
 
 export const base64UrlToBase64 = (str: string): string => {
   let s = str.replace(/-/g, "+").replace(/_/g, "/");
@@ -46,7 +47,7 @@ export const importIdentity = async (
           parsed.aesKey,
           result.encryptedPayload as EncryptedSymmetric<Credentials>,
         );
-        return creds;
+        return registerCredentials(creds);
       }
     } catch (e) {
       console.error("Failed to import from URL", e);
@@ -59,7 +60,7 @@ export const importIdentity = async (
       creds && typeof creds === "object" && creds.privateSignKey &&
       creds.privateEncryptKey
     ) {
-      return creds as Credentials;
+      return registerCredentials(creds);
     }
   } catch (e) {
     console.error("Failed to parse credentials JSON", e);
@@ -70,22 +71,27 @@ export const importIdentity = async (
 
 export const loadCredentials = (key: string): Credentials | null => {
   const stored = localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : null;
+  return stored ? registerCredentials(JSON.parse(stored)) : null;
 };
 
-export const saveCredentials = (key: string, credentials: Credentials): void =>
+export const saveCredentials = (
+  key: string,
+  credentials: Credentials,
+): void => {
+  registerCredentials(credentials);
   localStorage.setItem(key, JSON.stringify(credentials));
+};
 
 export const loadOrCreateCredentials = async (
   name: string | null,
   key: string,
 ): Promise<Credentials | null> => {
   const existing = loadCredentials(key);
-  if (existing) return existing;
+  if (existing) return registerCredentials(existing);
   if (!name) return null;
   const credentials = await createIdentity(name);
   saveCredentials(key, credentials);
-  return credentials;
+  return registerCredentials(credentials);
 };
 
 export const getCredentialsToCopy = (

@@ -10,9 +10,19 @@ import {
   sendMessageWithKey,
 } from "../../protocol/src/clientApi.ts";
 import { decryptAsymmetric } from "../../protocol/src/crypto.ts";
+import {
+  lookupConversationKeyCredentials,
+  registerConversationKeyCredentials,
+  registerCredentials,
+} from "../../protocol/src/instantAuth.ts";
 import type schema from "../../instant.schema.ts";
 import { reportError } from "./error-reporter.ts";
-import { accessAdminDb, accessDb } from "./instant-client.ts";
+import {
+  accessAdminDb,
+  accessDb,
+  subscribeAuthedInfiniteQuery,
+  subscribeAuthedQuery,
+} from "./instant-client.ts";
 
 export const compactPublicKey = (k: string): string =>
   k.length <= 14 ? k : `${k.slice(0, 6)}…${k.slice(-4)}`;
@@ -26,10 +36,14 @@ export type Conversation = {
 };
 
 export const subscribeConversations = (
-  publicSignKey: string,
+  credentialsOrKey: Credentials | string,
   onChange: (conversations: Conversation[] | null) => void,
-): () => void =>
-  accessDb().subscribeQuery(
+): () => void => {
+  const publicSignKey = typeof credentialsOrKey === "string"
+    ? credentialsOrKey
+    : credentialsOrKey.publicSignKey;
+  return subscribeAuthedQuery(
+    credentialsOrKey,
     {
       conversations: {
         participants: {},
@@ -49,6 +63,7 @@ export const subscribeConversations = (
       );
     },
   );
+};
 
 // subscribeConversationKey re-fires on every tick and can emit a transient null
 // (a decrypt blip, or a momentarily-empty key row). Nulling an already-resolved
@@ -74,10 +89,13 @@ export const decryptKeySafely = (
 
 export const subscribeConversationKey = (
   conversationId: string,
-  { publicSignKey, privateEncryptKey }: Credentials,
+  credentials: Credentials,
   onChange: (key: string | null) => void,
-): () => void =>
-  accessDb().subscribeQuery(
+): () => void => {
+  registerCredentials(credentials);
+  const { publicSignKey, privateEncryptKey } = credentials;
+  return subscribeAuthedQuery(
+    credentials,
     {
       identities: {
         $: { where: { publicSignKey } },
@@ -91,12 +109,19 @@ export const subscribeConversationKey = (
       const encryptedKey = data?.identities?.[0]?.keys?.[0]?.key;
       if (!encryptedKey) return onChange(null);
       decryptKeySafely(
-        () => decryptAsymmetric<string>(privateEncryptKey, encryptedKey),
+        () =>
+          decryptAsymmetric<string>(privateEncryptKey, encryptedKey).then(
+            (decryptedKey) => {
+              registerConversationKeyCredentials(decryptedKey, credentials);
+              return decryptedKey;
+            },
+          ),
         onChange,
         reportError,
       );
     },
   );
+};
 
 export type DecryptedMessagesResult = {
   messages: DecipheredMessage[] | null;
@@ -180,9 +205,16 @@ export const makeSubscribeDecryptedMessages =
 
 export const subscribeDecryptedMessages: ReturnType<
   typeof makeSubscribeDecryptedMessages
-> = makeSubscribeDecryptedMessages(
-  (query, cb) => accessDb().subscribeInfiniteQuery(query, cb),
-);
+> = (conversationId, conversationKey, onChange) =>
+  makeSubscribeDecryptedMessages((query, cb) =>
+    subscribeAuthedInfiniteQuery(
+      conversationKey
+        ? lookupConversationKeyCredentials(conversationKey)
+        : undefined,
+      query,
+      cb,
+    )
+  )(conversationId, conversationKey, onChange);
 
 export const subscribeIdentityDetailsMap = (
   publicKeys: string[],
@@ -328,15 +360,15 @@ export const subscribeTypingStates = (
   selfPublicSignKey: string,
   onChange: (typingNames: string[]) => void,
 ) => {
-  const db = accessDb();
-  let latestStates: TypingState[] = [];
+  const state: { latestStates: TypingState[] } = { latestStates: [] };
   const suppressed = new Map<string, number>();
   const emit = () =>
     onChange(
-      typingNamesFromStates(latestStates, selfPublicSignKey, suppressed),
+      typingNamesFromStates(state.latestStates, selfPublicSignKey, suppressed),
     );
   const interval = setInterval(emit, 5000);
-  const unsubQuery = db.subscribeQuery(
+  const unsubQuery = subscribeAuthedQuery(
+    selfPublicSignKey,
     {
       typingStates: {
         owner: {},
@@ -344,7 +376,7 @@ export const subscribeTypingStates = (
       },
     },
     ({ data }) => {
-      latestStates = data?.typingStates ?? [];
+      state.latestStates = data?.typingStates ?? [];
       emit();
     },
   );
@@ -489,13 +521,13 @@ const activityMessageQuery = (conversationId: string) => ({
 const subscribeConversationsActivity = (
   conversationIds: string[],
   onChange: (activity: Record<string, ConversationActivity>) => void,
+  credentials?: Credentials,
 ): () => void => {
-  const activity: Record<string, ConversationActivity> = {};
-  for (const id of conversationIds) {
-    activity[id] = { hasMessages: false, lastMessageAt: 0 };
-  }
+  const activity: Record<string, ConversationActivity> = Object.fromEntries(
+    conversationIds.map((id) => [id, { hasMessages: false, lastMessageAt: 0 }]),
+  );
   const unsubs = conversationIds.map((id) =>
-    accessDb().subscribeQuery(activityMessageQuery(id), ({ data }) => {
+    subscribeAuthedQuery(credentials, activityMessageQuery(id), ({ data }) => {
       const latest = data?.messages?.[0];
       activity[id] = latest
         ? { hasMessages: true, lastMessageAt: latest.timestamp }
@@ -542,8 +574,9 @@ export const getOrCreateConversation = (
       },
     );
   };
+  registerCredentials(credentials);
   const unsub = subscribeConversations(
-    credentials.publicSignKey,
+    credentials,
     (conversations) => {
       if (!conversations) return;
       const matches = conversations.filter(
@@ -569,6 +602,7 @@ export const getOrCreateConversation = (
           const best = pickBestConversation(matches, (id) => activity[id]);
           if (best) onConversation(best.id);
         },
+        credentials,
       );
     },
   );

@@ -60,6 +60,12 @@ export {
   shortIdFromPublicSignKey,
   shortIdLength,
 } from "./protocol/src/shortId.ts";
+export {
+  defaultWebhookServerPublicKey,
+  resetSeenWebhookMessages,
+  signWebhookOrigin,
+  verifyWebhookOrigin,
+} from "./protocol/src/webhookAuth.ts";
 export { setDarkModeOverride } from "./lit/core/dark-mode.ts";
 export {
   type Conversation,
@@ -114,18 +120,27 @@ export const createConversation: (
 ) => Promise<{ conversationId: string } | { error: string }> =
   createConversationNoDb(accessAdminDb);
 
-export const getConversations = async (publicSignKeys: string[]): Promise<{
+export const getConversations = async (
+  publicSignKeys: string[],
+  credentials?: Credentials,
+): Promise<{
   id: string;
   title: string;
   participants: {
     publicSignKey: string;
   }[];
 }[]> => {
-  const { conversations } = await backendGetConversations(publicSignKeys);
+  const { conversations } = await backendGetConversations(
+    publicSignKeys,
+    credentials,
+  );
   return conversations;
 };
 
-export const getConversationInfo = (conversationId: string): Promise<
+export const getConversationInfo = (
+  conversationId: string,
+  credentials?: Credentials,
+): Promise<
   | {
     conversationInfo: {
       participants: {
@@ -139,7 +154,7 @@ export const getConversationInfo = (conversationId: string): Promise<
     };
   }
   | { error: "not-found" }
-> => backendGetConversationInfo(conversationId);
+> => backendGetConversationInfo(conversationId, credentials);
 
 export const getMessages = ({
   conversationId,
@@ -179,7 +194,7 @@ export const getDecryptedMessages = async ({
       before,
       credentials,
     }),
-    backendGetConversationInfo(conversationId),
+    backendGetConversationInfo(conversationId, credentials),
   ]);
   if ("error" in result) return result;
   const allowedParticipantKeys =

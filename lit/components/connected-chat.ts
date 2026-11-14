@@ -5,6 +5,7 @@ import type {
   Credentials,
   DecipheredCanvasEventMessage,
   DecipheredMessage,
+  InternalMessage,
 } from "../../protocol/src/clientApi.ts";
 import {
   createConversation,
@@ -14,11 +15,13 @@ import {
   parseChatWithUrl,
   renameConversation,
   resolveHandle,
+  sendMessage,
   sendMessageWithKey,
   uploadAttachment,
 } from "../../protocol/src/clientApi.ts";
 import { importIdentity, saveCredentials } from "../core/credentials.ts";
-import { accessAdminDb, accessDb } from "../core/instant-client.ts";
+import { registerCredentials } from "../../protocol/src/instantAuth.ts";
+import { accessAdminDb, subscribeAuthedQuery } from "../core/instant-client.ts";
 import {
   compactPublicKey,
   type Conversation,
@@ -886,6 +889,7 @@ export class ConnectedChat extends LitElement {
 
   private _setupSubscriptions() {
     if (!this.credentials) return;
+    registerCredentials(this.credentials);
     if (this.enableChatSwitching) {
       this._setupChatListSubscriptions();
     }
@@ -896,7 +900,7 @@ export class ConnectedChat extends LitElement {
     if (!this.credentials) return;
     this._conversationsUnsub?.();
     this._conversationsUnsub = subscribeConversations(
-      this.credentials.publicSignKey,
+      this.credentials,
       (convs) => {
         this._conversations = convs;
         convs?.forEach((conv) => {
@@ -946,6 +950,7 @@ export class ConnectedChat extends LitElement {
   private _setupConversationSubscriptions() {
     const targetId = this._activeConversationId || this.conversationId;
     if (!this.credentials || !targetId) return;
+    registerCredentials(this.credentials);
 
     const { publicSignKey } = this.credentials;
 
@@ -963,7 +968,8 @@ export class ConnectedChat extends LitElement {
     });
 
     this._unsubs.push(
-      accessDb().subscribeQuery(
+      subscribeAuthedQuery(
+        this.credentials,
         {
           conversations: {
             participants: {},
@@ -984,7 +990,8 @@ export class ConnectedChat extends LitElement {
     );
 
     this._unsubs.push(
-      accessDb().subscribeQuery(
+      subscribeAuthedQuery(
+        this.credentials,
         {
           identities: {
             $: { where: { publicSignKey } },
@@ -1036,7 +1043,8 @@ export class ConnectedChat extends LitElement {
     );
 
     this._unsubs.push(
-      accessDb().subscribeQuery(
+      subscribeAuthedQuery(
+        this.credentials,
         {
           uiElements: {
             $: { where: { conversation: targetId } },
@@ -1128,16 +1136,24 @@ export class ConnectedChat extends LitElement {
 
   private _handleSend = (text: string, replyTo?: string) => {
     const targetId = this._activeConversationId || this.conversationId;
-    if (!this._conversationKey || !this.credentials || !targetId) return;
+    if (!this.credentials || !targetId) return;
     this.dispatchEvent(
       new CustomEvent("message-sent", { bubbles: true, composed: true }),
     );
-    sendMessageWithKey({
-      conversationKey: this._conversationKey,
-      credentials: this.credentials,
-      message: { type: "text", text, replyTo },
-      conversation: targetId,
-    }).catch((err) => console.error("Failed to send message", err));
+    const message: InternalMessage = { type: "text", text, replyTo };
+    const sendPromise = this._conversationKey
+      ? sendMessageWithKey({
+        conversationKey: this._conversationKey,
+        credentials: this.credentials,
+        message,
+        conversation: targetId,
+      })
+      : sendMessage({
+        credentials: this.credentials,
+        conversation: targetId,
+        message,
+      });
+    sendPromise.catch((err) => console.error("Failed to send message", err));
     this._typingNotifier?.onBlurOrSend();
   };
 

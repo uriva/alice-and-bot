@@ -4,11 +4,12 @@ import type {
   DecipheredMessage,
 } from "../protocol/src/clientApi.ts";
 import { sendCanvasEvent } from "../protocol/src/clientApi.ts";
+import { registerCredentials } from "../protocol/src/instantAuth.ts";
 import {
   subscribeConversationKey,
   subscribeDecryptedMessages,
 } from "../lit/core/subscriptions.ts";
-import { accessDb } from "../lit/core/instant-client.ts";
+import { subscribeAuthedQuery } from "../lit/core/instant-client.ts";
 import {
   actOnCanvas,
   type CanvasEvent,
@@ -493,6 +494,7 @@ export class CanvasView extends LitElement {
     this._unsubscribe();
     const { credentials, conversationId } = this;
     if (!credentials || !conversationId) return;
+    registerCredentials(credentials);
     this._unsubKey = subscribeConversationKey(
       conversationId,
       credentials,
@@ -507,15 +509,18 @@ export class CanvasView extends LitElement {
   }
 
   private _watchCanvas(key: string) {
-    let lastVersion: number | undefined;
-    const stop = accessDb().subscribeQuery(
+    const state: { lastVersion: number | undefined } = {
+      lastVersion: undefined,
+    };
+    const stop = subscribeAuthedQuery(
+      this.credentials,
       canvasQuery(this.conversationId),
       ({ data, error }) => {
         if (error) return console.error("canvas subscription failed", error);
         const rawCanvas = data?.conversations[0]?.canvas;
         const row = Array.isArray(rawCanvas) ? rawCanvas[0] : rawCanvas;
-        if (row?.version === lastVersion) return;
-        lastVersion = row?.version;
+        if (row?.version === state.lastVersion) return;
+        state.lastVersion = row?.version;
         canvasFromRow(row, key).then(
           (canvas) => this._setCanvas(canvas),
           (failure) =>
@@ -530,7 +535,7 @@ export class CanvasView extends LitElement {
     );
     this._watchersOff.push(() => {
       stop();
-      lastVersion = undefined;
+      state.lastVersion = undefined;
     });
   }
 

@@ -134,9 +134,30 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
       }
       return route.fulfill(json({ error: "not-found" }));
     }
+    if (endpoint === "mintInstantToken") {
+      return route.fulfill(json({
+        token: "mock-instant-refresh-token",
+        instantEmail: "mock@identity.aliceandbot.internal",
+      }));
+    }
+    if (endpoint === "getCanvasRow") {
+      return route.fulfill(json({ row: null }));
+    }
 
     return route.fulfill(json({ error: "unknown-endpoint" }, 404));
   });
+
+  await page.route(
+    "**/runtime/auth/verify_refresh_token",
+    (route: Route) =>
+      route.fulfill(json({
+        user: {
+          id: randomUUID(),
+          email: "mock@identity.aliceandbot.internal",
+          refresh_token: "mock-instant-refresh-token",
+        },
+      })),
+  );
 
   return { sentMessages };
 };

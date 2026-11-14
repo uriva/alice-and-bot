@@ -3,6 +3,7 @@ import { id } from "@instantdb/admin";
 import { apiHandler } from "typed-api";
 import type { PushSubscriptionJSON } from "../../instant.schema.ts";
 import { isValidAlias, normalizeAlias } from "../../protocol/src/alias.ts";
+import { instantEmailFromPublicSignKey } from "../../protocol/src/instantAuth.ts";
 import {
   shortIdFromPublicSignKey,
   shortIdLength,
@@ -36,6 +37,29 @@ import {
   receivedSatoshis,
 } from "@uri/crypto-utils";
 
+export const enforceStrictMetadataAuth =
+  Deno.env.get("ENFORCE_STRICT_METADATA_AUTH") === "1";
+
+const isStrictMetadataAuthActive = (): boolean =>
+  enforceStrictMetadataAuth ||
+  Deno.env.get("ENFORCE_STRICT_METADATA_AUTH") === "1";
+
+const resolveAvailableAlias = async (
+  alias: string | undefined,
+): Promise<string | undefined> => {
+  if (!alias) return undefined;
+  const normalized = normalizeAlias(alias);
+  if (!isValidAlias(normalized)) return undefined;
+  const { identities: taken } = await query({
+    identities: { $: { where: { alias: normalized } } },
+  });
+  return taken.length === 0 ? normalized : undefined;
+};
+
+const isMissingSchemaAttrError = (err: unknown): boolean =>
+  err instanceof Error &&
+  err.message.includes("Attributes are missing in your schema");
+
 const createIdentityForAccount = async (
   { publicSignKey, publicEncryptKey, account }: {
     publicSignKey: string;
@@ -43,15 +67,26 @@ const createIdentityForAccount = async (
     account: string;
   },
 ): Promise<{ success: true }> => {
+  const identityId = id();
+  const shortId = await shortIdFromPublicSignKey(publicSignKey);
+  const instantEmail = await instantEmailFromPublicSignKey(publicSignKey);
   await transact(
-    tx.identities[id()]
+    tx.identities[identityId]
       .update({
         publicSignKey,
         publicEncryptKey,
-        shortId: await shortIdFromPublicSignKey(publicSignKey),
+        shortId,
+        instantEmail,
       })
       .link({ account }),
-  );
+  ).catch((err) => {
+    if (!isMissingSchemaAttrError(err)) throw err;
+    return transact(
+      tx.identities[identityId]
+        .update({ publicSignKey, publicEncryptKey, shortId })
+        .link({ account }),
+    );
+  });
   return { success: true };
 };
 
@@ -107,7 +142,19 @@ const registerBackgroundTask = (promise: Promise<unknown>) => {
 export const endpoints: BackendApiImpl = {
   authenticate: (token: string) => auth.verifyToken(token),
   handlers: {
-    conversationKey: async ({ conversationId, publicSignKey }) => {
+    conversationKey: async ({ conversationId, publicSignKey, auth }) => {
+      if (auth !== undefined) {
+        const authOk = await verifyAuthToken({
+          action: "conversationKey",
+          payload: { conversationId },
+          publicSignKey,
+          nonce: auth.nonce,
+          authToken: auth.authToken,
+        });
+        if (!authOk) return { error: "no-such-key" };
+      } else if (isStrictMetadataAuthActive()) {
+        return { error: "no-such-key" };
+      }
       const { identities } = await query({
         identities: {
           $: { where: { publicSignKey } },
@@ -242,26 +289,22 @@ export const endpoints: BackendApiImpl = {
     createAnonymousIdentity: async (
       { name, publicSignKey, publicEncryptKey, alias },
     ) => {
-      let finalAlias: string | undefined = undefined;
-      if (alias) {
-        const normalized = normalizeAlias(alias);
-        if (isValidAlias(normalized)) {
-          // ensure not taken
-          const { identities: taken } = await query({
-            identities: { $: { where: { alias: normalized } } },
-          });
-          if (taken.length === 0) finalAlias = normalized;
-        }
-      }
+      const finalAlias = await resolveAvailableAlias(alias);
+      const identityId = id();
+      const baseFields = {
+        name,
+        publicSignKey,
+        publicEncryptKey,
+        shortId: await shortIdFromPublicSignKey(publicSignKey),
+        ...(finalAlias ? { alias: finalAlias } : {}),
+      };
+      const instantEmail = await instantEmailFromPublicSignKey(publicSignKey);
       await transact(
-        tx.identities[id()].update({
-          name,
-          publicSignKey,
-          publicEncryptKey,
-          shortId: await shortIdFromPublicSignKey(publicSignKey),
-          ...(finalAlias ? { alias: finalAlias } : {}),
-        }),
-      );
+        tx.identities[identityId].update({ ...baseFields, instantEmail }),
+      ).catch((err) => {
+        if (!isMissingSchemaAttrError(err)) throw err;
+        return transact(tx.identities[identityId].update(baseFields));
+      });
       return {};
     },
     createIdentity: async ({ email }, { publicSignKey, publicEncryptKey }) => {
@@ -320,7 +363,21 @@ export const endpoints: BackendApiImpl = {
       const { name, avatar, alias, priceTag } = identities[0];
       return { profile: { name, avatar, alias, priceTag } };
     },
-    getConversations: async ({ publicSignKeys }) => {
+    getConversations: async ({ publicSignKeys, auth }) => {
+      if (auth !== undefined) {
+        const authOk = await verifyAuthToken({
+          action: "getConversations",
+          payload: { publicSignKeys },
+          publicSignKey: auth.publicSignKey,
+          nonce: auth.nonce,
+          authToken: auth.authToken,
+        });
+        if (!authOk || !publicSignKeys.includes(auth.publicSignKey)) {
+          return { conversations: [] };
+        }
+      } else if (isStrictMetadataAuthActive()) {
+        return { conversations: [] };
+      }
       if (publicSignKeys.length === 0) return { conversations: [] };
       const { identities } = await query({
         identities: {
@@ -346,7 +403,19 @@ export const endpoints: BackendApiImpl = {
         ),
       };
     },
-    getConversationInfo: async ({ conversationId }) => {
+    getConversationInfo: async ({ conversationId, auth }) => {
+      if (auth !== undefined) {
+        const authOk = await verifyAuthToken({
+          action: "getConversationInfo",
+          payload: { conversationId },
+          publicSignKey: auth.publicSignKey,
+          nonce: auth.nonce,
+          authToken: auth.authToken,
+        });
+        if (!authOk) return { error: "not-found" };
+      } else if (isStrictMetadataAuthActive()) {
+        return { error: "not-found" };
+      }
       const { conversations } = await query({
         conversations: {
           participants: {},
@@ -355,6 +424,15 @@ export const endpoints: BackendApiImpl = {
         },
       });
       if (!conversations.length) return { error: "not-found" };
+      if (
+        auth !== undefined &&
+        !conversations[0].participants.some(
+          (p: { publicSignKey: string }) =>
+            p.publicSignKey === auth.publicSignKey,
+        )
+      ) {
+        return { error: "not-found" };
+      }
       const limited = conversations[0].participants.slice(0, 10);
       const { identities } = await query({
         identities: {
@@ -1088,6 +1166,71 @@ export const endpoints: BackendApiImpl = {
         );
         return { ok: true as const, version: nextVersion };
       });
+    },
+    mintInstantToken: async ({ payload, publicSignKey, nonce, authToken }) => {
+      const authOk = await verifyAuthToken({
+        action: "mintInstantToken",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) return { error: "invalid-auth" };
+      const { identities } = await query({
+        identities: { $: { where: { publicSignKey } } },
+      });
+      if (identities.length === 0) return { error: "not-found" };
+      const identity = identities[0];
+      const instantEmail = await instantEmailFromPublicSignKey(publicSignKey);
+      if (identity.instantEmail !== instantEmail) {
+        await transact(tx.identities[identity.id].update({ instantEmail }))
+          .catch((err) => {
+            if (!isMissingSchemaAttrError(err)) throw err;
+          });
+      }
+      const token = await auth.createToken(instantEmail);
+      return { token, instantEmail };
+    },
+    getCanvasRow: async ({ conversationId, auth }) => {
+      if (auth !== undefined) {
+        const authOk = await verifyAuthToken({
+          action: "getCanvasRow",
+          payload: { conversationId },
+          publicSignKey: auth.publicSignKey,
+          nonce: auth.nonce,
+          authToken: auth.authToken,
+        });
+        if (!authOk) return { row: null };
+      } else if (isStrictMetadataAuthActive()) {
+        return { row: null };
+      }
+      const { conversations } = await query({
+        conversations: {
+          participants: {},
+          canvas: {},
+          $: { where: { id: conversationId } },
+        },
+      });
+      if (conversations.length === 0) return { row: null };
+      if (
+        auth !== undefined &&
+        !conversations[0].participants.some(
+          (p: { publicSignKey: string }) =>
+            p.publicSignKey === auth.publicSignKey,
+        )
+      ) {
+        return { row: null };
+      }
+      const rawCanvas = conversations[0].canvas;
+      const canvas = Array.isArray(rawCanvas) ? rawCanvas[0] : rawCanvas;
+      if (!canvas || typeof canvas.encrypted !== "string") return { row: null };
+      return {
+        row: {
+          id: canvas.id,
+          encrypted: canvas.encrypted,
+          version: canvas.version,
+        },
+      };
     },
   },
 };

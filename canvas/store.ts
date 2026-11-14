@@ -1,11 +1,14 @@
 import type { Credentials, Json } from "../protocol/src/clientApi.ts";
-import { saveCanvasSigned } from "../backend/src/api.ts";
+import { getCanvasRow, saveCanvasSigned } from "../backend/src/api.ts";
 import {
   decryptSymmetric,
   type EncryptedSymmetric,
   encryptSymmetric,
 } from "../protocol/src/crypto.ts";
-import { accessAdminDb } from "../lit/core/instant-client.ts";
+import {
+  lookupConversationKeyCredentials,
+  registerCredentials,
+} from "../protocol/src/instantAuth.ts";
 import { applyEdit, type CanvasEdit } from "./patch.ts";
 
 export const emptyCanvas = `view = () => {
@@ -56,22 +59,14 @@ export type CanvasWrite =
 
 const findRow = async (
   conversationId: string,
+  credentials?: Credentials,
 ): Promise<CanvasRow | undefined> => {
-  // The conversation must be filtered: without it this scans every conversation
-  // in the table, which times out against a live database.
-  const { conversations } = await accessAdminDb().query({
-    conversations: {
-      $: { where: { id: conversationId } },
-      canvas: {},
-    },
-  });
-  const rawCanvas = conversations[0]?.canvas;
-  const canvas = Array.isArray(rawCanvas) ? rawCanvas[0] : rawCanvas;
-  if (!canvas || !isEncrypted(canvas.encrypted)) return undefined;
+  const { row } = await getCanvasRow(conversationId, credentials);
+  if (!row || !isEncrypted(row.encrypted)) return undefined;
   return {
-    id: canvas.id,
-    encrypted: canvas.encrypted,
-    version: canvas.version,
+    id: row.id,
+    encrypted: row.encrypted,
+    version: row.version,
   };
 };
 
@@ -86,10 +81,13 @@ const decryptRow = async (
 export const readCanvas = async ({
   conversationId,
   conversationKey,
+  credentials,
 }: {
   conversationId: string;
   conversationKey: string | undefined;
+  credentials?: Credentials;
 }): Promise<CanvasRead> => {
+  if (credentials) registerCredentials(credentials);
   if (!conversationKey) {
     return {
       ok: false,
@@ -97,17 +95,18 @@ export const readCanvas = async ({
       message: "no access to this conversation's key",
     };
   }
-  const row = await findRow(conversationId);
+  const creds = credentials ??
+    lookupConversationKeyCredentials(conversationKey);
+  const row = await findRow(conversationId, creds);
   if (!row) return { ok: true, canvas: { text: emptyCanvas, version: 0 } };
-  try {
-    return { ok: true, canvas: await decryptRow(conversationKey, row) };
-  } catch (error) {
-    return {
+  return decryptRow(conversationKey, row).then(
+    (canvas): CanvasRead => ({ ok: true, canvas }),
+    (error): CanvasRead => ({
       ok: false,
       reason: "unreadable",
       message: error instanceof Error ? error.message : String(error),
-    };
-  }
+    }),
+  );
 };
 
 // The only way a canvas comes into existence. Called by the auto-landing page
@@ -131,7 +130,7 @@ export const createCanvas = async ({
       message: "no access to this conversation's key",
     };
   }
-  if (await findRow(conversationId)) {
+  if (await findRow(conversationId, credentials)) {
     return {
       ok: false,
       reason: "conflict",
@@ -182,7 +181,7 @@ export const writeCanvas = async ({
       message: "no access to this conversation's key",
     };
   }
-  const row = await findRow(conversationId);
+  const row = await findRow(conversationId, credentials);
   const current = row
     ? await decryptRow(conversationKey, row).catch(() => undefined)
     : { text: emptyCanvas, version: 0 };
