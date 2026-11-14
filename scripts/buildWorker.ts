@@ -58,6 +58,23 @@ code = code.replace(
   "__CF_DurableObject",
 );
 
+const bannedEdgePatterns = [
+  {
+    pattern:
+      /\b(?:fetch|new\s+Request)\s*\([^);]{0,400}?\bredirect\s*:\s*["']error["']/,
+    label:
+      'fetch/Request with redirect: "error" (unsupported on Cloudflare Workers)',
+  },
+];
+const incompatibleEdgeCall = bannedEdgePatterns.find(({ pattern }) =>
+  pattern.test(code)
+);
+if (incompatibleEdgeCall) {
+  throw new Error(
+    `[buildWorker] Cloudflare Workers runtime incompatibility: ${incompatibleEdgeCall.label}`,
+  );
+}
+
 const polyfillHeader =
   `import { DurableObject as __CF_DurableObject, env as __cf_env } from "cloudflare:workers";
 import { createRequire as __cf_createRequire } from "node:module";

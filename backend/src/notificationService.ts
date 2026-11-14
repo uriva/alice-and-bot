@@ -8,7 +8,7 @@ import type {
 } from "../../protocol/src/clientApi.ts";
 import { signWebhookOrigin } from "../../protocol/src/webhookAuth.ts";
 import { query, transact, tx } from "./db.ts";
-import { isSafeWebhookUrl } from "./ssrfGuard.ts";
+import { fetchSafeWebhook, isSafeWebhookUrl } from "./ssrfGuard.ts";
 
 const relayWebhookPattern = /\/relay\/webhook\/([^/]+)$/;
 
@@ -110,9 +110,8 @@ export const callWebhooks = async (
       const freshTrace = `00-${
         crypto.randomUUID().replace(/-/g, "")
       }-0000000000000001-01`;
-      return fetch(webhook, {
+      return fetchSafeWebhook(webhook, {
         method: "POST",
-        redirect: "error",
         headers: {
           "Content-Type": "application/json",
           "traceparent": freshTrace,
@@ -175,9 +174,8 @@ async (sub: {
     pushUrgencyOptions,
   );
   if (!isSafeWebhookUrl(details.endpoint)) return;
-  const res = await fetch(details.endpoint, {
+  const res = await fetchSafeWebhook(details.endpoint, {
     method: details.method,
-    redirect: "error",
     headers: toFetchHeaders(details.headers),
     body: details.body ? new Uint8Array(details.body) : undefined,
   }).catch((err) => {

@@ -159,3 +159,48 @@ export const isSafeWebhookUrl = (
     return false;
   }
 };
+
+const maxSafeWebhookRedirects = 5;
+const methodPreservingRedirectStatuses = [307, 308];
+
+const resolveRedirectUrl = (
+  baseUrl: string,
+  location: string | null,
+): string | null => {
+  if (!location) return null;
+  try {
+    return new URL(location, baseUrl).toString();
+  } catch {
+    return null;
+  }
+};
+
+const fetchSafeWebhookHop = async (
+  url: string,
+  init: RequestInit,
+  hop: number,
+): Promise<Response> => {
+  if (!isSafeWebhookUrl(url)) {
+    throw new Error(`Blocked unsafe webhook URL: ${url}`);
+  }
+  const res = await fetch(url, { ...init, redirect: "manual" });
+  if (res.status < 300 || res.status >= 400) return res;
+  const nextUrl = resolveRedirectUrl(url, res.headers.get("location"));
+  if (!nextUrl || !methodPreservingRedirectStatuses.includes(res.status)) {
+    await res.body?.cancel();
+    return res;
+  }
+  await res.body?.cancel();
+  if (!isSafeWebhookUrl(nextUrl)) {
+    throw new Error(`Blocked unsafe webhook redirect URL: ${nextUrl}`);
+  }
+  if (hop >= maxSafeWebhookRedirects) {
+    throw new Error(`Too many webhook redirects: ${url}`);
+  }
+  return fetchSafeWebhookHop(nextUrl, init, hop + 1);
+};
+
+export const fetchSafeWebhook = (
+  url: string,
+  init: RequestInit,
+): Promise<Response> => fetchSafeWebhookHop(url, init, 0);
