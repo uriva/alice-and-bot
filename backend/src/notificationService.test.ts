@@ -16,25 +16,132 @@ import {
   sign,
 } from "../../protocol/src/crypto.ts";
 import { resetSeenWebhookMessages } from "../../protocol/src/webhookAuth.ts";
+import { canonicalStringForAuthSignV2 } from "./api.ts";
+import { issueNonceHelper } from "./auth.ts";
 import { query, transact, tx } from "./db.ts";
 import { endpoints, setRequestWaitUntil } from "./main.ts";
 
 const toBase64Url = (buf: ArrayBuffer) =>
   base64ToBase64Url(btoa(String.fromCharCode(...new Uint8Array(buf))));
 
-const makeRealPushSubscription = async (endpoint: string) => {
+const makeRealPushSubscriptionWithKeys = async (endpoint: string) => {
   const keyPair = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
     true,
     ["deriveBits"],
   );
-  const p256dh = toBase64Url(
+  const rawPublic = new Uint8Array(
     await crypto.subtle.exportKey("raw", keyPair.publicKey),
   );
   const authBytes = crypto.getRandomValues(new Uint8Array(16));
+  const p256dh = toBase64Url(rawPublic.buffer);
   const auth = toBase64Url(authBytes.buffer);
-  return { endpoint, expirationTime: null, keys: { p256dh, auth } };
+  return {
+    subscription: { endpoint, expirationTime: null, keys: { p256dh, auth } },
+    privateKey: keyPair.privateKey,
+    rawPublic,
+    authBytes,
+  };
 };
+
+const concatBytes = (...arrays: Uint8Array[]) => {
+  const out = new Uint8Array(arrays.reduce((sum, a) => sum + a.length, 0));
+  arrays.reduce((offset, a) => (out.set(a, offset), offset + a.length), 0);
+  return out;
+};
+
+const hkdfSha256 = async (
+  salt: Uint8Array,
+  ikm: Uint8Array,
+  info: Uint8Array,
+  length: number,
+) => {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new Uint8Array(ikm),
+    "HKDF",
+    false,
+    ["deriveBits"],
+  );
+  return new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: new Uint8Array(salt),
+        info: new Uint8Array(info),
+      },
+      key,
+      length * 8,
+    ),
+  );
+};
+
+const decryptWebPushPayload = async (
+  body: Uint8Array,
+  privateKey: CryptoKey,
+  uaPublic: Uint8Array,
+  authSecret: Uint8Array,
+): Promise<Record<string, unknown>> => {
+  const salt = body.slice(0, 16);
+  const idLen = body[20];
+  const asPublicBytes = body.slice(21, 21 + idLen);
+  const ciphertext = body.slice(21 + idLen);
+  const asPublic = await crypto.subtle.importKey(
+    "raw",
+    asPublicBytes,
+    { name: "ECDH", namedCurve: "P-256" },
+    false,
+    [],
+  );
+  const sharedSecret = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: "ECDH", public: asPublic },
+      privateKey,
+      256,
+    ),
+  );
+  const encoder = new TextEncoder();
+  const ikm = await hkdfSha256(
+    authSecret,
+    sharedSecret,
+    concatBytes(encoder.encode("WebPush: info\0"), uaPublic, asPublicBytes),
+    32,
+  );
+  const cek = await hkdfSha256(
+    salt,
+    ikm,
+    encoder.encode("Content-Encoding: aes128gcm\0"),
+    16,
+  );
+  const nonce = await hkdfSha256(
+    salt,
+    ikm,
+    encoder.encode("Content-Encoding: nonce\0"),
+    12,
+  );
+  const aesKey = await crypto.subtle.importKey(
+    "raw",
+    cek,
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"],
+  );
+  const plain = new Uint8Array(
+    await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: nonce },
+      aesKey,
+      ciphertext,
+    ),
+  );
+  const delimiterIndex = plain.lastIndexOf(2);
+  return JSON.parse(
+    new TextDecoder().decode(plain.subarray(0, delimiterIndex)),
+  );
+};
+
+const makeRealPushSubscription = async (endpoint: string) =>
+  (await makeRealPushSubscriptionWithKeys(endpoint)).subscription;
 
 type ReceivedPush = {
   path: string;
@@ -364,5 +471,310 @@ Deno.test(
       decrypted.message.type === "text" ? decrypted.message.text : "",
       "hello from edge chat",
     );
+  },
+);
+
+Deno.test(
+  "Web Push includes E2EE preview keys and sender avatar under 3.5KB, omits oversized ciphertext, and auto-dismisses when recipient replies",
+  async () => {
+    const vapid = webpush.generateVAPIDKeys();
+    Deno.env.set("VAPID_PUBLIC_KEY", vapid.publicKey);
+    Deno.env.set("VAPID_PRIVATE_KEY", vapid.privateKey);
+    Deno.env.set("ALLOW_LOCAL_WEBHOOKS", "1");
+
+    const receivedBodies: Uint8Array[] = [];
+    const server = Deno.serve({ port: 0, onListen: () => {} }, async (req) => {
+      receivedBodies.push(new Uint8Array(await req.arrayBuffer()));
+      return new Response("", { status: 201 });
+    });
+
+    const port = server.addr.port;
+    const [aliceSign, aliceEnc, botSign, botEnc] = await Promise.all([
+      generateKeyPair("sign"),
+      generateKeyPair("encrypt"),
+      generateKeyPair("sign"),
+      generateKeyPair("encrypt"),
+    ]);
+    const aliceId = id();
+    const botId = id();
+    const convoId = id();
+    const aliceKeyId = id();
+    const aliceSubId = id();
+    const symKey = await generateSymmetricKey();
+    const [aliceEncKey, alicePush] = await Promise.all([
+      encryptAsymmetric(aliceEnc.publicKey, symKey),
+      makeRealPushSubscriptionWithKeys(`http://127.0.0.1:${port}/alice-phone`),
+    ]);
+
+    await transact([
+      tx.identities[aliceId].update({
+        name: "Alice",
+        publicSignKey: aliceSign.publicKey,
+        publicEncryptKey: aliceEnc.publicKey,
+        lastActiveAt: Date.now(),
+      }),
+      tx.identities[botId].update({
+        name: "Arb Bot",
+        avatar: "https://aliceandbot.com/icon-192.png",
+        publicSignKey: botSign.publicKey,
+        publicEncryptKey: botEnc.publicKey,
+        lastActiveAt: Date.now(),
+      }),
+      tx.conversations[convoId]
+        .update({ title: "Alerts", updatedAt: Date.now() })
+        .link({ participants: [aliceId, botId] }),
+      tx.keys[aliceKeyId]
+        .update({ key: aliceEncKey })
+        .link({ owner: aliceId, conversation: convoId }),
+      tx.pushSubscriptions[aliceSubId]
+        .update({
+          endpoint: alicePush.subscription.endpoint,
+          subscription: alicePush.subscription,
+          createdAt: Date.now(),
+        })
+        .link({ owner: aliceId }),
+    ]);
+
+    const shortPayload = {
+      type: "text" as const,
+      text: "Found opportunity at 42c",
+      conversationId: convoId,
+      sentAt: Date.now(),
+    };
+    const shortCiphertext = await encryptSymmetric(symKey, {
+      payload: shortPayload,
+      publicSignKey: botSign.publicKey,
+      signature: await sign(botSign.privateKey, msgToStr(shortPayload)),
+    });
+
+    const bgTasks1: Promise<unknown>[] = [];
+    setRequestWaitUntil((p) => bgTasks1.push(p));
+    const { messageId: msg1 } = await endpoints.handlers.sendMessage({
+      conversation: convoId,
+      encryptedMessage: shortCiphertext,
+      senderPublicSignKey: botSign.publicKey,
+    });
+    await Promise.all(bgTasks1);
+
+    const largeCiphertext = "x".repeat(4200);
+    const bgTasks2: Promise<unknown>[] = [];
+    setRequestWaitUntil((p) => bgTasks2.push(p));
+    const { messageId: msg2 } = await endpoints.handlers.sendMessage({
+      conversation: convoId,
+      encryptedMessage: largeCiphertext,
+      senderPublicSignKey: botSign.publicKey,
+    });
+    await Promise.all(bgTasks2);
+
+    const bgTasks3: Promise<unknown>[] = [];
+    setRequestWaitUntil((p) => bgTasks3.push(p));
+    const { messageId: msg3 } = await endpoints.handlers.sendMessage({
+      conversation: convoId,
+      encryptedMessage: shortCiphertext,
+      senderPublicSignKey: aliceSign.publicKey,
+    });
+    await Promise.all(bgTasks3);
+    setRequestWaitUntil(undefined);
+
+    const decryptedPayloads = await Promise.all(
+      receivedBodies.map((b) =>
+        decryptWebPushPayload(
+          b,
+          alicePush.privateKey,
+          alicePush.rawPublic,
+          alicePush.authBytes,
+        )
+      ),
+    );
+
+    await transact([
+      tx.messages[msg1].delete(),
+      tx.messages[msg2].delete(),
+      tx.messages[msg3].delete(),
+      tx.pushSubscriptions[aliceSubId].delete(),
+      tx.keys[aliceKeyId].delete(),
+      tx.conversations[convoId].delete(),
+      tx.identities[aliceId].delete(),
+      tx.identities[botId].delete(),
+    ]);
+    await server.shutdown();
+    Deno.env.delete("ALLOW_LOCAL_WEBHOOKS");
+
+    assertEquals(decryptedPayloads.length, 3);
+    assertEquals(decryptedPayloads[0].type, "message");
+    assertEquals(decryptedPayloads[0].messageId, msg1);
+    assertEquals(decryptedPayloads[0].encryptedMessage, shortCiphertext);
+    assertEquals(decryptedPayloads[0].conversationKey, aliceEncKey);
+    assertEquals(decryptedPayloads[0].senderName, "Arb Bot");
+    assertEquals(
+      decryptedPayloads[0].senderAvatar,
+      "https://aliceandbot.com/icon-192.png",
+    );
+    assertEquals(decryptedPayloads[0].senderPublicSignKey, botSign.publicKey);
+
+    assertEquals(decryptedPayloads[1].type, "message");
+    assertEquals(decryptedPayloads[1].messageId, msg2);
+    assertEquals(decryptedPayloads[1].encryptedMessage, undefined);
+    assertEquals(decryptedPayloads[1].conversationKey, aliceEncKey);
+
+    assertEquals(decryptedPayloads[2].type, "dismiss");
+    assertEquals(decryptedPayloads[2].conversationId, convoId);
+  },
+);
+
+const buildSignedDismissArgs = async ({
+  conversationId,
+  excludeEndpoint,
+  publicSignKey,
+  privateSignKey,
+}: {
+  conversationId: string;
+  excludeEndpoint: string;
+  publicSignKey: string;
+  privateSignKey: string;
+}) => {
+  const payload = { conversationId, excludeEndpoint };
+  const nonce = await issueNonceHelper(publicSignKey);
+  const authToken = await sign(
+    privateSignKey,
+    await canonicalStringForAuthSignV2({
+      action: "dismissNotifications",
+      payload,
+      publicSignKey,
+      nonce,
+    }),
+  );
+  return { payload, publicSignKey, nonce, authToken };
+};
+
+Deno.test(
+  "dismissNotifications sends cross-device dismiss push only to other notified devices and is idempotent",
+  async () => {
+    const vapid = webpush.generateVAPIDKeys();
+    Deno.env.set("VAPID_PUBLIC_KEY", vapid.publicKey);
+    Deno.env.set("VAPID_PRIVATE_KEY", vapid.privateKey);
+    Deno.env.set("ALLOW_LOCAL_WEBHOOKS", "1");
+
+    const receivedEvents: { path: string; body: Uint8Array }[] = [];
+    const server = Deno.serve({ port: 0, onListen: () => {} }, async (req) => {
+      const { pathname } = new URL(req.url);
+      receivedEvents.push({
+        path: pathname,
+        body: new Uint8Array(await req.arrayBuffer()),
+      });
+      return new Response("", { status: 201 });
+    });
+
+    const port = server.addr.port;
+    const [aliceSign, aliceEnc, botSign, botEnc] = await Promise.all([
+      generateKeyPair("sign"),
+      generateKeyPair("encrypt"),
+      generateKeyPair("sign"),
+      generateKeyPair("encrypt"),
+    ]);
+    const [phonePush, desktopPush] = await Promise.all([
+      makeRealPushSubscriptionWithKeys(`http://127.0.0.1:${port}/phone`),
+      makeRealPushSubscriptionWithKeys(`http://127.0.0.1:${port}/desktop`),
+    ]);
+
+    const aliceId = id();
+    const botId = id();
+    const convoId = id();
+    const phoneSubId = id();
+    const desktopSubId = id();
+
+    await transact([
+      tx.identities[aliceId].update({
+        name: "Alice",
+        publicSignKey: aliceSign.publicKey,
+        publicEncryptKey: aliceEnc.publicKey,
+      }),
+      tx.identities[botId].update({
+        name: "Bot",
+        publicSignKey: botSign.publicKey,
+        publicEncryptKey: botEnc.publicKey,
+      }),
+      tx.conversations[convoId]
+        .update({ title: "Cross Device", updatedAt: Date.now() })
+        .link({ participants: [aliceId, botId] }),
+      tx.pushSubscriptions[phoneSubId]
+        .update({
+          endpoint: phonePush.subscription.endpoint,
+          subscription: phonePush.subscription,
+          createdAt: Date.now(),
+        })
+        .link({ owner: aliceId }),
+      tx.pushSubscriptions[desktopSubId]
+        .update({
+          endpoint: desktopPush.subscription.endpoint,
+          subscription: desktopPush.subscription,
+          createdAt: Date.now(),
+        })
+        .link({ owner: aliceId }),
+    ]);
+
+    const bgSend: Promise<unknown>[] = [];
+    setRequestWaitUntil((p) => bgSend.push(p));
+    const { messageId } = await endpoints.handlers.sendMessage({
+      conversation: convoId,
+      encryptedMessage: "msg-cipher",
+      senderPublicSignKey: botSign.publicKey,
+    });
+    await Promise.all(bgSend);
+
+    const bgDismiss1: Promise<unknown>[] = [];
+    setRequestWaitUntil((p) => bgDismiss1.push(p));
+    await endpoints.handlers.dismissNotifications(
+      await buildSignedDismissArgs({
+        conversationId: convoId,
+        excludeEndpoint: desktopPush.subscription.endpoint,
+        publicSignKey: aliceSign.publicKey,
+        privateSignKey: aliceSign.privateKey,
+      }),
+    );
+    await Promise.all(bgDismiss1);
+
+    const bgDismiss2: Promise<unknown>[] = [];
+    setRequestWaitUntil((p) => bgDismiss2.push(p));
+    await endpoints.handlers.dismissNotifications(
+      await buildSignedDismissArgs({
+        conversationId: convoId,
+        excludeEndpoint: desktopPush.subscription.endpoint,
+        publicSignKey: aliceSign.publicKey,
+        privateSignKey: aliceSign.privateKey,
+      }),
+    );
+    await Promise.all(bgDismiss2);
+    setRequestWaitUntil(undefined);
+
+    const phonePushes = receivedEvents.filter((e) => e.path === "/phone");
+    const desktopPushes = receivedEvents.filter((e) => e.path === "/desktop");
+    const phonePayloads = await Promise.all(
+      phonePushes.map((e) =>
+        decryptWebPushPayload(
+          e.body,
+          phonePush.privateKey,
+          phonePush.rawPublic,
+          phonePush.authBytes,
+        )
+      ),
+    );
+
+    await transact([
+      tx.messages[messageId].delete(),
+      tx.pushSubscriptions[phoneSubId].delete(),
+      tx.pushSubscriptions[desktopSubId].delete(),
+      tx.conversations[convoId].delete(),
+      tx.identities[aliceId].delete(),
+      tx.identities[botId].delete(),
+    ]);
+    await server.shutdown();
+    Deno.env.delete("ALLOW_LOCAL_WEBHOOKS");
+
+    assertEquals(desktopPushes.length, 1);
+    assertEquals(phonePayloads.length, 2);
+    assertEquals(phonePayloads[0].type, "message");
+    assertEquals(phonePayloads[1].type, "dismiss");
+    assertEquals(phonePayloads[1].conversationId, convoId);
   },
 );

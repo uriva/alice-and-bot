@@ -143,6 +143,17 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
     if (endpoint === "getCanvasRow") {
       return route.fulfill(json({ row: null }));
     }
+    if (
+      endpoint === "dismissNotifications" ||
+      endpoint === "heartbeat" ||
+      endpoint === "registerPushSubscription" ||
+      endpoint === "unregisterPushSubscription"
+    ) {
+      return route.fulfill(json({ success: true }));
+    }
+    if (endpoint === "getVapidPublicKey") {
+      return route.fulfill(json({ publicKey: "" }));
+    }
 
     return route.fulfill(json({ error: "unknown-endpoint" }, 404));
   });

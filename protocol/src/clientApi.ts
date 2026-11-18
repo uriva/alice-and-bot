@@ -263,6 +263,21 @@ const encryptAndSign = async (
   });
 };
 
+export const isSilentMessage = <
+  M extends {
+    type: InternalMessage["type"];
+    remove?: boolean;
+    action?: string;
+  },
+>(
+  message: M,
+): boolean =>
+  message.type === "event" ||
+  message.type === "spinner" ||
+  message.type === "progress" ||
+  (message.type === "reaction" && Boolean(message.remove)) ||
+  (message.type === "call" && message.action !== "offer");
+
 export const sendMessageWithKey = async ({
   conversationKey,
   conversation,
@@ -273,9 +288,7 @@ export const sendMessageWithKey = async ({
     endpoint: "sendMessage",
     payload: {
       conversation,
-      // A canvas event is not something a participant should be notified
-      // about, and the server cannot see inside the payload to know.
-      silent: message.type === "event" ? true : undefined,
+      silent: isSilentMessage(message) ? true : undefined,
       senderPublicSignKey: credentials.publicSignKey,
       encryptedMessage: await encryptAndSign(
         conversationKey,

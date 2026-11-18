@@ -1,5 +1,6 @@
-import { coerce } from "@uri/gamla";
+import { coerce, empty } from "@uri/gamla";
 import webpush from "web-push";
+import type { PushSubscriptionJSON } from "../../instant.schema.ts";
 import type {
   ConversationInfo,
   EncryptedConversationKey,
@@ -128,8 +129,95 @@ export const callWebhooks = async (
   return {};
 };
 
-type Participant = { publicSignKey: string; webhook?: string };
-type Conversation = { id: string; title: string; participants: Participant[] };
+type PushParticipant = {
+  id: string;
+  publicSignKey: string;
+  name?: string;
+  avatar?: string;
+  webhook?: string;
+  keys?: { key: EncryptedConversationKey }[];
+};
+type Conversation = {
+  id: string;
+  title: string;
+  participants: PushParticipant[];
+};
+
+const maxInlinePushPayloadBytes = 3500;
+const maxTrackedNotifiedConversations = 64;
+const maxAvatarUrlLength = 512;
+const textEncoder = new TextEncoder();
+
+const isHttpAvatarUrl = (avatar?: string): avatar is string =>
+  Boolean(
+    avatar &&
+      avatar.length <= maxAvatarUrlLength &&
+      (avatar.startsWith("https://") || avatar.startsWith("http://")),
+  );
+
+const withAddedNotifiedConversation = (
+  sub: PushSubscriptionJSON,
+  conversationId: string,
+): PushSubscriptionJSON => ({
+  ...sub,
+  notifiedConversations: [
+    ...(sub.notifiedConversations ?? []).filter((c) => c !== conversationId),
+    conversationId,
+  ].slice(-maxTrackedNotifiedConversations),
+});
+
+const withRemovedNotifiedConversation = (
+  sub: PushSubscriptionJSON,
+  conversationId: string,
+): PushSubscriptionJSON => ({
+  ...sub,
+  notifiedConversations: (sub.notifiedConversations ?? []).filter(
+    (c) => c !== conversationId,
+  ),
+});
+
+const buildMessagePushPayloadJson = ({
+  messageId,
+  conversationId,
+  conversationTitle,
+  senderName,
+  senderAvatar,
+  senderPublicSignKey,
+  isGroupChat,
+  conversationKey,
+  encryptedMessage,
+  timestamp,
+}: {
+  messageId?: string;
+  conversationId: string;
+  conversationTitle: string;
+  senderName?: string;
+  senderAvatar?: string;
+  senderPublicSignKey?: string;
+  isGroupChat: boolean;
+  conversationKey?: EncryptedConversationKey;
+  encryptedMessage?: string;
+  timestamp: number;
+}) => {
+  const base = {
+    type: "message" as const,
+    ...(messageId ? { messageId } : {}),
+    conversationId,
+    conversationTitle,
+    ...(senderName ? { senderName } : {}),
+    ...(isHttpAvatarUrl(senderAvatar) ? { senderAvatar } : {}),
+    ...(senderPublicSignKey ? { senderPublicSignKey } : {}),
+    isGroupChat,
+    ...(conversationKey ? { conversationKey } : {}),
+    timestamp,
+  };
+  if (!encryptedMessage) return JSON.stringify(base);
+  const withCiphertext = JSON.stringify({ ...base, encryptedMessage });
+  return textEncoder.encode(withCiphertext).byteLength <=
+      maxInlinePushPayloadBytes
+    ? withCiphertext
+    : JSON.stringify(base);
+};
 
 export const getVapidPublicKey = () => Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
 export const vapidPublicKey = getVapidPublicKey();
@@ -159,17 +247,27 @@ const toFetchHeaders = (headers: Record<string, string | number>) =>
     Object.entries(headers).map(([k, v]) => [k, String(v)]),
   );
 
-const deliverPushSubscription = (payloadJson: string) =>
-async (sub: {
+type StoredPushRow = {
   id: string;
-  subscription: webpush.PushSubscription;
-}) => {
+  subscription: PushSubscriptionJSON;
+  owner?: { id: string };
+  conversation?: { id: string };
+};
+
+const deliverPushSubscription = (
+  payloadJson: string,
+  onDelivered?: (sub: StoredPushRow) => Promise<unknown>,
+) =>
+async (sub: StoredPushRow) => {
   if (!isSafeWebhookUrl(sub.subscription.endpoint)) {
     console.warn("Blocked unsafe push endpoint:", sub.subscription.endpoint);
     return;
   }
   const details = webpush.generateRequestDetails(
-    sub.subscription,
+    {
+      endpoint: sub.subscription.endpoint,
+      keys: sub.subscription.keys,
+    },
     payloadJson,
     pushUrgencyOptions,
   );
@@ -184,67 +282,138 @@ async (sub: {
   });
   if (res && (res.status === 404 || res.status === 410)) {
     await transact(tx.pushSubscriptions[sub.id].delete());
+    return;
+  }
+  if (res && res.status >= 200 && res.status < 300 && onDelivered) {
+    await onDelivered(sub);
   }
 };
 
+const recordNotifiedConversation =
+  (conversationId: string) => (sub: StoredPushRow) =>
+    (sub.subscription.notifiedConversations ?? []).includes(conversationId)
+      ? Promise.resolve()
+      : transact(
+        tx.pushSubscriptions[sub.id].update({
+          subscription: withAddedNotifiedConversation(
+            sub.subscription,
+            conversationId,
+          ),
+        }),
+      );
+
+const clearNotifiedConversation =
+  (conversationId: string) => (sub: StoredPushRow) =>
+    transact(
+      tx.pushSubscriptions[sub.id].update({
+        subscription: withRemovedNotifiedConversation(
+          sub.subscription,
+          conversationId,
+        ),
+      }),
+    );
+
 export const sendPushToParticipants = async (
   {
-    messageId: _messageId,
+    messageId,
     conversationId,
+    encryptedMessage,
     timestamp,
     senderPublicSignKey,
+    prefetchedConversations,
   }: {
     messageId?: string;
     conversationId: string;
+    encryptedMessage?: string;
     timestamp: number;
     senderPublicSignKey?: string;
+    prefetchedConversations?: ReturnType<typeof fetchWebhookConversation>;
   },
 ) => {
   ensureVapidConfigured();
-  const { conversations } = await query({
-    conversations: {
-      participants: {},
-      $: { where: { id: conversationId } },
-    },
-  });
-  if (!conversations.length) return {};
+  const { conversations } = await (prefetchedConversations ??
+    fetchWebhookConversation(conversationId));
+  if (empty(conversations)) return {};
   const conversation = coerce<Conversation>(conversations[0]);
-  const allKeys = conversation.participants.map((p) => p.publicSignKey);
-  const recipientKeys = senderPublicSignKey
-    ? allKeys.filter((k) => k !== senderPublicSignKey)
-    : allKeys;
-  if (recipientKeys.length === 0) return {};
-  const { identities } = await query({
-    identities: { $: { where: { publicSignKey: { $in: allKeys } } } },
-  });
-  const senderName = senderPublicSignKey
-    ? identities.find((i) => i.publicSignKey === senderPublicSignKey)?.name
+  const sender = senderPublicSignKey
+    ? conversation.participants.find(
+      (p) => p.publicSignKey === senderPublicSignKey,
+    )
     : undefined;
-  const recipientIds = identities
-    .filter((i) => recipientKeys.includes(i.publicSignKey))
-    .map((i) => i.id);
-  if (recipientIds.length === 0) return {};
+  const recipients = senderPublicSignKey
+    ? conversation.participants.filter(
+      (p) => p.publicSignKey !== senderPublicSignKey,
+    )
+    : conversation.participants;
+  if (empty(recipients)) return {};
+  const recipientById = new Map(recipients.map((r) => [r.id, r]));
   const { pushSubscriptions } = await query({
     pushSubscriptions: {
       owner: {},
       conversation: {},
       $: {
-        where: { "owner.id": { $in: recipientIds } },
+        where: { "owner.id": { $in: recipients.map((r) => r.id) } },
       },
     },
   });
-  const payloadJson = JSON.stringify({
-    type: "message",
-    conversationId: conversation.id,
-    conversationTitle: conversation.title,
-    ...(senderName ? { senderName } : {}),
-    timestamp,
-  });
-  const matchingSubscriptions = pushSubscriptions.filter((s) =>
-    !s.conversation || s.conversation.id === conversation.id
-  );
+  const matchingSubscriptions = coerce<StoredPushRow[]>(pushSubscriptions)
+    .filter((s) => !s.conversation || s.conversation.id === conversation.id);
+  const isGroupChat = conversation.participants.length > 2;
+  const markDelivered = recordNotifiedConversation(conversation.id);
   await Promise.all(
-    matchingSubscriptions.map(deliverPushSubscription(payloadJson)),
+    matchingSubscriptions.map((sub) => {
+      const recipient = sub.owner ? recipientById.get(sub.owner.id) : undefined;
+      const payloadJson = buildMessagePushPayloadJson({
+        messageId,
+        conversationId: conversation.id,
+        conversationTitle: conversation.title,
+        senderName: sender?.name,
+        senderAvatar: sender?.avatar,
+        senderPublicSignKey,
+        isGroupChat,
+        conversationKey: recipient?.keys?.[0]?.key,
+        encryptedMessage,
+        timestamp,
+      });
+      return deliverPushSubscription(payloadJson, markDelivered)(sub);
+    }),
+  );
+  return {};
+};
+
+export const dismissPushForParticipant = async ({
+  conversationId,
+  publicSignKey,
+  excludeEndpoint,
+}: {
+  conversationId: string;
+  publicSignKey: string;
+  excludeEndpoint?: string;
+}) => {
+  ensureVapidConfigured();
+  const { identities } = await query({
+    identities: { $: { where: { publicSignKey } } },
+  });
+  if (empty(identities)) return {};
+  const { pushSubscriptions } = await query({
+    pushSubscriptions: {
+      $: { where: { "owner.id": identities[0].id } },
+    },
+  });
+  const activeSubs = coerce<StoredPushRow[]>(pushSubscriptions).filter(
+    (s) =>
+      s.subscription.endpoint !== excludeEndpoint &&
+      (s.subscription.notifiedConversations ?? []).includes(conversationId),
+  );
+  if (empty(activeSubs)) return {};
+  const payloadJson = JSON.stringify({
+    type: "dismiss",
+    conversationId,
+    timestamp: Date.now(),
+  });
+  const markCleared = clearNotifiedConversation(conversationId);
+  await Promise.all(
+    activeSubs.map(deliverPushSubscription(payloadJson, markCleared)),
   );
   return {};
 };

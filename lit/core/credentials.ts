@@ -8,6 +8,7 @@ import {
 } from "../../protocol/src/crypto.ts";
 import { retrieveTransferPayload } from "../../backend/src/api.ts";
 import { registerCredentials } from "../../protocol/src/instantAuth.ts";
+import { savePushCredentials } from "../../protocol/src/pushKeyStore.ts";
 
 export const base64UrlToBase64 = (str: string): string => {
   let s = str.replace(/-/g, "+").replace(/_/g, "/");
@@ -71,7 +72,10 @@ export const importIdentity = async (
 
 export const loadCredentials = (key: string): Credentials | null => {
   const stored = localStorage.getItem(key);
-  return stored ? registerCredentials(JSON.parse(stored)) : null;
+  if (!stored) return null;
+  const parsed = registerCredentials(JSON.parse(stored));
+  savePushCredentials(parsed).catch(() => {});
+  return parsed;
 };
 
 export const saveCredentials = (
@@ -79,6 +83,7 @@ export const saveCredentials = (
   credentials: Credentials,
 ): void => {
   registerCredentials(credentials);
+  savePushCredentials(credentials).catch(() => {});
   localStorage.setItem(key, JSON.stringify(credentials));
 };
 

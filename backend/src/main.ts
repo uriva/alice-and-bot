@@ -20,6 +20,7 @@ import { createConversation } from "./createConversation.ts";
 import { auth, query, transact, tx } from "./db.ts";
 import {
   callWebhooks,
+  dismissPushForParticipant,
   fetchWebhookConversation,
   getVapidPublicKey,
   sendPushToParticipants,
@@ -219,9 +220,19 @@ export const endpoints: BackendApiImpl = {
                 sendPushToParticipants({
                   messageId,
                   conversationId: conversation,
+                  encryptedMessage,
                   timestamp,
                   senderPublicSignKey,
+                  prefetchedConversations,
                 }).catch((e) => console.error("push dispatch failed", e)),
+              ]
+              : []),
+            ...(senderPublicSignKey
+              ? [
+                dismissPushForParticipant({
+                  conversationId: conversation,
+                  publicSignKey: senderPublicSignKey,
+                }).catch((e) => console.error("push dismiss failed", e)),
               ]
               : []),
           ]).then(() => resolve());
@@ -966,9 +977,15 @@ export const endpoints: BackendApiImpl = {
         },
       });
       if (pushSubscriptions.length) {
+        const existingNotified = pushSubscriptions[0].subscription
+          ?.notifiedConversations;
         await transact(
           tx.pushSubscriptions[pushSubscriptions[0].id]
-            .update({ subscription })
+            .update({
+              subscription: existingNotified
+                ? { ...subscription, notifiedConversations: existingNotified }
+                : subscription,
+            })
             .link({
               owner: identity.id,
               ...(conversationId ? { conversation: conversationId } : {}),
@@ -1022,6 +1039,29 @@ export const endpoints: BackendApiImpl = {
           );
         }
       }
+      return { success: true };
+    },
+    dismissNotifications: async (
+      { payload, publicSignKey, nonce, authToken },
+    ) => {
+      const authed = await verifyAuthToken<{
+        conversationId: string;
+        excludeEndpoint?: string;
+      }>({
+        action: "dismissNotifications",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authed) return { success: true };
+      registerBackgroundTask(
+        dismissPushForParticipant({
+          conversationId: payload.conversationId,
+          publicSignKey,
+          excludeEndpoint: payload.excludeEndpoint,
+        }).catch((e) => console.error("dismissNotifications failed", e)),
+      );
       return { success: true };
     },
     heartbeat: async ({ payload, publicSignKey, nonce, authToken }) => {

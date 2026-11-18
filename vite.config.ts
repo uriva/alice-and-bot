@@ -22,9 +22,32 @@ const spaFallback = (): Plugin => ({
   },
 });
 
+const buildServiceWorker = (): Plugin => ({
+  name: "build-service-worker",
+  buildStart: async () => {
+    const cmd = new Deno.Command("deno", {
+      args: [
+        "bundle",
+        "--platform",
+        "browser",
+        "--format",
+        "iife",
+        "--minify",
+        resolve(__dirname, "landing/src/sw-entry.ts"),
+        "--output",
+        resolve(__dirname, "landing/public/sw.js"),
+      ],
+    });
+    const out = await cmd.output();
+    if (!out.success) {
+      throw new Error(new TextDecoder().decode(out.stderr));
+    }
+  },
+});
+
 export default defineConfig({
   root: "./landing",
   server: { port: 3000, allowedHosts: true },
-  plugins: [deno(), tailwindcss(), spaFallback()],
+  plugins: [buildServiceWorker(), deno(), tailwindcss(), spaFallback()],
   build: { sourcemap: true, outDir: resolve(__dirname, "landing/dist") },
 });

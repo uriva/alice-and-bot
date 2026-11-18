@@ -69,15 +69,21 @@
       "./landing/src/vite-env.d.ts"
     ]
   },
+  "fmt": {
+    "exclude": [
+      "landing/public/sw.js"
+    ]
+  },
   "lint": {
     "exclude": [
       "opencode-plugin/plugin.js",
-      "opencode-plugin/index.test.ts"
+      "opencode-plugin/index.test.ts",
+      "landing/public/sw.js"
     ]
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "1.0.55",
+  "version": "1.0.56",
   "publish": {
     "include": [
       "mod.ts",

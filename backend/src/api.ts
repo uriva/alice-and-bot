@@ -364,6 +364,13 @@ export const backendApiSchema = {
     z.object({ endpoint: z.string() }),
     z.object({ success: z.literal(true) }),
   ),
+  dismissNotifications: authenticatedEndpoint(
+    z.object({
+      conversationId: z.string(),
+      excludeEndpoint: z.string().optional(),
+    }),
+    z.object({ success: z.literal(true) }),
+  ),
   heartbeat: authenticatedEndpoint(
     z.object({}),
     z.object({ success: z.literal(true) }),
@@ -894,6 +901,19 @@ export const unregisterPushSubscription = (
   },
 ): Promise<{ success: true }> =>
   apiClient({ endpoint: "unregisterPushSubscription", payload: params });
+
+export const dismissNotificationsSigned = async (
+  credentials: Credentials,
+  payload: { conversationId: string; excludeEndpoint?: string },
+): Promise<{ success: true }> =>
+  apiClient({
+    endpoint: "dismissNotifications",
+    payload: await buildSignedRequest(
+      credentials,
+      "dismissNotifications",
+      payload,
+    ),
+  });
 
 export const sendTyping = (
   params: { conversation: string; isTyping: boolean; publicSignKey: string },

@@ -1,4 +1,5 @@
 import {
+  dismissNotificationsSigned,
   getVapidPublicKey,
   heartbeatSigned,
   registerPushSubscription,
@@ -7,6 +8,8 @@ import {
 import type { PushSubscriptionJSON } from "../../instant.schema.ts";
 import type { Credentials } from "./clientApi.ts";
 import { buildSignedRequest } from "./authClient.ts";
+import { defaultPushKeyStore } from "./pushKeyStore.ts";
+import { syncAppBadgeFromNotifications } from "./pushNotification.ts";
 
 const urlBase64ToUint8Array = (base64String: string) => {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -85,8 +88,13 @@ export const registerPush = async (
     reg,
     urlBase64ToUint8Array(publicKey),
   );
+  const normalized = toNormalizedSubscription(sub);
+  await Promise.all([
+    defaultPushKeyStore.setCredentials(credentials),
+    defaultPushKeyStore.setPushEndpoint(normalized.endpoint),
+  ]);
   const payload = {
-    subscription: toNormalizedSubscription(sub),
+    subscription: normalized,
     conversationId: options.conversationId,
   };
   await registerPushSubscription(
@@ -95,8 +103,64 @@ export const registerPush = async (
   return { supported: true } as const;
 };
 
-export const unregisterPush = async (credentials: Credentials) => {
+const setNavigatorBadge = (count: number) =>
+  "setAppBadge" in navigator && typeof navigator.setAppBadge === "function"
+    ? navigator.setAppBadge(count)
+    : Promise.resolve();
+
+const clearNavigatorBadge = () =>
+  "clearAppBadge" in navigator && typeof navigator.clearAppBadge === "function"
+    ? navigator.clearAppBadge()
+    : Promise.resolve();
+
+export const closeLocalNotificationsForConversation = async (
+  conversationId?: string,
+) => {
   if (!("serviceWorker" in navigator)) return;
+  const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+  if (!reg || typeof reg.getNotifications !== "function") return;
+  const matching = await reg
+    .getNotifications(conversationId ? { tag: conversationId } : undefined)
+    .catch(() => []);
+  matching.forEach((n) => n.close());
+  await syncAppBadgeFromNotifications({
+    registration: {
+      showNotification: (title, opts) => reg.showNotification(title, opts),
+      getNotifications: (filter) => reg.getNotifications(filter),
+    },
+    setAppBadge: setNavigatorBadge,
+    clearAppBadge: clearNavigatorBadge,
+  }).catch(() => {});
+};
+
+const resolveCurrentPushEndpoint = async (): Promise<string | undefined> => {
+  const stored = await defaultPushKeyStore.getPushEndpoint();
+  if (stored) return stored;
+  if (!("serviceWorker" in navigator)) return undefined;
+  const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+  const sub = await reg?.pushManager?.getSubscription().catch(() => null);
+  return sub?.endpoint;
+};
+
+export const dismissConversationNotifications = async (
+  credentials: Credentials,
+  conversationId: string,
+) => {
+  await closeLocalNotificationsForConversation(conversationId);
+  const excludeEndpoint = await resolveCurrentPushEndpoint();
+  await dismissNotificationsSigned(credentials, {
+    conversationId,
+    ...(excludeEndpoint ? { excludeEndpoint } : {}),
+  }).catch(() => {});
+};
+
+export const unregisterPush = async (credentials: Credentials) => {
+  if (!("serviceWorker" in navigator)) {
+    await defaultPushKeyStore.clear();
+    return;
+  }
+  await closeLocalNotificationsForConversation();
+  await defaultPushKeyStore.clear();
   const reg = await navigator.serviceWorker.getRegistration();
   if (!reg) return;
   const sub = await reg.pushManager.getSubscription();

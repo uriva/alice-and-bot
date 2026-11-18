@@ -17,6 +17,7 @@ import {
   registerConversationKeyCredentials,
   registerCredentials,
 } from "../../protocol/src/instantAuth.ts";
+import { savePushConversationKey } from "../../protocol/src/pushKeyStore.ts";
 import type schema from "../../instant.schema.ts";
 import { reportError } from "./error-reporter.ts";
 import {
@@ -197,6 +198,9 @@ export const subscribeConversationKey = (
               cacheId,
               encryptedKey,
               decryptedKey,
+            );
+            savePushConversationKey(conversationId, decryptedKey).catch(
+              () => {},
             );
             registerConversationKeyCredentials(decryptedKey, credentials);
             return decryptedKey;

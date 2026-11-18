@@ -35,7 +35,15 @@ import {
   retrieveTransferPayload,
   storeTransferPayload,
 } from "../../backend/src/api.ts";
-import { registerPush } from "../../protocol/src/pushClient.ts";
+import {
+  closeLocalNotificationsForConversation,
+  dismissConversationNotifications,
+  registerPush,
+} from "../../protocol/src/pushClient.ts";
+import {
+  clearPushKeyStore,
+  savePushCredentials,
+} from "../../protocol/src/pushKeyStore.ts";
 import {
   canInstallPwa,
   isIosDevice,
@@ -695,6 +703,7 @@ const syncStateFromUrl = () => {
   if (c) {
     if (view !== "chats") view = "chats";
     if (selectedConversation !== c) selectedConversation = c;
+    acknowledgeActiveConversation();
   } else {
     if (view !== "chats") view = "chats";
     if (selectedConversation !== null) selectedConversation = null;
@@ -1151,6 +1160,7 @@ const selectConversation = (id: string) => {
   const params = new URLSearchParams(globalThis.location.search);
   params.set("c", id);
   globalThis.history.pushState(null, "", `${chatPath}?${params.toString()}`);
+  acknowledgeActiveConversation();
   rerenderChat();
 };
 
@@ -1533,7 +1543,12 @@ const deleteCredentialsRow = () =>
           ) {
             localStorage.removeItem("alicebot_credentials");
             localStorage.removeItem(conversationsCacheKey);
-            globalThis.location.reload();
+            Promise.all([
+              clearPushKeyStore(),
+              closeLocalNotificationsForConversation(),
+            ]).finally(() => {
+              globalThis.location.reload();
+            });
           }
         }}"
       >
@@ -3067,12 +3082,52 @@ const chatTemplate = (): TemplateResult =>
     </div>
   `;
 
+const notificationAckState = { lastRemoteAckKey: "" };
+
+const acknowledgeActiveConversation = () => {
+  if (!credentials || view !== "chats" || !selectedConversation) return;
+  if (globalThis.document?.visibilityState === "hidden") return;
+  closeLocalNotificationsForConversation(selectedConversation).catch(() => {});
+  const convUpdatedAt =
+    conversations?.find((c) => c.id === selectedConversation)?.updatedAt ?? 0;
+  const ackKey = `${selectedConversation}:${convUpdatedAt}`;
+  if (notificationAckState.lastRemoteAckKey === ackKey) return;
+  notificationAckState.lastRemoteAckKey = ackKey;
+  dismissConversationNotifications(credentials, selectedConversation).catch(
+    () => {},
+  );
+};
+
+const onWindowFocusOrVisible = () => {
+  if (globalThis.document?.visibilityState === "hidden") return;
+  notificationAckState.lastRemoteAckKey = "";
+  acknowledgeActiveConversation();
+};
+
+const onServiceWorkerMessage = (event: MessageEvent) => {
+  const data: unknown = event.data;
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "type" in data &&
+    data.type === "alice:select-conversation" &&
+    "conversationId" in data &&
+    typeof data.conversationId === "string"
+  ) {
+    view = "chats";
+    selectConversation(data.conversationId);
+  }
+};
+
 // --- Init / teardown ---
 
 const initLoggedInState = () => {
   if (!credentials) return;
   const activeCredentials = credentials;
   registerCredentials(activeCredentials);
+  if (globalThis.localStorage?.getItem("alicebot_credentials")) {
+    savePushCredentials(activeCredentials).catch(() => {});
+  }
   const initialQueryConv = currentQuery()["c"];
   hintColdBootstrap(activeCredentials.publicSignKey, {
     includeConversations: true,
@@ -3097,6 +3152,7 @@ const initLoggedInState = () => {
           subscribeName(other.publicSignKey);
         }
       });
+      acknowledgeActiveConversation();
       rerenderChat();
       handleChatWithInvite();
     },
@@ -3149,7 +3205,17 @@ const cleanup = () => {
   nameUnsubs.forEach((unsub) => unsub());
   nameUnsubs.clear();
   nameCache.clear();
+  notificationAckState.lastRemoteAckKey = "";
   globalThis.removeEventListener("popstate", onPopstate);
+  globalThis.removeEventListener("focus", onWindowFocusOrVisible);
+  globalThis.document?.removeEventListener(
+    "visibilitychange",
+    onWindowFocusOrVisible,
+  );
+  globalThis.navigator?.serviceWorker?.removeEventListener(
+    "message",
+    onServiceWorkerMessage,
+  );
 };
 
 export const chat = (): TemplateResult => {
@@ -3216,8 +3282,17 @@ export const chat = (): TemplateResult => {
       console.error("Failed transfer import", e)
     );
 
-    // URL popstate
+    // URL popstate & notification focus/message sync
     globalThis.addEventListener("popstate", onPopstate);
+    globalThis.addEventListener("focus", onWindowFocusOrVisible);
+    globalThis.document?.addEventListener(
+      "visibilitychange",
+      onWindowFocusOrVisible,
+    );
+    globalThis.navigator?.serviceWorker?.addEventListener(
+      "message",
+      onServiceWorkerMessage,
+    );
 
     // Init logged-in state if we have credentials
     if (credentials) {
