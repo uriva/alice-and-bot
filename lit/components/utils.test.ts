@@ -4,6 +4,7 @@ import {
   collectIdentityKeys,
   computeTextareaResize,
   downloadMedia,
+  extractInlineIdentityDetails,
   filterParticipants,
   findCompletedSpinners,
   findNewIncomingMessages,
@@ -712,4 +713,45 @@ Deno.test("getActiveSpinnerIds returns only non-stale active spinner and unfinis
 
   const result = getActiveSpinnerIds(spinners, progress);
   assertEquals(result, new Set(["s1", "p1"]));
+});
+
+Deno.test("resolveConversationDisplayName uses inline participant.name without separate identity query", () => {
+  const conv = {
+    id: "c1",
+    title: "Chat",
+    participants: [
+      { publicSignKey: "pk-bot", name: "HelperBot@domain" },
+      { publicSignKey: "pk-me", name: "Me" },
+    ],
+  };
+  assertEquals(
+    resolveConversationDisplayName(conv, "pk-me", new Map()),
+    "HelperBot",
+  );
+});
+
+Deno.test("extractInlineIdentityDetails extracts known participant details and collectIdentityKeys skips them", () => {
+  const participants = [
+    { publicSignKey: "pk-1", name: "Alice", avatar: "https://a.example/1.png" },
+    { publicSignKey: "pk-2" },
+  ];
+  const details = extractInlineIdentityDetails(participants, null);
+  assertEquals(details, {
+    "pk-1": { name: "Alice", avatar: "https://a.example/1.png" },
+  });
+  const missing = collectIdentityKeys({
+    messages: [{
+      id: "m1",
+      type: "text",
+      text: "hi",
+      timestamp: 1,
+      publicSignKey: "pk-1",
+    }],
+    participants,
+    ephemeralStreams: [],
+    conversations: null,
+    enableChatSwitching: false,
+    knownDetails: details,
+  });
+  assertEquals(missing, ["pk-2"]);
 });

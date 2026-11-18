@@ -1277,3 +1277,79 @@ Deno.test("getConversations, getConversationInfo, conversationKey, and getCanvas
     tx.identities[outsider.identityId].delete(),
   ]);
 });
+
+Deno.test("mintInstantToken returns cold-start bootstrap conversations, key, and messages for participant and blocks non-participants", async () => {
+  const alice = await makeTestIdentity("BootstrapAlice");
+  const bob = await makeTestIdentity("BootstrapBob");
+  const outsider = await makeTestIdentity("BootstrapOutsider");
+  const symKey = await generateSymmetricKey();
+  const aliceEncKey = await encryptAsymmetric(alice.publicEncryptKey, symKey);
+  const convoId = id();
+  const keyId = id();
+  const msgId = id();
+  const ts = Date.now();
+  const inner = {
+    type: "text" as const,
+    text: "Bootstrap hello",
+    conversationId: convoId,
+    sentAt: ts,
+  };
+  const sig = await sign(alice.creds.privateSignKey, JSON.stringify(inner));
+  const encMsg = await encryptSymmetric(symKey, {
+    payload: inner,
+    publicSignKey: alice.creds.publicSignKey,
+    signature: sig,
+  });
+
+  await transact([
+    tx.conversations[convoId]
+      .update({ title: "Bootstrap Chat", updatedAt: ts })
+      .link({ participants: [alice.identityId, bob.identityId] }),
+    tx.keys[keyId]
+      .update({ key: aliceEncKey })
+      .link({ owner: alice.identityId, conversation: convoId }),
+    tx.messages[msgId]
+      .update({ payload: encMsg, timestamp: ts })
+      .link({ conversation: convoId }),
+  ]);
+
+  const aliceSigned = await signAuthPayload(
+    alice.creds,
+    "mintInstantToken",
+    { includeConversations: true, conversationId: convoId },
+  );
+  const aliceRes = await endpoints.handlers.mintInstantToken(aliceSigned);
+  assert("token" in aliceRes);
+  assertEquals(
+    aliceRes.conversations?.some((c) => c.id === convoId),
+    true,
+  );
+  assertEquals(aliceRes.conversationBootstrap?.hasAccess, true);
+  assertEquals(aliceRes.conversationBootstrap?.encryptedKey, aliceEncKey);
+  assertEquals(aliceRes.conversationBootstrap?.messages.length, 1);
+  assertEquals(aliceRes.conversationBootstrap?.messages[0].id, msgId);
+
+  const outsiderSigned = await signAuthPayload(
+    outsider.creds,
+    "mintInstantToken",
+    { includeConversations: true, conversationId: convoId },
+  );
+  const outsiderRes = await endpoints.handlers.mintInstantToken(outsiderSigned);
+  assert("token" in outsiderRes);
+  assertEquals(
+    outsiderRes.conversations?.some((c) => c.id === convoId),
+    false,
+  );
+  assertEquals(outsiderRes.conversationBootstrap?.hasAccess, false);
+  assertEquals(outsiderRes.conversationBootstrap?.encryptedKey, undefined);
+  assertEquals(outsiderRes.conversationBootstrap?.messages, []);
+
+  await transact([
+    tx.messages[msgId].delete(),
+    tx.keys[keyId].delete(),
+    tx.conversations[convoId].delete(),
+    tx.identities[alice.identityId].delete(),
+    tx.identities[bob.identityId].delete(),
+    tx.identities[outsider.identityId].delete(),
+  ]);
+});

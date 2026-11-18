@@ -56,6 +56,7 @@ import {
   accessAdminDb,
   accessDb,
   ensureInstantAuth,
+  hintColdBootstrap,
 } from "../../lit/core/instant-client.ts";
 import { tx } from "@instantdb/core";
 import {
@@ -116,6 +117,46 @@ let viewportCleanup: (() => void) | null = null;
 let overflowCleanup: (() => void) | null = null;
 let conversationsUnsub: (() => void) | null = null;
 let activeReportCleanup: (() => void) | null = null;
+let activeReportTimer: ReturnType<typeof setTimeout> | null = null;
+
+const conversationsCacheKey = "alicebot_conversations_cache";
+
+const readCachedConversations = (
+  publicSignKey: string,
+): Conversation[] | null => {
+  try {
+    const raw = globalThis.localStorage?.getItem(conversationsCacheKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      parsed.publicSignKey === publicSignKey &&
+      Array.isArray(parsed.conversations)
+    ) {
+      return parsed.conversations;
+    }
+  } catch {
+    // ignore corrupted cache
+  }
+  return null;
+};
+
+const writeCachedConversations = (
+  publicSignKey: string,
+  convs: Conversation[] | null,
+) => {
+  if (!convs) return;
+  try {
+    if (!globalThis.localStorage?.getItem("alicebot_credentials")) return;
+    globalThis.localStorage.setItem(
+      conversationsCacheKey,
+      JSON.stringify({ publicSignKey, conversations: convs }),
+    );
+  } catch {
+    // ignore quota errors
+  }
+};
 
 // Sub-component mutable state
 let loginShowForm: null | "existing" = null;
@@ -222,7 +263,7 @@ const archiveConversation = (conversationId: string) => {
   if (!profileId) return;
   const creds = credentials ?? undefined;
   ensureInstantAuth(creds).then(() =>
-    db.transact(
+    accessDb().transact(
       tx.identities[profileId].link({
         archivedConversations: conversationId,
       }),
@@ -239,7 +280,7 @@ const unarchiveConversation = (conversationId: string) => {
   if (!profileId) return;
   const creds = credentials ?? undefined;
   ensureInstantAuth(creds).then(() =>
-    db.transact(
+    accessDb().transact(
       tx.identities[profileId].unlink({
         archivedConversations: conversationId,
       }),
@@ -352,10 +393,8 @@ const toastPromise = <T>(
 
 // --- DB ---
 
-const db = accessDb();
-
 const nameFromPublicSignKey = async (publicSignKey: string) => {
-  const { data } = await db.queryOnce({
+  const { data } = await accessDb().queryOnce({
     identities: { $: { where: { publicSignKey } } },
   });
   if (data.identities.length === 0) {
@@ -583,8 +622,11 @@ const handleTransferImport = async () => {
       result.encryptedPayload as EncryptedSymmetric<Credentials>,
     );
     localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
-    showToast("Credentials imported — reloading…", "success");
-    setTimeout(() => globalThis.location.reload(), 500);
+    transferImportInFlight = false;
+    credentialsChecked = true;
+    setCredentials_(creds);
+    syncStateFromUrl();
+    showToast("Credentials imported", "success");
   } catch (e) {
     console.error("Error importing transfer credentials", e);
     showToast("Failed to import credentials", "error");
@@ -645,6 +687,7 @@ const syncStateFromUrl = () => {
   if (v === "identity" || v === "new_chat") {
     if (selectedConversation !== null) selectedConversation = null;
     if (view !== v) view = v;
+    if (v === "identity" && !yourKeyBalanceData) fetchBalance();
     if (!initializedFromQuery) initializedFromQuery = true;
     rerenderChat();
     return;
@@ -730,10 +773,10 @@ const subscribeYourKeyProfile = (publicSignKey: string) => {
     if (profile?.alias !== undefined && yourKeyAliasInput === "") {
       yourKeyAliasInput = profile.alias ?? "";
     }
-    rerenderChat();
-  });
-  subscribeUserName(publicSignKey, (name) => {
-    if (name !== null && yourKeyNameInput === "") yourKeyNameInput = name;
+    const shortName = profile?.name?.split("@")[0] ?? null;
+    if (shortName !== null && yourKeyNameInput === "") {
+      yourKeyNameInput = shortName;
+    }
     rerenderChat();
   });
 };
@@ -1098,6 +1141,7 @@ const renameModalTemplate = () =>
 
 const setView_ = (v: View) => {
   view = v;
+  if (v === "identity" && !yourKeyBalanceData) fetchBalance();
   syncUrlFromState();
   rerenderChat();
 };
@@ -1135,7 +1179,8 @@ const conversationListItem = (conv: Conversation) => {
     (p) => p.publicSignKey !== credentials!.publicSignKey,
   );
   const otherKey = otherParticipant?.publicSignKey ?? "";
-  const participantName = nameCache.get(otherKey) ?? null;
+  const participantName = otherParticipant?.name?.split("@")[0] ??
+    nameCache.get(otherKey) ?? null;
   const displayName = conv.title || participantName;
   const isSelected = selectedConversation === conv.id;
   const isCurrentlyArchived = isArchived(conv);
@@ -1487,6 +1532,7 @@ const deleteCredentialsRow = () =>
             )
           ) {
             localStorage.removeItem("alicebot_credentials");
+            localStorage.removeItem(conversationsCacheKey);
             globalThis.location.reload();
           }
         }}"
@@ -3025,32 +3071,50 @@ const chatTemplate = (): TemplateResult =>
 
 const initLoggedInState = () => {
   if (!credentials) return;
-  registerCredentials(credentials);
-  ensureInstantAuth(credentials).catch(() => {});
-  // Subscribe to conversations
+  const activeCredentials = credentials;
+  registerCredentials(activeCredentials);
+  const initialQueryConv = currentQuery()["c"];
+  hintColdBootstrap(activeCredentials.publicSignKey, {
+    includeConversations: true,
+    ...(initialQueryConv ? { conversationId: initialQueryConv } : {}),
+  });
+  ensureInstantAuth(activeCredentials).catch(() => {});
+  if (conversations === null) {
+    conversations = readCachedConversations(activeCredentials.publicSignKey);
+  }
   if (conversationsUnsub) conversationsUnsub();
   conversationsUnsub = subscribeConversations(
-    credentials,
+    activeCredentials,
     (convs) => {
+      if (convs === null && conversations !== null) return;
       conversations = convs;
+      writeCachedConversations(activeCredentials.publicSignKey, convs);
       convs?.forEach((conv) => {
-        const otherKey = conv.participants.find(
-          (p) => p.publicSignKey !== credentials!.publicSignKey,
-        )?.publicSignKey;
-        if (otherKey) subscribeName(otherKey);
+        const other = conv.participants.find(
+          (p) => p.publicSignKey !== activeCredentials.publicSignKey,
+        );
+        if (other && !conv.title && !other.name) {
+          subscribeName(other.publicSignKey);
+        }
       });
       rerenderChat();
       handleChatWithInvite();
     },
   );
-  // Subscribe to profile
-  subscribeYourKeyProfile(credentials.publicSignKey);
-  fetchBalance();
-  // Active reporting & silent push subscription refresh when already granted
-  if (activeReportCleanup) activeReportCleanup();
-  activeReportCleanup = startActiveReporting(credentials);
+  subscribeYourKeyProfile(activeCredentials.publicSignKey);
+  if (activeReportTimer) clearTimeout(activeReportTimer);
+  if (activeReportCleanup) {
+    activeReportCleanup();
+    activeReportCleanup = null;
+  }
+  activeReportTimer = setTimeout(() => {
+    activeReportTimer = null;
+    if (credentials?.publicSignKey === activeCredentials.publicSignKey) {
+      activeReportCleanup = startActiveReporting(activeCredentials);
+    }
+  }, 2000);
   if (globalThis.Notification?.permission === "granted") {
-    registerPush(credentials).catch(() => {});
+    registerPush(activeCredentials).catch(() => {});
   }
 };
 
@@ -3068,6 +3132,10 @@ const cleanup = () => {
   if (conversationsUnsub) {
     conversationsUnsub();
     conversationsUnsub = null;
+  }
+  if (activeReportTimer) {
+    clearTimeout(activeReportTimer);
+    activeReportTimer = null;
   }
   if (activeReportCleanup) {
     activeReportCleanup();

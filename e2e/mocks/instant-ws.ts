@@ -107,6 +107,7 @@ const buildAttrs = () => [
   refAttr("conversations", "keys", "keys", "conversation"),
   refAttr("identities", "keys", "keys", "owner"),
   refAttr("conversations", "participants", "identities", "conversations"),
+  refAttr("identities", "archivedConversations", "conversations", "archivedBy"),
   refAttr("conversations", "typingStates", "typingStates", "conversation"),
   refAttr("identities", "typingStates", "typingStates", "owner"),
   refAttr("conversations", "uiElements", "uiElements", "conversation"),
@@ -327,6 +328,24 @@ export const setupInstantWsMock = async (
                 publicEncryptKey: data.bob.publicEncryptKey,
                 name: "Bob",
               }, tx),
+              ...fieldTriples(data.conversationId, "conversations", {
+                title: "Test Conversation",
+                updatedAt: Date.now(),
+              }, tx),
+              link(
+                "conversations",
+                "participants",
+                data.conversationId,
+                data.aliceIdentityId,
+                tx,
+              ),
+              link(
+                "conversations",
+                "participants",
+                data.conversationId,
+                data.bobIdentityId,
+                tx,
+              ),
               ...fieldTriples(data.keyId, "keys", {
                 key: data.aliceEncryptedKey,
               }, tx),

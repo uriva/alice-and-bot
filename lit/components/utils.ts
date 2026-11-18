@@ -28,18 +28,39 @@ export type Participant = {
   alias?: string;
 };
 
+export const extractInlineIdentityDetails = (
+  participants: Participant[],
+  conversations: Conversation[] | null,
+): IdentityDetails =>
+  Object.fromEntries(
+    [
+      ...(conversations ?? []).flatMap((c) => c.participants),
+      ...participants,
+    ]
+      .filter((p): p is Participant & { name: string } => Boolean(p.name))
+      .map((p) => [
+        p.publicSignKey,
+        {
+          name: p.name,
+          ...(p.avatar !== undefined ? { avatar: p.avatar } : {}),
+        },
+      ]),
+  );
+
 export const collectIdentityKeys = ({
   messages,
   participants,
   ephemeralStreams,
   conversations,
   enableChatSwitching,
+  knownDetails,
 }: {
   messages: DecipheredMessage[] | null;
   participants: Participant[];
   ephemeralStreams: EphemeralStreamEvent[];
   conversations: Conversation[] | null;
   enableChatSwitching: boolean;
+  knownDetails?: IdentityDetails;
 }): string[] =>
   unique([
     ...(enableChatSwitching && conversations
@@ -50,7 +71,7 @@ export const collectIdentityKeys = ({
     ...ephemeralStreams
       .map((e) => e.authorId)
       .filter((x): x is string => Boolean(x)),
-  ].filter(Boolean));
+  ].filter((k) => Boolean(k) && !knownDetails?.[k]));
 
 export const mergeIdentityDetails = (
   current: IdentityDetails,
@@ -69,7 +90,8 @@ export const resolveConversationDisplayName = (
   if (conv.title && conv.title !== "Chat") return conv.title;
   const other = conv.participants.find((p) => p.publicSignKey !== myKey);
   if (!other) return conv.title || "Chat";
-  const cachedName = nameCache.get(other.publicSignKey) ||
+  const cachedName = other.name?.split("@")[0] ||
+    nameCache.get(other.publicSignKey) ||
     identityDetails?.[other.publicSignKey]?.name;
   return cachedName || conv.title || compactPublicKey(other.publicSignKey);
 };

@@ -1,4 +1,3 @@
-import "emoji-picker-element";
 import { html, LitElement, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import type { Attachment } from "../../protocol/src/clientApi.ts";
@@ -347,12 +346,24 @@ const renderReactionPills = (
     </div>
   `;
 
+const emojiPickerState: { loaded: Promise<unknown> | null } = { loaded: null };
+
+const ensureEmojiPickerLoaded = () => {
+  if (!emojiPickerState.loaded) {
+    emojiPickerState.loaded = import("emoji-picker-element").catch((err) => {
+      emojiPickerState.loaded = null;
+      console.error("Failed to load emoji picker", err);
+    });
+  }
+};
+
 const renderEmojiGrid = (
   isDark: boolean,
   onPick: (emoji: string) => void,
   onClose: () => void,
-) =>
-  html`
+) => {
+  ensureEmojiPickerLoaded();
+  return html`
     <div style="${overlayStyle}" @click="${onClose}">
       <div
         style="background:${isDark
@@ -375,6 +386,7 @@ const renderEmojiGrid = (
       </div>
     </div>
   `;
+};
 
 const resolveTargetMedia = (
   target: EventTarget | null,

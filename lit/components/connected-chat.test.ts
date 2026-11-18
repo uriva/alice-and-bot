@@ -447,3 +447,10 @@ Deno.test("connected-chat connects rename-conversation event and calls renameCon
   assertEquals(code.includes("@rename-conversation"), true);
   assertEquals(code.includes("renameConversation("), true);
 });
+
+Deno.test("connected-chat subscribes to messages in parallel with conversation key without re-subscribing", async () => {
+  const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+  assertEquals(code.includes("subscribeConversationMessagesStream"), true);
+  assertEquals(code.includes("setConversationKey("), true);
+  assertEquals(code.includes("_resubscribeMessages"), false);
+});

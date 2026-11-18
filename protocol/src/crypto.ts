@@ -44,27 +44,56 @@ export const decryptAsymmetric = async <T>(
     ),
   ));
 
+const maxCachedCryptoKeys = 512;
+const importedKeyCache = new Map<string, Promise<CryptoKey>>();
+
+const cacheImportedKey = (
+  cacheKey: string,
+  loader: () => Promise<CryptoKey>,
+): Promise<CryptoKey> => {
+  const cached = importedKeyCache.get(cacheKey);
+  if (cached) return cached;
+  if (importedKeyCache.size >= maxCachedCryptoKeys) {
+    const oldest = importedKeyCache.keys().next().value;
+    if (oldest !== undefined) importedKeyCache.delete(oldest);
+  }
+  const pending = loader().catch((err) => {
+    importedKeyCache.delete(cacheKey);
+    throw err;
+  });
+  importedKeyCache.set(cacheKey, pending);
+  return pending;
+};
+
 const importKey = (
   key: string,
   usage: "encrypt" | "decrypt" | "sign" | "verify",
 ) =>
-  crypto.subtle.importKey(
-    usage === "decrypt" || usage === "sign"
-      ? privateKeyFormat
-      : publicKeyFormat,
-    base64ToUint8Array(key),
-    usage === "decrypt" || usage === "encrypt" ? encryptAlgo : signAlgo,
-    false,
-    [usage],
+  cacheImportedKey(
+    `${usage}:${key}`,
+    () =>
+      crypto.subtle.importKey(
+        usage === "decrypt" || usage === "sign"
+          ? privateKeyFormat
+          : publicKeyFormat,
+        base64ToUint8Array(key),
+        usage === "decrypt" || usage === "encrypt" ? encryptAlgo : signAlgo,
+        false,
+        [usage],
+      ),
   );
 
 const importSymmetricKey = (key: string, usage: KeyUsage[]) =>
-  crypto.subtle.importKey(
-    "raw",
-    base64ToUint8Array(key),
-    aesAlgo,
-    false,
-    usage,
+  cacheImportedKey(
+    `aes:${usage.join(",")}:${key}`,
+    () =>
+      crypto.subtle.importKey(
+        "raw",
+        base64ToUint8Array(key),
+        aesAlgo,
+        false,
+        usage,
+      ),
   );
 
 export const encryptAsymmetric = async <T>(publicKey: string, data: T) =>

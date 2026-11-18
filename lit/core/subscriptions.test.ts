@@ -3,6 +3,9 @@ import { FakeTime } from "@std/testing/time";
 import type { EncryptedMessage } from "../../protocol/src/clientApi.ts";
 import {
   type ConversationActivity,
+  conversationKeyQuery,
+  conversationsQuery,
+  createConversationMessagesStream,
   createConversationSafely,
   type DecryptedMessagesResult,
   decryptKeySafely,
@@ -13,6 +16,14 @@ import {
   pickBestConversation,
   typingTtl,
 } from "./subscriptions.ts";
+import { subscribePaginatedQuery } from "./instant-client.ts";
+import {
+  encryptSymmetric,
+  generateKeyPair,
+  generateSymmetricKey,
+  sign,
+} from "../../protocol/src/crypto.ts";
+import { msgToStr } from "../../protocol/src/clientApi.ts";
 
 type TypingState = {
   owner?: { publicSignKey?: string; name?: string };
@@ -604,4 +615,198 @@ Deno.test("useGetOrCreateConversation forwards title parameter", async () => {
   const code = await Deno.readTextFile("./lit/react-hooks.ts");
   assertEquals(code.includes("title?: string;"), true);
   assertEquals(code.includes("getOrCreateConversation("), true);
+});
+
+Deno.test("conversationsQuery traverses from indexed identity with participant display fields", () => {
+  const q = conversationsQuery("pk-self");
+  assertEquals(q.identities.$.where, { publicSignKey: "pk-self" });
+  assertEquals(
+    q.identities.conversations.participants.$.fields,
+    ["publicSignKey", "name", "avatar"],
+  );
+  assertEquals(q.identities.conversations.archivedBy.$.where, {
+    publicSignKey: "pk-self",
+  });
+});
+
+Deno.test("conversationKeyQuery queries keys directly by conversation and owner", () => {
+  const q = conversationKeyQuery("convo-1", "pk-self");
+  assertEquals(q.keys.$.where, {
+    conversation: "convo-1",
+    "owner.publicSignKey": "pk-self",
+  });
+});
+
+Deno.test("createConversationMessagesStream decrypts pre-fetched messages when key arrives without re-subscribing", async () => {
+  const { publicKey, privateKey } = await generateKeyPair("sign");
+  const symKey = await generateSymmetricKey();
+  const makeMsg = async (id: string, text: string, timestamp: number) => {
+    const inner = {
+      type: "text" as const,
+      text,
+      conversationId: "convo-1",
+      sentAt: timestamp,
+    };
+    const signature = await sign(privateKey, msgToStr(inner));
+    const payload = await encryptSymmetric(symKey, {
+      payload: inner,
+      publicSignKey: publicKey,
+      signature,
+    });
+    return { id, payload, timestamp };
+  };
+  const m1 = await makeMsg("m1", "first message", 1000);
+  const m2 = await makeMsg("m2", "second message", 2000);
+
+  const tracker: {
+    subscribeCalls: number;
+    m1PayloadReads: number;
+    pushSnapshot: (
+      msgs: Array<{ id: string; payload: EncryptedMessage; timestamp: number }>,
+    ) => void;
+  } = {
+    subscribeCalls: 0,
+    m1PayloadReads: 0,
+    pushSnapshot: () => {},
+  };
+  const received: DecryptedMessagesResult[] = [];
+
+  const stream = createConversationMessagesStream(
+    (_query, cb) => {
+      tracker.subscribeCalls++;
+      tracker.pushSnapshot = (messages) =>
+        cb({ data: { messages }, canLoadNextPage: false });
+      return { unsubscribe: () => {}, loadNextPage: () => {} };
+    },
+  )("convo-1", (res) => received.push(res));
+
+  assertEquals(tracker.subscribeCalls, 1);
+
+  tracker.pushSnapshot([m1]);
+  assertEquals(received.at(-1)?.messages, null);
+
+  await stream.setConversationKey(symKey);
+  assertEquals(
+    tracker.subscribeCalls,
+    1,
+    "must not tear down and re-subscribe when key arrives",
+  );
+  assertEquals(received.at(-1)?.messages?.map((m) => m.text), [
+    "first message",
+  ]);
+
+  const trackedM1 = {
+    id: m1.id,
+    timestamp: m1.timestamp,
+    get payload() {
+      tracker.m1PayloadReads++;
+      return m1.payload;
+    },
+  };
+  tracker.pushSnapshot([m2, trackedM1]);
+  await new Promise((r) => setTimeout(r, 20));
+  assertEquals(
+    received.at(-1)?.messages?.map((m) => m.text),
+    ["second message", "first message"],
+  );
+  assertEquals(
+    tracker.m1PayloadReads,
+    0,
+    "already-decrypted message by id must hit cache",
+  );
+  stream.unsubscribe();
+});
+
+Deno.test("subscribePaginatedQuery emits full page immediately on first callback even when rows equal limit", () => {
+  const queries: Array<{ limit?: number }> = [];
+  const callbacks: Array<
+    (resp: {
+      data?: { messages?: Array<{ id: string }> };
+      pageInfo?: { messages?: { hasNextPage?: boolean } };
+    }) => void
+  > = [];
+  const emitted: Array<{ count: number; canLoadNextPage: boolean }> = [];
+
+  const sub = subscribePaginatedQuery(messagesInfiniteQuery("convo-full"))<{
+    messages?: Array<{ id: string }>;
+  }>(
+    (q, cb) => {
+      queries.push({ limit: q.messages.$.limit });
+      callbacks.push(cb);
+      return () => {};
+    },
+    (resp) => {
+      const rows = resp.data?.messages;
+      emitted.push({
+        count: Array.isArray(rows) ? rows.length : 0,
+        canLoadNextPage: resp.canLoadNextPage,
+      });
+    },
+  );
+
+  assertEquals(queries.length, 1);
+  assertEquals(queries[0].limit, 100);
+
+  const hundredRows = Array.from({ length: 100 }, (_, i) => ({ id: `m-${i}` }));
+  callbacks[0]({
+    data: { messages: hundredRows },
+    pageInfo: { messages: { hasNextPage: true } },
+  });
+
+  assertEquals(
+    queries.length,
+    1,
+    "must not discard starter rows and spawn extra queries",
+  );
+  assertEquals(emitted, [{ count: 100, canLoadNextPage: true }]);
+
+  sub.loadNextPage();
+  assertEquals(queries.length, 2);
+  assertEquals(queries[1].limit, 200);
+  sub.unsubscribe();
+});
+
+Deno.test("createConversationMessagesStream progressively emits newest 20 messages before older history on initial load", async () => {
+  const { publicKey, privateKey } = await generateKeyPair("sign");
+  const symKey = await generateSymmetricKey();
+  const rows = await Promise.all(
+    Array.from({ length: 30 }, async (_, idx) => {
+      const timestamp = 1000 + idx * 100;
+      const inner = {
+        type: "text" as const,
+        text: `msg-${idx}`,
+        conversationId: "convo-prog",
+        sentAt: timestamp,
+      };
+      const signature = await sign(privateKey, msgToStr(inner));
+      const payload = await encryptSymmetric(symKey, {
+        payload: inner,
+        publicSignKey: publicKey,
+        signature,
+      });
+      return { id: `id-${idx}`, payload, timestamp };
+    }),
+  );
+
+  const emissionLengths: number[] = [];
+  const fullLoaded = new Promise<void>((resolve) => {
+    const stream = createConversationMessagesStream((_q, cb) => {
+      cb({ data: { messages: rows }, canLoadNextPage: false });
+      return { unsubscribe: () => {}, loadNextPage: () => {} };
+    })(
+      "convo-prog",
+      (res) => {
+        if (!res.messages) return;
+        emissionLengths.push(res.messages.length);
+        if (res.messages.length === 30) {
+          stream.unsubscribe();
+          resolve();
+        }
+      },
+      symKey,
+    );
+  });
+
+  await fullLoaded;
+  assertEquals(emissionLengths, [20, 30]);
 });

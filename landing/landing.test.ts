@@ -36,3 +36,8 @@ Deno.test("landing page restricts green strictly to the word WhatsApp and includ
   assertEquals(manifest.theme_color, "#181715");
   assertFalse(chatTs.includes("emerald-"));
 });
+
+Deno.test("index.html does not include render-blocking @tailwindcss/browser CDN script", async () => {
+  const indexHtml = await Deno.readTextFile(indexUrl);
+  assertFalse(indexHtml.includes("@tailwindcss/browser"));
+});

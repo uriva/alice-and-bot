@@ -447,9 +447,59 @@ export const backendApiSchema = {
     ]),
   ),
   mintInstantToken: authenticatedEndpoint(
-    z.object({}),
+    z.object({
+      includeConversations: z.boolean().optional(),
+      conversationId: z.string().optional(),
+    }),
     z.union([
-      z.object({ token: z.string(), instantEmail: z.string() }),
+      z.object({
+        token: z.string(),
+        instantEmail: z.string(),
+        conversations: z
+          .array(
+            z.object({
+              id: z.string(),
+              title: z.string(),
+              updatedAt: z.number().optional(),
+              participants: z.array(
+                z.object({
+                  publicSignKey: z.string(),
+                  name: z.string().optional(),
+                  avatar: z.string().optional(),
+                }),
+              ),
+              archivedBy: z
+                .array(z.object({ publicSignKey: z.string() }))
+                .optional(),
+            }),
+          )
+          .optional(),
+        conversationBootstrap: z
+          .object({
+            conversationId: z.string(),
+            hasAccess: z.boolean(),
+            title: z.string().optional(),
+            participants: z
+              .array(
+                z.object({
+                  publicSignKey: z.string(),
+                  name: z.string().optional(),
+                  avatar: z.string().optional(),
+                }),
+              )
+              .optional(),
+            encryptedKey: z.string().optional(),
+            messages: z.array(
+              z.object({
+                id: z.string(),
+                payload: z.unknown(),
+                timestamp: z.number(),
+              }),
+            ),
+            hasMore: z.boolean(),
+          })
+          .optional(),
+      }),
       z.object({ error: z.enum(["invalid-auth", "not-found"]) }),
     ]),
   ),
@@ -957,16 +1007,63 @@ export const saveCanvasSigned = async ({
     }),
   });
 
+export type MintInstantTokenBootstrap = {
+  conversations?: Array<{
+    id: string;
+    title: string;
+    updatedAt?: number;
+    participants: Array<{
+      publicSignKey: string;
+      name?: string;
+      avatar?: string;
+    }>;
+    archivedBy?: Array<{ publicSignKey: string }>;
+  }>;
+  conversationBootstrap?: {
+    conversationId: string;
+    hasAccess: boolean;
+    title?: string;
+    participants?: Array<{
+      publicSignKey: string;
+      name?: string;
+      avatar?: string;
+    }>;
+    encryptedKey?: string;
+    messages: Array<{ id: string; payload: unknown; timestamp: number }>;
+    hasMore: boolean;
+  };
+};
+
+export type MintInstantTokenResult =
+  | ({ token: string; instantEmail: string } & MintInstantTokenBootstrap)
+  | { error: "invalid-auth" | "not-found" };
+
 export const mintInstantTokenSigned = async (
   credentials: Credentials,
-): Promise<
-  | { token: string; instantEmail: string }
-  | { error: "invalid-auth" | "not-found" }
-> =>
-  apiClient({
+  options?: { includeConversations?: boolean; conversationId?: string },
+): Promise<MintInstantTokenResult> => {
+  const payload = {
+    ...(options?.includeConversations ? { includeConversations: true } : {}),
+    ...(options?.conversationId
+      ? { conversationId: options.conversationId }
+      : {}),
+  };
+  const res = await apiClient({
     endpoint: "mintInstantToken",
-    payload: await buildSignedRequest(credentials, "mintInstantToken", {}),
+    payload: await buildSignedRequest(credentials, "mintInstantToken", payload),
   });
+  if (
+    "error" in res &&
+    res.error === "invalid-auth" &&
+    Object.keys(payload).length > 0
+  ) {
+    return apiClient({
+      endpoint: "mintInstantToken",
+      payload: await buildSignedRequest(credentials, "mintInstantToken", {}),
+    });
+  }
+  return res;
+};
 
 export const getCanvasRow = async (
   conversationId: string,

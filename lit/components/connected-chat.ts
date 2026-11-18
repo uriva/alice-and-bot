@@ -21,15 +21,20 @@ import {
 } from "../../protocol/src/clientApi.ts";
 import { importIdentity, saveCredentials } from "../core/credentials.ts";
 import { registerCredentials } from "../../protocol/src/instantAuth.ts";
-import { accessAdminDb, subscribeAuthedQuery } from "../core/instant-client.ts";
+import {
+  accessAdminDb,
+  subscribeAuthedQuery,
+  subscribeColdBootstrap,
+} from "../core/instant-client.ts";
 import {
   compactPublicKey,
   type Conversation,
+  type ConversationMessagesStream,
   createTypingNotifier,
   nextConversationKey,
   subscribeConversationKey,
+  subscribeConversationMessagesStream,
   subscribeConversations,
-  subscribeDecryptedMessages,
   subscribeIdentityDetailsMap,
   subscribeTypingStates,
   subscribeUserName,
@@ -51,6 +56,7 @@ import { faPen } from "./icons.ts";
 import {
   collectIdentityKeys,
   copyToClipboard,
+  extractInlineIdentityDetails,
   type IdentityDetails,
   mergeIdentityDetails,
   type Participant,
@@ -859,8 +865,8 @@ export class ConnectedChat extends LitElement {
     this._suppressTypingAuthor = null;
     this._voiceCall?.cleanup();
     this._voiceCall = null;
-    this._messagesUnsub?.();
-    this._messagesUnsub = null;
+    this._messagesStream?.unsubscribe();
+    this._messagesStream = null;
     this._progressMax.clear();
     this._hadMessages = false;
     this._lastMessageSubscriptionKey = undefined;
@@ -907,8 +913,14 @@ export class ConnectedChat extends LitElement {
           const other = conv.participants.find(
             (p) => p.publicSignKey !== this.credentials!.publicSignKey,
           );
-          if (other) this._subscribeName(other.publicSignKey);
+          if (other && !conv.title && !other.name) {
+            this._subscribeName(other.publicSignKey);
+          }
         });
+        this._identityDetails = mergeIdentityDetails(
+          this._identityDetails,
+          extractInlineIdentityDetails(this._participants, convs),
+        );
         this._resubscribeIdentities();
         if (
           !this._activeConversationId && convs && convs.length > 0 &&
@@ -968,6 +980,29 @@ export class ConnectedChat extends LitElement {
     });
 
     this._unsubs.push(
+      subscribeColdBootstrap(publicSignKey, ({ conversationBootstrap }) => {
+        if (
+          conversationBootstrap?.conversationId !== targetId ||
+          this._participants.length > 0 ||
+          !conversationBootstrap.participants
+        ) {
+          return;
+        }
+        this._conversationTitle = conversationBootstrap.title || "Chat";
+        this._isGroupChat = conversationBootstrap.participants.length > 2;
+        this._participants = conversationBootstrap.participants;
+        this._identityDetails = mergeIdentityDetails(
+          this._identityDetails,
+          extractInlineIdentityDetails(
+            this._participants,
+            this.enableChatSwitching ? this._conversations : null,
+          ),
+        );
+        this.requestUpdate();
+      }),
+    );
+
+    this._unsubs.push(
       subscribeAuthedQuery(
         this.credentials,
         {
@@ -983,29 +1018,46 @@ export class ConnectedChat extends LitElement {
           this._conversationTitle = conv?.title || "Chat";
           this._isGroupChat = (conv?.participants.length ?? 0) > 2;
           this._participants = conv?.participants ?? [];
+          this._identityDetails = mergeIdentityDetails(
+            this._identityDetails,
+            extractInlineIdentityDetails(
+              this._participants,
+              this.enableChatSwitching ? this._conversations : null,
+            ),
+          );
           this._resubscribeIdentities();
           this.requestUpdate();
         },
       ),
     );
 
-    this._unsubs.push(
-      subscribeAuthedQuery(
-        this.credentials,
-        {
-          identities: {
-            $: { where: { publicSignKey } },
-            keys: {
-              $: { where: { conversation: targetId } },
-            },
-          },
-        },
-        ({ data }) => {
-          if (!data) return;
-          this._hasAccess = (data.identities?.[0]?.keys?.length ?? 0) > 0;
-          this.requestUpdate();
-        },
-      ),
+    this._messagesStream = subscribeConversationMessagesStream(
+      targetId,
+      this.credentials,
+      ({ messages, canLoadMore, loadMore }) => {
+        if (!messages) return;
+        if (messages.length === 0 && this._hadMessages) return;
+        const messagesChanged = !this._messages ||
+          this._messages.length !== messages.length ||
+          this._messages.some((m, i) => m.id !== messages[i].id);
+        const canLoadMoreChanged = this._canLoadMore !== canLoadMore;
+        if (!messagesChanged && !canLoadMoreChanged) return;
+        if (messages.length > this._lastMessageCount) {
+          const latestMessage = messages[0];
+          if (latestMessage) {
+            this._suppressTypingAuthor?.(latestMessage.publicSignKey);
+          }
+        }
+        this._messages = messages;
+        this._lastMessageCount = messages.length;
+        this._hadMessages = this._hadMessages || messages.length > 0;
+        this._canLoadMore = canLoadMore;
+        this._loadMore = loadMore;
+        this._resubscribeIdentities();
+        this._voiceCall?.handleMessages();
+        this.requestUpdate();
+      },
+      this._conversationKey,
     );
 
     this._unsubs.push(
@@ -1017,8 +1069,14 @@ export class ConnectedChat extends LitElement {
           if (resolved === this._lastMessageSubscriptionKey) return;
           this._lastMessageSubscriptionKey = resolved;
           this._conversationKey = resolved;
-          this._resubscribeMessages();
+          this._messagesStream?.setConversationKey(resolved);
           this.requestUpdate();
+        },
+        (hasAccess) => {
+          if (this._hasAccess !== hasAccess) {
+            this._hasAccess = hasAccess;
+            this.requestUpdate();
+          }
         },
       ),
     );
@@ -1060,40 +1118,7 @@ export class ConnectedChat extends LitElement {
 
   private _identityUnsub: (() => void) | null = null;
   private _lastIdentityKeys = "";
-  private _messagesUnsub: (() => void) | null = null;
-
-  private _resubscribeMessages() {
-    const targetId = this._activeConversationId || this.conversationId;
-    if (!targetId) return;
-    this._messagesUnsub?.();
-    this._messagesUnsub = subscribeDecryptedMessages(
-      targetId,
-      this._conversationKey,
-      ({ messages, canLoadMore, loadMore }) => {
-        if (!messages) return;
-        if (messages.length === 0 && this._hadMessages) return;
-        const messagesChanged = !this._messages ||
-          this._messages.length !== messages.length ||
-          this._messages.some((m, i) => m.id !== messages[i].id);
-        const canLoadMoreChanged = this._canLoadMore !== canLoadMore;
-        if (!messagesChanged && !canLoadMoreChanged) return;
-        if (messages.length > this._lastMessageCount) {
-          const latestMessage = messages[0];
-          if (latestMessage) {
-            this._suppressTypingAuthor?.(latestMessage.publicSignKey);
-          }
-        }
-        this._messages = messages;
-        this._lastMessageCount = messages.length;
-        this._hadMessages = this._hadMessages || messages.length > 0;
-        this._canLoadMore = canLoadMore;
-        this._loadMore = loadMore;
-        this._resubscribeIdentities();
-        this._voiceCall?.handleMessages();
-        this.requestUpdate();
-      },
-    );
-  }
+  private _messagesStream: ConversationMessagesStream | null = null;
 
   private _resubscribeIdentities() {
     const keys = collectIdentityKeys({
@@ -1102,6 +1127,7 @@ export class ConnectedChat extends LitElement {
       ephemeralStreams: this._ephemeralStreams,
       conversations: this._conversations,
       enableChatSwitching: this.enableChatSwitching,
+      knownDetails: this._identityDetails,
     });
     const sorted = [...new Set(keys)].sort().join(",");
     if (sorted === this._lastIdentityKeys) return;

@@ -1175,9 +1175,58 @@ export const endpoints: BackendApiImpl = {
         authToken,
       });
       if (!authOk) return { error: "invalid-auth" };
-      const { identities } = await query({
-        identities: { $: { where: { publicSignKey } } },
-      });
+      const wantConvos = Boolean(payload.includeConversations);
+      const targetConvId = payload.conversationId;
+      const bootstrapMsgLimit = 30;
+
+      const [identityQueryRes, convoBootstrapRes] = await Promise.all([
+        wantConvos
+          ? query({
+            identities: {
+              $: { where: { publicSignKey } },
+              conversations: {
+                participants: {
+                  $: { fields: ["publicSignKey", "name", "avatar"] },
+                },
+                archivedBy: {
+                  $: { where: { publicSignKey }, fields: ["publicSignKey"] },
+                },
+              },
+            },
+          })
+          : query({
+            identities: {
+              $: { where: { publicSignKey } },
+            },
+          }),
+        targetConvId
+          ? query({
+            conversations: {
+              participants: {
+                $: { fields: ["publicSignKey", "name", "avatar"] },
+              },
+              $: { where: { id: targetConvId } },
+            },
+            keys: {
+              $: {
+                where: {
+                  conversation: targetConvId,
+                  "owner.publicSignKey": publicSignKey,
+                },
+              },
+            },
+            messages: {
+              $: {
+                where: { conversation: targetConvId },
+                order: { timestamp: "desc" as const },
+                limit: bootstrapMsgLimit + 1,
+              },
+            },
+          })
+          : Promise.resolve(null),
+      ]);
+
+      const { identities } = identityQueryRes;
       if (identities.length === 0) return { error: "not-found" };
       const identity = identities[0];
       const instantEmail = await instantEmailFromPublicSignKey(publicSignKey);
@@ -1188,7 +1237,80 @@ export const endpoints: BackendApiImpl = {
           });
       }
       const token = await auth.createToken(instantEmail);
-      return { token, instantEmail };
+
+      const conversations = wantConvos
+        ? ("conversations" in identity && Array.isArray(identity.conversations)
+          ? identity.conversations
+          : []).map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            ...(c.updatedAt !== undefined ? { updatedAt: c.updatedAt } : {}),
+            participants: (c.participants ?? []).map((p: any) => ({
+              publicSignKey: p.publicSignKey,
+              ...(p.name !== undefined ? { name: p.name } : {}),
+              ...(p.avatar !== undefined ? { avatar: p.avatar } : {}),
+            })),
+            ...(c.archivedBy !== undefined
+              ? {
+                archivedBy: c.archivedBy.map((a: any) => ({
+                  publicSignKey: a.publicSignKey,
+                })),
+              }
+              : {}),
+          }))
+        : undefined;
+
+      const buildConversationBootstrap = () => {
+        if (!targetConvId || !convoBootstrapRes) return undefined;
+        const conv = convoBootstrapRes.conversations[0];
+        const isParticipant = Boolean(
+          conv?.participants?.some(
+            (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+          ),
+        );
+        const encryptedKey = isParticipant
+          ? convoBootstrapRes.keys[0]?.key
+          : undefined;
+        if (!isParticipant || typeof encryptedKey !== "string") {
+          return {
+            conversationId: targetConvId,
+            hasAccess: false,
+            messages: [],
+            hasMore: false,
+          };
+        }
+        const rawMsgs = convoBootstrapRes.messages ?? [];
+        return {
+          conversationId: targetConvId,
+          hasAccess: true,
+          title: conv?.title,
+          participants: (conv?.participants ?? []).map((p: any) => ({
+            publicSignKey: p.publicSignKey,
+            ...(p.name !== undefined ? { name: p.name } : {}),
+            ...(p.avatar !== undefined ? { avatar: p.avatar } : {}),
+          })),
+          encryptedKey,
+          messages: rawMsgs.slice(0, bootstrapMsgLimit).map(
+            (m: { id: string; payload: unknown; timestamp: number }) => ({
+              id: m.id,
+              payload: m.payload,
+              timestamp: m.timestamp,
+            }),
+          ),
+          hasMore: rawMsgs.length > bootstrapMsgLimit,
+        };
+      };
+
+      const conversationBootstrap = buildConversationBootstrap();
+
+      return {
+        token,
+        instantEmail,
+        ...(conversations !== undefined ? { conversations } : {}),
+        ...(conversationBootstrap !== undefined
+          ? { conversationBootstrap }
+          : {}),
+      };
     },
     getCanvasRow: async ({ conversationId, auth }) => {
       if (auth !== undefined) {
