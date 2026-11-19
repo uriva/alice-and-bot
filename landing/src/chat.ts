@@ -54,6 +54,7 @@ import {
 import { copyToClipboard } from "../../lit/components/utils.ts";
 import { chatPath, homePath } from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
+import { setActiveConversationGetter } from "./activeConversationBridge.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
 import { getCredentialsToCopy } from "../../lit/core/credentials.ts";
 import { startActiveReporting } from "../../lit/core/activeReporting.ts";
@@ -2794,7 +2795,8 @@ const mobileBottomNav = () => {
     }`;
   return html`
     <div
-      class="border-t border-[#e5e1d6] dark:border-[#24231f] px-3 py-2.5 bg-[#faf9f5] dark:bg-[#141412] flex items-center gap-1.5 flex-shrink-0"
+      class="border-t border-[#e5e1d6] dark:border-[#24231f] px-3 pt-2.5 bg-[#faf9f5] dark:bg-[#141412] flex items-center gap-1.5 flex-shrink-0"
+      style="padding-bottom:calc(0.625rem + env(safe-area-inset-bottom, 0px))"
     >
       <button type="button" class="${btnClass("chats")}" @click="${() =>
         setView_("chats")}">Chats</button>
@@ -3178,6 +3180,7 @@ const initLoggedInState = () => {
 };
 
 const cleanup = () => {
+  setActiveConversationGetter(null);
   chatInitialized = false;
   chatContainer = null;
   if (viewportCleanup) {
@@ -3286,6 +3289,9 @@ export const chat = (): TemplateResult => {
     );
 
     // URL popstate & notification focus/message sync
+    setActiveConversationGetter(() =>
+      view === "chats" ? selectedConversation : null
+    );
     globalThis.addEventListener("popstate", onPopstate);
     globalThis.addEventListener("focus", onWindowFocusOrVisible);
     globalThis.document?.addEventListener(

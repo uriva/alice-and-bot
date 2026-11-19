@@ -2078,7 +2078,7 @@ export class ChatBox extends LitElement {
                 customColors,
               )
               ? "0"
-              : "8px 12px 12px"};gap:${isTransparentInput(
+              : "8px 12px calc(12px + env(safe-area-inset-bottom, 0px))"};gap:${isTransparentInput(
                 customColors,
               )
               ? "0px"

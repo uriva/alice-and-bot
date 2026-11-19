@@ -1,4 +1,8 @@
 import { assertEquals } from "@std/assert";
+import {
+  handleActiveConversationQuery,
+  setActiveConversationGetter,
+} from "./src/activeConversationBridge.ts";
 
 const indexUrl = new URL("./index.html", import.meta.url);
 const manifestUrl = new URL("./public/manifest.json", import.meta.url);
@@ -52,4 +56,30 @@ Deno.test("manifest separates any and maskable icons and ships monochrome notifi
   assertEquals(swRaw.includes("/badge-96.png"), true);
   assertEquals(swRaw.includes("dismiss"), true);
   assertEquals(swRaw.includes("alice:select-conversation"), true);
+  assertEquals(swRaw.includes("alice:query-active-conversation"), true);
+});
+
+Deno.test("activeConversationBridge answers SW focus queries accurately across visible, hidden, and unmounted states", () => {
+  const replies: unknown[] = [];
+  const port = {
+    postMessage: (msg: unknown) => {
+      replies.push(msg);
+    },
+  };
+  const makeEvent = () => ({
+    data: { type: "alice:query-active-conversation" },
+    ports: [port],
+  });
+
+  setActiveConversationGetter(() => "conv-open");
+  handleActiveConversationQuery(makeEvent(), "visible");
+  handleActiveConversationQuery(makeEvent(), "hidden");
+  setActiveConversationGetter(null);
+  handleActiveConversationQuery(makeEvent(), "visible");
+
+  assertEquals(replies, [
+    { conversationId: "conv-open" },
+    { conversationId: null },
+    { conversationId: null },
+  ]);
 });

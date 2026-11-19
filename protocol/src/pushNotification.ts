@@ -78,9 +78,10 @@ export type NotificationRegistrationLike = {
 export type WindowClientLike = {
   url: string;
   focused?: boolean;
+  visibilityState?: string;
   focus?: () => Promise<unknown>;
   navigate?: (url: string) => Promise<unknown>;
-  postMessage?: (message: unknown) => void;
+  postMessage?: (message: unknown, transfer?: Transferable[]) => void;
 };
 
 export type ClientsLike = {
@@ -252,19 +253,102 @@ const parseUrlSafe = (rawUrl: string): URL | null => {
   }
 };
 
+const activeConversationQueryTimeoutMs = 250;
+
+const isWindowClientVisible = (client: {
+  focused?: boolean;
+  visibilityState?: string;
+}) => Boolean(client.focused || client.visibilityState === "visible");
+
+const isClientUrlMatchingConversation = (
+  url: string,
+  conversationId: string,
+) => {
+  const parsed = parseUrlSafe(url);
+  return Boolean(
+    parsed &&
+      parsed.pathname === "/chat" &&
+      parsed.searchParams.get("c") === conversationId,
+  );
+};
+
 export const isConversationFocused = (
-  clients: readonly { focused?: boolean; url: string }[],
+  clients: readonly {
+    focused?: boolean;
+    visibilityState?: string;
+    url: string;
+  }[],
   conversationId?: string,
 ): boolean => {
   if (!conversationId) return false;
-  return clients.some((client) => {
-    if (!client.focused) return false;
-    const parsed = parseUrlSafe(client.url);
-    return Boolean(
-      parsed &&
-        parsed.pathname === "/chat" &&
-        parsed.searchParams.get("c") === conversationId,
-    );
+  return clients.some(
+    (client) =>
+      isWindowClientVisible(client) &&
+      isClientUrlMatchingConversation(client.url, conversationId),
+  );
+};
+
+const queryClientActiveConversation = (
+  client: WindowClientLike,
+  timeoutMs = activeConversationQueryTimeoutMs,
+): Promise<string | null | undefined> => {
+  const postMessage = client.postMessage;
+  if (
+    !postMessage ||
+    typeof globalThis.MessageChannel === "undefined"
+  ) {
+    return Promise.resolve(undefined);
+  }
+  const channel = new MessageChannel();
+  return new Promise((resolve) => {
+    const finish = (
+      result: string | null | undefined,
+      closePort2: boolean,
+    ) => {
+      clearTimeout(timer);
+      channel.port1.onmessage = null;
+      channel.port1.close();
+      if (closePort2) channel.port2.close();
+      resolve(result);
+    };
+    const timer = setTimeout(() => finish(undefined, true), timeoutMs);
+    channel.port1.onmessage = (event: MessageEvent) => {
+      const payload: unknown = event.data;
+      if (!isPlainObject(payload) || !("conversationId" in payload)) {
+        finish(undefined, false);
+        return;
+      }
+      finish(
+        typeof payload.conversationId === "string"
+          ? payload.conversationId
+          : null,
+        false,
+      );
+    };
+    try {
+      postMessage.call(client, { type: "alice:query-active-conversation" }, [
+        channel.port2,
+      ]);
+    } catch {
+      finish(undefined, true);
+    }
+  });
+};
+
+const resolveIsConversationFocused = async (
+  clients: readonly WindowClientLike[],
+  conversationId?: string,
+): Promise<boolean> => {
+  if (!conversationId) return false;
+  const visibleClients = clients.filter(isWindowClientVisible);
+  if (empty(visibleClients)) return false;
+  const responses = await Promise.all(
+    visibleClients.map((client) => queryClientActiveConversation(client)),
+  );
+  return visibleClients.some((client, index) => {
+    const activeId = responses[index];
+    if (activeId !== undefined) return activeId === conversationId;
+    return isClientUrlMatchingConversation(client.url, conversationId);
   });
 };
 
@@ -573,7 +657,7 @@ export const handleServiceWorkerPush = async ({
   });
 
   if (data.type === "dismiss") {
-    const anyFocused = windowClients.some((c) => Boolean(c.focused));
+    const anyFocused = windowClients.some(isWindowClientVisible);
     if (!anyFocused) {
       await registration
         .showNotification("Alice&Bot", {
@@ -594,7 +678,7 @@ export const handleServiceWorkerPush = async ({
     return;
   }
 
-  if (isConversationFocused(windowClients, data.conversationId)) {
+  if (await resolveIsConversationFocused(windowClients, data.conversationId)) {
     await closeMatchingNotifications(registration, tag);
     await syncAppBadgeFromNotifications({
       registration,

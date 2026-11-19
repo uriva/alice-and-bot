@@ -21,14 +21,15 @@
     <link rel="icon" type="image/png" href="/icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="color-scheme" content="light dark" />
     <meta
       name="theme-color"
-      content="#f6f4ee"
+      content="#faf9f5"
       media="(prefers-color-scheme: light)"
     />
     <meta
       name="theme-color"
-      content="#0c0c0b"
+      content="#141412"
       media="(prefers-color-scheme: dark)"
     />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -44,6 +45,16 @@
       margin: 0;
       padding: 0;
       width: 100%;
+    }
+
+    html {
+      background-color: #faf9f5;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html {
+        background-color: #141412;
+      }
     }
 
     #root {

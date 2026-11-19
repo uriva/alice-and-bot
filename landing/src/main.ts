@@ -5,6 +5,8 @@ import {
   setDarkModeOverride,
   subscribeDarkMode,
 } from "../../lit/core/dark-mode.ts";
+import { applyDocumentTheme } from "./theme.ts";
+import { installActiveConversationResponder } from "./activeConversationBridge.ts";
 import { initRouter } from "./router.ts";
 import { initPwaInstall } from "./pwaInstall.ts";
 import {
@@ -29,6 +31,7 @@ const analytics: { capture: (eventName: string) => void } = {
 };
 
 if (typeof window !== "undefined") {
+  installActiveConversationResponder();
   initPwaInstall();
   setTimeout(() => {
     import("posthog-js")
@@ -48,7 +51,7 @@ setErrorReporter((eventName) => {
 });
 
 const setDocumentDarkClass = (isDark: boolean) => {
-  document.documentElement.classList.toggle("dark", isDark);
+  applyDocumentTheme(document, isDark);
 };
 
 const storedTheme = localStorage.getItem("theme");

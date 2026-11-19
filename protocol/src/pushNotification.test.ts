@@ -678,3 +678,118 @@ Deno.test("handleServiceWorkerNotificationClick focuses chat window before slow 
   gate.resolve(null);
   await clickDone;
 });
+
+Deno.test("handleServiceWorkerPush suppresses notifications for SPA-navigated focused/visible conversation even when client.url lacks ?c= or holds stale ?c=", async () => {
+  const [alice, bot] = await Promise.all([
+    makeTestParticipant(),
+    makeTestParticipant(),
+  ]);
+  const symKey = await generateSymmetricKey();
+  const aliceEncryptedConvKey = await encryptAsymmetric(
+    alice.publicEncryptKey,
+    symKey,
+  );
+  const keyStore = createMemoryPushKeyStore();
+  await keyStore.setCredentials(alice.credentials);
+
+  const makeSpaClient = ({
+    url,
+    focused,
+    visibilityState,
+    activeConversationId,
+  }: {
+    url: string;
+    focused: boolean;
+    visibilityState: string;
+    activeConversationId: string | null;
+  }) => ({
+    url,
+    focused,
+    visibilityState,
+    postMessage: (msg: unknown, transfer?: Transferable[]) => {
+      if (
+        typeof msg === "object" &&
+        msg !== null &&
+        "type" in msg &&
+        msg.type === "alice:query-active-conversation" &&
+        transfer?.[0] instanceof MessagePort
+      ) {
+        const port = transfer[0];
+        port.postMessage({ conversationId: activeConversationId });
+        port.close();
+      }
+    },
+  });
+
+  const cipherNew = await makeEncryptedSignedMessage(
+    symKey,
+    bot.credentials,
+    "conv-new",
+    { type: "text", text: "You are staring right at me" },
+  );
+  const { active: active1, registration: reg1 } = createFakeRegistration();
+  await handleServiceWorkerPush({
+    data: {
+      type: "message",
+      messageId: "m-spa-1",
+      conversationId: "conv-new",
+      conversationTitle: "Bot",
+      senderName: "Bot",
+      senderPublicSignKey: bot.credentials.publicSignKey,
+      conversationKey: aliceEncryptedConvKey,
+      encryptedMessage: cipherNew,
+    },
+    registration: reg1,
+    clients: {
+      matchAll: () =>
+        Promise.resolve([
+          makeSpaClient({
+            url: "https://aliceandbot.com/chat",
+            focused: false,
+            visibilityState: "visible",
+            activeConversationId: "conv-new",
+          }),
+        ]),
+    },
+    keyStore,
+  });
+  assertEquals(active1.size, 0);
+
+  const cipherOld = await makeEncryptedSignedMessage(
+    symKey,
+    bot.credentials,
+    "conv-old",
+    { type: "text", text: "Message in old convo after switching away" },
+  );
+  const { active: active2, registration: reg2 } = createFakeRegistration();
+  await handleServiceWorkerPush({
+    data: {
+      type: "message",
+      messageId: "m-spa-2",
+      conversationId: "conv-old",
+      conversationTitle: "Old Bot",
+      senderName: "Old Bot",
+      senderPublicSignKey: bot.credentials.publicSignKey,
+      conversationKey: aliceEncryptedConvKey,
+      encryptedMessage: cipherOld,
+    },
+    registration: reg2,
+    clients: {
+      matchAll: () =>
+        Promise.resolve([
+          makeSpaClient({
+            url: "https://aliceandbot.com/chat?c=conv-old",
+            focused: true,
+            visibilityState: "visible",
+            activeConversationId: "conv-new",
+          }),
+        ]),
+    },
+    keyStore,
+  });
+  assertEquals(active2.size, 1);
+  assertEquals(
+    active2.get("conv-old")?.body,
+    "Message in old convo after switching away",
+  );
+});

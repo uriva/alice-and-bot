@@ -3,10 +3,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  color-scheme: light;
+  background-color: #faf9f5;
   --toast-bg: #fff;
   --toast-text: #363636;
 }
 .dark {
+  color-scheme: dark;
+  background-color: #141412;
   --toast-bg: #2a2a2a;
   --toast-text: #f3f4f6;
 }
