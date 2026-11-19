@@ -239,7 +239,15 @@ const sidebarRenameButtonStyle = (
 ) =>
   `background:transparent;border:none;cursor:pointer;padding:6px;border-radius:6px;color:${
     customColors?.text ?? (isDark ? "#9ca3af" : "#6b7280")
-  };display:flex;align-items:center;justify-content:center;font-size:12px;opacity:0.6;transition:opacity 0.15s,background 0.15s;flex-shrink:0`;
+  };display:flex;align-items:center;justify-content:center;font-size:12px;transition:opacity 0.15s,background 0.15s;flex-shrink:0`;
+
+const sidebarHoverStyles = `
+  .alice-sidebar-rename-btn { opacity: 0.6; }
+  .alice-sidebar-desktop .alice-sidebar-item .alice-sidebar-rename-btn { opacity: 0; pointer-events: none; }
+  .alice-sidebar-desktop .alice-sidebar-item:hover .alice-sidebar-rename-btn,
+  .alice-sidebar-desktop .alice-sidebar-item:focus-within .alice-sidebar-rename-btn { opacity: 0.6; pointer-events: auto; }
+  .alice-sidebar-desktop .alice-sidebar-item .alice-sidebar-rename-btn:hover { opacity: 1; }
+`;
 
 const sameCredentials = (
   a: Credentials | null,
@@ -1736,6 +1744,7 @@ export class ConnectedChat extends LitElement {
 
       return html`
         <div
+          class="alice-sidebar-item"
           style="${sidebarItemStyle(isSelected, isDark, this.customColors)}"
           @click="${() => this._selectConversation(conv.id)}"
         >
@@ -1755,6 +1764,7 @@ export class ConnectedChat extends LitElement {
           <button
             type="button"
             title="Rename chat"
+            class="alice-sidebar-rename-btn"
             style="${sidebarRenameButtonStyle(isDark, this.customColors)}"
             @click="${(e: Event) => {
               e.stopPropagation();
@@ -2125,6 +2135,7 @@ export class ConnectedChat extends LitElement {
 
     if (this._isMobile && this._mobileShowList) {
       return html`
+        <style>${sidebarHoverStyles}</style>
         <div style="${mobileFullListStyle(isDark, this.customColors)}">
           <div style="${sidebarHeaderStyle(isDark)}">
             <div style="font-size:16px;font-weight:700;color:${this.customColors
@@ -2167,8 +2178,12 @@ export class ConnectedChat extends LitElement {
     }
 
     return html`
+      <style>${sidebarHoverStyles}</style>
       <div style="${chatSwitcherContainerStyle}">
-        <div style="${sidebarContainerStyle(isDark, this.customColors)}">
+        <div
+          class="alice-sidebar-desktop"
+          style="${sidebarContainerStyle(isDark, this.customColors)}"
+        >
           <div style="${sidebarHeaderStyle(isDark)}">
             <input
               type="text"

@@ -454,3 +454,25 @@ Deno.test("connected-chat subscribes to messages in parallel with conversation k
   assertEquals(code.includes("setConversationKey("), true);
   assertEquals(code.includes("_resubscribeMessages"), false);
 });
+
+Deno.test("connected-chat desktop sidebar hides rename button until row hover without inline opacity override", async () => {
+  const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+  assertEquals(code.includes("alice-sidebar-desktop"), true);
+  assertEquals(
+    code.includes(
+      ".alice-sidebar-desktop .alice-sidebar-item .alice-sidebar-rename-btn",
+    ),
+    true,
+  );
+  assertEquals(
+    code.includes(
+      ".alice-sidebar-desktop .alice-sidebar-item:hover .alice-sidebar-rename-btn",
+    ),
+    true,
+  );
+  const renameStyleMatch = code.match(
+    /const sidebarRenameButtonStyle =[\s\S]*?flex-shrink:0`/,
+  );
+  assertEquals(Boolean(renameStyleMatch), true);
+  assertEquals(renameStyleMatch?.[0].includes("opacity:"), false);
+});
