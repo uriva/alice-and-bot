@@ -116,13 +116,23 @@ const dummyDb: Db = init({
   schema,
 });
 
-export const auth: Db["auth"] = new Proxy(dummyDb.auth, {
-  get(_target, prop) {
-    const targetAuth = getDb().auth;
-    const val = Reflect.get(targetAuth, prop);
-    return typeof val === "function" ? val.bind(targetAuth) : val;
-  },
-});
+export const wrapAuthWithRetry =
+  (retry: ReturnType<typeof retryInstantDbOp>) =>
+  <T extends object>(getTarget: () => T): T =>
+    new Proxy(getTarget(), {
+      get(_target, prop) {
+        const targetAuth = getTarget();
+        const val = Reflect.get(targetAuth, prop);
+        return typeof val === "function"
+          ? (...args: unknown[]) =>
+            retry(() => Promise.resolve(val.apply(targetAuth, args)))
+          : val;
+      },
+    });
+
+export const auth: Db["auth"] = wrapAuthWithRetry(withDefaultRetry)(
+  () => getDb().auth,
+);
 
 export const query: Db["query"] = (q) =>
   withDefaultRetry(() => getDb().query(q));

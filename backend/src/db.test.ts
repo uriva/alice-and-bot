@@ -1,5 +1,9 @@
 import { assertEquals, assertRejects } from "@std/assert";
-import { isRetryableInstantDbError, retryInstantDbOp } from "./db.ts";
+import {
+  isRetryableInstantDbError,
+  retryInstantDbOp,
+  wrapAuthWithRetry,
+} from "./db.ts";
 
 const fastRetry = retryInstantDbOp({
   initialDelayMs: 1,
@@ -80,4 +84,26 @@ Deno.test("retryInstantDbOp stops after maxAttempts on persistent rate limiting"
     "Your request exceeded the rate limit.",
   );
   assertEquals(state.attempts, 4);
+});
+
+Deno.test("wrapAuthWithRetry retries rate-limited auth.createToken calls", async () => {
+  const state = { attempts: 0 };
+  const fakeAuth = {
+    createToken: (email: string) => {
+      state.attempts += 1;
+      if (state.attempts < 3) {
+        return Promise.reject(
+          Object.assign(
+            new Error("InstantAPIError: Your request exceeded the rate limit."),
+            { status: 429, body: { type: "rate-limited" } },
+          ),
+        );
+      }
+      return Promise.resolve(`token-for-${email}`);
+    },
+  };
+  const wrapped = wrapAuthWithRetry(fastRetry)(() => fakeAuth);
+  const token = await wrapped.createToken("user@example.com");
+  assertEquals(state.attempts, 3);
+  assertEquals(token, "token-for-user@example.com");
 });
