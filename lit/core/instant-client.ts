@@ -44,7 +44,7 @@ export const accessAdminDb = (): AdminDb => {
   return dbRefs.admin;
 };
 
-const isBrowserAuthCapable = (): boolean =>
+export const isBrowserAuthCapable = (): boolean =>
   typeof globalThis.window !== "undefined" && typeof indexedDB !== "undefined";
 
 const inFlightAuth = new Map<string, Promise<void>>();

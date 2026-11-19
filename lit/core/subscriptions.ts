@@ -11,21 +11,29 @@ import {
   renameConversation,
   sendMessageWithKey,
 } from "../../protocol/src/clientApi.ts";
-import { decryptAsymmetric } from "../../protocol/src/crypto.ts";
+import {
+  canSignWithPrivateKey,
+  decryptAsymmetric,
+} from "../../protocol/src/crypto.ts";
 import {
   lookupConversationKeyCredentials,
   registerConversationKeyCredentials,
   registerCredentials,
 } from "../../protocol/src/instantAuth.ts";
-import { savePushConversationKey } from "../../protocol/src/pushKeyStore.ts";
+import {
+  defaultPushKeyStore,
+  isStoredPushMessage,
+  type PushKeyStore,
+  type StoredPushMessage,
+} from "../../protocol/src/pushKeyStore.ts";
 import type schema from "../../instant.schema.ts";
 import { reportError } from "./error-reporter.ts";
 import {
   accessAdminDb,
   accessDb,
+  ensureInstantAuth,
   hintColdBootstrap,
-  isConversationBootstrapping,
-  isInstantAuthInFlight,
+  isBrowserAuthCapable,
   subscribeAuthedInfiniteQuery,
   subscribeAuthedQuery,
   subscribeColdBootstrap,
@@ -160,7 +168,72 @@ const isEncryptedConversationKeyStr = (
   value: unknown,
 ): value is EncryptedConversationKey => typeof value === "string";
 
-export const subscribeConversationKey = (
+type SwPushMessageData = {
+  type: "alice:push-message";
+  conversationId: string;
+  conversationKey: string;
+  message: StoredPushMessage;
+};
+
+const isSwPushMessageData = (data: unknown): data is SwPushMessageData =>
+  typeof data === "object" &&
+  data !== null &&
+  "type" in data &&
+  data.type === "alice:push-message" &&
+  "conversationId" in data &&
+  typeof data.conversationId === "string" &&
+  "conversationKey" in data &&
+  typeof data.conversationKey === "string" &&
+  "message" in data &&
+  isStoredPushMessage(data.message);
+
+const isSwSelectConversationFor = (
+  data: unknown,
+  conversationId: string,
+): boolean =>
+  typeof data === "object" &&
+  data !== null &&
+  "type" in data &&
+  data.type === "alice:select-conversation" &&
+  "conversationId" in data &&
+  data.conversationId === conversationId;
+
+const listenServiceWorkerMessages = (
+  handler: (data: unknown) => void,
+): () => void => {
+  const sw = globalThis.navigator?.serviceWorker;
+  if (!sw || typeof sw.addEventListener !== "function") return () => {};
+  const listener = (event: MessageEvent) => handler(event.data);
+  sw.addEventListener("message", listener);
+  return () => sw.removeEventListener("message", listener);
+};
+
+type SubscribeConversationKeyQuery = (
+  credentials: Credentials,
+  query: ReturnType<typeof conversationKeyQuery>,
+  cb: (resp: {
+    data?: { keys?: Array<{ key?: EncryptedConversationKey }> };
+    error?: unknown;
+  }) => void,
+) => () => void;
+
+export const makeSubscribeConversationKey = ({
+  subscribeQuery,
+  keyStore = defaultPushKeyStore,
+  fetchKey = getConversationKey,
+  canFetchDirect = isBrowserAuthCapable,
+  waitForAuth = ensureInstantAuth,
+}: {
+  subscribeQuery: SubscribeConversationKeyQuery;
+  keyStore?: Pick<
+    PushKeyStore,
+    "getConversationKey" | "setConversationKey"
+  >;
+  fetchKey?: typeof getConversationKey;
+  canFetchDirect?: () => boolean;
+  waitForAuth?: typeof ensureInstantAuth;
+}) =>
+(
   conversationId: string,
   credentials: Credentials,
   onChange: (key: string | null) => void,
@@ -177,10 +250,30 @@ export const subscribeConversationKey = (
     onAccessChange?.(true);
     onChange(cachedEntry.decrypted);
   }
-  const shouldDirectFetchKey = !cachedEntry &&
-    isInstantAuthInFlight(publicSignKey) &&
-    !isConversationBootstrapping(publicSignKey, conversationId);
   hintColdBootstrap(publicSignKey, { conversationId });
+
+  const emitResolvedPlainKey = (plainKey: string) => {
+    if (state.cancelled || state.resolved || !plainKey) return;
+    state.resolved = true;
+    registerConversationKeyCredentials(plainKey, credentials);
+    onAccessChange?.(true);
+    onChange(plainKey);
+  };
+
+  if (!cachedEntry) {
+    keyStore
+      .getConversationKey(conversationId)
+      .then((storedKey) => {
+        if (storedKey) emitResolvedPlainKey(storedKey);
+      })
+      .catch(() => {});
+  }
+
+  const unsubSw = listenServiceWorkerMessages((data) => {
+    if (isSwPushMessageData(data) && data.conversationId === conversationId) {
+      emitResolvedPlainKey(data.conversationKey);
+    }
+  });
 
   const decryptAndNotify = (encryptedKey: EncryptedConversationKey) => {
     const hit = decryptedConversationKeyCache.get(cacheId);
@@ -199,9 +292,9 @@ export const subscribeConversationKey = (
               encryptedKey,
               decryptedKey,
             );
-            savePushConversationKey(conversationId, decryptedKey).catch(
-              () => {},
-            );
+            keyStore
+              .setConversationKey(conversationId, decryptedKey)
+              .catch(() => {});
             registerConversationKeyCredentials(decryptedKey, credentials);
             return decryptedKey;
           },
@@ -226,25 +319,30 @@ export const subscribeConversationKey = (
         return;
       }
       onAccessChange?.(conversationBootstrap.hasAccess);
-      if (!isEncryptedConversationKeyStr(conversationBootstrap.encryptedKey)) {
+      if (
+        !isEncryptedConversationKeyStr(conversationBootstrap.encryptedKey)
+      ) {
         return onChange(null);
       }
       decryptAndNotify(conversationBootstrap.encryptedKey);
     },
   );
 
-  if (shouldDirectFetchKey) {
-    getConversationKey(credentials, conversationId)
-      .then((decryptedKey) => {
+  if (!cachedEntry && canFetchDirect()) {
+    waitForAuth(credentials)
+      .then(() => {
         if (state.cancelled || state.resolved) return;
-        state.resolved = true;
-        onAccessChange?.(true);
-        onChange(decryptedKey);
+        return fetchKey(credentials, conversationId).then((decryptedKey) => {
+          keyStore
+            .setConversationKey(conversationId, decryptedKey)
+            .catch(() => {});
+          emitResolvedPlainKey(decryptedKey);
+        });
       })
       .catch(() => {});
   }
 
-  const unsubLive = subscribeAuthedQuery(
+  const unsubLive = subscribeQuery(
     credentials,
     conversationKeyQuery(conversationId, publicSignKey),
     ({ data, error }) => {
@@ -262,10 +360,16 @@ export const subscribeConversationKey = (
 
   return () => {
     state.cancelled = true;
+    unsubSw();
     unsubBootstrap();
     unsubLive();
   };
 };
+
+export const subscribeConversationKey = makeSubscribeConversationKey({
+  subscribeQuery: (credentials, query, cb) =>
+    subscribeAuthedQuery(credentials, query, cb),
+});
 
 export type DecryptedMessagesResult = {
   messages: DecipheredMessage[] | null;
@@ -299,10 +403,42 @@ type SubscribeMessagesInfinite = (
 export type ConversationMessagesStream = {
   setConversationKey: (key: string | null) => Promise<void>;
   feedBootstrapMessages: (messages: DbMessage[], canLoadMore: boolean) => void;
+  mergeMessages: (messages: DbMessage[]) => void;
   unsubscribe: () => void;
 };
 
 const initialDecryptBatch = 20;
+const wakeupCatchUpCooldownMs = 1500;
+
+const pruneCoveredSupplemental = (
+  raw: DbMessage[] | undefined,
+  canLoadMore: boolean,
+  supplemental: Map<string, DbMessage>,
+) => {
+  if (supplemental.size === 0 || !raw || raw.length === 0) return;
+  const rawIds = new Set(raw.map((m) => m.id));
+  const oldestWindowTs = canLoadMore
+    ? Math.min(...raw.map((m) => m.timestamp))
+    : -Infinity;
+  Array.from(supplemental.values()).forEach((m) => {
+    if (rawIds.has(m.id) || m.timestamp < oldestWindowTs) {
+      supplemental.delete(m.id);
+    }
+  });
+};
+
+const combineRawWithSupplemental = (
+  raw: DbMessage[] | undefined,
+  supplemental: Map<string, DbMessage>,
+): DbMessage[] | undefined => {
+  if (supplemental.size === 0) return raw;
+  if (raw === undefined) return Array.from(supplemental.values());
+  const rawIds = new Set(raw.map((m) => m.id));
+  const extras = Array.from(supplemental.values()).filter(
+    (m) => !rawIds.has(m.id),
+  );
+  return extras.length === 0 ? raw : [...extras, ...raw];
+};
 
 export const messagesInfiniteQuery = (
   conversationId: string,
@@ -328,10 +464,12 @@ export const createConversationMessagesStream =
       return {
         setConversationKey: () => Promise.resolve(),
         feedBootstrapMessages: () => {},
+        mergeMessages: () => {},
         unsubscribe: () => {},
       };
     }
     const decryptedCache = new Map<string, DecipheredMessage | null>();
+    const supplementalMessages = new Map<string, DbMessage>();
     const state: {
       conversationKey: string | null;
       rawMessages: DbMessage[] | undefined;
@@ -384,7 +522,10 @@ export const createConversationMessagesStream =
 
     const decryptAndEmit = (): Promise<void> => {
       const key = state.conversationKey;
-      const encrypted = state.rawMessages;
+      const encrypted = combineRawWithSupplemental(
+        state.rawMessages,
+        supplementalMessages,
+      );
       const gen = ++state.generation;
       if (!key || !encrypted) {
         emit(null);
@@ -416,7 +557,9 @@ export const createConversationMessagesStream =
             emit([...head, ...tail]);
             return;
           }
-          state.hasEmittedInitial = true;
+          if (state.rawMessages !== undefined) {
+            state.hasEmittedInitial = true;
+          }
           const all = await decryptSlice(key, sorted);
           if (gen !== state.generation || !state.active) return;
           emit(all);
@@ -436,6 +579,11 @@ export const createConversationMessagesStream =
         state.liveReceived = true;
         state.canLoadMore = resp.canLoadNextPage ?? false;
         state.rawMessages = resp.data?.messages;
+        pruneCoveredSupplemental(
+          state.rawMessages,
+          state.canLoadMore,
+          supplementalMessages,
+        );
         decryptAndEmit();
       },
     );
@@ -445,7 +593,7 @@ export const createConversationMessagesStream =
       setConversationKey: (nextKey: string | null) => {
         if (nextKey === state.conversationKey) return Promise.resolve();
         state.conversationKey = nextKey;
-        return state.rawMessages !== undefined
+        return state.rawMessages !== undefined || supplementalMessages.size > 0
           ? decryptAndEmit()
           : Promise.resolve();
       },
@@ -453,11 +601,34 @@ export const createConversationMessagesStream =
         if (state.liveReceived || state.rawMessages !== undefined) return;
         state.canLoadMore = canLoadMore;
         state.rawMessages = messages;
+        pruneCoveredSupplemental(
+          state.rawMessages,
+          state.canLoadMore,
+          supplementalMessages,
+        );
+        decryptAndEmit();
+      },
+      mergeMessages: (messages: DbMessage[]) => {
+        if (!state.active || empty(messages)) return;
+        const rawIds = new Set((state.rawMessages ?? []).map((m) => m.id));
+        const oldestWindowTs =
+          state.canLoadMore && state.rawMessages && state.rawMessages.length > 0
+            ? Math.min(...state.rawMessages.map((m) => m.timestamp))
+            : -Infinity;
+        const fresh = messages.filter(
+          (m) =>
+            !rawIds.has(m.id) &&
+            m.timestamp >= oldestWindowTs &&
+            supplementalMessages.get(m.id)?.payload !== m.payload,
+        );
+        if (empty(fresh)) return;
+        fresh.forEach((m) => supplementalMessages.set(m.id, m));
         decryptAndEmit();
       },
       unsubscribe: () => {
         state.active = false;
         state.generation++;
+        supplementalMessages.clear();
         decryptedCache.clear();
         unsubscribe();
       },
@@ -490,25 +661,125 @@ const toDbMessages = (
       : []
   );
 
-export const subscribeConversationMessagesStream = (
+export const makeSubscribeConversationMessagesStream = ({
+  subscribeInfiniteQuery,
+  keyStore = defaultPushKeyStore,
+  fetchMessages = getMessagesSigned,
+  canFetchDirect = isBrowserAuthCapable,
+  waitForAuth = ensureInstantAuth,
+}: {
+  subscribeInfiniteQuery: (
+    credentials: Credentials | undefined,
+    query: MessagesInfiniteQuery,
+    cb: (resp: MessagesInfiniteResponse) => void,
+  ) => { unsubscribe: () => void; loadNextPage: () => void };
+  keyStore?: Pick<PushKeyStore, "getConversationMessages">;
+  fetchMessages?: typeof getMessagesSigned;
+  canFetchDirect?: () => boolean;
+  waitForAuth?: typeof ensureInstantAuth;
+}) =>
+(
   conversationId: string,
   credentials: Credentials | undefined,
   onChange: (result: DecryptedMessagesResult) => void,
   initialKey: string | null = null,
 ): ConversationMessagesStream => {
   const publicSignKey = credentials?.publicSignKey ?? "";
-  const shouldDirectFetchMsgs = Boolean(
-    publicSignKey &&
-      conversationId &&
-      isInstantAuthInFlight(publicSignKey) &&
-      !isConversationBootstrapping(publicSignKey, conversationId),
-  );
   if (publicSignKey && conversationId) {
     hintColdBootstrap(publicSignKey, { conversationId });
   }
   const stream = createConversationMessagesStream((query, cb) =>
-    subscribeAuthedInfiniteQuery(credentials, query, cb)
+    subscribeInfiniteQuery(credentials, query, cb)
   )(conversationId, onChange, initialKey);
+
+  const syncState = {
+    cancelled: false,
+    bootstrapReceived: false,
+    catchUpInFlight: false,
+    lastCatchUpAt: 0,
+  };
+
+  const pullStoredPushMessages = () => {
+    if (!conversationId) return;
+    keyStore
+      .getConversationMessages(conversationId)
+      .then((stored) => {
+        if (syncState.cancelled || empty(stored)) return;
+        stream.mergeMessages(toDbMessages(stored));
+      })
+      .catch(() => {});
+  };
+
+  const catchUpFromBackend = (force = false) => {
+    if (
+      syncState.cancelled ||
+      syncState.catchUpInFlight ||
+      !credentials ||
+      !conversationId ||
+      !canFetchDirect()
+    ) {
+      return;
+    }
+    const now = Date.now();
+    if (!force && now - syncState.lastCatchUpAt < wakeupCatchUpCooldownMs) {
+      return;
+    }
+    syncState.catchUpInFlight = true;
+    syncState.lastCatchUpAt = now;
+    canSignWithPrivateKey(credentials.privateSignKey)
+      .then((canSign) => {
+        if (!canSign || syncState.cancelled) return;
+        return fetchMessages({ conversationId, limit: 100, credentials })
+          .then((res) => {
+            if (syncState.cancelled || "error" in res) return;
+            const dbMsgs = toDbMessages(res.messages);
+            stream.feedBootstrapMessages(dbMsgs, res.hasMore);
+            stream.mergeMessages(dbMsgs);
+          });
+      })
+      .catch(() => {})
+      .finally(() => {
+        syncState.catchUpInFlight = false;
+      });
+  };
+
+  pullStoredPushMessages();
+
+  const unsubSw = conversationId
+    ? listenServiceWorkerMessages((data) => {
+      if (
+        isSwPushMessageData(data) &&
+        data.conversationId === conversationId
+      ) {
+        stream.setConversationKey(data.conversationKey);
+        stream.mergeMessages(toDbMessages([data.message]));
+        return;
+      }
+      if (isSwSelectConversationFor(data, conversationId)) {
+        pullStoredPushMessages();
+        catchUpFromBackend(true);
+      }
+    })
+    : () => {};
+
+  const onVisibilityOrFocus = () => {
+    if (globalThis.document?.visibilityState === "hidden") return;
+    pullStoredPushMessages();
+    catchUpFromBackend();
+  };
+
+  if (conversationId && typeof globalThis.addEventListener === "function") {
+    globalThis.addEventListener("focus", onVisibilityOrFocus);
+  }
+  if (
+    conversationId &&
+    typeof globalThis.document?.addEventListener === "function"
+  ) {
+    globalThis.document.addEventListener(
+      "visibilitychange",
+      onVisibilityOrFocus,
+    );
+  }
 
   const unsubBootstrap = publicSignKey && conversationId
     ? subscribeColdBootstrap(publicSignKey, ({ conversationBootstrap }) => {
@@ -518,18 +789,19 @@ export const subscribeConversationMessagesStream = (
       ) {
         return;
       }
-      stream.feedBootstrapMessages(
-        toDbMessages(conversationBootstrap.messages),
-        conversationBootstrap.hasMore,
-      );
+      syncState.bootstrapReceived = true;
+      const dbMsgs = toDbMessages(conversationBootstrap.messages);
+      stream.feedBootstrapMessages(dbMsgs, conversationBootstrap.hasMore);
+      stream.mergeMessages(dbMsgs);
     })
     : () => {};
 
-  if (credentials && conversationId && shouldDirectFetchMsgs) {
-    getMessagesSigned({ conversationId, limit: 100, credentials })
-      .then((res) => {
-        if ("error" in res) return;
-        stream.feedBootstrapMessages(toDbMessages(res.messages), res.hasMore);
+  if (credentials && conversationId && canFetchDirect()) {
+    waitForAuth(credentials)
+      .then(() => {
+        if (!syncState.bootstrapReceived) {
+          catchUpFromBackend(true);
+        }
       })
       .catch(() => {});
   }
@@ -537,12 +809,30 @@ export const subscribeConversationMessagesStream = (
   return {
     setConversationKey: stream.setConversationKey,
     feedBootstrapMessages: stream.feedBootstrapMessages,
+    mergeMessages: stream.mergeMessages,
     unsubscribe: () => {
+      syncState.cancelled = true;
+      if (typeof globalThis.removeEventListener === "function") {
+        globalThis.removeEventListener("focus", onVisibilityOrFocus);
+      }
+      if (typeof globalThis.document?.removeEventListener === "function") {
+        globalThis.document.removeEventListener(
+          "visibilitychange",
+          onVisibilityOrFocus,
+        );
+      }
+      unsubSw();
       unsubBootstrap();
       stream.unsubscribe();
     },
   };
 };
+
+export const subscribeConversationMessagesStream =
+  makeSubscribeConversationMessagesStream({
+    subscribeInfiniteQuery: (credentials, query, cb) =>
+      subscribeAuthedInfiniteQuery(credentials, query, cb),
+  });
 
 export const subscribeDecryptedMessages: ReturnType<
   typeof makeSubscribeDecryptedMessages

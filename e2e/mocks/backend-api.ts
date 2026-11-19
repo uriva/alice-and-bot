@@ -143,6 +143,19 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
     if (endpoint === "getCanvasRow") {
       return route.fulfill(json({ row: null }));
     }
+    if (endpoint === "getMessages") {
+      const conversationId = str(payload.conversationId);
+      const msgs = conversationId === data.conversationId
+        ? [...data.messages]
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .map(({ id, payload: p, timestamp }) => ({
+            id,
+            payload: p,
+            timestamp,
+          }))
+        : [];
+      return route.fulfill(json({ messages: msgs, hasMore: false }));
+    }
     if (
       endpoint === "dismissNotifications" ||
       endpoint === "heartbeat" ||

@@ -570,3 +570,111 @@ Deno.test("handleServiceWorkerPush fetches oversized ciphertext by messageId, pr
     "Analyst: Final verified report\nReviewer: Approved",
   );
 });
+
+Deno.test("handleServiceWorkerPush caches pushed ciphertext in keyStore and posts instant update to background chat window", async () => {
+  const [alice, bot] = await Promise.all([
+    makeTestParticipant(),
+    makeTestParticipant(),
+  ]);
+  const symKey = await generateSymmetricKey();
+  const aliceEncryptedConvKey = await encryptAsymmetric(
+    alice.publicEncryptKey,
+    symKey,
+  );
+  const keyStore = createMemoryPushKeyStore();
+  await keyStore.setCredentials(alice.credentials);
+  const { registration } = createFakeRegistration();
+  const backgroundMessages: unknown[] = [];
+
+  const cipher = await makeEncryptedSignedMessage(
+    symKey,
+    bot.credentials,
+    "conv-instant",
+    { type: "text", text: "Instant push body" },
+  );
+
+  await handleServiceWorkerPush({
+    data: {
+      type: "message",
+      messageId: "m-push-1",
+      conversationId: "conv-instant",
+      conversationTitle: "Bot",
+      senderName: "Bot",
+      senderPublicSignKey: bot.credentials.publicSignKey,
+      conversationKey: aliceEncryptedConvKey,
+      encryptedMessage: cipher,
+      timestamp: 1700000000123,
+    },
+    registration,
+    clients: {
+      matchAll: () =>
+        Promise.resolve([
+          {
+            focused: false,
+            url: "https://aliceandbot.com/chat?c=conv-instant",
+            postMessage: (msg: unknown) => {
+              backgroundMessages.push(msg);
+            },
+          },
+        ]),
+    },
+    keyStore,
+  });
+
+  const cachedMsgs = await keyStore.getConversationMessages("conv-instant");
+  assertEquals(cachedMsgs, [
+    { id: "m-push-1", payload: cipher, timestamp: 1700000000123 },
+  ]);
+  assertEquals(backgroundMessages, [
+    {
+      type: "alice:push-message",
+      conversationId: "conv-instant",
+      conversationKey: symKey,
+      message: { id: "m-push-1", payload: cipher, timestamp: 1700000000123 },
+    },
+  ]);
+});
+
+Deno.test("handleServiceWorkerNotificationClick focuses chat window before slow keyStore or remote dismiss completes", async () => {
+  const keyStore = createMemoryPushKeyStore();
+  const gate = Promise.withResolvers<null>();
+  const slowKeyStore = {
+    ...keyStore,
+    getCredentials: () => gate.promise,
+  };
+  const { registration } = createFakeRegistration();
+  const events: string[] = [];
+
+  const clickDone = handleServiceWorkerNotificationClick({
+    action: "",
+    notification: {
+      tag: "conv-fast",
+      data: { conversationId: "conv-fast" },
+      close: () => {
+        events.push("closed");
+      },
+    },
+    registration,
+    clients: {
+      matchAll: () =>
+        Promise.resolve([
+          {
+            url: "https://aliceandbot.com/chat",
+            postMessage: () => {
+              events.push("posted");
+            },
+            focus: () => {
+              events.push("focused");
+              return Promise.resolve();
+            },
+          },
+        ]),
+    },
+    keyStore: slowKeyStore,
+  });
+
+  await new Promise((r) => setTimeout(r, 10));
+  assertEquals(events, ["closed", "posted", "focused"]);
+  gate.resolve(null);
+  await clickDone;
+});

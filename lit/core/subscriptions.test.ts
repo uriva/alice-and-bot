@@ -10,6 +10,8 @@ import {
   type DecryptedMessagesResult,
   decryptKeySafely,
   makeCreateTypingNotifier,
+  makeSubscribeConversationKey,
+  makeSubscribeConversationMessagesStream,
   makeSubscribeDecryptedMessages,
   makeSubscribeTypingStates,
   messagesInfiniteQuery,
@@ -24,6 +26,7 @@ import {
   sign,
 } from "../../protocol/src/crypto.ts";
 import { msgToStr } from "../../protocol/src/clientApi.ts";
+import { createMemoryPushKeyStore } from "../../protocol/src/pushKeyStore.ts";
 
 type TypingState = {
   owner?: { publicSignKey?: string; name?: string };
@@ -809,4 +812,152 @@ Deno.test("createConversationMessagesStream progressively emits newest 20 messag
 
   await fullLoaded;
   assertEquals(emissionLengths, [20, 30]);
+});
+
+Deno.test("createConversationMessagesStream mergeMessages shows pushed message immediately and survives stale offline cache until WS catches up", async () => {
+  const { publicKey, privateKey } = await generateKeyPair("sign");
+  const symKey = await generateSymmetricKey();
+  const makeMsg = async (id: string, text: string, timestamp: number) => {
+    const inner = {
+      type: "text" as const,
+      text,
+      conversationId: "convo-push-merge",
+      sentAt: timestamp,
+    };
+    const signature = await sign(privateKey, msgToStr(inner));
+    const payload = await encryptSymmetric(symKey, {
+      payload: inner,
+      publicSignKey: publicKey,
+      signature,
+    });
+    return { id, payload, timestamp };
+  };
+  const m1 = await makeMsg("m1", "older cached message", 1000);
+  const m2 = await makeMsg("m2", "new pushed reply", 2000);
+
+  const holder: {
+    pushSnapshot: (
+      msgs: Array<{ id: string; payload: EncryptedMessage; timestamp: number }>,
+    ) => void;
+  } = { pushSnapshot: () => {} };
+  const emissions: string[][] = [];
+
+  const stream = createConversationMessagesStream((_q, cb) => {
+    holder.pushSnapshot = (messages) =>
+      cb({ data: { messages }, canLoadNextPage: false });
+    return { unsubscribe: () => {}, loadNextPage: () => {} };
+  })(
+    "convo-push-merge",
+    (res) => {
+      if (res.messages) emissions.push(res.messages.map((m) => m.text));
+    },
+    symKey,
+  );
+
+  stream.mergeMessages([m2]);
+  await new Promise((r) => setTimeout(r, 15));
+  assertEquals(emissions.at(-1), ["new pushed reply"]);
+
+  // InstantDB offline IndexedDB cache emits stale snapshot without m2
+  holder.pushSnapshot([m1]);
+  await new Promise((r) => setTimeout(r, 15));
+  assertEquals(emissions.at(-1), ["new pushed reply", "older cached message"]);
+
+  // InstantDB live WebSocket catches up with both m2 and m1
+  holder.pushSnapshot([m2, m1]);
+  await new Promise((r) => setTimeout(r, 15));
+  assertEquals(emissions.at(-1), ["new pushed reply", "older cached message"]);
+
+  stream.unsubscribe();
+});
+
+Deno.test("opening a notification resolves conversationKey and pushed message from pushKeyStore without waiting for live WebSocket", async () => {
+  const keyStore = createMemoryPushKeyStore();
+  const [signPair, encPair] = await Promise.all([
+    generateKeyPair("sign"),
+    generateKeyPair("encrypt"),
+  ]);
+  const credentials = {
+    publicSignKey: signPair.publicKey,
+    privateSignKey: signPair.privateKey,
+    privateEncryptKey: encPair.privateKey,
+  };
+  const symKey = await generateSymmetricKey();
+  const conversationId = crypto.randomUUID();
+  const makeMsg = async (id: string, text: string, timestamp: number) => {
+    const inner = {
+      type: "text" as const,
+      text,
+      conversationId,
+      sentAt: timestamp,
+    };
+    const payload = await encryptSymmetric(symKey, {
+      payload: inner,
+      publicSignKey: signPair.publicKey,
+      signature: await sign(signPair.privateKey, msgToStr(inner)),
+    });
+    return { id, payload, timestamp };
+  };
+  const pushed = await makeMsg(
+    "notif-m1",
+    "Instant reply from notification",
+    5000,
+  );
+  const extraBackendMsg = await makeMsg(
+    "notif-m2",
+    "Follow-up fetched over HTTP",
+    6000,
+  );
+
+  await keyStore.setConversationKey(conversationId, symKey);
+  await keyStore.appendConversationMessage(conversationId, pushed);
+
+  const backendGate = Promise.withResolvers<{
+    messages: Array<
+      { id: string; payload: EncryptedMessage; timestamp: number }
+    >;
+    hasMore: boolean;
+  }>();
+
+  const subscribeKey = makeSubscribeConversationKey({
+    subscribeQuery: () => () => {},
+    keyStore,
+    canFetchDirect: () => false,
+  });
+  const subscribeStream = makeSubscribeConversationMessagesStream({
+    subscribeInfiniteQuery: () => ({
+      unsubscribe: () => {},
+      loadNextPage: () => {},
+    }),
+    keyStore,
+    fetchMessages: () => backendGate.promise,
+    canFetchDirect: () => true,
+    waitForAuth: () => Promise.resolve(),
+  });
+
+  const resolvedTexts: string[][] = [];
+  const stream = subscribeStream(conversationId, credentials, (res) => {
+    if (res.messages && res.messages.length > 0) {
+      resolvedTexts.push(res.messages.map((m) => m.text));
+    }
+  });
+  const unsubKey = subscribeKey(conversationId, credentials, (key) => {
+    stream.setConversationKey(key);
+  });
+
+  await new Promise((r) => setTimeout(r, 20));
+  assertEquals(resolvedTexts.at(-1), ["Instant reply from notification"]);
+
+  backendGate.resolve({
+    messages: [extraBackendMsg, pushed],
+    hasMore: false,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  assertEquals(resolvedTexts.at(-1), [
+    "Follow-up fetched over HTTP",
+    "Instant reply from notification",
+  ]);
+
+  unsubKey();
+  stream.unsubscribe();
 });

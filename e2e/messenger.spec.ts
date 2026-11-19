@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { generateTestData, type TestData } from "./mocks/test-data.ts";
+import {
+  generateTestData,
+  makeEncryptedMessage,
+  type TestData,
+} from "./mocks/test-data.ts";
 import {
   clearStorage,
   elementInkBounds,
@@ -359,5 +363,57 @@ test.describe("Messenger (landing /chat)", () => {
     );
 
     await context.close();
+  });
+
+  test("opening /chat?c= from a notification renders pushed message from IndexedDB immediately even before WebSocket catches up", async ({ page }) => {
+    const pushedText = "Instant notification reply before WS sync";
+    const pushedCipher = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      pushedText,
+    );
+    const pushedEntry = {
+      id: crypto.randomUUID(),
+      payload: pushedCipher,
+      timestamp: Date.now() + 10_000,
+    };
+
+    await setupMessengerMocks(page, data);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.addInitScript(
+      (seed: {
+        conversationId: string;
+        symKey: string;
+        msg: { id: string; payload: string; timestamp: number };
+      }) => {
+        const req = indexedDB.open("alicebot_push_store", 1);
+        req.onupgradeneeded = () => {
+          if (!req.result.objectStoreNames.contains("kv")) {
+            req.result.createObjectStore("kv");
+          }
+        };
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction("kv", "readwrite");
+          const store = tx.objectStore("kv");
+          store.put(seed.symKey, `conv_key:${seed.conversationId}`);
+          store.put([seed.msg], `conv_msgs:${seed.conversationId}`);
+          tx.oncomplete = () => db.close();
+        };
+      },
+      {
+        conversationId: data.conversationId,
+        symKey: data.conversationKey,
+        msg: pushedEntry,
+      },
+    );
+
+    await page.goto(`/chat?c=${encodeURIComponent(data.conversationId)}`);
+    await expect(page.getByText(pushedText)).toBeVisible({ timeout: 2_000 });
+    await expect(page.getByText(data.messages[0].text)).toBeVisible({
+      timeout: 5_000,
+    });
+    // Still visible after WS snapshot delivered older history without pushedEntry
+    await expect(page.getByText(pushedText)).toBeVisible();
   });
 });

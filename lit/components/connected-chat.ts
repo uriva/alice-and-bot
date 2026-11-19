@@ -684,6 +684,7 @@ export class ConnectedChat extends LitElement {
   static override properties = {
     credentials: { attribute: false },
     conversationId: { attribute: false },
+    initialConversation: { attribute: false },
     onClose: { attribute: false },
     darkModeOverride: { type: Boolean },
     customColors: { attribute: false },
@@ -701,6 +702,7 @@ export class ConnectedChat extends LitElement {
 
   declare credentials: Credentials | null;
   declare conversationId: string;
+  declare initialConversation: Conversation | null | undefined;
   declare onClose: (() => void) | undefined;
   declare darkModeOverride: boolean | undefined;
   declare customColors: CustomColors | undefined;
@@ -854,6 +856,13 @@ export class ConnectedChat extends LitElement {
     }
     if (credentialsChanged || conversationIdChanged) {
       this._setupSubscriptions();
+    } else if (
+      changed.has("initialConversation") &&
+      this._participants.length === 0
+    ) {
+      this._applyInitialConversation(
+        this._activeConversationId || this.conversationId,
+      );
     }
   }
 
@@ -959,10 +968,26 @@ export class ConnectedChat extends LitElement {
     this.requestUpdate();
   }
 
+  private _applyInitialConversation(targetId: string) {
+    const seed = this.initialConversation;
+    if (!seed || seed.id !== targetId || this._participants.length > 0) return;
+    this._conversationTitle = seed.title || "Chat";
+    this._isGroupChat = seed.participants.length > 2;
+    this._participants = seed.participants;
+    this._identityDetails = mergeIdentityDetails(
+      this._identityDetails,
+      extractInlineIdentityDetails(
+        this._participants,
+        this.enableChatSwitching ? this._conversations : null,
+      ),
+    );
+  }
+
   private _setupConversationSubscriptions() {
     const targetId = this._activeConversationId || this.conversationId;
     if (!this.credentials || !targetId) return;
     registerCredentials(this.credentials);
+    this._applyInitialConversation(targetId);
 
     const { publicSignKey } = this.credentials;
 

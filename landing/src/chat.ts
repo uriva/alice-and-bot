@@ -844,7 +844,7 @@ const mountChatPanels = () => {
 const rerenderChat = () => {
   if (!chatContainer?.isConnected) return;
   render(chatTemplate(), chatContainer);
-  requestAnimationFrame(mountChatPanels);
+  mountChatPanels();
 };
 
 // --- Chevron SVG ---
@@ -2748,6 +2748,9 @@ const chatPanelTemplate = () => {
       style="${"display:flex;flex-direction:column;flex-grow:1;min-height:0"}"
       .credentials="${credentials}"
       .conversationId="${selectedConversation}"
+      .initialConversation="${conversations?.find((c) =>
+        c.id === selectedConversation
+      ) ?? null}"
       .darkModeOverride="${currentDark}"
       .onClose="${closeConversation}"
       .onChatWith="${handleChatWith}"

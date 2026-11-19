@@ -15,7 +15,11 @@ import {
   sendMessageWithKey,
 } from "./clientApi.ts";
 import { decryptAsymmetric } from "./crypto.ts";
-import { defaultPushKeyStore, type PushKeyStore } from "./pushKeyStore.ts";
+import {
+  defaultPushKeyStore,
+  type PushKeyStore,
+  type StoredPushMessage,
+} from "./pushKeyStore.ts";
 
 export const notificationBadgePath = "/badge-96.png";
 export const defaultNotificationIconPath = "/icon-192.png";
@@ -472,15 +476,34 @@ const fallbackPreviewBody = (data: PushPayloadData) =>
     ? `New message in ${data.conversationTitle}`
     : "New message";
 
+const notifyBackgroundChatWindows = (
+  windowClients: readonly WindowClientLike[],
+  conversationId: string,
+  conversationKey: string,
+  message: StoredPushMessage,
+) => {
+  windowClients.forEach((client) => {
+    if (parseUrlSafe(client.url)?.pathname !== "/chat") return;
+    client.postMessage?.({
+      type: "alice:push-message",
+      conversationId,
+      conversationKey,
+      message,
+    });
+  });
+};
+
 const decryptPushPayloadMessage = async ({
   data,
   credentials,
   keyStore,
+  windowClients,
   fetchLatestCiphertext,
 }: {
   data: PushPayloadData;
   credentials: Credentials | null;
   keyStore: PushKeyStore;
+  windowClients: readonly WindowClientLike[];
   fetchLatestCiphertext: typeof defaultFetchLatestCiphertext;
 }) => {
   if (!credentials || !data.conversationId) return undefined;
@@ -498,11 +521,29 @@ const decryptPushPayloadMessage = async ({
       credentials,
     }));
   if (!isEncryptedMessage(rawCiphertext)) return undefined;
+  const timestamp = data.timestamp ?? Date.now();
+  if (data.messageId) {
+    const storedMessage: StoredPushMessage = {
+      id: data.messageId,
+      payload: rawCiphertext,
+      timestamp,
+    };
+    await keyStore.appendConversationMessage(
+      data.conversationId,
+      storedMessage,
+    );
+    notifyBackgroundChatWindows(
+      windowClients,
+      data.conversationId,
+      symKey,
+      storedMessage,
+    );
+  }
   return decryptMessagePayload(symKey, {
     conversationId: data.conversationId,
   })({
     payload: rawCiphertext,
-    timestamp: data.timestamp ?? Date.now(),
+    timestamp,
   });
 };
 
@@ -568,6 +609,7 @@ export const handleServiceWorkerPush = async ({
     data,
     credentials,
     keyStore,
+    windowClients,
     fetchLatestCiphertext,
   });
 
@@ -635,6 +677,72 @@ const extractConversationKeyFromData = (data: unknown): string | undefined =>
     ? data.conversationKey
     : undefined;
 
+const focusOrOpenChatWindow = async (
+  clients: ClientsLike,
+  conversationId?: string,
+) => {
+  const targetUrl = conversationId
+    ? `/chat?c=${encodeURIComponent(conversationId)}`
+    : "/chat";
+  const windowClients = await clients.matchAll({
+    type: "window",
+    includeUncontrolled: true,
+  });
+  const existingChatWindow = windowClients.find((w) => {
+    const parsed = parseUrlSafe(w.url);
+    return parsed?.pathname === "/chat";
+  });
+  if (existingChatWindow) {
+    if (conversationId && existingChatWindow.postMessage) {
+      existingChatWindow.postMessage({
+        type: "alice:select-conversation",
+        conversationId,
+      });
+    } else if (existingChatWindow.navigate) {
+      await existingChatWindow.navigate(targetUrl);
+    }
+    await existingChatWindow.focus?.();
+    return;
+  }
+  await clients.openWindow?.(targetUrl);
+};
+
+const dismissClickNotifications = async ({
+  conversationId,
+  registration,
+  keyStore,
+  setAppBadge,
+  clearAppBadge,
+  dismissRemoteFn,
+}: {
+  conversationId?: string;
+  registration: NotificationRegistrationLike;
+  keyStore: PushKeyStore;
+  setAppBadge?: (count: number) => Promise<unknown>;
+  clearAppBadge?: () => Promise<unknown>;
+  dismissRemoteFn: typeof dismissNotificationsSigned;
+}) => {
+  if (conversationId) {
+    await closeMatchingNotifications(registration, conversationId);
+  }
+  await syncAppBadgeFromNotifications({
+    registration,
+    setAppBadge,
+    clearAppBadge,
+  });
+  const [credentials, pushEndpoint] = await Promise.all([
+    keyStore.getCredentials(),
+    keyStore.getPushEndpoint(),
+  ]);
+  if (credentials && conversationId) {
+    dismissRemoteFn(credentials, {
+      conversationId,
+      ...(pushEndpoint ? { excludeEndpoint: pushEndpoint } : {}),
+    }).catch(() => {});
+  }
+  return credentials;
+};
+
 export const handleServiceWorkerNotificationClick = async ({
   action,
   reply,
@@ -660,33 +768,37 @@ export const handleServiceWorkerNotificationClick = async ({
 }): Promise<void> => {
   notification.close();
   const conversationId = extractConversationIdFromData(notification.data);
-  if (conversationId) {
-    await closeMatchingNotifications(registration, conversationId);
+
+  if (action !== "mark-read" && action !== "reply") {
+    await Promise.all([
+      focusOrOpenChatWindow(clients, conversationId),
+      dismissClickNotifications({
+        conversationId,
+        registration,
+        keyStore,
+        setAppBadge,
+        clearAppBadge,
+        dismissRemoteFn,
+      }),
+    ]);
+    return;
   }
-  await syncAppBadgeFromNotifications({
+
+  const credentials = await dismissClickNotifications({
+    conversationId,
     registration,
+    keyStore,
     setAppBadge,
     clearAppBadge,
+    dismissRemoteFn,
   });
-
-  const [credentials, pushEndpoint] = await Promise.all([
-    keyStore.getCredentials(),
-    keyStore.getPushEndpoint(),
-  ]);
-
-  if (credentials && conversationId) {
-    dismissRemoteFn(credentials, {
-      conversationId,
-      ...(pushEndpoint ? { excludeEndpoint: pushEndpoint } : {}),
-    }).catch(() => {});
-  }
 
   if (action === "mark-read") {
     return;
   }
 
   const trimmedReply = reply?.trim() ?? "";
-  if (action === "reply" && trimmedReply && credentials && conversationId) {
+  if (trimmedReply && credentials && conversationId) {
     const symKey = await resolveConversationSymmetricKey({
       conversationId,
       encryptedConversationKey: extractConversationKeyFromData(
@@ -706,28 +818,5 @@ export const handleServiceWorkerNotificationClick = async ({
     }
   }
 
-  const targetUrl = conversationId
-    ? `/chat?c=${encodeURIComponent(conversationId)}`
-    : "/chat";
-  const windowClients = await clients.matchAll({
-    type: "window",
-    includeUncontrolled: true,
-  });
-  const existingChatWindow = windowClients.find((w) => {
-    const parsed = parseUrlSafe(w.url);
-    return parsed?.pathname === "/chat";
-  });
-  if (existingChatWindow) {
-    if (conversationId && existingChatWindow.postMessage) {
-      existingChatWindow.postMessage({
-        type: "alice:select-conversation",
-        conversationId,
-      });
-    } else if (existingChatWindow.navigate) {
-      await existingChatWindow.navigate(targetUrl);
-    }
-    await existingChatWindow.focus?.();
-    return;
-  }
-  await clients.openWindow?.(targetUrl);
+  await focusOrOpenChatWindow(clients, conversationId);
 };
