@@ -4,12 +4,10 @@ import { buttonClass, codeBlock, shellCode } from "./components.ts";
 import { header } from "./header.ts";
 import {
   chatPath,
-  claudeCodePath,
   docsPath,
   legalPath,
   manifestoPath,
   mcpGuidePath,
-  opencodePath,
 } from "./paths.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import { triggerPwaInstall } from "./pwaInstall.ts";
@@ -154,10 +152,10 @@ const developerFeatures: FeatureItem[] = [
 
 const editorFeatures: FeatureItem[] = [
   {
-    badge: "Your stack",
-    title: "Claude Code, OpenCode & Cursor",
+    badge: "MCP server",
+    title: "Cursor, Windsurf & VS Code",
     description:
-      "Every running terminal session appears as a contact in your Alice&Bot inbox.",
+      "Connect any MCP-compatible editor as an encrypted contact in your Alice&Bot inbox.",
   },
   {
     badge: "QR pairing",
@@ -223,9 +221,9 @@ const sidebarAgents: SidebarAgent[] = [
     active: true,
   },
   {
-    initials: "OC",
+    initials: "DL",
     color: "bg-[#b06d3b] text-white",
-    name: "opencode-laptop",
+    name: "dev_laptop",
     tag: "agent",
     preview: "All 18 tests passing. Push?",
     time: "2m",
@@ -575,18 +573,10 @@ const editorsTab = () =>
     <div class="w-full">
       ${twoColFeatureGrid(editorFeatures)}
       <div class="flex flex-wrap justify-center gap-3 mt-6">
-        <a href="${claudeCodePath}" class="${buttonClass(
-          "secondary",
-          "lg",
-        )}">Claude Code</a>
-        <a href="${opencodePath}" class="${buttonClass(
-          "secondary",
-          "lg",
-        )}">OpenCode</a>
         <a href="${mcpGuidePath}" class="${buttonClass(
-          "outline",
+          "secondary",
           "lg",
-        )}">Cursor / Windsurf</a>
+        )}">MCP Setup Guide</a>
       </div>
     </div>
   `;

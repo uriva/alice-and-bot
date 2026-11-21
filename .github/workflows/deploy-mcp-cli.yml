@@ -19,11 +19,17 @@ jobs:
         with:
           deno-version: v2.x
       - uses: actions/checkout@v4
+      - name: Check and test MCP server
+        working-directory: mcp
+        run: |
+          deno check mcp.ts mcp.test.ts security.ts
+          deno test -A mcp.test.ts
       - name: Compile binaries for all platforms
         working-directory: mcp
         run: |
           mkdir -p dist
           deno compile -A --no-check --target x86_64-unknown-linux-gnu -o dist/alice-and-bot-mcp-linux-x64 mcp.ts
+          deno compile -A --no-check --target aarch64-unknown-linux-gnu -o dist/alice-and-bot-mcp-linux-arm64 mcp.ts
           deno compile -A --no-check --target aarch64-apple-darwin -o dist/alice-and-bot-mcp-darwin-arm64 mcp.ts
           deno compile -A --no-check --target x86_64-apple-darwin -o dist/alice-and-bot-mcp-darwin-x64 mcp.ts
           deno compile -A --no-check --target x86_64-pc-windows-msvc -o dist/alice-and-bot-mcp-windows-x64.exe mcp.ts

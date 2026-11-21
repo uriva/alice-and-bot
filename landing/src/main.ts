@@ -11,14 +11,12 @@ import { initRouter } from "./router.ts";
 import { initPwaInstall } from "./pwaInstall.ts";
 import {
   chatPath,
-  claudeCodePath,
   docsPath,
   guidePath,
   homePath,
   legalPath,
   manifestoPath,
   mcpGuidePath,
-  opencodePath,
 } from "./paths.ts";
 import "./app.css";
 
@@ -109,14 +107,6 @@ initRouter({
     {
       path: mcpGuidePath,
       component: () => import("./mcp-guide.ts").then((m) => m.mcpGuide()),
-    },
-    {
-      path: claudeCodePath,
-      component: () => import("./claude-code.ts").then((m) => m.claudeCode()),
-    },
-    {
-      path: opencodePath,
-      component: () => import("./opencode.ts").then((m) => m.opencodePage()),
     },
   ],
   notFound,

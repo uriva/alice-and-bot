@@ -3,12 +3,10 @@ import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { buttonClass } from "./components.ts";
 import {
   chatPath,
-  claudeCodePath,
   docsPath,
   homePath,
   manifestoPath,
   mcpGuidePath,
-  opencodePath,
 } from "./paths.ts";
 
 const isDark = () =>
@@ -72,8 +70,6 @@ const moonSvg = html`
 const navLinks = [
   { href: manifestoPath, label: "Manifesto" },
   { href: docsPath, label: "Docs" },
-  { href: claudeCodePath, label: "Claude Code" },
-  { href: opencodePath, label: "OpenCode" },
   { href: mcpGuidePath, label: "MCP" },
 ];
 

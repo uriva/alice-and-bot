@@ -584,11 +584,12 @@ const scriptTag = embedScript({
 ## MCP Server (AI Code Editors)
 
 Chat with your coding sessions from your phone. The MCP server gives your AI
-code editor three tools — setup, check, and reply — that let you open an
-encrypted Alice&Bot conversation with any active session.
+code editor three tools — `aliceandbot_setup`, `aliceandbot_read`, and
+`aliceandbot_reply` — that let you open an encrypted Alice&Bot conversation with
+any active session.
 
-Works with Claude Code, Cursor, Windsurf, VS Code (Copilot), and any editor that
-supports MCP.
+Works with Cursor, Windsurf, VS Code (Copilot), and any editor that supports
+MCP.
 
 ### Quick start
 
@@ -598,8 +599,8 @@ supports MCP.
    curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
    ```
 
-2. Add the MCP server to your editor's config (e.g. `.claude/settings.json`,
-   `.cursor/mcp.json`, or VS Code settings):
+2. Add the MCP server to your editor's config (e.g. `.cursor/mcp.json`,
+   `.windsurf/mcp.json`, or VS Code settings):
 
    ```json
    {
@@ -612,17 +613,11 @@ supports MCP.
    ```
 
 3. Ask your AI agent to "set up Alice&Bot". It calls `aliceandbot_setup`, shows
-   a QR code — scan it with your phone to start messaging.
+   a QR code and pairing code — scan it with your phone and send the pairing
+   code to start messaging.
 
 See [`mcp/README.md`](mcp/README.md) for full details, or the
 [setup guide](https://aliceandbot.com/mcp).
-
-### `opencode` Native Plugin
-
-If you use `opencode`, we offer a native plugin that provides true real-time
-syncing without requiring the AI to manually call tools. See
-[`opencode-plugin/README.md`](opencode-plugin/README.md) for installation
-instructions.
 
 ## Self-Hosting
 

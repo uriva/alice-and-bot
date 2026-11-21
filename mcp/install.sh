@@ -23,8 +23,10 @@ esac
 
 if [ "$PLATFORM" = "windows" ]; then
   FILENAME="${BIN_NAME}-${PLATFORM}-${ARCH_TAG}.exe"
+  TARGET_NAME="${BIN_NAME}.exe"
 else
   FILENAME="${BIN_NAME}-${PLATFORM}-${ARCH_TAG}"
+  TARGET_NAME="${BIN_NAME}"
 fi
 
 URL="${BASE_URL}/${FILENAME}"
@@ -32,8 +34,8 @@ URL="${BASE_URL}/${FILENAME}"
 mkdir -p "$INSTALL_DIR"
 
 echo "Downloading ${BIN_NAME} for ${PLATFORM}/${ARCH_TAG}..."
-curl -fSL "$URL" -o "${INSTALL_DIR}/${BIN_NAME}"
-chmod +x "${INSTALL_DIR}/${BIN_NAME}"
+curl -fSL "$URL" -o "${INSTALL_DIR}/${TARGET_NAME}"
+chmod +x "${INSTALL_DIR}/${TARGET_NAME}"
 
 if ! echo "$PATH" | tr ':' '\n' | grep -qx "$INSTALL_DIR"; then
   echo ""
@@ -42,4 +44,4 @@ if ! echo "$PATH" | tr ':' '\n' | grep -qx "$INSTALL_DIR"; then
   echo ""
 fi
 
-echo "Installed ${BIN_NAME} to ${INSTALL_DIR}/${BIN_NAME}"
+echo "Installed ${TARGET_NAME} to ${INSTALL_DIR}/${TARGET_NAME}"

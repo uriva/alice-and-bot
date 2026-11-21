@@ -53,22 +53,18 @@ export const evaluateSenderAuthorization = ({
   if (!senderPublicSignKey || senderPublicSignKey === botPublicSignKey) {
     return { status: "ignore-self" };
   }
+  if (authorizedPublicSignKey) {
+    return safeEqual(senderPublicSignKey, authorizedPublicSignKey)
+      ? { status: "authorized" }
+      : { status: "rejected", reason: "wrong-sender" };
+  }
   if (matchesPairingCode(messageText, pairingCode)) {
     return {
       status: "paired-now",
       authorizedPublicSignKey: senderPublicSignKey,
     };
   }
-  if (
-    authorizedPublicSignKey &&
-    safeEqual(senderPublicSignKey, authorizedPublicSignKey)
-  ) {
-    return { status: "authorized" };
-  }
-  return {
-    status: "rejected",
-    reason: authorizedPublicSignKey ? "wrong-sender" : "unpaired",
-  };
+  return { status: "rejected", reason: "unpaired" };
 };
 
 export const isAllowedAttachmentUrl = (rawUrl: string): boolean => {
