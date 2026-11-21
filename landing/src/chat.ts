@@ -78,6 +78,18 @@ import {
   subscribeIdentityProfile,
   subscribeUserName,
 } from "../../lit/core/subscriptions.ts";
+import {
+  activeTypingNamesForConversation,
+  type ConversationPreviewMap,
+  conversationPreviewsCacheKey,
+  type ConversationPreviewsManager,
+  type ConversationTypingMap,
+  createConversationPreviewsManager,
+  formatConversationPreviewLine,
+  formatConversationTime,
+  formatConversationTypingLabel,
+  subscribeAllTypingStates,
+} from "../../lit/core/conversation-previews.ts";
 
 // --- Styles ---
 
@@ -119,6 +131,8 @@ let credentialsChecked = false;
 let selectedConversation: string | null = null;
 let view: View = "chats";
 let conversations: Conversation[] | null = null;
+let conversationPreviews: ConversationPreviewMap = {};
+let typingByConversation: ConversationTypingMap = {};
 let searchQuery = "";
 let initializedFromQuery = false;
 let handledChatWith: string | null = null;
@@ -129,6 +143,8 @@ let chatContainer: HTMLElement | null = null;
 let viewportCleanup: (() => void) | null = null;
 let overflowCleanup: (() => void) | null = null;
 let conversationsUnsub: (() => void) | null = null;
+let previewsManager: ConversationPreviewsManager | null = null;
+let allTypingUnsub: (() => void) | null = null;
 let activeReportCleanup: (() => void) | null = null;
 let activeReportTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -1191,6 +1207,22 @@ const toggleDark = () => {
 const scrollbarStyle = () =>
   `scrollbar-color:${currentDark ? "#292824 #141412" : "#d6d2c7 #faf9f5"}`;
 
+const visibleConversations = (sq?: string) => {
+  if (!conversations) return [];
+  const query = sq?.trim().toLowerCase();
+  const filtered = query
+    ? conversations.filter((conv) => conv.title.toLowerCase().includes(query))
+    : conversations;
+  return filtered.filter((conv) =>
+    showArchived ? isArchived(conv) : !isArchived(conv)
+  );
+};
+
+const syncPreviewTargets = () => {
+  if (!previewsManager || !conversations) return;
+  previewsManager.setConversations(visibleConversations(searchQuery));
+};
+
 // --- Conversation list item ---
 
 const conversationListItem = (conv: Conversation) => {
@@ -1207,6 +1239,24 @@ const conversationListItem = (conv: Conversation) => {
   const displayName = conv.title || participantName;
   const isSelected = selectedConversation === conv.id;
   const isCurrentlyArchived = isArchived(conv);
+  const isGroupChat = conv.participants.length > 2;
+  const preview = conversationPreviews[conv.id];
+  const typingNames = activeTypingNamesForConversation(
+    typingByConversation[conv.id],
+    preview,
+  );
+  const typingLabel = formatConversationTypingLabel(typingNames, isGroupChat);
+  const previewLine = preview
+    ? formatConversationPreviewLine({
+      preview,
+      selfPublicSignKey: credentials.publicSignKey,
+      participants: conv.participants,
+      nameCache,
+    })
+    : null;
+  const timeLabel = preview?.empty
+    ? ""
+    : formatConversationTime(preview?.timestamp || conv.updatedAt);
 
   const swipeTransition =
     "transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);";
@@ -1276,22 +1326,70 @@ const conversationListItem = (conv: Conversation) => {
           if (wasSwiping) return;
           selectConversation(conv.id);
         }}">
-          ${displayName === null ? shimmerCircle() : chatAvatar({
+          ${displayName === null ? shimmerCircle(40) : chatAvatar({
+            image: otherParticipant?.avatar,
             name: displayName,
             baseColor: avatarColor(otherKey, currentDark),
+            size: 40,
           })}
-          <div class="flex-grow overflow-hidden min-w-0 pr-14">
-            <div class="${`${
-              isSelected ? "font-semibold" : "font-medium"
-            } text-sm ${textColorStyle} truncate`}">
-              ${displayName === null ? shimmerText() : displayName}
+          <div class="flex-grow overflow-hidden min-w-0">
+            <div class="flex items-baseline justify-between gap-2">
+              <div class="${`${
+                isSelected ? "font-semibold" : "font-medium"
+              } text-sm ${textColorStyle} truncate min-w-0`}">
+                ${displayName === null ? shimmerText() : displayName}
+              </div>
+              ${timeLabel
+                ? html`
+                  <span
+                    data-testid="conversation-time"
+                    class="${`text-[11px] shrink-0 tabular-nums text-[#8c867c] dark:text-[#78736a] ${
+                      !currentIsMobile
+                        ? "group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity"
+                        : ""
+                    }`}"
+                  >${timeLabel}</span>
+                `
+                : nothing}
+            </div>
+            <div class="mt-0.5 text-xs truncate min-h-[1rem] leading-4">
+              ${typingLabel
+                ? html`
+                  <span
+                    data-testid="conversation-typing-indicator"
+                    class="inline-flex items-center gap-1.5 font-medium text-[#39587f] dark:text-[#7da2cf] max-w-full"
+                  >
+                    <span class="typing-dots-inline" aria-hidden="true">
+                      <span></span><span></span><span></span>
+                    </span>
+                    <span class="truncate">${typingLabel}</span>
+                  </span>
+                `
+                : previewLine
+                ? html`
+                  <span
+                    data-testid="conversation-last-message"
+                    class="block truncate text-[#78736a] dark:text-[#8c867c]"
+                  >${previewLine}</span>
+                `
+                : preview?.empty
+                ? html`
+                  <span
+                    class="block truncate italic text-[#9c968c] dark:text-[#66625b]"
+                  >No messages yet</span>
+                `
+                : nothing}
             </div>
           </div>
         </button>
         ${displayName !== null && !currentIsMobile
           ? html`
             <div
-              class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center gap-0.5"
+              class="${`absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center gap-0.5 pl-2 py-1 rounded-lg ${
+                isSelected
+                  ? "bg-[#ebe7dc] dark:bg-[#24231f]"
+                  : "bg-[#f0ede4] dark:bg-[#1c1b18]"
+              }`}"
             >
               <button
                 type="button"
@@ -1377,15 +1475,7 @@ const openChats = (sq?: string, onNewChat?: () => void) => {
       </div>
     `;
   }
-  const filtered = sq?.trim()
-    ? conversations.filter((conv) =>
-      conv.title.toLowerCase().includes(sq.toLowerCase())
-    )
-    : conversations;
-
-  const displayList = filtered.filter((conv) =>
-    showArchived ? isArchived(conv) : !isArchived(conv)
-  );
+  const displayList = visibleConversations(sq);
 
   return html`
     <div style="display:flex;flex-direction:column;flex-grow:1">
@@ -1556,6 +1646,7 @@ const deleteCredentialsRow = () =>
           ) {
             localStorage.removeItem("alicebot_credentials");
             localStorage.removeItem(conversationsCacheKey);
+            localStorage.removeItem(conversationPreviewsCacheKey);
             Promise.all([
               clearPushKeyStore(),
               closeLocalNotificationsForConversation(),
@@ -2889,6 +2980,7 @@ const mobileChatsListView = () => {
               .value="${searchQuery}"
               @input="${(e: Event) => {
                 searchQuery = (e.target as HTMLInputElement).value;
+                syncPreviewTargets();
                 rerenderChat();
               }}"
               class="w-full px-3.5 py-2 rounded-full bg-[#efede6] dark:bg-[#1e1d1a] text-[#181715] dark:text-[#f3f1ea] placeholder-[#8c867c] focus:outline-none focus:ring-2 focus:ring-[#39587f]/30 text-sm"
@@ -2926,6 +3018,7 @@ const mobileChatsListView = () => {
               class="text-xs font-medium text-[#78736a] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition-colors flex items-center gap-1.5"
               @click="${() => {
                 showArchived = !showArchived;
+                syncPreviewTargets();
                 rerenderChat();
               }}"
             >
@@ -2983,6 +3076,7 @@ const desktopChatsView = () =>
           .value="${searchQuery}"
           @input="${(e: Event) => {
             searchQuery = (e.target as HTMLInputElement).value;
+            syncPreviewTargets();
             rerenderChat();
           }}"
           class="w-full px-3.5 py-2 rounded-full bg-[#efede6] dark:bg-[#1e1d1a] text-[#181715] dark:text-[#f3f1ea] placeholder-[#8c867c] focus:outline-none focus:ring-2 focus:ring-[#39587f]/30 text-sm"
@@ -3001,6 +3095,7 @@ const desktopChatsView = () =>
           class="text-xs font-medium text-[#78736a] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition-colors flex items-center gap-1.5"
           @click="${() => {
             showArchived = !showArchived;
+            syncPreviewTargets();
             rerenderChat();
           }}"
         >
@@ -3165,6 +3260,23 @@ const initLoggedInState = () => {
   if (conversations === null) {
     conversations = readCachedConversations(activeCredentials.publicSignKey);
   }
+  if (previewsManager) previewsManager.unsubscribe();
+  previewsManager = createConversationPreviewsManager(
+    activeCredentials,
+    (map) => {
+      conversationPreviews = map;
+      rerenderChat();
+    },
+  );
+  if (allTypingUnsub) allTypingUnsub();
+  allTypingUnsub = subscribeAllTypingStates(
+    activeCredentials,
+    (map) => {
+      typingByConversation = map;
+      rerenderChat();
+    },
+  );
+  syncPreviewTargets();
   if (conversationsUnsub) conversationsUnsub();
   conversationsUnsub = subscribeConversations(
     activeCredentials,
@@ -3180,6 +3292,7 @@ const initLoggedInState = () => {
           subscribeName(other.publicSignKey);
         }
       });
+      syncPreviewTargets();
       acknowledgeActiveConversation();
       rerenderChat();
       handleChatWithInvite();
@@ -3218,6 +3331,16 @@ const cleanup = () => {
     conversationsUnsub();
     conversationsUnsub = null;
   }
+  if (previewsManager) {
+    previewsManager.unsubscribe();
+    previewsManager = null;
+  }
+  if (allTypingUnsub) {
+    allTypingUnsub();
+    allTypingUnsub = null;
+  }
+  conversationPreviews = {};
+  typingByConversation = {};
   if (activeReportTimer) {
     clearTimeout(activeReportTimer);
     activeReportTimer = null;
@@ -3258,6 +3381,8 @@ export const chat = (): TemplateResult => {
   selectedConversation = null;
   view = "chats";
   conversations = null;
+  conversationPreviews = {};
+  typingByConversation = {};
   searchQuery = "";
   initializedFromQuery = false;
   handledChatWith = null;

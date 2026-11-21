@@ -39,6 +39,18 @@ import {
   subscribeTypingStates,
   subscribeUserName,
 } from "../core/subscriptions.ts";
+import {
+  activeTypingNamesForConversation,
+  type ConversationPreviewMap,
+  type ConversationPreviewsManager,
+  type ConversationTypingMap,
+  createConversationPreviewsManager,
+  formatConversationPreviewLine,
+  formatConversationTime,
+  formatConversationTypingLabel,
+  notifyConversationMessages,
+  subscribeAllTypingStates,
+} from "../core/conversation-previews.ts";
 import { subscribeIsMobile } from "../core/responsive.ts";
 import {
   type EphemeralStreamEvent,
@@ -240,6 +252,25 @@ const sidebarRenameButtonStyle = (
   `background:transparent;border:none;cursor:pointer;padding:6px;border-radius:6px;color:${
     customColors?.text ?? (isDark ? "#9ca3af" : "#6b7280")
   };display:flex;align-items:center;justify-content:center;font-size:12px;transition:opacity 0.15s,background 0.15s;flex-shrink:0`;
+
+const sidebarItemBodyStyle =
+  "flex:1;min-width:0;display:flex;flex-direction:column;gap:2px";
+
+const sidebarItemTopRowStyle =
+  "display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0";
+
+const sidebarItemTimeStyle = (isDark: boolean) =>
+  `font-size:11px;flex-shrink:0;color:${isDark ? "#78736a" : "#8c867c"}`;
+
+const sidebarItemPreviewStyle = (isDark: boolean) =>
+  `font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${
+    isDark ? "#9c968c" : "#66625b"
+  }`;
+
+const sidebarItemTypingStyle = (isDark: boolean) =>
+  `font-size:12px;line-height:1.25;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${
+    isDark ? "#7da2cf" : "#39587f"
+  }`;
 
 const sidebarHoverStyles = `
   .alice-sidebar-rename-btn { opacity: 0.6; }
@@ -743,10 +774,14 @@ export class ConnectedChat extends LitElement {
 
   private _activeConversationId = "";
   private _conversations: Conversation[] | null = null;
+  private _conversationPreviews: ConversationPreviewMap = {};
+  private _typingByConversation: ConversationTypingMap = {};
   private _searchQuery = "";
   private _nameCache = new Map<string, string | null>();
   private _nameUnsubs = new Map<string, () => void>();
   private _conversationsUnsub: (() => void) | null = null;
+  private _previewsManager: ConversationPreviewsManager | null = null;
+  private _allTypingUnsub: (() => void) | null = null;
   private _mobileShowList = false;
   private _isMobile = false;
   private _responsiveUnsub: (() => void) | null = null;
@@ -862,8 +897,7 @@ export class ConnectedChat extends LitElement {
       } else {
         this._responsiveUnsub?.();
         this._responsiveUnsub = null;
-        this._conversationsUnsub?.();
-        this._conversationsUnsub = null;
+        this._teardownChatListSubscriptions();
         this._resubscribeIdentities();
       }
     }
@@ -900,10 +934,20 @@ export class ConnectedChat extends LitElement {
     this._conversationKey = null;
   }
 
-  private _teardown() {
-    this._teardownConversation();
+  private _teardownChatListSubscriptions() {
     this._conversationsUnsub?.();
     this._conversationsUnsub = null;
+    this._previewsManager?.unsubscribe();
+    this._previewsManager = null;
+    this._allTypingUnsub?.();
+    this._allTypingUnsub = null;
+    this._conversationPreviews = {};
+    this._typingByConversation = {};
+  }
+
+  private _teardown() {
+    this._teardownConversation();
+    this._teardownChatListSubscriptions();
     this._identityUnsub?.();
     this._identityUnsub = null;
     this._lastIdentityKeys = "";
@@ -926,11 +970,26 @@ export class ConnectedChat extends LitElement {
 
   private _setupChatListSubscriptions() {
     if (!this.credentials) return;
-    this._conversationsUnsub?.();
+    this._teardownChatListSubscriptions();
+    this._previewsManager = createConversationPreviewsManager(
+      this.credentials,
+      (map) => {
+        this._conversationPreviews = map;
+        this.requestUpdate();
+      },
+    );
+    this._allTypingUnsub = subscribeAllTypingStates(
+      this.credentials,
+      (map) => {
+        this._typingByConversation = map;
+        this.requestUpdate();
+      },
+    );
     this._conversationsUnsub = subscribeConversations(
       this.credentials,
       (convs) => {
         this._conversations = convs;
+        if (convs) this._previewsManager?.setConversations(convs);
         convs?.forEach((conv) => {
           const other = conv.participants.find(
             (p) => p.publicSignKey !== this.credentials!.publicSignKey,
@@ -1087,6 +1146,7 @@ export class ConnectedChat extends LitElement {
           }
         }
         this._messages = messages;
+        notifyConversationMessages(targetId, messages);
         this._lastMessageCount = messages.length;
         this._hadMessages = this._hadMessages || messages.length > 0;
         this._canLoadMore = canLoadMore;
@@ -1747,6 +1807,27 @@ export class ConnectedChat extends LitElement {
         ? resolveParticipantAvatar(otherParticipant, this._identityDetails)
         : undefined;
 
+      const preview = this._conversationPreviews[conv.id];
+      const typingNames = activeTypingNamesForConversation(
+        this._typingByConversation[conv.id],
+        preview,
+      );
+      const typingLabel = formatConversationTypingLabel(
+        typingNames,
+        conv.participants.length > 2,
+      );
+      const previewLine = preview
+        ? formatConversationPreviewLine({
+          preview,
+          selfPublicSignKey: myKey,
+          participants: conv.participants,
+          nameCache: this._nameCache,
+        })
+        : null;
+      const timeLabel = preview?.empty
+        ? ""
+        : formatConversationTime(preview?.timestamp || conv.updatedAt);
+
       return html`
         <div
           class="alice-sidebar-item"
@@ -1759,12 +1840,36 @@ export class ConnectedChat extends LitElement {
             .baseColor="${baseColor}"
             .isDark="${isDark}"
           ></chat-avatar>
-          <div style="${sidebarItemTitleStyle(
-            isDark,
-            isSelected,
-            this.customColors,
-          )}">
-            ${displayName}
+          <div style="${sidebarItemBodyStyle}">
+            <div style="${sidebarItemTopRowStyle}">
+              <div style="${sidebarItemTitleStyle(
+                isDark,
+                isSelected,
+                this.customColors,
+              )}">
+                ${displayName}
+              </div>
+              ${timeLabel
+                ? html`
+                  <span style="${sidebarItemTimeStyle(
+                    isDark,
+                  )}">${timeLabel}</span>
+                `
+                : nothing}
+            </div>
+            ${typingLabel
+              ? html`
+                <div style="${sidebarItemTypingStyle(
+                  isDark,
+                )}">${typingLabel}</div>
+              `
+              : previewLine
+              ? html`
+                <div style="${sidebarItemPreviewStyle(
+                  isDark,
+                )}">${previewLine}</div>
+              `
+              : nothing}
           </div>
           <button
             type="button"

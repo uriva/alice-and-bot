@@ -164,6 +164,31 @@ const rememberDecryptedConversationKey = (
   decryptedConversationKeyCache.set(cacheId, { encrypted, decrypted });
 };
 
+export const getCachedConversationKey = (
+  publicSignKey: string,
+  conversationId: string,
+  encryptedKey?: string,
+): string | null => {
+  const hit = decryptedConversationKeyCache.get(
+    `${publicSignKey}:${conversationId}`,
+  );
+  if (!hit) return null;
+  if (encryptedKey !== undefined && hit.encrypted !== encryptedKey) return null;
+  return hit.decrypted;
+};
+
+export const cacheDecryptedConversationKey = (
+  publicSignKey: string,
+  conversationId: string,
+  encryptedKey: string,
+  decryptedKey: string,
+) =>
+  rememberDecryptedConversationKey(
+    `${publicSignKey}:${conversationId}`,
+    encryptedKey,
+    decryptedKey,
+  );
+
 const isEncryptedConversationKeyStr = (
   value: unknown,
 ): value is EncryptedConversationKey => typeof value === "string";

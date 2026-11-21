@@ -83,9 +83,10 @@ export const setupWidgetMocks = async (
 };
 
 export const setupMessengerMocks = async (page: Page, data: TestData) => {
-  await setupInstantWsMock(page, data);
-  await setupBackendApiMock(page, data);
+  const wsMock = await setupInstantWsMock(page, data);
+  const apiMock = await setupBackendApiMock(page, data);
   await setupGcsMock(page);
+  return { wsMock, apiMock };
 };
 
 export const injectMessengerCredentials = (

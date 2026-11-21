@@ -7,8 +7,8 @@ export { avatarColor } from "../../lit/components/design.ts";
 let currentDark = false;
 subscribeDarkMode((d) => (currentDark = d));
 
-const avatarContainerStyle = (baseColor: string) =>
-  `display:flex;align-items:center;justify-content:center;flex-shrink:0;width:32px;height:32px;padding:4px;border-radius:50%;background:${baseColor};box-shadow:${
+const avatarContainerStyle = (baseColor: string, size = 32) =>
+  `display:flex;align-items:center;justify-content:center;flex-shrink:0;width:${size}px;height:${size}px;overflow:hidden;border-radius:50%;background:${baseColor};box-shadow:${
     currentDark ? "0 1px 4px #0004" : "0 1px 4px #0001"
   };transition:background 0.2s,box-shadow 0.2s`;
 
@@ -16,27 +16,30 @@ const initialsColor = (baseColor: string) =>
   isLightColor(baseColor) ? (currentDark ? "#fff" : "#222") : "#fff";
 
 export const chatAvatar = (
-  { image, name, baseColor }: {
+  { image, name, baseColor, size = 32 }: {
     image?: string;
     name: string | null;
     baseColor: string;
+    size?: number;
   },
 ): TemplateResult =>
   html`
-    <div style="${avatarContainerStyle(baseColor)}">
+    <div style="${avatarContainerStyle(baseColor, size)}">
       ${image
         ? html`
           <img
             src="${image}"
             alt="${name ?? ""}"
-            style="object-fit:cover;border-radius:50%"
+            style="width:100%;height:100%;object-fit:cover;border-radius:50%"
           />
         `
         : html`
           <span
             style="color:${initialsColor(
               baseColor,
-            )};font-weight:700;font-size:15px;letter-spacing:0.5px"
+            )};font-weight:700;font-size:${Math.round(
+              size * 0.44,
+            )}px;letter-spacing:0.5px"
           >${(name ?? "").slice(0, 2).toUpperCase()}</span>
         `}
     </div>

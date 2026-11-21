@@ -484,11 +484,54 @@ test.describe("Messenger (landing /chat)", () => {
     );
 
     await page.goto(`/chat?c=${encodeURIComponent(data.conversationId)}`);
-    await expect(page.getByText(pushedText)).toBeVisible({ timeout: 2_000 });
-    await expect(page.getByText(data.messages[0].text)).toBeVisible({
+    const messageList = page.getByTestId("message-list");
+    await expect(messageList.getByText(pushedText)).toBeVisible({
+      timeout: 2_000,
+    });
+    await expect(messageList.getByText(data.messages[0].text)).toBeVisible({
       timeout: 5_000,
     });
     // Still visible after WS snapshot delivered older history without pushedEntry
-    await expect(page.getByText(pushedText)).toBeVisible();
+    await expect(messageList.getByText(pushedText)).toBeVisible();
+    await expect(page.getByTestId("conversation-last-message").first())
+      .toHaveText(pushedText);
+  });
+
+  test("conversations list shows last message preview, live typing indicator, and updates on new message", async ({ page }) => {
+    const { wsMock } = await setupMessengerMocks(page, data);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    const preview = page.getByTestId("conversation-last-message").first();
+    await expect(preview).toHaveText("You: Just building some E2E tests.", {
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId("conversation-time").first()).toBeVisible();
+
+    const typingAt = Date.now();
+    wsMock.pushTypingSnapshot(typingAt);
+    const typingIndicator = page.getByTestId("conversation-typing-indicator")
+      .first();
+    await expect(typingIndicator).toContainText("typing…", { timeout: 5_000 });
+    await expect(preview).toHaveCount(0);
+
+    const bobReply = "Awesome, let me know when it ships!";
+    const bobCipher = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      bobReply,
+    );
+    wsMock.pushNewMessage({
+      id: crypto.randomUUID(),
+      payload: bobCipher,
+      timestamp: typingAt + 1_000,
+      senderPublicSignKey: data.bob.publicSignKey,
+    });
+
+    await expect(page.getByTestId("conversation-last-message").first())
+      .toHaveText(bobReply, { timeout: 10_000 });
+    await expect(page.getByTestId("conversation-typing-indicator")).toHaveCount(
+      0,
+    );
   });
 });

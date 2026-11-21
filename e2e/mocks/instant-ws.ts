@@ -200,27 +200,90 @@ export const setupInstantWsMock = async (
   const messageQueries: Array<{ q: unknown }> = [];
   const keyQueries: Array<{ q: unknown }> = [];
   const typingQueries: Array<{ q: unknown }> = [];
+  const identityQueries: Array<{ q: unknown }> = [];
   const state: {
     serverWs: WebSocketRoute | null;
     txCounter: number;
     currentMessages: TestData["messages"];
     latestTypingUpdatedAt: number | null;
+    conversationUpdatedAt: number;
   } = {
     serverWs: null,
     txCounter: 100,
     currentMessages: [...data.messages],
     latestTypingUpdatedAt: null,
+    conversationUpdatedAt: data.messages.reduce(
+      (max, m) => Math.max(max, m.timestamp),
+      Date.now(),
+    ),
   };
+
+  const buildIdentityTriples = (tx: number): Triple[] => [
+    ...fieldTriples(data.aliceIdentityId, "identities", {
+      publicSignKey: data.alice.publicSignKey,
+      publicEncryptKey: data.alice.publicEncryptKey,
+      name: "Alice",
+    }, tx),
+    ...fieldTriples(data.bobIdentityId, "identities", {
+      publicSignKey: data.bob.publicSignKey,
+      publicEncryptKey: data.bob.publicEncryptKey,
+      name: "Bob",
+    }, tx),
+    ...fieldTriples(data.conversationId, "conversations", {
+      title: "Test Conversation",
+      updatedAt: state.conversationUpdatedAt,
+    }, tx),
+    link(
+      "conversations",
+      "participants",
+      data.conversationId,
+      data.aliceIdentityId,
+      tx,
+    ),
+    link(
+      "conversations",
+      "participants",
+      data.conversationId,
+      data.bobIdentityId,
+      tx,
+    ),
+    ...fieldTriples(data.keyId, "keys", {
+      key: data.aliceEncryptedKey,
+    }, tx),
+    link(
+      "conversations",
+      "keys",
+      data.conversationId,
+      data.keyId,
+      tx,
+    ),
+    link("identities", "keys", data.aliceIdentityId, data.keyId, tx),
+  ];
 
   const buildTypingTriples = (updatedAt: number, tx: number): Triple[] => {
     const typingStateId = randomUUID();
     return [
       ...fieldTriples(typingStateId, "typingStates", { updatedAt }, tx),
+      idTriple(data.conversationId, "conversations", tx),
       link(
         "conversations",
         "typingStates",
         data.conversationId,
         typingStateId,
+        tx,
+      ),
+      link(
+        "conversations",
+        "participants",
+        data.conversationId,
+        data.aliceIdentityId,
+        tx,
+      ),
+      link(
+        "conversations",
+        "participants",
+        data.conversationId,
+        data.bobIdentityId,
         tx,
       ),
       link(
@@ -230,6 +293,11 @@ export const setupInstantWsMock = async (
         typingStateId,
         tx,
       ),
+      ...fieldTriples(data.aliceIdentityId, "identities", {
+        publicSignKey: data.alice.publicSignKey,
+        publicEncryptKey: data.alice.publicEncryptKey,
+        name: "Alice",
+      }, tx),
       ...fieldTriples(data.bobIdentityId, "identities", {
         publicSignKey: data.bob.publicSignKey,
         publicEncryptKey: data.bob.publicEncryptKey,
@@ -251,6 +319,7 @@ export const setupInstantWsMock = async (
           messageQueries.length = 0;
           keyQueries.length = 0;
           typingQueries.length = 0;
+          identityQueries.length = 0;
           ws.send(JSON.stringify({
             op: "init-ok",
             "session-id": randomUUID(),
@@ -268,6 +337,7 @@ export const setupInstantWsMock = async (
               ...fieldTriples(data.keyId, "keys", {
                 key: data.aliceEncryptedKey,
               }, tx),
+              idTriple(data.conversationId, "conversations", tx),
               link(
                 "conversations",
                 "keys",
@@ -317,48 +387,14 @@ export const setupInstantWsMock = async (
           }
 
           if (ns === "identities") {
-            const triples: Triple[] = [
-              ...fieldTriples(data.aliceIdentityId, "identities", {
-                publicSignKey: data.alice.publicSignKey,
-                publicEncryptKey: data.alice.publicEncryptKey,
-                name: "Alice",
-              }, tx),
-              ...fieldTriples(data.bobIdentityId, "identities", {
-                publicSignKey: data.bob.publicSignKey,
-                publicEncryptKey: data.bob.publicEncryptKey,
-                name: "Bob",
-              }, tx),
-              ...fieldTriples(data.conversationId, "conversations", {
-                title: "Test Conversation",
-                updatedAt: Date.now(),
-              }, tx),
-              link(
-                "conversations",
-                "participants",
-                data.conversationId,
-                data.aliceIdentityId,
-                tx,
+            identityQueries.push({ q: msg.q });
+            ws.send(
+              queryResponse(
+                msg.q,
+                tid,
+                wrapResult(ns, buildIdentityTriples(tx)),
               ),
-              link(
-                "conversations",
-                "participants",
-                data.conversationId,
-                data.bobIdentityId,
-                tx,
-              ),
-              ...fieldTriples(data.keyId, "keys", {
-                key: data.aliceEncryptedKey,
-              }, tx),
-              link(
-                "conversations",
-                "keys",
-                data.conversationId,
-                data.keyId,
-                tx,
-              ),
-              link("identities", "keys", data.aliceIdentityId, data.keyId, tx),
-            ];
-            ws.send(queryResponse(msg.q, tid, wrapResult(ns, triples)));
+            );
             return;
           }
 
@@ -415,21 +451,43 @@ export const setupInstantWsMock = async (
         ...state.currentMessages,
         { ...msg, text: "" },
       ];
+      state.conversationUpdatedAt = Math.max(
+        state.conversationUpdatedAt + 1,
+        msg.timestamp,
+      );
       const activeWs = state.serverWs;
-      if (!activeWs || !messageQueries.length) return;
+      if (!activeWs) return;
       const tx = Date.now();
-      const triples: Triple[] = state.currentMessages.flatMap((m) => [
-        ...fieldTriples(m.id, "messages", {
-          payload: m.payload,
-          timestamp: m.timestamp,
-        }, tx),
-        link("messages", "conversation", m.id, data.conversationId, tx),
-      ]);
-      messageQueries.forEach(({ q }) => {
-        activeWs.send(
-          queryResponse(q, ++state.txCounter, wrapResult("messages", triples)),
-        );
-      });
+      if (messageQueries.length) {
+        const triples: Triple[] = state.currentMessages.flatMap((m) => [
+          ...fieldTriples(m.id, "messages", {
+            payload: m.payload,
+            timestamp: m.timestamp,
+          }, tx),
+          link("messages", "conversation", m.id, data.conversationId, tx),
+        ]);
+        messageQueries.forEach(({ q }) => {
+          activeWs.send(
+            queryResponse(
+              q,
+              ++state.txCounter,
+              wrapResult("messages", triples),
+            ),
+          );
+        });
+      }
+      if (identityQueries.length) {
+        const idTriples = buildIdentityTriples(tx);
+        identityQueries.forEach(({ q }) => {
+          activeWs.send(
+            queryResponse(
+              q,
+              ++state.txCounter,
+              wrapResult("identities", idTriples),
+            ),
+          );
+        });
+      }
     },
     pushMessageSnapshot: (messages) => {
       state.currentMessages = [...messages];
@@ -454,6 +512,7 @@ export const setupInstantWsMock = async (
         ...fieldTriples(data.keyId, "keys", {
           key: data.aliceEncryptedKey,
         }, tx),
+        idTriple(data.conversationId, "conversations", tx),
         link(
           "conversations",
           "keys",
