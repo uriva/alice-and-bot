@@ -288,7 +288,7 @@ const createMarked = (textColor: string, isDark: boolean) => {
 };
 
 const buttonTagRegex =
-  /<button(?:\s+[^>]*\bid=(?:"([^"]*)"|'([^']*)'))?[^>]*>([\s\S]*?)<\/button>|<button(?:\s+[^>]*\bid=(?:"([^"]*)"|'([^']*)'))?[^>]*\btitle=(?:"([^"]*)"|'([^']*)')[^>]*\/?>/gi;
+  /<button(?:\s+[^>]*\bid=(?:"([^"]*)"|'([^']*)'))?(?:[^>]*[^>/])?>((?:(?!<\/?button\b)[\s\S])*?)<\/button>|<button(?:\s+[^>]*\bid=(?:"([^"]*)"|'([^']*)'))?[^>]*\btitle=(?:"([^"]*)"|'([^']*)')[^>]*\/?>/gi;
 
 const quickReplyButtonHtml = (
   title: string,
@@ -315,11 +315,11 @@ const processButtons = (
   const textWithoutButtons = text.replace(
     buttonTagRegex,
     (_match, id1Dq, id1Sq, content, id2Dq, id2Sq, titleDq, titleSq) => {
-      const id = id1Dq ?? id1Sq ?? id2Dq ?? id2Sq ?? "";
+      const id = decodeHtmlEntities(id1Dq ?? id1Sq ?? id2Dq ?? id2Sq ?? "");
       const rawTitle = content !== undefined
         ? content
         : (titleDq ?? titleSq ?? "");
-      const title = rawTitle.replace(/<[^>]+>/g, "").trim();
+      const title = decodeHtmlEntities(rawTitle.replace(/<[^>]+>/g, "").trim());
       if (title && showButtons) {
         renderedButtons.push(
           quickReplyButtonHtml(title, id || title, isDark, primaryColor),

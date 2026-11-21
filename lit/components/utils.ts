@@ -225,7 +225,7 @@ export const decodeHtmlEntities = (text: string) =>
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&#39;|&#x27;|&apos;/gi, "'")
     .replace(/&amp;/g, "&");
 
 export const htmlListToMarkdown = (text: string) =>

@@ -321,6 +321,32 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "renderMarkdown decodes HTML entities in quick-reply buttons without double-escaping",
+  () => {
+    const html = renderMarkdown(
+      'How would you like to proceed?\n<buttons><button>Free cash &amp; add</button><button>Raw &amp; plain &amp; don&apos;t &amp; can&#x27;t & more</button><button id="buy&amp;sell" title="Buy &amp; sell &quot;now&quot;" /><button>1 &lt; 2 &amp; 3 &gt; 0</button></buttons>',
+      "#fff",
+      true,
+    );
+    assertEquals(html.includes("&amp;amp;"), false);
+    assertEquals(html.includes(">Free cash &amp; add</button>"), true);
+    assertEquals(html.includes('data-button-id="Free cash &amp; add"'), true);
+    assertEquals(
+      html.includes(
+        ">Raw &amp; plain &amp; don&#39;t &amp; can&#39;t &amp; more</button>",
+      ),
+      true,
+    );
+    assertEquals(html.includes('data-button-id="buy&amp;sell"'), true);
+    assertEquals(
+      html.includes(">Buy &amp; sell &quot;now&quot;</button>"),
+      true,
+    );
+    assertEquals(html.includes(">1 &lt; 2 &amp; 3 &gt; 0</button>"), true);
+  },
+);
+
 Deno.test("renderMarkdown renders video url as chat-video-player", () => {
   const html = renderMarkdown(
     '<video src="https://example.com/clip.mp4"></video>',
