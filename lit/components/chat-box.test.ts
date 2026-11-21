@@ -1,6 +1,6 @@
 import { assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import { suggestedMessageButtonStyle } from "./design.ts";
-import { resolveSuggestedMessage } from "./utils.ts";
+import { resolveSuggestedMessage, shouldAutoFocusInput } from "./utils.ts";
 
 Deno.test(
   "chat-box template assigns dir to spinner indicator container and text span based on textDirection",
@@ -130,6 +130,68 @@ Deno.test(
     assertMatch(
       connectedChatCode,
       /\.suggestedMessages="\$\{this\.suggestedMessages\}"/,
+    );
+  },
+);
+
+Deno.test(
+  "shouldAutoFocusInput suppresses auto-focus on mobile, touch-only devices, or when disableAutoFocus is set",
+  () => {
+    assertEquals(
+      shouldAutoFocusInput({
+        isMobile: false,
+        disableAutoFocus: false,
+        isTouchDevice: false,
+      }),
+      true,
+    );
+    assertEquals(
+      shouldAutoFocusInput({
+        isMobile: true,
+        disableAutoFocus: false,
+        isTouchDevice: false,
+      }),
+      false,
+    );
+    assertEquals(
+      shouldAutoFocusInput({
+        isMobile: false,
+        disableAutoFocus: true,
+        isTouchDevice: false,
+      }),
+      false,
+    );
+    assertEquals(
+      shouldAutoFocusInput({
+        isMobile: false,
+        disableAutoFocus: false,
+        isTouchDevice: true,
+      }),
+      false,
+    );
+  },
+);
+
+Deno.test(
+  "chat-box renders back arrow button when onBack is provided and connected-chat forwards onBack and disableAutoFocus",
+  () => {
+    const chatBoxCode = Deno.readTextFileSync(
+      new URL("./chat-box.ts", import.meta.url).pathname,
+    );
+    const connectedChatCode = Deno.readTextFileSync(
+      new URL("./connected-chat.ts", import.meta.url).pathname,
+    );
+    assertMatch(
+      chatBoxCode,
+      /data-testid="back-to-chats-button"[\s\S]*?style="\$\{headerButtonStyle\}"[\s\S]*?\$\{faArrowLeft\}/,
+    );
+    assertMatch(
+      connectedChatCode,
+      /\.onBack="\$\{this\.onBack\}"/,
+    );
+    assertMatch(
+      connectedChatCode,
+      /\.disableAutoFocus="\$\{this\.disableAutoFocus\}"/,
     );
   },
 );

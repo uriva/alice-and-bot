@@ -328,7 +328,7 @@ test.describe("Messenger (landing /chat)", () => {
     await expect(nameInput).toBeVisible({ timeout: 15_000 });
   });
 
-  test("mobile header three dots and close x are vertically aligned in light and dark mode", async ({ browser }) => {
+  test("mobile header back arrow and three dots are vertically aligned in light and dark mode and back arrow leads to all chats page", async ({ browser }) => {
     const context = await browser.newContext({
       viewport: { width: 390, height: 844 },
       deviceScaleFactor: 3,
@@ -338,31 +338,106 @@ test.describe("Messenger (landing /chat)", () => {
     const page = await context.newPage();
     await setupMessengerMocks(page, data);
     await injectMessengerCredentials(page, data, credKey);
-    await page.goto("/chat");
-    const convo = page.getByText("Test Conversation").first();
-    await expect(convo).toBeVisible({ timeout: 15_000 });
-    await convo.click();
+    await page.goto(`/chat?c=${encodeURIComponent(data.conversationId)}`);
+    const backBtn = page.getByTestId("back-to-chats-button");
     const menuBtn = page.getByTestId("menu-button");
-    const closeBtn = page.getByTestId("widget-close-button");
+    const titleText = page.getByTestId("title-text");
+    await expect(backBtn).toBeVisible({ timeout: 10_000 });
     await expect(menuBtn).toBeVisible({ timeout: 10_000 });
-    await expect(closeBtn).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("widget-close-button")).toHaveCount(0);
     await page.evaluate(() => document.fonts.ready);
 
+    const backBox = (await backBtn.boundingBox())!;
+    const titleBox = (await titleText.boundingBox())!;
+    expect(backBox.x).toBeLessThan(titleBox.x);
+
     const lightMenu = await elementInkBounds(page, menuBtn);
-    const lightClose = await elementInkBounds(page, closeBtn);
-    expect(Math.abs(lightClose.centerY - lightMenu.centerY))
+    const lightBack = await elementInkBounds(page, backBtn);
+    expect(Math.abs(lightBack.centerY - lightMenu.centerY))
       .toBeLessThanOrEqual(
         0.5,
       );
 
     await page.evaluate(() => document.documentElement.classList.add("dark"));
     const darkMenu = await elementInkBounds(page, menuBtn);
-    const darkClose = await elementInkBounds(page, closeBtn);
-    expect(Math.abs(darkClose.centerY - darkMenu.centerY)).toBeLessThanOrEqual(
+    const darkBack = await elementInkBounds(page, backBtn);
+    expect(Math.abs(darkBack.centerY - darkMenu.centerY)).toBeLessThanOrEqual(
       0.5,
     );
 
+    await backBtn.click();
+    await expect(page.getByPlaceholder("Search chats...")).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByText("Test Conversation").first()).toBeVisible({
+      timeout: 10_000,
+    });
+    expect(new URL(page.url()).searchParams.get("c")).toBeNull();
+
     await context.close();
+  });
+
+  test("mobile messenger does not auto-focus input on open, landscape touch open, conversation select, or returning from background", async ({ browser }) => {
+    const isInputFocused = (page: import("@playwright/test").Page) =>
+      page.evaluate(() => {
+        const el = document.activeElement;
+        return el?.tagName === "TEXTAREA" || el?.tagName === "INPUT";
+      });
+
+    // 1. Portrait mobile direct open + search-to-chat transition + background blur
+    const portraitContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+    });
+    const portraitPage = await portraitContext.newPage();
+    await setupMessengerMocks(portraitPage, data);
+    await injectMessengerCredentials(portraitPage, data, credKey);
+    await portraitPage.goto("/chat");
+    const searchInput = portraitPage.getByPlaceholder("Search chats...");
+    await expect(searchInput).toBeVisible({ timeout: 15_000 });
+    expect(await isInputFocused(portraitPage)).toBe(false);
+
+    await searchInput.focus();
+    expect(await isInputFocused(portraitPage)).toBe(true);
+    await portraitPage.getByText("Test Conversation").first().click();
+    await expect(portraitPage.getByText(data.messages[0].text)).toBeVisible({
+      timeout: 15_000,
+    });
+    expect(await isInputFocused(portraitPage)).toBe(false);
+
+    const msgInput = portraitPage.getByTestId("message-input");
+    await msgInput.focus();
+    expect(await isInputFocused(portraitPage)).toBe(true);
+    await portraitPage.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(await isInputFocused(portraitPage)).toBe(false);
+    await portraitContext.close();
+
+    // 2. Landscape / wide touch device (>768px) must still not auto-focus message input
+    const landscapeContext = await browser.newContext({
+      viewport: { width: 844, height: 390 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+    });
+    const landscapePage = await landscapeContext.newPage();
+    await setupMessengerMocks(landscapePage, data);
+    await injectMessengerCredentials(landscapePage, data, credKey);
+    await landscapePage.goto(
+      `/chat?c=${encodeURIComponent(data.conversationId)}`,
+    );
+    await expect(landscapePage.getByText(data.messages[0].text)).toBeVisible({
+      timeout: 15_000,
+    });
+    expect(await isInputFocused(landscapePage)).toBe(false);
+    await landscapeContext.close();
   });
 
   test("opening /chat?c= from a notification renders pushed message from IndexedDB immediately even before WebSocket catches up", async ({ page }) => {

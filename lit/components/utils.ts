@@ -19,6 +19,16 @@ export const resolveSuggestedMessage = (
 ): { label: string; text: string } =>
   typeof item === "string" ? { label: item, text: item } : item;
 
+export const shouldAutoFocusInput = ({
+  isMobile,
+  disableAutoFocus,
+  isTouchDevice,
+}: {
+  isMobile: boolean;
+  disableAutoFocus: boolean;
+  isTouchDevice: boolean;
+}): boolean => !isMobile && !disableAutoFocus && !isTouchDevice;
+
 export type IdentityDetails = Record<string, { name: string; avatar?: string }>;
 
 export type Participant = {

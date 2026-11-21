@@ -60,7 +60,11 @@ import { getCredentialsToCopy } from "../../lit/core/credentials.ts";
 import { startActiveReporting } from "../../lit/core/activeReporting.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { registerCredentials } from "../../protocol/src/instantAuth.ts";
-import { subscribeIsMobile } from "../../lit/core/responsive.ts";
+import {
+  blurActiveInput,
+  isTouchOnlyDevice,
+  subscribeIsMobile,
+} from "../../lit/core/responsive.ts";
 import {
   accessAdminDb,
   accessDb,
@@ -1149,7 +1153,14 @@ const renameModalTemplate = () =>
 
 // --- Sub-templates ---
 
+const isMobileOrTouch = () => currentIsMobile || isTouchOnlyDevice();
+
+const blurActiveInputOnMobile = () => {
+  if (isMobileOrTouch()) blurActiveInput();
+};
+
 const setView_ = (v: View) => {
+  blurActiveInputOnMobile();
   view = v;
   if (v === "identity" && !yourKeyBalanceData) fetchBalance();
   syncUrlFromState();
@@ -1157,6 +1168,7 @@ const setView_ = (v: View) => {
 };
 
 const selectConversation = (id: string) => {
+  blurActiveInputOnMobile();
   selectedConversation = id;
   const params = new URLSearchParams(globalThis.location.search);
   params.set("c", id);
@@ -2593,6 +2605,8 @@ const desktopSidebar = () => {
 // --- Chat panel (renders connected-chat custom element) ---
 
 const closeConversation = () => {
+  blurActiveInputOnMobile();
+  view = "chats";
   selectedConversation = null;
   syncUrlFromState();
   rerenderChat();
@@ -2753,7 +2767,9 @@ const chatPanelTemplate = () => {
         c.id === selectedConversation
       ) ?? null}"
       .darkModeOverride="${currentDark}"
-      .onClose="${closeConversation}"
+      .disableAutoFocus="${isMobileOrTouch()}"
+      .onBack="${currentIsMobile ? closeConversation : undefined}"
+      .onClose="${currentIsMobile ? undefined : closeConversation}"
       .onChatWith="${handleChatWith}"
       .onNewThread="${handleNewThread}"
       .enableVoiceCall="${true}"
@@ -3104,9 +3120,16 @@ const acknowledgeActiveConversation = () => {
 };
 
 const onWindowFocusOrVisible = () => {
-  if (globalThis.document?.visibilityState === "hidden") return;
+  if (globalThis.document?.visibilityState === "hidden") {
+    blurActiveInputOnMobile();
+    return;
+  }
   notificationAckState.lastRemoteAckKey = "";
   acknowledgeActiveConversation();
+};
+
+const onPageHide = () => {
+  blurActiveInputOnMobile();
 };
 
 const onServiceWorkerMessage = (event: MessageEvent) => {
@@ -3214,6 +3237,7 @@ const cleanup = () => {
   notificationAckState.lastRemoteAckKey = "";
   globalThis.removeEventListener("popstate", onPopstate);
   globalThis.removeEventListener("focus", onWindowFocusOrVisible);
+  globalThis.removeEventListener("pagehide", onPageHide);
   globalThis.document?.removeEventListener(
     "visibilitychange",
     onWindowFocusOrVisible,
@@ -3294,6 +3318,7 @@ export const chat = (): TemplateResult => {
     );
     globalThis.addEventListener("popstate", onPopstate);
     globalThis.addEventListener("focus", onWindowFocusOrVisible);
+    globalThis.addEventListener("pagehide", onPageHide);
     globalThis.document?.addEventListener(
       "visibilitychange",
       onWindowFocusOrVisible,

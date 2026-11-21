@@ -693,7 +693,9 @@ export class ConnectedChat extends LitElement {
     credentials: { attribute: false },
     conversationId: { attribute: false },
     initialConversation: { attribute: false },
+    onBack: { attribute: false },
     onClose: { attribute: false },
+    disableAutoFocus: { type: Boolean },
     darkModeOverride: { type: Boolean },
     customColors: { attribute: false },
     enableAttachments: { type: Boolean },
@@ -711,7 +713,9 @@ export class ConnectedChat extends LitElement {
   declare credentials: Credentials | null;
   declare conversationId: string;
   declare initialConversation: Conversation | null | undefined;
+  declare onBack: (() => void) | undefined;
   declare onClose: (() => void) | undefined;
+  declare disableAutoFocus: boolean;
   declare darkModeOverride: boolean | undefined;
   declare customColors: CustomColors | undefined;
   declare enableAttachments: boolean;
@@ -733,6 +737,7 @@ export class ConnectedChat extends LitElement {
     this.enableAudioRecording = true;
     this.enableVoiceCall = false;
     this.enableChatSwitching = false;
+    this.disableAutoFocus = false;
     this.isDark = false;
   }
 
@@ -1797,7 +1802,11 @@ export class ConnectedChat extends LitElement {
       return notFoundHtml(this.customColors, isDark);
     }
     if (!this._hasAccess) {
-      return accessDeniedHtml(this.onClose, this.customColors, isDark);
+      return accessDeniedHtml(
+        this.onClose ?? this.onBack,
+        this.customColors,
+        isDark,
+      );
     }
 
     const { chatMessages, activeSpinners, activeProgress, activeStreams } = this
@@ -1817,7 +1826,9 @@ export class ConnectedChat extends LitElement {
         .credentials="${this.credentials}"
         .onSend="${this._handleSend}"
         .onSendWithAttachments="${this._handleSendWithAttachments}"
+        .onBack="${this.onBack}"
         .onClose="${this.onClose}"
+        .disableAutoFocus="${this.disableAutoFocus}"
         .title="${this._currentDisplayTitle()}"
         .typingUsers="${this._typingNames}"
         .isLoading="${!this._messages}"

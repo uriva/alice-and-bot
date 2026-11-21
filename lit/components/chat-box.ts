@@ -18,6 +18,7 @@ import {
   titleStyle,
 } from "./design.ts";
 import {
+  faArrowLeft,
   faCamera,
   faChevronDown,
   faEllipsisV,
@@ -37,6 +38,7 @@ import "./chat-message.ts";
 import "./chat-typing-indicator.ts";
 import "./chat-avatar.ts";
 import { textDirection } from "./markdown.ts";
+import { isTouchOnlyDevice } from "../core/responsive.ts";
 import { compactPublicKey } from "../core/subscriptions.ts";
 import type {
   AbstracChatMessage,
@@ -68,6 +70,7 @@ import {
   recordingMimeType,
   resolveSuggestedMessage,
   sendingStatusText,
+  shouldAutoFocusInput,
   shouldShowScrollDownButton,
   showAuthorName,
 } from "./utils.ts";
@@ -519,6 +522,7 @@ export class ChatBox extends LitElement {
     userId: { attribute: false },
     onSend: { attribute: false },
     onSendWithAttachments: { attribute: false },
+    onBack: { attribute: false },
     onClose: { attribute: false },
     title: {},
     emptyMessage: { attribute: false },
@@ -588,6 +592,7 @@ export class ChatBox extends LitElement {
       replyTo?: string,
     ) => Promise<void>)
     | undefined;
+  declare onBack: (() => void) | undefined;
   declare onClose: (() => void) | undefined;
   declare title: string;
   declare emptyMessage: string | undefined;
@@ -745,9 +750,9 @@ export class ChatBox extends LitElement {
     this.style.minWidth = "0";
     this.style.maxWidth = "100%";
     this._isMobile = isMobileCheck();
-    if (this.onClose) {
+    if (this.onClose || this.onBack) {
       this._escHandler = (e: KeyboardEvent) => {
-        if (e.key === "Escape") this.onClose?.();
+        if (e.key === "Escape") (this.onClose ?? this.onBack)?.();
       };
       globalThis.addEventListener("keydown", this._escHandler);
     }
@@ -1173,7 +1178,15 @@ export class ChatBox extends LitElement {
 
     setTimeout(() => {
       if (this._inputEl) {
-        this._inputEl.focus();
+        if (
+          shouldAutoFocusInput({
+            isMobile: this._isMobile || isMobileCheck(),
+            disableAutoFocus: this.disableAutoFocus,
+            isTouchDevice: isTouchOnlyDevice(),
+          })
+        ) {
+          this._inputEl.focus();
+        }
         this._inputEl.style.height = `${minTextareaHeight}px`;
       }
       this._scrollToBottom();
@@ -1442,7 +1455,14 @@ export class ChatBox extends LitElement {
       this._inputResizeObserver.observe(this._inputAreaEl);
     }
 
-    if (!this._isMobile && !this.disableAutoFocus && this._inputEl) {
+    if (
+      shouldAutoFocusInput({
+        isMobile: this._isMobile || isMobileCheck(),
+        disableAutoFocus: this.disableAutoFocus,
+        isTouchDevice: isTouchOnlyDevice(),
+      }) &&
+      this._inputEl
+    ) {
       if (changed.has("title")) this._inputEl.focus();
     }
 
@@ -1723,10 +1743,26 @@ export class ChatBox extends LitElement {
                 style="${contentMaxWidthStyle(customColors)
                   ? contentMaxWidthStyle(customColors) + ";"
                   : ""}width:100%;display:flex;align-items:center;padding:0 ${this
-                    .onClose
+                    .onClose || this.onBack
                   ? "16px"
                   : "44px"} 0 16px"
               >
+                ${this.onBack
+                  ? html`
+                    <button
+                      type="button"
+                      data-testid="back-to-chats-button"
+                      @click="${this.onBack}"
+                      title="All chats"
+                      aria-label="All chats"
+                      style="${headerButtonStyle}"
+                      @mouseover="${this._hoverBtnIn}"
+                      @mouseout="${this._hoverBtnOut}"
+                    >
+                      ${faArrowLeft}
+                    </button>
+                  `
+                  : nothing}
                 <div style="flex:1;display:flex;justify-content:center;min-width:0;overflow:hidden">
                   <div
                     data-testid="title-text"

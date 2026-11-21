@@ -35,8 +35,24 @@ const parseBody = (
 
 export type SentMessage = { conversation: string; encryptedMessage: string };
 
+const instantEmailFor = async (publicSignKey: string): Promise<string> => {
+  const digest = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(publicSignKey),
+  );
+  const hex = Array.from(
+    new Uint8Array(digest),
+    (b) => b.toString(16).padStart(2, "0"),
+  ).join("");
+  return `${hex}@identity.aliceandbot.internal`;
+};
+
 export const setupBackendApiMock = async (page: Page, data: TestData) => {
   const sentMessages: SentMessage[] = [];
+  const defaultInstantEmail = await instantEmailFor(data.alice.publicSignKey);
+  const emailByToken = new Map<string, string>([
+    ["mock-instant-refresh-token", defaultInstantEmail],
+  ]);
 
   await page.route("**/api.aliceandbot.com/**", async (route: Route) => {
     const { endpoint, payload } = parseBody(route.request().postData());
@@ -135,9 +151,14 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
       return route.fulfill(json({ error: "not-found" }));
     }
     if (endpoint === "mintInstantToken") {
+      const publicSignKey = str(payload.publicSignKey) ||
+        data.alice.publicSignKey;
+      const instantEmail = await instantEmailFor(publicSignKey);
+      const token = `mock-instant-refresh-token:${instantEmail}`;
+      emailByToken.set(token, instantEmail);
       return route.fulfill(json({
-        token: "mock-instant-refresh-token",
-        instantEmail: "mock@identity.aliceandbot.internal",
+        token,
+        instantEmail,
       }));
     }
     if (endpoint === "getCanvasRow") {
@@ -173,14 +194,28 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
 
   await page.route(
     "**/runtime/auth/verify_refresh_token",
-    (route: Route) =>
-      route.fulfill(json({
+    (route: Route) => {
+      const body = (() => {
+        try {
+          const parsed: unknown = JSON.parse(
+            route.request().postData() ?? "{}",
+          );
+          return isRecord(parsed) ? parsed : {};
+        } catch {
+          return {};
+        }
+      })();
+      const refreshToken = str(body["refresh-token"]) ||
+        "mock-instant-refresh-token";
+      const email = emailByToken.get(refreshToken) ?? defaultInstantEmail;
+      return route.fulfill(json({
         user: {
           id: randomUUID(),
-          email: "mock@identity.aliceandbot.internal",
-          refresh_token: "mock-instant-refresh-token",
+          email,
+          refresh_token: refreshToken,
         },
-      })),
+      }));
+    },
   );
 
   return { sentMessages };
