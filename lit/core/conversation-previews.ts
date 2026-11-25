@@ -712,10 +712,16 @@ export const makeCreateConversationPreviewsManager = ({
       messages[0]?.timestamp ?? 0,
       previews[conversationId]?.updatedAt ?? 0,
     );
-    applyPreview(
-      conversationId,
-      extractLatestPreview(messages, effectiveUpdatedAt),
-    );
+    const nextPreview = extractLatestPreview(messages, effectiveUpdatedAt);
+    const existing = previews[conversationId];
+    if (nextPreview.empty && existing && !existing.empty) return;
+    if (
+      !nextPreview.empty && existing && !existing.empty &&
+      existing.timestamp > nextPreview.timestamp
+    ) {
+      return;
+    }
+    applyPreview(conversationId, nextPreview);
   };
   liveMessagesListeners.add(onLiveMessages);
 

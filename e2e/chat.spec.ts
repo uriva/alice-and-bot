@@ -583,4 +583,155 @@ test.describe("Chat (full encryption pipeline)", () => {
     expect(shared.files.length).toBe(1);
     expect(shared.files[0].name).toBe("tiny-red.png");
   });
+
+  test("switching chats in controlled sidebar does not reload previews or shift item sizes", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await setupChatMocks(page, data);
+    await page.goto("/");
+    await waitForChat(page);
+
+    await page.evaluate(async () => {
+      const chat = globalThis.__TEST_CHAT__;
+      chat.enableChatSwitching = true;
+      chat.onConversationChange = (id: string) => {
+        chat.conversationId = id;
+      };
+      await chat.updateComplete;
+    });
+
+    const items = page.locator(".alice-sidebar-item");
+    await expect(items.first()).toBeVisible({ timeout: 15_000 });
+    // Wait for the real decrypted preview from the WS mock to populate
+    await expect(items.first()).toContainText(
+      "You: Just building some E2E tests.",
+      { timeout: 15_000 },
+    );
+
+    // Add a second conversation (initially without a preview) alongside the
+    // real conversation, and verify row height is identical with vs without
+    // a preview line (using an image avatar so the row height is driven by text).
+    const secondConvId = "00000000-0000-4000-8000-000000000099";
+    await page.evaluate(async ({ conv1Id, conv2Id, myKey, bobKey }) => {
+      const chat = globalThis.__TEST_CHAT__;
+      const tinyAvatar =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      chat._conversations = [
+        {
+          id: conv1Id,
+          title: "Test Conversation",
+          participants: [
+            { publicSignKey: myKey, name: "Alice" },
+            { publicSignKey: bobKey, name: "Bob", avatar: tinyAvatar },
+          ],
+          updatedAt: Date.now(),
+        },
+        {
+          id: conv2Id,
+          title: "Second Chat",
+          participants: [
+            { publicSignKey: myKey, name: "Alice" },
+            { publicSignKey: bobKey, name: "Bob", avatar: tinyAvatar },
+          ],
+          updatedAt: Date.now() - 10_000,
+        },
+      ];
+      chat.requestUpdate();
+      await chat.updateComplete;
+    }, {
+      conv1Id: data.conversationId,
+      conv2Id: secondConvId,
+      myKey: data.alice.publicSignKey,
+      bobKey: data.bob.publicSignKey,
+    });
+
+    await expect(items).toHaveCount(2);
+    const geometryBeforeClick = await items.evaluateAll((els) =>
+      els.map((el) => {
+        const box = el.getBoundingClientRect();
+        const avatarBox = el.querySelector("chat-avatar")!
+          .getBoundingClientRect();
+        return {
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+          avatarX: avatarBox.x,
+        };
+      })
+    );
+    // Row with preview and row without preview must have identical heights
+    expect(
+      Math.abs(geometryBeforeClick[0].height - geometryBeforeClick[1].height),
+    ).toBeLessThanOrEqual(0.5);
+
+    await page.evaluate(() => {
+      const sidebar = document.querySelector(".alice-sidebar-desktop")!;
+      const previewDisappeared = { count: 0 };
+      // deno-lint-ignore no-explicit-any
+      (globalThis as any).__PREVIEW_DISAPPEARED__ = previewDisappeared;
+      // deno-lint-ignore no-explicit-any
+      (globalThis as any).__MANAGER_BEFORE__ =
+        globalThis.__TEST_CHAT__._previewsManager;
+      const obs = new MutationObserver(() => {
+        const text = sidebar.textContent ?? "";
+        if (!text.includes("You: Just building some E2E tests.")) {
+          previewDisappeared.count++;
+        }
+      });
+      obs.observe(sidebar, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+      // deno-lint-ignore no-explicit-any
+      (globalThis as any).__SIDEBAR_OBS__ = obs;
+    });
+
+    await items.nth(1).click();
+    await page.waitForTimeout(400);
+    await items.nth(0).click();
+    await page.waitForTimeout(400);
+
+    const { disappearedCount, sameManager } = await page.evaluate(() => {
+      // deno-lint-ignore no-explicit-any
+      (globalThis as any).__SIDEBAR_OBS__?.disconnect();
+      return {
+        // deno-lint-ignore no-explicit-any
+        disappearedCount: (globalThis as any).__PREVIEW_DISAPPEARED__?.count ??
+          0,
+        sameManager:
+          // deno-lint-ignore no-explicit-any
+          (globalThis as any).__MANAGER_BEFORE__ ===
+            globalThis.__TEST_CHAT__._previewsManager,
+      };
+    });
+    expect(sameManager).toBe(true);
+    expect(disappearedCount).toBe(0);
+    await expect(items.nth(0)).toContainText(
+      "You: Just building some E2E tests.",
+    );
+
+    const geometryAfterClick = await items.evaluateAll((els) =>
+      els.map((el) => {
+        const box = el.getBoundingClientRect();
+        const avatarBox = el.querySelector("chat-avatar")!
+          .getBoundingClientRect();
+        return {
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+          avatarX: avatarBox.x,
+        };
+      })
+    );
+    geometryAfterClick.forEach((after, i) => {
+      const before = geometryBeforeClick[i];
+      expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(after.width - before.width)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(after.avatarX - before.avatarX)).toBeLessThanOrEqual(0.5);
+    });
+  });
 });

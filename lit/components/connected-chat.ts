@@ -257,18 +257,21 @@ const sidebarItemBodyStyle =
   "flex:1;min-width:0;display:flex;flex-direction:column;gap:2px";
 
 const sidebarItemTopRowStyle =
-  "display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0";
+  "display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;min-height:18px";
 
 const sidebarItemTimeStyle = (isDark: boolean) =>
-  `font-size:11px;flex-shrink:0;color:${isDark ? "#78736a" : "#8c867c"}`;
-
-const sidebarItemPreviewStyle = (isDark: boolean) =>
-  `font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${
-    isDark ? "#9c968c" : "#66625b"
+  `font-size:11px;line-height:18px;flex-shrink:0;color:${
+    isDark ? "#78736a" : "#8c867c"
   }`;
 
+const sidebarItemPreviewRowStyle =
+  "font-size:12px;line-height:15px;min-height:15px;height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+
+const sidebarItemPreviewStyle = (isDark: boolean) =>
+  `${sidebarItemPreviewRowStyle};color:${isDark ? "#9c968c" : "#66625b"}`;
+
 const sidebarItemTypingStyle = (isDark: boolean) =>
-  `font-size:12px;line-height:1.25;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${
+  `${sidebarItemPreviewRowStyle};font-weight:500;color:${
     isDark ? "#7da2cf" : "#39587f"
   }`;
 
@@ -287,18 +290,6 @@ const sameCredentials = (
   a === b || !!a && !!b && a.publicSignKey === b.publicSignKey &&
     a.privateSignKey === b.privateSignKey &&
     a.privateEncryptKey === b.privateEncryptKey;
-
-const credentialsOrNull = (value: unknown): Credentials | null => {
-  if (!value || typeof value !== "object") return null;
-  const publicSignKey = Reflect.get(value, "publicSignKey");
-  const privateSignKey = Reflect.get(value, "privateSignKey");
-  const privateEncryptKey = Reflect.get(value, "privateEncryptKey");
-  return typeof publicSignKey === "string" &&
-      typeof privateSignKey === "string" &&
-      typeof privateEncryptKey === "string"
-    ? { publicSignKey, privateSignKey, privateEncryptKey }
-    : null;
-};
 
 type ReactionMsg = DecipheredMessage & {
   type: "reaction";
@@ -550,22 +541,22 @@ const sidebarItemStyle = (
     isSelected
       ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)")
       : "transparent"
-  };border:none;border-radius:8px;cursor:pointer;transition:background 0.15s;box-sizing:border-box;outline:none;${
+  };border:none;border-left:3px solid ${
     isSelected
-      ? `border-left:3px solid ${
-        customColors?.primary ?? defaultPrimary(isDark)
-      };`
-      : ""
-  }`;
+      ? (customColors?.primary ?? defaultPrimary(isDark))
+      : "transparent"
+  };border-radius:8px;cursor:pointer;transition:background 0.15s;box-sizing:border-box;outline:none`;
 
 const sidebarItemTitleStyle = (
   isDark: boolean,
   isSelected: boolean,
   customColors?: CustomColors,
 ) =>
-  `font-size:13px;font-weight:${isSelected ? "600" : "500"};color:${
+  `font-size:13px;line-height:18px;font-weight:${
+    isSelected ? "600" : "500"
+  };color:${
     customColors?.text ?? (isDark ? "#f4f4f4" : "#111827")
-  };white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1`;
+  };white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0`;
 
 const mobileBackButtonStyle = (isDark: boolean, customColors?: CustomColors) =>
   `position:absolute;top:10px;left:10px;z-index:90;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:18px;background:${
@@ -779,6 +770,9 @@ export class ConnectedChat extends LitElement {
   }
 
   private _activeConversationId = "";
+  private _subscribedConversationId = "";
+  private _subscribedCredentials: Credentials | null = null;
+  private _chatListCredentials: Credentials | null = null;
   private _conversations: Conversation[] | null = null;
   private _conversationPreviews: ConversationPreviewMap = {};
   private _typingByConversation: ConversationTypingMap = {};
@@ -866,29 +860,27 @@ export class ConnectedChat extends LitElement {
   }
 
   override willUpdate(changed: Map<PropertyKey, unknown>) {
-    const credentialsChanged = changed.has("credentials") &&
-      !sameCredentials(
-        credentialsOrNull(changed.get("credentials")),
-        this.credentials,
-      );
     const conversationIdChanged = changed.has("conversationId") &&
       changed.get("conversationId") !== this.conversationId;
-    if (conversationIdChanged && this.conversationId) {
-      this._activeConversationId = this.conversationId;
+    if (conversationIdChanged) {
+      if (this.conversationId || !this.enableChatSwitching) {
+        this._activeConversationId = this.conversationId;
+      }
     }
-    if (credentialsChanged || conversationIdChanged) {
+    const targetId = this._activeConversationId || this.conversationId;
+    const conversationCredentialsChanged = !sameCredentials(
+      this._subscribedCredentials,
+      this.credentials,
+    );
+    const needsConversationReset = Boolean(this._subscribedConversationId) &&
+      (conversationCredentialsChanged ||
+        targetId !== this._subscribedConversationId);
+    if (needsConversationReset) {
       this._teardownConversation();
     }
   }
 
   override updated(changed: Map<string, unknown>) {
-    const credentialsChanged = changed.has("credentials") &&
-      !sameCredentials(
-        credentialsOrNull(changed.get("credentials")),
-        this.credentials,
-      );
-    const conversationIdChanged = changed.has("conversationId") &&
-      changed.get("conversationId") !== this.conversationId;
     const chatSwitchingChanged = changed.has("enableChatSwitching") &&
       changed.get("enableChatSwitching") !== this.enableChatSwitching;
     if (chatSwitchingChanged) {
@@ -899,7 +891,6 @@ export class ConnectedChat extends LitElement {
             this.requestUpdate();
           });
         }
-        this._setupChatListSubscriptions();
       } else {
         this._responsiveUnsub?.();
         this._responsiveUnsub = null;
@@ -907,15 +898,32 @@ export class ConnectedChat extends LitElement {
         this._resubscribeIdentities();
       }
     }
-    if (credentialsChanged || conversationIdChanged) {
-      this._setupSubscriptions();
+
+    if (!this.credentials) {
+      this._teardownChatListSubscriptions();
+      this._subscribedCredentials = null;
+      return;
+    }
+
+    const chatListNeedsSetup = this.enableChatSwitching &&
+      (!this._conversationsUnsub ||
+        !sameCredentials(this._chatListCredentials, this.credentials));
+    if (chatListNeedsSetup) {
+      registerCredentials(this.credentials);
+      this._setupChatListSubscriptions();
+    }
+
+    const targetId = this._activeConversationId || this.conversationId;
+    const conversationNeedsSetup = Boolean(targetId) &&
+      (targetId !== this._subscribedConversationId ||
+        !sameCredentials(this._subscribedCredentials, this.credentials));
+    if (conversationNeedsSetup) {
+      this._setupConversationSubscriptions();
     } else if (
       changed.has("initialConversation") &&
       this._participants.length === 0
     ) {
-      this._applyInitialConversation(
-        this._activeConversationId || this.conversationId,
-      );
+      this._applyInitialConversation(targetId);
     }
   }
 
@@ -938,6 +946,12 @@ export class ConnectedChat extends LitElement {
     this._copiedParticipantId = null;
     this._messages = null;
     this._conversationKey = null;
+    this._ephemeralStreams = [];
+    this._uiElements = [];
+    this._typingNames = [];
+    this._hasAccess = true;
+    this._convNotFound = false;
+    this._subscribedConversationId = "";
   }
 
   private _teardownChatListSubscriptions() {
@@ -949,11 +963,13 @@ export class ConnectedChat extends LitElement {
     this._allTypingUnsub = null;
     this._conversationPreviews = {};
     this._typingByConversation = {};
+    this._chatListCredentials = null;
   }
 
   private _teardown() {
     this._teardownConversation();
     this._teardownChatListSubscriptions();
+    this._subscribedCredentials = null;
     this._identityUnsub?.();
     this._identityUnsub = null;
     this._lastIdentityKeys = "";
@@ -976,7 +992,14 @@ export class ConnectedChat extends LitElement {
 
   private _setupChatListSubscriptions() {
     if (!this.credentials) return;
+    if (
+      this._conversationsUnsub &&
+      sameCredentials(this._chatListCredentials, this.credentials)
+    ) {
+      return;
+    }
     this._teardownChatListSubscriptions();
+    this._chatListCredentials = this.credentials;
     this._previewsManager = createConversationPreviewsManager(
       this.credentials,
       (map) => {
@@ -1033,6 +1056,13 @@ export class ConnectedChat extends LitElement {
     if (this._activeConversationId === id && !this._mobileShowList) return;
     this._activeConversationId = id;
     this._mobileShowList = false;
+    if (
+      this._subscribedConversationId !== id ||
+      !sameCredentials(this._subscribedCredentials, this.credentials)
+    ) {
+      this._teardownConversation();
+      this._setupConversationSubscriptions();
+    }
     this.onConversationChange?.(id);
     this.dispatchEvent(
       new CustomEvent("conversation-change", {
@@ -1041,8 +1071,6 @@ export class ConnectedChat extends LitElement {
         detail: { conversationId: id },
       }),
     );
-    this._teardownConversation();
-    this._setupConversationSubscriptions();
     this.requestUpdate();
   }
 
@@ -1064,6 +1092,8 @@ export class ConnectedChat extends LitElement {
   private _setupConversationSubscriptions() {
     const targetId = this._activeConversationId || this.conversationId;
     if (!this.credentials || !targetId) return;
+    this._subscribedConversationId = targetId;
+    this._subscribedCredentials = this.credentials;
     registerCredentials(this.credentials);
     this._applyInitialConversation(targetId);
 
@@ -1863,19 +1893,14 @@ export class ConnectedChat extends LitElement {
                 `
                 : nothing}
             </div>
-            ${typingLabel
-              ? html`
-                <div style="${sidebarItemTypingStyle(
-                  isDark,
-                )}">${typingLabel}</div>
-              `
-              : previewLine
-              ? html`
-                <div style="${sidebarItemPreviewStyle(
-                  isDark,
-                )}">${previewLine}</div>
-              `
-              : nothing}
+            <div
+              data-testid="conversation-preview-slot"
+              style="${typingLabel
+                ? sidebarItemTypingStyle(isDark)
+                : sidebarItemPreviewStyle(isDark)}"
+            >
+              ${typingLabel || previewLine || nothing}
+            </div>
           </div>
           <button
             type="button"

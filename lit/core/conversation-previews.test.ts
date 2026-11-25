@@ -490,5 +490,14 @@ Deno.test("makeCreateConversationPreviewsManager decrypts latest messages, cache
   });
   assertEquals(fetchedFor.length, 2);
 
+  // Transient empty live messages snapshot must NOT wipe an existing non-empty preview
+  notifyConversationMessages("conv1", [], 3000);
+  assertEquals(state.emitted.at(-1)?.conv1, {
+    text: "Just sent live",
+    timestamp: 3000,
+    authorPublicSignKey: alice.credentials.publicSignKey,
+    updatedAt: 3000,
+  });
+
   manager.unsubscribe();
 });
