@@ -793,3 +793,28 @@ Deno.test("handleServiceWorkerPush suppresses notifications for SPA-navigated fo
     "Message in old convo after switching away",
   );
 });
+
+Deno.test("isSafeRemoteAvatarUrl rejects http://, localhost, and private IP avatar URLs", async () => {
+  const { isSafeRemoteAvatarUrl } = await import("./pushNotification.ts");
+  const unsafeAvatars = [
+    "http://127.0.0.1:8080/secret",
+    "https://127.0.0.1/avatar.png",
+    "https://localhost/avatar.png",
+    "https://169.254.169.254/latest/meta-data/",
+    "https://192.168.1.1/admin",
+    "https://10.0.0.1/internal",
+    "http://example.com/avatar.png",
+    "data:image/svg+xml,<svg/>",
+  ];
+  unsafeAvatars.forEach((url) => {
+    assertEquals(
+      isSafeRemoteAvatarUrl(url),
+      false,
+      `Expected ${url} to be rejected`,
+    );
+  });
+  assertEquals(
+    isSafeRemoteAvatarUrl("https://cdn.example.com/avatar.png"),
+    true,
+  );
+});

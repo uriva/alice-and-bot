@@ -52,12 +52,21 @@ export const escapeHtml = (value: string): string =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+const hasTransferFragment = (rawUrl: string): boolean => {
+  try {
+    return /#transfer=/i.test(decodeURIComponent(rawUrl));
+  } catch {
+    return /#transfer=/i.test(rawUrl);
+  }
+};
+
 export const sanitizeMarkdownUrl = (
   rawUrl: string,
   allowMailto = true,
 ): string | null => {
   const cleaned = rawUrl.replace(/\p{Cc}+/gu, "").trim();
   if (!cleaned) return null;
+  if (hasTransferFragment(cleaned)) return null;
   if (cleaned.startsWith("/")) {
     return cleaned.startsWith("//") || cleaned.startsWith("/\\")
       ? null
@@ -288,7 +297,15 @@ const createMarked = (textColor: string, isDark: boolean) => {
 };
 
 const buttonTagRegex =
-  /<button(?:\s+[^>]*\bid=(?:"([^"]*)"|'([^']*)'))?(?:[^>]*[^>/])?>((?:(?!<\/?button\b)[\s\S])*?)<\/button>|<button(?:\s+[^>]*\bid=(?:"([^"]*)"|'([^']*)'))?[^>]*\btitle=(?:"([^"]*)"|'([^']*)')[^>]*\/?>/gi;
+  /<button\b([^>]*)>(?:((?:(?!<\/?button\b)[\s\S])*?)<\/button>)?/gi;
+
+const extractHtmlAttr = (attrs: string, name: string): string | undefined => {
+  const match = new RegExp(
+    `\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`,
+    "i",
+  ).exec(attrs);
+  return match ? (match[1] ?? match[2] ?? "") : undefined;
+};
 
 const quickReplyButtonHtml = (
   title: string,
@@ -314,11 +331,14 @@ const processButtons = (
   const renderedButtons: string[] = [];
   const textWithoutButtons = text.replace(
     buttonTagRegex,
-    (_match, id1Dq, id1Sq, content, id2Dq, id2Sq, titleDq, titleSq) => {
-      const id = decodeHtmlEntities(id1Dq ?? id1Sq ?? id2Dq ?? id2Sq ?? "");
-      const rawTitle = content !== undefined
-        ? content
-        : (titleDq ?? titleSq ?? "");
+    (fullMatch, rawAttrs: string, content: string | undefined) => {
+      const selfClosing = rawAttrs.trimEnd().endsWith("/");
+      const titleAttr = extractHtmlAttr(rawAttrs, "title");
+      if (content === undefined && !selfClosing && titleAttr === undefined) {
+        return fullMatch;
+      }
+      const id = decodeHtmlEntities(extractHtmlAttr(rawAttrs, "id") ?? "");
+      const rawTitle = content !== undefined ? content : (titleAttr ?? "");
       const title = decodeHtmlEntities(rawTitle.replace(/<[^>]+>/g, "").trim());
       if (title && showButtons) {
         renderedButtons.push(

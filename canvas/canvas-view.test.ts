@@ -85,3 +85,16 @@ Deno.test("a full landing page program renders and stays within the tag set", as
 Deno.test("toasts expire so messages do not pile up", () => {
   assertEquals(toastLifetimeMs, 5_000);
 });
+
+Deno.test("canvasViewCss isolates fixed positioning and sanitizeCanvasClassName strips viewport-overlay classes", async () => {
+  const { canvasViewCss, sanitizeCanvasClassName } = await import(
+    "./canvas-view.ts"
+  );
+  assertEquals(canvasViewCss(false).includes("contain: layout paint"), true);
+  assertEquals(
+    sanitizeCanvasClassName(
+      "canvas-card fixed inset-0 z-50 z-[9999] sticky absolute top-0 left-0 right-0 bottom-0 featured",
+    ),
+    "canvas-card featured",
+  );
+});

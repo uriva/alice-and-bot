@@ -8,3 +8,4 @@ deno.lock
 dist
 .wrangler
 .npmrc
+*.log

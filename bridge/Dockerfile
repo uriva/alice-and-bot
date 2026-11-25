@@ -1,4 +1,4 @@
-FROM denoland/deno:latest
+FROM denoland/deno:2.9.8
 
 WORKDIR /app
 
@@ -11,4 +11,4 @@ COPY main.ts ./
 RUN deno cache --no-lock main.ts
 
 # These are passed as runtime flags to deno run
-CMD ["run", "-A", "--no-lock", "main.ts"]
+CMD ["run", "--allow-net", "--allow-env", "--allow-sys", "--allow-read", "--no-lock", "main.ts"]

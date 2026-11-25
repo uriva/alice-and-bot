@@ -1,4 +1,9 @@
-import { assertEquals, assertFalse, assertStringIncludes } from "@std/assert";
+import {
+  assertEquals,
+  assertFalse,
+  assertRejects,
+  assertStringIncludes,
+} from "@std/assert";
 import { parseChatWithUrl } from "../../protocol/src/clientApi.ts";
 import { renderMarkdown } from "./markdown.ts";
 
@@ -295,4 +300,82 @@ Deno.test("[MEDIUM-01] chat-attachment validates storage source URLs, decrypted 
   assertEquals(sanitizeDownloadFilename("../../evil.html"), "evil.html.bin");
   assertEquals(sanitizeDownloadFilename("payload.svg"), "payload.svg.bin");
   assertEquals(sanitizeDownloadFilename("report.pdf"), "report.pdf");
+
+  assertEquals(
+    isSafeAttachmentSourceUrl(
+      "https://storage.googleapis.com/fake-bucket/file.bin",
+    ),
+    false,
+  );
+});
+
+Deno.test("renderMarkdown blocks #transfer= session-fixation links and avoids ReDoS on unclosed <button tags", () => {
+  const transferLinks = [
+    "[sync](/chat#transfer=abc:def)",
+    "[sync](https://aliceandbot.com/chat#transfer=abc:def)",
+    "[sync](#transfer=abc:def)",
+  ];
+  transferLinks.forEach((md) => {
+    const html = renderMarkdown(md, "#222", false);
+    assertFalse(
+      html.includes("<a "),
+      `Expected transfer link to be blocked: ${md}, got: ${html}`,
+    );
+  });
+
+  const start = performance.now();
+  const pathological = `<button ${"a=1 ".repeat(3000)}`;
+  renderMarkdown(pathological, "#222", false);
+  const elapsedMs = performance.now() - start;
+  assertEquals(
+    elapsedMs < 200,
+    true,
+    `Expected linear-time button parsing, took ${elapsedMs}ms`,
+  );
+});
+
+Deno.test("processChatState drops ephemeralStreams authored by non-participants", () => {
+  const state = processChatState({
+    messages: [],
+    details: {
+      "pk-alice": { name: "Alice" },
+      "pk-outsider": { name: "Outsider" },
+    },
+    uiElements: [],
+    ephemeralStreams: [
+      {
+        elementId: "s-legit",
+        text: "Legit stream",
+        active: true,
+        authorId: "pk-alice",
+        updatedAt: 1000,
+      },
+      {
+        elementId: "s-spoof",
+        text: "Spoofed stream",
+        active: true,
+        authorId: "pk-outsider",
+        updatedAt: 1001,
+      },
+    ],
+    progressMax: new Map(),
+    allowedParticipantKeys: new Set(["pk-alice", "pk-bob"]),
+  });
+  assertEquals(state.activeStreams.length, 1);
+  assertEquals(state.activeStreams[0].elementId, "s-legit");
+});
+
+Deno.test("downloadAttachment rejects untrusted or non-bucket URLs", async () => {
+  const { downloadAttachment } = await import(
+    "../../protocol/src/clientApi.ts"
+  );
+  await assertRejects(
+    () =>
+      downloadAttachment({
+        url: "https://evil.example.com/steal.bin",
+        conversationKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      }),
+    Error,
+    "Untrusted attachment URL",
+  );
 });

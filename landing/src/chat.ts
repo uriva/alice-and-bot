@@ -46,6 +46,10 @@ import {
   savePushCredentials,
 } from "../../protocol/src/pushKeyStore.ts";
 import {
+  isValidCredentials,
+  shouldOverwriteCredentials,
+} from "../../lit/core/credentials.ts";
+import {
   canInstallPwa,
   isIosDevice,
   isStandaloneApp,
@@ -579,6 +583,7 @@ const startConversation = async (
         participantKeys,
         title,
         creds,
+        totalCost,
       );
       if ("error" in res) throw new Error(res.error);
       return res;
@@ -647,10 +652,21 @@ const handleTransferImport = async () => {
       rerenderChat();
       return;
     }
-    const creds = await decryptSymmetric<Credentials>(
+    const creds = await decryptSymmetric<unknown>(
       parsed.aesKey,
-      result.encryptedPayload as EncryptedSymmetric<Credentials>,
+      result.encryptedPayload as EncryptedSymmetric<unknown>,
     );
+    if (!isValidCredentials(creds)) {
+      throw new Error("Invalid transfer credentials");
+    }
+    const existingStored = localStorage.getItem("alicebot_credentials");
+    if (!shouldOverwriteCredentials(existingStored)) {
+      transferImportInFlight = false;
+      credentialsChecked = true;
+      showToast("Identity import cancelled");
+      rerenderChat();
+      return;
+    }
     localStorage.setItem("alicebot_credentials", JSON.stringify(creds));
     transferImportInFlight = false;
     credentialsChecked = true;

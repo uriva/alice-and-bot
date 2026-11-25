@@ -77,6 +77,16 @@ const expandIpv6 = (raw: string): number[] | null => {
   return [...left, ...Array<number>(missing).fill(0), ...right];
 };
 
+const octetsFromGroups = (
+  hi: number,
+  lo: number,
+): [number, number, number, number] => [
+  (hi >> 8) & 0xff,
+  hi & 0xff,
+  (lo >> 8) & 0xff,
+  lo & 0xff,
+];
+
 const isPrivateIpv6 = (groups: number[]): boolean => {
   if (groups.every((g) => g === 0)) return true;
   if (groups.slice(0, 7).every((g) => g === 0) && groups[7] === 1) return true;
@@ -84,41 +94,45 @@ const isPrivateIpv6 = (groups: number[]): boolean => {
     groups.slice(0, 5).every((g) => g === 0) &&
     (groups[5] === 0xffff || groups[5] === 0)
   ) {
-    return isPrivateIpv4([
-      (groups[6] >> 8) & 0xff,
-      groups[6] & 0xff,
-      (groups[7] >> 8) & 0xff,
-      groups[7] & 0xff,
-    ]);
+    return isPrivateIpv4(octetsFromGroups(groups[6], groups[7]));
+  }
+  if (
+    groups.slice(0, 4).every((g) => g === 0) &&
+    groups[4] === 0xffff &&
+    groups[5] === 0
+  ) {
+    return isPrivateIpv4(octetsFromGroups(groups[6], groups[7]));
+  }
+  if (groups[0] === 0x0064 && groups[1] === 0xff9b) {
+    return isPrivateIpv4(octetsFromGroups(groups[6], groups[7]));
+  }
+  if (groups[0] === 0x2002) {
+    return isPrivateIpv4(octetsFromGroups(groups[1], groups[2]));
   }
   if ((groups[0] & 0xfe00) === 0xfc00) return true;
   if ((groups[0] & 0xffc0) === 0xfe80) return true;
   if ((groups[0] & 0xffc0) === 0xfec0) return true;
   if ((groups[0] & 0xff00) === 0xff00) return true;
   if (groups[0] === 0x2001 && groups[1] === 0x0db8) return true;
+  if (groups[0] === 0x0100 && groups.slice(1, 4).every((g) => g === 0)) {
+    return true;
+  }
   return false;
 };
+
+const hasLeadingZeroOctet = (host: string): boolean =>
+  host.split(".").some((part) => part.length > 1 && part.startsWith("0"));
 
 export const isPrivateOrReservedHost = (rawHost: string): boolean => {
   const host = rawHost.trim().toLowerCase().replace(/\.$/, "");
   if (!host) return true;
-  if (
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host.endsWith(".local") ||
-    host.endsWith(".internal") ||
-    host === "metadata" ||
-    host === "metadata.google.internal" ||
-    host === "instance-data"
-  ) {
-    return true;
-  }
-  const v4 = parseIpv4(host);
+  const v4 = !hasLeadingZeroOctet(host) ? parseIpv4(host) : null;
   if (v4) return isPrivateIpv4(v4);
   const v6 = expandIpv6(host);
   if (v6) return isPrivateIpv6(v6);
-  if (host.includes(":")) return true;
-  return false;
+  // Reject non-canonical IP encodings (decimal/hex/octal/short IPv4) and
+  // arbitrary DNS hostnames in ICE candidates to prevent DNS-rebinding SSRF.
+  return true;
 };
 
 export const isSafeIceCandidate = (candidateInput: unknown): boolean => {
@@ -229,6 +243,36 @@ const extractOfferSdp = (sdpField: unknown): string | null => {
   return null;
 };
 
+const MAX_CONCURRENT_BRIDGE_CONNECTIONS = 100;
+let activeBridgeConnections = 0;
+
+const verifyBridgeRequest = (req: Request, token: string): boolean => {
+  const authHeader = req.headers.get("authorization") ?? "";
+  if (safeEqualStrings(authHeader, `Bearer ${token}`)) return true;
+  const queryToken = new URL(req.url).searchParams.get("token") ?? "";
+  return queryToken.length > 0 && safeEqualStrings(queryToken, token);
+};
+
+const getBridgeIceServers = () => {
+  const stun = { urls: "stun:stun.l.google.com:19302" };
+  const turnUrl = Deno.env.get("TURN_URL") ?? "turn:34.71.16.134:3478";
+  const authSecret = (Deno.env.get("TURN_AUTH_SECRET") ?? "").trim();
+  if (authSecret) {
+    const expiry = Math.floor(Date.now() / 1000) + 3600;
+    const username = `${expiry}:bridge`;
+    const credential = createHmac("sha1", authSecret)
+      .update(username)
+      .digest("base64");
+    return [stun, { urls: turnUrl, username, credential }];
+  }
+  const username = Deno.env.get("TURN_USERNAME");
+  const credential = Deno.env.get("TURN_CREDENTIAL");
+  if (username && credential) {
+    return [stun, { urls: turnUrl, username, credential }];
+  }
+  return [stun];
+};
+
 export const handleRequest = (req: Request): Response => {
   const url = new URL(req.url);
   if (req.headers.get("upgrade")?.toLowerCase() !== "websocket") {
@@ -236,13 +280,24 @@ export const handleRequest = (req: Request): Response => {
   }
   if (url.pathname === "/twilio-voice/stream") {
     const twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
-    if (twilioAuthToken && !verifyTwilioStreamRequest(req, twilioAuthToken)) {
+    if (
+      !twilioAuthToken || !verifyTwilioStreamRequest(req, twilioAuthToken)
+    ) {
       return new Response("Forbidden", { status: 403 });
     }
     return proxyTwilioStream(req);
   }
 
+  const bridgeAuthToken = Deno.env.get("BRIDGE_AUTH_TOKEN") ?? "";
+  if (bridgeAuthToken && !verifyBridgeRequest(req, bridgeAuthToken)) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  if (activeBridgeConnections >= MAX_CONCURRENT_BRIDGE_CONNECTIONS) {
+    return new Response("Too many connections", { status: 503 });
+  }
+
   const { socket, response } = Deno.upgradeWebSocket(req);
+  activeBridgeConnections++;
 
   let pc: RTCPeerConnection | null = null;
   const decoder = new Decoder({ sample_rate: 48000, channels: 1 });
@@ -348,14 +403,7 @@ export const handleRequest = (req: Request): Response => {
         }
 
         const currentPc = new RTCPeerConnection({
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            {
-              urls: "turn:34.71.16.134:3478",
-              username: "turnuser",
-              credential: "c4667414eb0867040af94292a6c5e3c0",
-            },
-          ],
+          iceServers: getBridgeIceServers(),
         });
         pc = currentPc;
 
@@ -609,6 +657,7 @@ export const handleRequest = (req: Request): Response => {
 
   socket.onerror = (e) => console.error("WebSocket error:", e);
   socket.onclose = () => {
+    activeBridgeConnections = Math.max(0, activeBridgeConnections - 1);
     console.log("WebSocket closed");
     if (pacingInterval) clearInterval(pacingInterval);
     if (mediaReadyFallbackTimer) clearTimeout(mediaReadyFallbackTimer);
@@ -661,6 +710,10 @@ const forwardInto = (from: ProxyEndpoint, to: ProxyEndpoint) => {
     for (const data of queue.splice(0)) to.send(data);
   });
   from.onMessage((data) => {
+    if (wsFrameByteLength(data) > MAX_WS_FRAME_BYTES) {
+      console.warn("[twilio-proxy] Dropped oversized WebSocket frame");
+      return;
+    }
     if (!toReady) {
       if (queue.length >= maxQueuedWhilePeerPending) queue.shift();
       queue.push(data);

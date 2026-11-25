@@ -272,11 +272,15 @@ async (sub: StoredPushRow) => {
     pushUrgencyOptions,
   );
   if (!isSafeWebhookUrl(details.endpoint)) return;
-  const res = await fetchSafeWebhook(details.endpoint, {
-    method: details.method,
-    headers: toFetchHeaders(details.headers),
-    body: details.body ? new Uint8Array(details.body) : undefined,
-  }).catch((err) => {
+  const res = await fetchSafeWebhook(
+    details.endpoint,
+    {
+      method: details.method,
+      headers: toFetchHeaders(details.headers),
+      body: details.body ? new Uint8Array(details.body) : undefined,
+    },
+    { allowRedirects: false },
+  ).catch((err) => {
     console.error("Failed to send web push", err);
     return null;
   });

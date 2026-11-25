@@ -59,3 +59,42 @@ Deno.test("getCredentialsToCopy - returns null if both are empty", () => {
   const result = getCredentialsToCopy("alicebot_credentials", null);
   assertEquals(result, null);
 });
+
+Deno.test("isValidCredentials and shouldOverwriteCredentials guard against silent identity fixation", async () => {
+  const { isValidCredentials, shouldOverwriteCredentials } = await import(
+    "./credentials.ts"
+  );
+  assertEquals(
+    isValidCredentials({
+      publicSignKey: "pub",
+      privateSignKey: "priv",
+      privateEncryptKey: "enc",
+    }),
+    true,
+  );
+  assertEquals(isValidCredentials({ publicSignKey: "pub" }), false);
+  assertEquals(isValidCredentials(null), false);
+
+  // No existing credentials -> allow import without prompting
+  assertEquals(
+    shouldOverwriteCredentials(null, () => {
+      throw new Error("Should not prompt when no credentials exist");
+    }),
+    true,
+  );
+
+  // Existing credentials -> prompt and obey user decision
+  const prompts: string[] = [];
+  assertEquals(
+    shouldOverwriteCredentials('{"publicSignKey":"existing"}', (msg) => {
+      prompts.push(msg);
+      return false;
+    }),
+    false,
+  );
+  assertEquals(prompts.length, 1);
+  assertEquals(
+    shouldOverwriteCredentials('{"publicSignKey":"existing"}', () => true),
+    true,
+  );
+});

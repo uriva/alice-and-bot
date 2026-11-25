@@ -1,3 +1,4 @@
+import { getTurnCredentialsSigned } from "../../backend/src/api.ts";
 import type {
   CallAction,
   Credentials,
@@ -14,14 +15,26 @@ export type CallState =
 
 type CallMsg = DecipheredMessage & { type: "call" };
 
-const iceServers = [
+const defaultStunServers: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
-  {
-    urls: "turn:34.71.16.134:3478",
-    username: "turnuser",
-    credential: "c4667414eb0867040af94292a6c5e3c0",
-  },
 ];
+
+const resolveVoiceIceServers = async (
+  credentials: Credentials,
+): Promise<RTCIceServer[]> => {
+  const res = await getTurnCredentialsSigned(credentials).catch(() => null);
+  if (res && "username" in res) {
+    return [
+      ...defaultStunServers,
+      {
+        urls: res.urls,
+        username: res.username,
+        credential: res.credential,
+      },
+    ];
+  }
+  return defaultStunServers;
+};
 
 const staleAgeMs = 45_000;
 const iceGatheringTimeoutMs = 2_000;
@@ -61,7 +74,8 @@ const awaitIceGathering = (pc: RTCPeerConnection) =>
   });
 
 export type VoiceCallDeps = {
-  createPeerConnection: () => RTCPeerConnection;
+  createPeerConnection: (iceServers?: RTCIceServer[]) => RTCPeerConnection;
+  resolveIceServers?: (credentials: Credentials) => Promise<RTCIceServer[]>;
   getUserAudioStream: () => Promise<MediaStream>;
   sendCall: (params: {
     credentials: Credentials;
@@ -99,7 +113,9 @@ export type VoiceCallController = {
   cleanup: () => void;
 };
 
-const defaultCreatePeerConnection = () => new RTCPeerConnection({ iceServers });
+const defaultCreatePeerConnection = (
+  iceServers: RTCIceServer[] = defaultStunServers,
+) => new RTCPeerConnection({ iceServers });
 
 const defaultGetUserAudioStream = () =>
   navigator.mediaDevices.getUserMedia({ audio: true });
@@ -197,6 +213,7 @@ const defaultDeps = (): VoiceCallDeps => {
   const tones = makeAudioTonePlayer();
   return {
     createPeerConnection: defaultCreatePeerConnection,
+    resolveIceServers: resolveVoiceIceServers,
     getUserAudioStream: defaultGetUserAudioStream,
     sendCall: defaultSendCall,
     playRingbackTone: tones.playRingbackTone,
@@ -267,8 +284,11 @@ export const makeCreateVoiceCall =
       deps.stopTone();
     };
 
-    const buildPc = () => {
-      const newPc = deps.createPeerConnection();
+    const buildPc = async () => {
+      const iceServers = deps.resolveIceServers
+        ? await deps.resolveIceServers(params.credentials)
+        : undefined;
+      const newPc = deps.createPeerConnection(iceServers);
       newPc.oniceconnectionstatechange = () => {
         console.log("[webrtc] ICE state:", newPc.iceConnectionState);
       };
@@ -316,7 +336,7 @@ export const makeCreateVoiceCall =
       try {
         localStream = await deps.getUserAudioStream();
         deps.playRingbackTone();
-        pc = buildPc();
+        pc = await buildPc();
         const currentPc = pc;
         const stream = localStream;
         stream.getTracks().forEach((t) => currentPc.addTrack(t, stream));
@@ -337,7 +357,7 @@ export const makeCreateVoiceCall =
       if (!params.getConversationKey() || !callId) return;
       try {
         localStream = await deps.getUserAudioStream();
-        pc = buildPc();
+        pc = await buildPc();
         const currentPc = pc;
         const stream = localStream;
         stream.getTracks().forEach((t) => currentPc.addTrack(t, stream));

@@ -10,6 +10,9 @@ Deno.test("validateView rejects unsafe URL protocols on href and src attributes"
     "data:image/svg+xml;base64,PHN2Zy8+",
     "//evil.com/steal",
     "/\\evil.com/steal",
+    "/chat#transfer=abc:def",
+    "https://aliceandbot.com/chat#transfer=abc:def",
+    "#transfer=abc:def",
   ];
 
   unsafeUrls.forEach((badUrl) => {

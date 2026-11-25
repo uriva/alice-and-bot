@@ -162,6 +162,12 @@ export const isSafeWebhookUrl = (
 
 const maxSafeWebhookRedirects = 5;
 const methodPreservingRedirectStatuses = [307, 308];
+const crossOriginStrippedHeaders = new Set([
+  "authorization",
+  "cookie",
+  "crypto-key",
+  "x-alice-signature",
+]);
 
 const resolveRedirectUrl = (
   baseUrl: string,
@@ -175,16 +181,34 @@ const resolveRedirectUrl = (
   }
 };
 
+const stripSensitiveHeadersOnCrossOrigin = (
+  fromUrl: string,
+  toUrl: string,
+  init: RequestInit,
+): RequestInit => {
+  if (!init.headers) return init;
+  try {
+    if (new URL(fromUrl).origin === new URL(toUrl).origin) return init;
+  } catch {
+    // treat unparseable origins as cross-origin
+  }
+  const filtered = new Headers(init.headers);
+  crossOriginStrippedHeaders.forEach((name) => filtered.delete(name));
+  return { ...init, headers: filtered };
+};
+
 const fetchSafeWebhookHop = async (
   url: string,
   init: RequestInit,
   hop: number,
+  allowRedirects: boolean,
 ): Promise<Response> => {
   if (!isSafeWebhookUrl(url)) {
     throw new Error(`Blocked unsafe webhook URL: ${url}`);
   }
   const res = await fetch(url, { ...init, redirect: "manual" });
   if (res.status < 300 || res.status >= 400) return res;
+  if (!allowRedirects) return res;
   const nextUrl = resolveRedirectUrl(url, res.headers.get("location"));
   if (!nextUrl || !methodPreservingRedirectStatuses.includes(res.status)) {
     await res.body?.cancel();
@@ -197,10 +221,17 @@ const fetchSafeWebhookHop = async (
   if (hop >= maxSafeWebhookRedirects) {
     throw new Error(`Too many webhook redirects: ${url}`);
   }
-  return fetchSafeWebhookHop(nextUrl, init, hop + 1);
+  return fetchSafeWebhookHop(
+    nextUrl,
+    stripSensitiveHeadersOnCrossOrigin(url, nextUrl, init),
+    hop + 1,
+    allowRedirects,
+  );
 };
 
 export const fetchSafeWebhook = (
   url: string,
   init: RequestInit,
-): Promise<Response> => fetchSafeWebhookHop(url, init, 0);
+  options?: { allowRedirects?: boolean },
+): Promise<Response> =>
+  fetchSafeWebhookHop(url, init, 0, options?.allowRedirects ?? true);

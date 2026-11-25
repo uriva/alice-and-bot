@@ -121,8 +121,10 @@ export const setupBackendApiMock = async (page: Page, data: TestData) => {
     if (endpoint === "getUploadUrl") {
       await delay(100);
       return route.fulfill(json({
-        uploadUrl: "https://storage.googleapis.com/fake-bucket/upload",
-        fileUrl: "https://storage.googleapis.com/fake-bucket/file.bin",
+        uploadUrl:
+          "https://storage.googleapis.com/alice-and-bot-attachments/test-upload",
+        fileUrl:
+          "https://storage.googleapis.com/alice-and-bot-attachments/test-file.bin",
         maxSize: 10_000_000,
       }));
     }

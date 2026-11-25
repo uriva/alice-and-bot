@@ -337,7 +337,7 @@ Deno.test("[MEDIUM-03] createConversation does NOT waive priceTag when sender an
   ]);
 });
 
-Deno.test("[CRITICAL-03] setWebhook blocks SSRF URLs and prevents unauthenticated hijack while preserving legacy first-time registration", async () => {
+Deno.test("[CRITICAL-03] setWebhook blocks SSRF URLs and requires signed auth even for first-time registration", async () => {
   const bot = await makeTestIdentity("WebhookBot");
 
   const ssrfUrls = [
@@ -357,9 +357,13 @@ Deno.test("[CRITICAL-03] setWebhook blocks SSRF URLs and prevents unauthenticate
 
   await Promise.all(
     ssrfUrls.map(async (badUrl) => {
+      const signed = await signAuthPayload(bot.creds, "setWebhook", {
+        url: badUrl,
+      });
       const res = await endpoints.handlers.setWebhook({
         url: badUrl,
         publicSignKey: bot.creds.publicSignKey,
+        auth: { nonce: signed.nonce, authToken: signed.authToken },
       });
       assertEquals(
         res.success,
@@ -370,17 +374,21 @@ Deno.test("[CRITICAL-03] setWebhook blocks SSRF URLs and prevents unauthenticate
   );
 
   const initialUrl = "https://legit-bot.example.com/webhook";
+  const unauthFirstSet = await endpoints.handlers.setWebhook({
+    url: initialUrl,
+    publicSignKey: bot.creds.publicSignKey,
+  });
+  assertEquals(unauthFirstSet, { success: false, error: "invalid-auth" });
+
+  const signedInitial = await signAuthPayload(bot.creds, "setWebhook", {
+    url: initialUrl,
+  });
   const firstSet = await endpoints.handlers.setWebhook({
     url: initialUrl,
     publicSignKey: bot.creds.publicSignKey,
+    auth: { nonce: signedInitial.nonce, authToken: signedInitial.authToken },
   });
   assertEquals(firstSet, { success: true });
-
-  const idempotentSet = await endpoints.handlers.setWebhook({
-    url: initialUrl,
-    publicSignKey: bot.creds.publicSignKey,
-  });
-  assertEquals(idempotentSet, { success: true });
 
   const unauthHijack = await endpoints.handlers.setWebhook({
     url: "https://attacker.example.com/steal",
@@ -1352,4 +1360,328 @@ Deno.test("mintInstantToken returns cold-start bootstrap conversations, key, and
     tx.identities[bob.identityId].delete(),
     tx.identities[outsider.identityId].delete(),
   ]);
+});
+
+Deno.test("per-key nonce quota prevents one attacker key from evicting another user's active nonce", async () => {
+  const victim = await generateKeyPair("sign");
+  const victimNonce = await issueNonceHelper(victim.publicKey);
+  const digest = await canonicalStringForAuthSignV2({
+    action: "heartbeat",
+    publicSignKey: victim.publicKey,
+    payload: {},
+    nonce: victimNonce,
+  });
+  const victimSig = await sign(victim.privateKey, digest);
+
+  await Promise.all(
+    Array.from(
+      { length: MAX_NONCES + 100 },
+      () => issueNonceHelper("attacker-single-key"),
+    ),
+  );
+
+  assertEquals(
+    await verifyAuthToken({
+      action: "heartbeat",
+      publicSignKey: victim.publicKey,
+      payload: {},
+      nonce: victimNonce,
+      authToken: victimSig,
+    }),
+    true,
+  );
+});
+
+Deno.test("createConversation rejects price-tag TOCTOU increase above signed maxTotalCost", async () => {
+  const sender = await makeTestIdentity("ToctouSender", { balance: 10_000 });
+  const recipient = await makeTestIdentity("ToctouVip", { priceTag: 500 });
+  const symKey = await generateSymmetricKey();
+  const keyMap = {
+    [sender.creds.publicSignKey]: await encryptAsymmetric(
+      sender.publicEncryptKey,
+      symKey,
+    ),
+    [recipient.creds.publicSignKey]: await encryptAsymmetric(
+      recipient.publicEncryptKey,
+      symKey,
+    ),
+  };
+
+  const signed = await signAuthPayload(sender.creds, "createConversation", {
+    title: "Paid Chat",
+    publicSignKeyToEncryptedSymmetricKey: keyMap,
+    maxTotalCost: 100,
+  });
+  const res = await endpoints.handlers.createConversation(signed);
+  assertEquals(res, { error: "price-changed" });
+
+  await transact([
+    tx.wallets[sender.walletId!].delete(),
+    tx.identities[sender.identityId].delete(),
+    tx.identities[recipient.identityId].delete(),
+  ]);
+});
+
+Deno.test("setAvatar rejects non-HTTPS and private/internal URLs", async () => {
+  const user = await makeTestIdentity("AvatarUser");
+  const badAvatars = [
+    "http://127.0.0.1/avatar.png",
+    "http://169.254.169.254/latest/meta-data/",
+    "https://127.0.0.1/a.png",
+    "javascript:alert(1)",
+    "data:image/svg+xml,<svg onload=alert(1)>",
+  ];
+  await Promise.all(
+    badAvatars.map(async (avatar) => {
+      const signed = await signAuthPayload(user.creds, "setAvatar", { avatar });
+      const res = await endpoints.handlers.setAvatar(signed);
+      assertEquals(res, { success: false, error: "invalid-avatar" });
+    }),
+  );
+
+  const goodSigned = await signAuthPayload(user.creds, "setAvatar", {
+    avatar: "https://cdn.example.com/avatar.png",
+  });
+  assertEquals(await endpoints.handlers.setAvatar(goodSigned), {
+    success: true,
+  });
+
+  await transact(tx.identities[user.identityId].delete());
+});
+
+Deno.test("sanitizeUploadContentType allows only safe non-scriptable MIME types", () => {
+  [
+    "application/rss+xml",
+    "application/atom+xml",
+    "text/xsl",
+    "multipart/related",
+    "text/css",
+  ].forEach((dangerous) => {
+    assertEquals(
+      sanitizeUploadContentType(dangerous),
+      "application/octet-stream",
+    );
+  });
+  assertEquals(sanitizeUploadContentType("image/png"), "image/png");
+  assertEquals(
+    sanitizeUploadContentType("application/octet-stream"),
+    "application/octet-stream",
+  );
+});
+
+Deno.test("deposit helpers reject unconfirmed 0-conf transactions and convert BTC to integer cents", async () => {
+  const { isConfirmedDepositTx, satoshisToCents } = await import("./main.ts");
+  assertEquals(isConfirmedDepositTx({ txid: "a", vout: [] }), false);
+  assertEquals(
+    isConfirmedDepositTx({ txid: "a", vout: [], status: { confirmed: false } }),
+    false,
+  );
+  assertEquals(
+    isConfirmedDepositTx({ txid: "a", vout: [], status: { confirmed: true } }),
+    true,
+  );
+  // 0.001 BTC at $100,000/BTC = $100.00 = 10,000 cents
+  assertEquals(satoshisToCents(100_000, 100_000), 10_000);
+});
+
+Deno.test("sendMessage rejects forged auth and supports ENFORCE_STRICT_MESSAGE_AUTH", async () => {
+  const alice = await makeTestIdentity("MsgAuthAlice");
+  const bob = await makeTestIdentity("MsgAuthBob");
+  const convoId = id();
+
+  await transact(
+    tx.conversations[convoId]
+      .update({ title: "Auth Msg Chat", updatedAt: Date.now() })
+      .link({ participants: [alice.identityId, bob.identityId] }),
+  );
+
+  await assertRejects(() =>
+    endpoints.handlers.sendMessage({
+      conversation: convoId,
+      encryptedMessage: "ciphertext",
+      senderPublicSignKey: alice.creds.publicSignKey,
+      auth: { nonce: "bad", authToken: "forged" },
+    })
+  );
+
+  Deno.env.set("ENFORCE_STRICT_MESSAGE_AUTH", "1");
+  await assertRejects(() =>
+    endpoints.handlers.sendMessage({
+      conversation: convoId,
+      encryptedMessage: "ciphertext",
+      senderPublicSignKey: alice.creds.publicSignKey,
+    })
+  );
+
+  const signed = await signAuthPayload(alice.creds, "sendMessage", {
+    conversation: convoId,
+    encryptedMessage: "ciphertext-authed",
+  });
+  const sent = await endpoints.handlers.sendMessage({
+    conversation: convoId,
+    encryptedMessage: "ciphertext-authed",
+    senderPublicSignKey: alice.creds.publicSignKey,
+    silent: true,
+    auth: { nonce: signed.nonce, authToken: signed.authToken },
+  });
+  Deno.env.delete("ENFORCE_STRICT_MESSAGE_AUTH");
+  assertExists(sent.messageId);
+
+  await transact([
+    tx.messages[sent.messageId].delete(),
+    tx.conversations[convoId].delete(),
+    tx.identities[alice.identityId].delete(),
+    tx.identities[bob.identityId].delete(),
+  ]);
+});
+
+Deno.test("/ui-update rejects invalid types/percentages, non-participant authorId, and enforces ENFORCE_STRICT_UI_UPDATE_AUTH", async () => {
+  const alice = await makeTestIdentity("UiAlice");
+  const outsider = await makeTestIdentity("UiOutsider");
+  const convoId = id();
+
+  await transact(
+    tx.conversations[convoId]
+      .update({ title: "UI Chat", updatedAt: Date.now() })
+      .link({ participants: [alice.identityId] }),
+  );
+
+  const badType = await handleRequest(
+    new Request("http://localhost/ui-update", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        elementId: "el-bad-type",
+        conversationId: convoId,
+        type: "evil-type",
+      }),
+    }),
+  );
+  assertEquals(badType.status, 400);
+
+  const badAuthor = await handleRequest(
+    new Request("http://localhost/ui-update", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        elementId: "el-spoof",
+        conversationId: convoId,
+        type: "stream",
+        text: "spoofed",
+        authorId: outsider.creds.publicSignKey,
+      }),
+    }),
+  );
+  assertEquals(badAuthor.status, 403);
+
+  Deno.env.set("ENFORCE_STRICT_UI_UPDATE_AUTH", "1");
+  const unauthStrict = await handleRequest(
+    new Request("http://localhost/ui-update", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        elementId: "el-strict",
+        conversationId: convoId,
+        type: "stream",
+        text: "hi",
+      }),
+    }),
+  );
+  Deno.env.delete("ENFORCE_STRICT_UI_UPDATE_AUTH");
+  assertEquals(unauthStrict.status, 401);
+
+  await transact([
+    tx.conversations[convoId].delete(),
+    tx.identities[alice.identityId].delete(),
+    tx.identities[outsider.identityId].delete(),
+  ]);
+});
+
+Deno.test("fetchSafeWebhook blocks redirects when allowRedirects is false and strips sensitive headers on cross-origin redirect", async () => {
+  const { fetchSafeWebhook } = await import("./ssrfGuard.ts");
+  Deno.env.set("ALLOW_LOCAL_WEBHOOKS", "1");
+  const seenHeaders: Record<string, string | null>[] = [];
+  const target = Deno.serve({ port: 0, onListen: () => {} }, (req) => {
+    seenHeaders.push({
+      authorization: req.headers.get("authorization"),
+      signature: req.headers.get("x-alice-signature"),
+    });
+    return new Response("ok", { status: 200 });
+  });
+  const redirector = Deno.serve(
+    { port: 0, onListen: () => {} },
+    () =>
+      new Response(null, {
+        status: 307,
+        headers: { location: `http://127.0.0.1:${target.addr.port}/dest` },
+      }),
+  );
+
+  const noRedirRes = await fetchSafeWebhook(
+    `http://127.0.0.1:${redirector.addr.port}/start`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer secret",
+        "X-Alice-Signature": "sig-secret",
+      },
+      body: "{}",
+    },
+    { allowRedirects: false },
+  );
+  assertEquals(noRedirRes.status, 307);
+  await noRedirRes.body?.cancel();
+
+  const crossOriginRes = await fetchSafeWebhook(
+    `http://127.0.0.1:${redirector.addr.port}/start`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer secret",
+        "X-Alice-Signature": "sig-secret",
+      },
+      body: "{}",
+    },
+  );
+  assertEquals(crossOriginRes.status, 200);
+  await crossOriginRes.body?.cancel();
+  assertEquals(seenHeaders.length, 1);
+  assertEquals(seenHeaders[0].authorization, null);
+  assertEquals(seenHeaders[0].signature, null);
+
+  Deno.env.delete("ALLOW_LOCAL_WEBHOOKS");
+  await Promise.all([redirector.shutdown(), target.shutdown()]);
+});
+
+Deno.test("getTurnCredentials requires signed auth, mints ephemeral HMAC-SHA1 TURN credentials, and no hardcoded TURN secrets remain in source", async () => {
+  const user = await makeTestIdentity("TurnUser");
+
+  const unauthRes = await endpoints.handlers.getTurnCredentials({
+    payload: {},
+    publicSignKey: user.creds.publicSignKey,
+    nonce: "bad",
+    authToken: "forged",
+  });
+  assertEquals(unauthRes, { error: "invalid-auth" });
+
+  Deno.env.set("TURN_AUTH_SECRET", "test-turn-hmac-secret");
+  const signed = await signAuthPayload(user.creds, "getTurnCredentials", {});
+  const res = await endpoints.handlers.getTurnCredentials(signed);
+  Deno.env.delete("TURN_AUTH_SECRET");
+
+  assert("username" in res && "credential" in res && "urls" in res);
+  if ("username" in res) {
+    const expiry = Number(res.username.split(":")[0]);
+    assert(expiry > Math.floor(Date.now() / 1000));
+    assert(res.credential.length > 10);
+  }
+
+  const [voiceCode, bridgeCode] = await Promise.all([
+    Deno.readTextFile("./lit/core/voice-call.ts"),
+    Deno.readTextFile("./bridge/main.ts"),
+  ]);
+  assertFalse(voiceCode.includes("c4667414eb0867040af94292a6c5e3c0"));
+  assertFalse(bridgeCode.includes("c4667414eb0867040af94292a6c5e3c0"));
+
+  await transact(tx.identities[user.identityId].delete());
 });

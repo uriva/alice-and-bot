@@ -56,15 +56,15 @@ const videoPlaceholderStyle = (isDark: boolean) =>
   }`;
 
 export const isSafeAttachmentSourceUrl = (rawUrl: string): boolean => {
-  if (!rawUrl || /\p{Cc}/u.test(rawUrl)) return false;
+  if (!rawUrl || /[\p{Cc}\\]/u.test(rawUrl)) return false;
   try {
     if (decodeURIComponent(rawUrl).includes("..")) return false;
     const parsed = new URL(rawUrl);
     if (parsed.protocol !== "https:") return false;
     if (parsed.hostname !== "storage.googleapis.com") return false;
     return (
-      parsed.pathname.startsWith("/alice-and-bot-attachments/") ||
-      parsed.pathname.startsWith("/fake-bucket/")
+      parsed.pathname.startsWith("/alice-and-bot-attachments/") &&
+      parsed.pathname.length > "/alice-and-bot-attachments/".length
     );
   } catch {
     return false;

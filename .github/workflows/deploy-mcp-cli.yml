@@ -28,11 +28,15 @@ jobs:
         working-directory: mcp
         run: |
           mkdir -p dist
-          deno compile -A --no-check --target x86_64-unknown-linux-gnu -o dist/alice-and-bot-mcp-linux-x64 mcp.ts
-          deno compile -A --no-check --target aarch64-unknown-linux-gnu -o dist/alice-and-bot-mcp-linux-arm64 mcp.ts
-          deno compile -A --no-check --target aarch64-apple-darwin -o dist/alice-and-bot-mcp-darwin-arm64 mcp.ts
-          deno compile -A --no-check --target x86_64-apple-darwin -o dist/alice-and-bot-mcp-darwin-x64 mcp.ts
-          deno compile -A --no-check --target x86_64-pc-windows-msvc -o dist/alice-and-bot-mcp-windows-x64.exe mcp.ts
+          DENO_PERMS="--allow-net --allow-read --allow-write --allow-env --allow-sys"
+          deno compile $DENO_PERMS --no-check --target x86_64-unknown-linux-gnu -o dist/alice-and-bot-mcp-linux-x64 mcp.ts
+          deno compile $DENO_PERMS --no-check --target aarch64-unknown-linux-gnu -o dist/alice-and-bot-mcp-linux-arm64 mcp.ts
+          deno compile $DENO_PERMS --no-check --target aarch64-apple-darwin -o dist/alice-and-bot-mcp-darwin-arm64 mcp.ts
+          deno compile $DENO_PERMS --no-check --target x86_64-apple-darwin -o dist/alice-and-bot-mcp-darwin-x64 mcp.ts
+          deno compile $DENO_PERMS --no-check --target x86_64-pc-windows-msvc -o dist/alice-and-bot-mcp-windows-x64.exe mcp.ts
+          for f in dist/alice-and-bot-mcp-*; do
+            sha256sum "$f" | awk '{print $1}' > "${f}.sha256"
+          done
       - name: Confirm binaries are built
         run: ls -lh mcp/dist/
       - name: Set up Google Cloud credentials

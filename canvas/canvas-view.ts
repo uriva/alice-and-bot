@@ -29,6 +29,7 @@ export const toastLifetimeMs = 5_000;
 export const canvasViewCss = (isDark: boolean) => `
 .canvas-view {
   position: relative;
+  contain: layout paint;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -214,6 +215,18 @@ const collectFields = (target: EventTarget | null) => {
   return fields;
 };
 
+const blockedCanvasClassPattern =
+  /^(?:[a-z0-9-]+:)*!?(?:fixed|sticky|absolute|inset(?:-[xy])?-.+|top-.+|right-.+|bottom-.+|left-.+|z-.+)$/i;
+
+export const sanitizeCanvasClassName = (raw?: string): string =>
+  (raw ?? "")
+    .split(/\s+/)
+    .filter((token) => token && !blockedCanvasClassPattern.test(token))
+    .join(" ");
+
+const isExternalCanvasHref = (href: string): boolean =>
+  href.startsWith("https://") || href.startsWith("http://");
+
 const renderNode = (
   node: ViewNode,
   onAction: (action: string, fields: Record<string, string>) => void,
@@ -223,8 +236,7 @@ const renderNode = (
   }
   const tag = node.tag.toLowerCase();
   if (!isRenderableTag(tag)) return nothing;
-  const className = node.attrs?.class?.split(/\s+/).filter(Boolean).join(" ") ??
-    "";
+  const className = sanitizeCanvasClassName(node.attrs?.class);
   const children = (node.children ?? []).map((child) =>
     renderNode(child, onAction)
   );
@@ -270,11 +282,12 @@ const renderNode = (
     `;
   }
   if (tag === "a") {
+    const safeHref = sanitizeViewUrl(node.attrs?.href, "#");
+    const external = isExternalCanvasHref(safeHref);
     return html`
-      <a dir="auto" class="canvas-el ${className}" href=${sanitizeViewUrl(
-        node.attrs?.href,
-        "#",
-      )}
+      <a dir="auto" class="canvas-el ${className}" href=${safeHref}
+        target=${external ? "_blank" : nothing}
+        rel=${external ? "noopener noreferrer" : nothing}
         @click=${clickHandler}>${node.text ?? nothing}${children}</a>
     `;
   }

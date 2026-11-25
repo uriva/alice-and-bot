@@ -86,6 +86,11 @@ Deno.test("[CRITICAL-05] MCP security helpers enforce pairing code, pinned sende
   assertEquals(sanitizeTempExtension("png", ".bin"), ".png");
 });
 
+Deno.test("MCP server enforces server origin signatures on incoming webhook updates", async () => {
+  const code = await Deno.readTextFile("./mcp.ts");
+  assertEquals(code.includes("requireServerSignature: true"), true);
+});
+
 Deno.test("MCP server advertises listChanged, exposes aliceandbot_read, and validates tool/prompt inputs", async () => {
   const tempDir = await Deno.makeTempDir({ prefix: "alice-mcp-test-" });
   const prevConfigDir = Deno.env.get("ALICEANDBOT_MCP_CONFIG_DIR");

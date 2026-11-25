@@ -3,8 +3,11 @@ const secretKeys = [
   "BITCOIN_XPUB",
   "GCP_CREDENTIALS",
   "INSTANT_ADMIN_TOKEN",
+  "RELAY_WEBHOOK_SECRET",
+  "TURN_AUTH_SECRET",
   "VAPID_PRIVATE_KEY",
   "VAPID_PUBLIC_KEY",
+  "WEBHOOK_SIGNING_PRIVATE_KEY",
 ];
 
 const secrets: Record<string, string> = {};

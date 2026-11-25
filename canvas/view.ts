@@ -118,9 +118,18 @@ const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
 
 const urlAttrs = ["href", "src", "action", "formaction"];
 
+const hasTransferFragment = (rawUrl: string): boolean => {
+  try {
+    return /#transfer=/i.test(decodeURIComponent(rawUrl));
+  } catch {
+    return /#transfer=/i.test(rawUrl);
+  }
+};
+
 export const isSafeViewUrl = (rawUrl: string): boolean => {
   const cleaned = rawUrl.replace(/\p{Cc}+/gu, "").trim();
   if (!cleaned) return true;
+  if (hasTransferFragment(cleaned)) return false;
   if (cleaned.startsWith("/")) {
     return !cleaned.startsWith("//") && !cleaned.startsWith("/\\");
   }

@@ -44,6 +44,56 @@ export const enforceStrictMetadataAuth =
 const isStrictMetadataAuthActive = (): boolean =>
   Deno.env.get("ENFORCE_STRICT_METADATA_AUTH") !== "0";
 
+const isStrictMessageAuthActive = (): boolean =>
+  Deno.env.get("ENFORCE_STRICT_MESSAGE_AUTH") === "1";
+
+export const isConfirmedDepositTx = (tx: unknown): boolean => {
+  if (typeof tx !== "object" || tx === null) return false;
+  const status = Reflect.get(tx, "status");
+  if (typeof status !== "object" || status === null) return false;
+  return Reflect.get(status, "confirmed") === true;
+};
+
+export const satoshisToCents = (
+  satoshis: number,
+  btcPriceUsd: number,
+): number => Math.round((satoshis / 1e8) * btcPriceUsd * 100);
+
+const turnTtlSeconds = 3600;
+const defaultTurnUrl = "turn:34.71.16.134:3478";
+
+const mintEphemeralTurnCredentials = async (
+  secret: string,
+  tag: string,
+  ttlSeconds = turnTtlSeconds,
+): Promise<
+  { urls: string; username: string; credential: string; ttl: number }
+> => {
+  const expiry = Math.floor(Date.now() / 1000) + ttlSeconds;
+  const username = `${expiry}:${tag}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(username),
+  );
+  const credential = btoa(
+    Array.from(new Uint8Array(sig), (b) => String.fromCharCode(b)).join(""),
+  );
+  return {
+    urls: Deno.env.get("TURN_URL") ?? defaultTurnUrl,
+    username,
+    credential,
+    ttl: ttlSeconds,
+  };
+};
+
 const resolveAvailableAlias = async (
   alias: string | undefined,
 ): Promise<string | undefined> => {
@@ -170,12 +220,29 @@ export const endpoints: BackendApiImpl = {
     },
     createConversation,
     sendMessage: async (
-      { encryptedMessage, conversation, silent, senderPublicSignKey },
+      { encryptedMessage, conversation, silent, senderPublicSignKey, auth },
     ) => {
       console.log(
         "[DEBUG sendMessage] received for conversation",
         conversation,
       );
+      if (auth !== undefined) {
+        if (!senderPublicSignKey) {
+          throw new Error("Invalid auth");
+        }
+        const authOk = await verifyAuthToken({
+          action: "sendMessage",
+          payload: { conversation, encryptedMessage },
+          publicSignKey: senderPublicSignKey,
+          nonce: auth.nonce,
+          authToken: auth.authToken,
+        });
+        if (!authOk) {
+          throw new Error("Invalid auth");
+        }
+      } else if (isStrictMessageAuthActive()) {
+        throw new Error("Invalid auth");
+      }
       const convResult = await fetchWebhookConversation(conversation);
       if (convResult.conversations.length === 0) {
         throw new Error("Conversation not found");
@@ -241,7 +308,19 @@ export const endpoints: BackendApiImpl = {
       registerBackgroundTask(dispatchPromise);
       return { messageId };
     },
-    sendTyping: async ({ conversation, isTyping, publicSignKey }) => {
+    sendTyping: async ({ conversation, isTyping, publicSignKey, auth }) => {
+      if (auth !== undefined) {
+        const authOk = await verifyAuthToken({
+          action: "sendTyping",
+          payload: { conversation, isTyping },
+          publicSignKey,
+          nonce: auth.nonce,
+          authToken: auth.authToken,
+        });
+        if (!authOk) return { success: true };
+      } else if (isStrictMessageAuthActive()) {
+        return { success: true };
+      }
       // Validate conversation & participant membership and fetch existing typingState in one query
       const { conversations, identities, typingStates } = await query({
         conversations: {
@@ -332,17 +411,18 @@ export const endpoints: BackendApiImpl = {
       return { success: true };
     },
     setWebhook: async ({ url, publicSignKey, auth }) => {
-      if (auth !== undefined) {
-        const authOk = await verifyAuthToken({
-          action: "setWebhook",
-          payload: { url },
-          publicSignKey,
-          nonce: auth.nonce,
-          authToken: auth.authToken,
-        });
-        if (!authOk) {
-          return { success: false, error: "invalid-auth" as const };
-        }
+      if (auth === undefined) {
+        return { success: false, error: "invalid-auth" as const };
+      }
+      const authOk = await verifyAuthToken({
+        action: "setWebhook",
+        payload: { url },
+        publicSignKey,
+        nonce: auth.nonce,
+        authToken: auth.authToken,
+      });
+      if (!authOk) {
+        return { success: false, error: "invalid-auth" as const };
       }
       if (!isSafeWebhookUrl(url, { allowEmpty: true })) {
         return { success: false, error: "invalid-url" as const };
@@ -356,13 +436,7 @@ export const endpoints: BackendApiImpl = {
           error: "identity-does-not-exist" as const,
         };
       }
-      const identity = identities[0];
-      if (!auth) {
-        if (url === "" || (identity.webhook && identity.webhook !== url)) {
-          return { success: false, error: "invalid-auth" as const };
-        }
-      }
-      await transact(tx.identities[identity.id].update({ webhook: url }));
+      await transact(tx.identities[identities[0].id].update({ webhook: url }));
       return { success: true };
     },
     getProfile: async ({ publicSignKey }) => {
@@ -517,6 +591,7 @@ export const endpoints: BackendApiImpl = {
         nonce,
         authToken,
       });
+      if (!authOk) return { success: false, error: "invalid-auth" };
       const { alias } = payload;
       if (!isValidAlias(alias)) {
         return { success: false, error: "invalid-alias" };
@@ -527,7 +602,6 @@ export const endpoints: BackendApiImpl = {
       if (identityMatches.length === 0) {
         return { success: false, error: "not-found" };
       }
-      if (!authOk) return { success: false, error: "invalid-auth" };
       const { identities: taken } = await query({
         identities: { $: { where: { alias } } },
       });
@@ -547,6 +621,7 @@ export const endpoints: BackendApiImpl = {
         nonce,
         authToken,
       });
+      if (!authOk) return { success: false, error: "invalid-auth" };
       const { name } = payload;
       const trimmed = name.trim();
       if (trimmed.length === 0 || trimmed.length > 50) {
@@ -562,7 +637,6 @@ export const endpoints: BackendApiImpl = {
       if (identityMatches.length === 0) {
         return { success: false, error: "not-found" };
       }
-      if (!authOk) return { success: false, error: "invalid-auth" };
       const oldName = identityMatches[0].name;
       const convUpdates = oldName && oldName !== trimmed
         ? (identityMatches[0].conversations ?? [])
@@ -585,8 +659,9 @@ export const endpoints: BackendApiImpl = {
         nonce,
         authToken,
       });
+      if (!authOk) return { success: false, error: "invalid-auth" };
       const avatar = payload.avatar?.trim() || undefined;
-      if (avatar && avatar.length > 2048) {
+      if (avatar && (avatar.length > 2048 || !isSafeWebhookUrl(avatar))) {
         return { success: false, error: "invalid-avatar" };
       }
       const { identities: identityMatches } = await query({
@@ -595,7 +670,6 @@ export const endpoints: BackendApiImpl = {
       if (identityMatches.length === 0) {
         return { success: false, error: "not-found" };
       }
-      if (!authOk) return { success: false, error: "invalid-auth" };
       await transact(
         tx.identities[identityMatches[0].id].update({ avatar }),
       );
@@ -798,16 +872,13 @@ export const endpoints: BackendApiImpl = {
 
         const txs = await getAddressTransactions(paymentAddress);
         for (const t of txs) {
+          if (!isConfirmedDepositTx(t)) continue;
           const satoshis = receivedSatoshis(t, paymentAddress);
           if (satoshis <= 0) continue;
 
           const btcPrice = await getBtcPriceUsd();
-          const btcAmount = satoshis / 1e8;
-          const usdAmount = Math.round(btcAmount * btcPrice * 100) / 100;
-
-          await transact(
-            tx.cryptoPayments[addressData.id].update({ claimedTxid: t.txid }),
-          );
+          const centsAmount = satoshisToCents(satoshis, btcPrice);
+          if (centsAmount <= 0) continue;
 
           const { identities: identityMatches } = await query({
             identities: {
@@ -816,26 +887,31 @@ export const endpoints: BackendApiImpl = {
             },
           });
 
-          if (identityMatches.length > 0) {
-            const identity = identityMatches[0];
-            const currentBalance = identity.wallet?.balance || 0;
-            await transact([
-              tx.wallets[identity.wallet?.id || id()].update({
-                balance: currentBalance + usdAmount,
-              }).link({ identity: identity.id }),
-              tx.transactions[id()].update({
-                amount: usdAmount,
-                type: "deposit",
-                timestamp: Date.now(),
-                status: "completed",
-                walletAddress: t.txid,
-              }).link({ receiver: identity.id }),
-            ]);
-          }
+          const identity = identityMatches[0];
+          const currentBalance = identity?.wallet?.balance || 0;
+          await transact([
+            tx.cryptoPayments[addressData.id].update({ claimedTxid: t.txid }),
+            ...(identity
+              ? [
+                tx.wallets[identity.wallet?.id || id()].update({
+                  balance: currentBalance + centsAmount,
+                }).link({ identity: identity.id }),
+                tx.transactions[id()].update({
+                  amount: centsAmount,
+                  type: "deposit",
+                  timestamp: Date.now(),
+                  status: "completed",
+                  walletAddress: t.txid,
+                }).link({ receiver: identity.id }),
+              ]
+              : []),
+          ]);
 
           return {
             success: true as const,
-            message: `Successfully verified and credited $${usdAmount}`,
+            message: `Successfully verified and credited $${
+              (centsAmount / 100).toFixed(2)
+            }`,
           };
         }
 
@@ -934,6 +1010,24 @@ export const endpoints: BackendApiImpl = {
     },
     getVapidPublicKey: () =>
       Promise.resolve({ publicKey: getVapidPublicKey() }),
+    getTurnCredentials: async (
+      { payload, publicSignKey, nonce, authToken },
+    ) => {
+      const authOk = await verifyAuthToken({
+        action: "getTurnCredentials",
+        payload,
+        publicSignKey,
+        nonce,
+        authToken,
+      });
+      if (!authOk) return { error: "invalid-auth" };
+      const secret = (Deno.env.get("TURN_AUTH_SECRET") ?? "").trim();
+      if (!secret) return { error: "missing-secret" };
+      return mintEphemeralTurnCredentials(
+        secret,
+        await shortIdFromPublicSignKey(publicSignKey),
+      );
+    },
     registerPushSubscription: async (
       { payload, publicSignKey, nonce, authToken },
     ) => {
@@ -1406,7 +1500,12 @@ const RELAY_MSG_TTL_MS = 3600_000;
 const MAX_RELAY_BODY_BYTES = 256 * 1024;
 const MAX_RELAY_MESSAGES_PER_TOKEN = 200;
 const MAX_RELAY_TOKEN_QUEUES = 1_000;
+const MAX_RELAY_SOCKETS_PER_TOKEN = 10;
+const MAX_RELAY_SOCKETS_TOTAL = 2_000;
 const MAX_UI_UPDATE_BODY_BYTES = 65_536;
+
+const totalRelaySockets = (): number =>
+  Array.from(relaySockets.values()).reduce((sum, s) => sum + s.size, 0);
 
 const hasValidRelaySecret = (req: Request): boolean => {
   const secret = Deno.env.get("RELAY_WEBHOOK_SECRET") ?? "";
@@ -1515,6 +1614,13 @@ export const handleRequest = async (req: Request): Promise<Response> => {
       if (relay.action === "ws") {
         if (req.headers.get("upgrade")?.toLowerCase() !== "websocket") {
           return new Response(null, { status: 501 });
+        }
+        const existingForToken = relaySockets.get(relay.token)?.size ?? 0;
+        if (
+          existingForToken >= MAX_RELAY_SOCKETS_PER_TOKEN ||
+          totalRelaySockets() >= MAX_RELAY_SOCKETS_TOTAL
+        ) {
+          return jsonCorsResponse({ error: "Too many relay connections" }, 429);
         }
         const { socket, response } = Deno.upgradeWebSocket(req);
 

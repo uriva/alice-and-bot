@@ -199,6 +199,7 @@ export const backendApiSchema = {
     z.object({
       publicSignKeyToEncryptedSymmetricKey: z.record(z.string(), z.string()),
       title: z.string(),
+      maxTotalCost: z.number().nonnegative().finite().optional(),
     }),
     z.union([
       z.object({ conversationId: z.string() }),
@@ -207,6 +208,7 @@ export const backendApiSchema = {
           "invalid-participants",
           "must-own-an-identity",
           "insufficient-balance",
+          "price-changed",
           "invalid-auth",
         ]),
       }),
@@ -224,18 +226,18 @@ export const backendApiSchema = {
   createAnonymousIdentity: endpoint({
     authRequired: false,
     input: z.object({
-      name: z.string(),
-      publicSignKey: z.string(),
-      publicEncryptKey: z.string(),
-      alias: z.string().optional(),
+      name: z.string().max(100),
+      publicSignKey: z.string().min(1).max(4096),
+      publicEncryptKey: z.string().min(1).max(4096),
+      alias: z.string().max(64).optional(),
     }),
     output: z.object({}),
   }),
   createIdentity: endpoint({
     authRequired: true,
     input: z.object({
-      publicSignKey: z.string(),
-      publicEncryptKey: z.string(),
+      publicSignKey: z.string().min(1).max(4096),
+      publicEncryptKey: z.string().min(1).max(4096),
     }),
     output: z.union([
       z.object({ success: z.literal(true) }),
@@ -251,6 +253,7 @@ export const backendApiSchema = {
       // from a chat message. The sender declares that it should not notify.
       silent: z.boolean().optional(),
       senderPublicSignKey: z.string().optional(),
+      auth: authTokenSchema.optional(),
     }),
     output: z.object({ messageId: z.string() }),
   }),
@@ -260,6 +263,7 @@ export const backendApiSchema = {
       conversation: z.string(),
       isTyping: z.boolean(),
       publicSignKey: z.string(),
+      auth: authTokenSchema.optional(),
     }),
     output: z.object({ success: z.literal(true) }),
   }),
@@ -347,6 +351,18 @@ export const backendApiSchema = {
     input: z.object({}),
     output: z.object({ publicKey: z.string() }),
   }),
+  getTurnCredentials: authenticatedEndpoint(
+    z.object({}),
+    z.union([
+      z.object({
+        urls: z.string(),
+        username: z.string(),
+        credential: z.string(),
+        ttl: z.number(),
+      }),
+      z.object({ error: z.enum(["invalid-auth", "missing-secret"]) }),
+    ]),
+  ),
   registerPushSubscription: authenticatedEndpoint(
     z.object({
       subscription: z.object({
@@ -874,6 +890,17 @@ export const getConversationInfo = async (
 
 export const getVapidPublicKey = (): Promise<{ publicKey: string }> =>
   apiClient({ endpoint: "getVapidPublicKey", payload: {} });
+
+export const getTurnCredentialsSigned = async (
+  credentials: Credentials,
+): Promise<
+  | { urls: string; username: string; credential: string; ttl: number }
+  | { error: "invalid-auth" | "missing-secret" }
+> =>
+  apiClient({
+    endpoint: "getTurnCredentials",
+    payload: await buildSignedRequest(credentials, "getTurnCredentials", {}),
+  });
 
 export const registerPushSubscription = (
   params: {

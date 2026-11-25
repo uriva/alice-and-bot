@@ -283,21 +283,32 @@ export const sendMessageWithKey = async ({
   conversation,
   credentials,
   message,
-}: SendMessageParams): Promise<{ messageId: string }> =>
-  apiClient({
+}: SendMessageParams): Promise<{ messageId: string }> => {
+  const encryptedMessage = await encryptAndSign(
+    conversationKey,
+    credentials,
+    message,
+    conversation,
+  );
+  const signed = (await canSignWithPrivateKey(credentials.privateSignKey))
+    ? await buildSignedRequest(credentials, "sendMessage", {
+      conversation,
+      encryptedMessage,
+    })
+    : undefined;
+  return apiClient({
     endpoint: "sendMessage",
     payload: {
       conversation,
       silent: isSilentMessage(message) ? true : undefined,
       senderPublicSignKey: credentials.publicSignKey,
-      encryptedMessage: await encryptAndSign(
-        conversationKey,
-        credentials,
-        message,
-        conversation,
-      ),
+      encryptedMessage,
+      ...(signed
+        ? { auth: { nonce: signed.nonce, authToken: signed.authToken } }
+        : {}),
     },
   });
+};
 
 // Deliver a canvas event to every participant without adding it to the
 // conversation transcript that chat interfaces render.
@@ -626,6 +637,7 @@ async (
   publicSignKeys: string[],
   conversationTitle: string,
   credentials: Credentials,
+  maxTotalCost?: number,
 ) => {
   registerCredentials(credentials);
   const { identities } = await db().query({
@@ -660,6 +672,7 @@ async (
         payload: await buildSignedRequest(credentials, "createConversation", {
           publicSignKeyToEncryptedSymmetricKey,
           title: conversationTitle,
+          ...(maxTotalCost !== undefined ? { maxTotalCost } : {}),
         }),
       }),
   )(publicSignKeys);
@@ -992,6 +1005,24 @@ export const uploadAttachment = async ({
   }
 };
 
+const allowedAttachmentPrefix = "/alice-and-bot-attachments/";
+
+export const isSafeAttachmentUrl = (rawUrl: string): boolean => {
+  if (!rawUrl || /[\p{Cc}\\]/u.test(rawUrl)) return false;
+  try {
+    if (decodeURIComponent(rawUrl).includes("..")) return false;
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:") return false;
+    if (parsed.hostname !== "storage.googleapis.com") return false;
+    return (
+      parsed.pathname.startsWith(allowedAttachmentPrefix) &&
+      parsed.pathname.length > allowedAttachmentPrefix.length
+    );
+  } catch {
+    return false;
+  }
+};
+
 export const downloadAttachment = async ({
   url,
   conversationKey,
@@ -999,6 +1030,9 @@ export const downloadAttachment = async ({
   url: string;
   conversationKey: string;
 }): Promise<ArrayBuffer> => {
+  if (!isSafeAttachmentUrl(url)) {
+    throw new Error("Untrusted attachment URL");
+  }
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(

@@ -33,14 +33,18 @@ const hasExistingDirectConversation = async (
 
 export const createConversation:
   BackendApiImpl["handlers"]["createConversation"] = async ({
-    payload: { title, publicSignKeyToEncryptedSymmetricKey },
+    payload: { title, publicSignKeyToEncryptedSymmetricKey, maxTotalCost },
     publicSignKey,
     nonce,
     authToken,
   }) => {
     const authOk = await verifyAuthToken({
       action: "createConversation",
-      payload: { title, publicSignKeyToEncryptedSymmetricKey },
+      payload: {
+        title,
+        publicSignKeyToEncryptedSymmetricKey,
+        ...(maxTotalCost !== undefined ? { maxTotalCost } : {}),
+      },
       publicSignKey,
       nonce,
       authToken,
@@ -89,6 +93,10 @@ export const createConversation:
         (sum, r) => sum + (r.priceTag ?? 0),
         0,
       );
+
+      if (maxTotalCost !== undefined && totalCost > maxTotalCost) {
+        return { error: "price-changed" as const };
+      }
 
       if (totalCost > 0) {
         const senderBalance = sender.wallet?.balance ?? 0;

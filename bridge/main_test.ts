@@ -94,6 +94,18 @@ Deno.test("closing one side closes the other", () => {
   assert(a.closed, "peer should be closed when one side closes");
 });
 
+Deno.test("proxy drops oversized frames exceeding MAX_WS_FRAME_BYTES", () => {
+  const a = makeFakeSocket();
+  const b = makeFakeSocket();
+  pipeProxyEndpoints(a.endpoint, b.endpoint);
+  a.open();
+  b.open();
+  a.emit("x".repeat(1_100_000));
+  assertEquals(b.sent.length, 0);
+  a.emit('{"event":"ok"}');
+  assertEquals(b.sent, ['{"event":"ok"}']);
+});
+
 Deno.test(
   "pre-buffered greeting audio sent before WebRTC peer connects is held until transport connects and not dropped",
   { sanitizeOps: false, sanitizeResources: false },
@@ -161,9 +173,17 @@ Deno.test(
 );
 
 Deno.test(
-  "[CRITICAL-07] & [CRITICAL-08] bridge survives malformed JSON, missing sdp, bad inputRate, oversized frames, and blocks unauthenticated Twilio stream when TWILIO_AUTH_TOKEN is set",
+  "[CRITICAL-07] & [CRITICAL-08] bridge survives malformed JSON, missing sdp, bad inputRate, oversized frames, and blocks unauthenticated Twilio stream when TWILIO_AUTH_TOKEN is unset or set",
   { sanitizeOps: false, sanitizeResources: false },
   async () => {
+    Deno.env.delete("TWILIO_AUTH_TOKEN");
+    const failClosedTwilioRes = handleRequest(
+      new Request("http://127.0.0.1:8080/twilio-voice/stream", {
+        headers: { upgrade: "websocket" },
+      }),
+    );
+    assertEquals(failClosedTwilioRes.status, 403);
+
     Deno.env.set("TWILIO_AUTH_TOKEN", "test-twilio-secret-token");
     const unauthTwilioRes = handleRequest(
       new Request("http://127.0.0.1:8080/twilio-voice/stream", {
@@ -244,6 +264,41 @@ Deno.test("[CRITICAL-07] & [CRITICAL-08] isSafeIceCandidate and verifyTwilioStre
   assertFalse(
     isSafeIceCandidate(
       "candidate:1 1 udp 2130706431 laptop.local 5000 typ host",
+    ),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 2130706433 5000 typ host",
+    ),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 0x7f000001 5000 typ host",
+    ),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 0177.0.0.1 5000 typ host",
+    ),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 127.1 5000 typ host",
+    ),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 64:ff9b::169.254.169.254 80 typ host",
+    ),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 2002:a9fe:a9fe::1 80 typ host",
+    ),
+  );
+  assertFalse(
+    isSafeIceCandidate(
+      "candidate:1 1 udp 2130706431 169-254-169-254.nip.io 80 typ host",
     ),
   );
 

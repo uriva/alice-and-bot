@@ -689,6 +689,12 @@ export const processChatState = ({
   });
   const msgMap = new Map(withReactions.map((m) => [m.id, m]));
   const persistedTexts = new Set(withReactions.map((m) => m.text));
+  const verifiedStreams =
+    allowedParticipantKeys && allowedParticipantKeys.size > 0
+      ? ephemeralStreams.filter(
+        (s) => !s.authorId || allowedParticipantKeys.has(s.authorId),
+      )
+      : ephemeralStreams;
   return {
     chatMessages: withReactions.map(resolveReplyTo(msgMap)),
     // Canvas events reach every participant but are never part of the chat
@@ -711,7 +717,7 @@ export const processChatState = ({
       ),
     ]),
     activeStreams: standaloneStreamEntries(
-      ephemeralStreams,
+      verifiedStreams,
       knownIds,
       persistedTexts,
       details,

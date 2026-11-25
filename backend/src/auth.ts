@@ -6,16 +6,29 @@ import {
 
 const NONCE_TTL_MS = 2 * 60 * 1000;
 export const MAX_NONCES = 10_000;
+export const MAX_NONCES_PER_KEY = 25;
 
 const nonces = new Map<string, number>();
 
 const nonceKey = (publicSignKey: string, nonce: string) =>
   `${publicSignKey}:${nonce}`;
 
-const pruneNonces = (now: number) => {
+const pruneNoncesForKey = (publicSignKey: string) => {
+  const prefix = `${publicSignKey}:`;
+  const matching = Array.from(nonces.keys()).filter((k) =>
+    k.startsWith(prefix)
+  );
+  if (matching.length >= MAX_NONCES_PER_KEY) {
+    const excess = matching.length - MAX_NONCES_PER_KEY + 1;
+    matching.slice(0, excess).forEach((k) => nonces.delete(k));
+  }
+};
+
+const pruneNonces = (now: number, publicSignKey: string) => {
   nonces.forEach((expiresAt, k) => {
     if (now > expiresAt) nonces.delete(k);
   });
+  pruneNoncesForKey(publicSignKey);
   if (nonces.size >= MAX_NONCES) {
     const excess = nonces.size - MAX_NONCES + 1;
     Array.from(nonces.keys())
@@ -28,7 +41,7 @@ export const getActiveNoncesCount = (): number => nonces.size;
 
 export const issueNonceHelper = (publicSignKey: string): Promise<string> => {
   const now = Date.now();
-  pruneNonces(now);
+  pruneNonces(now, publicSignKey);
   const nonce = crypto.randomUUID();
   nonces.set(nonceKey(publicSignKey, nonce), now + NONCE_TTL_MS);
   return Promise.resolve(nonce);

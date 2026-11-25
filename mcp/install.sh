@@ -30,12 +30,38 @@ else
 fi
 
 URL="${BASE_URL}/${FILENAME}"
+CHECKSUM_URL="${URL}.sha256"
 
 mkdir -p "$INSTALL_DIR"
+TMP_BIN="$(mktemp "${INSTALL_DIR}/.${TARGET_NAME}.XXXXXX")"
+trap 'rm -f "$TMP_BIN"' EXIT
 
 echo "Downloading ${BIN_NAME} for ${PLATFORM}/${ARCH_TAG}..."
-curl -fSL "$URL" -o "${INSTALL_DIR}/${TARGET_NAME}"
-chmod +x "${INSTALL_DIR}/${TARGET_NAME}"
+curl -fSL "$URL" -o "$TMP_BIN"
+
+EXPECTED_SHA="$(curl -fsSL "$CHECKSUM_URL" | tr -d '[:space:]')"
+if [ -z "$EXPECTED_SHA" ]; then
+  echo "Failed to fetch SHA-256 checksum from ${CHECKSUM_URL}" >&2
+  exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL_SHA="$(sha256sum "$TMP_BIN" | awk '{print $1}')"
+elif command -v shasum >/dev/null 2>&1; then
+  ACTUAL_SHA="$(shasum -a 256 "$TMP_BIN" | awk '{print $1}')"
+else
+  echo "Error: neither sha256sum nor shasum is installed to verify download integrity" >&2
+  exit 1
+fi
+
+if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+  echo "Checksum mismatch! Expected ${EXPECTED_SHA}, got ${ACTUAL_SHA}" >&2
+  exit 1
+fi
+
+chmod +x "$TMP_BIN"
+mv "$TMP_BIN" "${INSTALL_DIR}/${TARGET_NAME}"
+trap - EXIT
 
 if ! echo "$PATH" | tr ':' '\n' | grep -qx "$INSTALL_DIR"; then
   echo ""

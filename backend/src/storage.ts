@@ -6,18 +6,22 @@ const contentHashPattern = /^[a-fA-F0-9]{64}$/;
 const safeExtensionPattern = /^\.[a-zA-Z0-9]{1,10}$/;
 const safeConversationIdPattern = /^[a-zA-Z0-9_-]{1,128}$/;
 
-const blockedContentTypes = new Set([
-  "text/html",
-  "application/xhtml+xml",
-  "image/svg+xml",
-  "image/svg",
-  "text/javascript",
-  "application/javascript",
-  "text/ecmascript",
-  "application/ecmascript",
-  "text/xml",
-  "application/xml",
+const allowedExactContentTypes = new Set([
+  "application/octet-stream",
+  "application/pdf",
+  "text/plain",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+  "image/heic",
+  "image/heif",
 ]);
+
+const isAllowedMediaPrefix = (base: string): boolean =>
+  (base.startsWith("audio/") || base.startsWith("video/")) &&
+  /^(?:audio|video)\/[a-z0-9.+-]+$/.test(base);
 
 const bucketCache: {
   instance: ReturnType<Storage["bucket"]> | null;
@@ -56,10 +60,13 @@ export const sanitizeUploadExtension = (fileName: string): string => {
 
 export const sanitizeUploadContentType = (contentType: string): string => {
   const base = contentType.split(";")[0].trim().toLowerCase();
-  if (!base || blockedContentTypes.has(base)) {
+  if (
+    !base ||
+    (!allowedExactContentTypes.has(base) && !isAllowedMediaPrefix(base))
+  ) {
     return "application/octet-stream";
   }
-  return contentType;
+  return base;
 };
 
 export const buildSafeAttachmentPath = ({

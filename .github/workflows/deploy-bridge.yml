@@ -29,22 +29,34 @@ jobs:
           docker push gcr.io/alice-and-bot/webrtc-bridge:latest
 
       - name: Restart bridge on VM
+        env:
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          BRIDGE_AUTH_TOKEN: ${{ secrets.BRIDGE_AUTH_TOKEN }}
+          TURN_AUTH_SECRET: ${{ secrets.TURN_AUTH_SECRET }}
         run: |
+          printf '%s\n%s\n%s\n' \
+            "TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}" \
+            "BRIDGE_AUTH_TOKEN=${BRIDGE_AUTH_TOKEN}" \
+            "TURN_AUTH_SECRET=${TURN_AUTH_SECRET}" \
+            | gcloud compute ssh webrtc-bridge \
+              --zone=us-central1-a \
+              --project=alice-and-bot \
+              --command="sudo install -d -m 700 /etc/alice-bridge && sudo tee /etc/alice-bridge/env >/dev/null && sudo chmod 600 /etc/alice-bridge/env"
           gcloud compute ssh webrtc-bridge \
             --zone=us-central1-a \
             --project=alice-and-bot \
-            --command="sudo docker container prune -f && sudo docker image prune -af && docker-credential-gcr configure-docker --registries=gcr.io && docker pull gcr.io/alice-and-bot/webrtc-bridge:latest && (docker rm -f bridge || true) && docker run -d --name bridge --network host --restart always gcr.io/alice-and-bot/webrtc-bridge:latest"
+            --command="sudo docker container prune -f && sudo docker image prune -af && docker-credential-gcr configure-docker --registries=gcr.io && docker pull gcr.io/alice-and-bot/webrtc-bridge:latest && (docker rm -f bridge || true) && sudo docker run -d --name bridge --network host --restart always --env-file /etc/alice-bridge/env gcr.io/alice-and-bot/webrtc-bridge:latest"
 
       - name: Sync Caddyfile
         run: |
           cat bridge/Caddyfile | gcloud compute ssh webrtc-bridge \
             --zone=us-central1-a \
             --project=alice-and-bot \
-            --command="cat > /tmp/twilio.Caddyfile"
+            --command="sudo install -d -m 755 /etc/alice-caddy && sudo tee /etc/alice-caddy/Caddyfile >/dev/null && sudo chmod 644 /etc/alice-caddy/Caddyfile"
 
       - name: Restart caddy TLS front
         run: |
           gcloud compute ssh webrtc-bridge \
             --zone=us-central1-a \
             --project=alice-and-bot \
-            --command="sudo docker pull caddy:2 && (sudo docker rm -f caddy || true) && sudo docker run -d --name caddy --network host --restart always -v caddy_data:/data -v caddy_config:/config -v /tmp/twilio.Caddyfile:/etc/caddy/Caddyfile:ro caddy:2 caddy run --config /etc/caddy/Caddyfile && sudo docker image prune -f"
+            --command="sudo docker pull caddy:2 && (sudo docker rm -f caddy || true) && sudo docker run -d --name caddy --network host --restart always -v caddy_data:/data -v caddy_config:/config -v /etc/alice-caddy/Caddyfile:/etc/caddy/Caddyfile:ro caddy:2 caddy run --config /etc/caddy/Caddyfile && sudo docker image prune -f"

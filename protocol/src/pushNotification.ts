@@ -222,6 +222,52 @@ const renderOffscreenRemoteAvatarPng = async (
   return blobToDataUrl(outBlob, "image/png");
 };
 
+const isReservedAvatarIpv4 = (host: string): boolean => {
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return false;
+  const [a, b, c] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
+  return (
+    a === 0 ||
+    a === 10 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) ||
+    (a === 203 && b === 0 && c === 113) ||
+    a >= 224
+  );
+};
+
+export const isSafeRemoteAvatarUrl = (rawUrl: string): boolean => {
+  if (!rawUrl || /\p{Cc}/u.test(rawUrl)) return false;
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+    if (
+      !host ||
+      host === "localhost" ||
+      host.endsWith(".localhost") ||
+      host.endsWith(".local") ||
+      host.endsWith(".internal") ||
+      host === "metadata" ||
+      host === "instance-data" ||
+      host.startsWith("[") ||
+      /^\d+$/.test(host) ||
+      /^0x[0-9a-f]+$/i.test(host) ||
+      isReservedAvatarIpv4(host)
+    ) {
+      return false;
+    }
+    return host.includes(".");
+  } catch {
+    return false;
+  }
+};
+
 export const resolveSenderAvatarIcon = async ({
   senderAvatar,
   senderPublicSignKey,
@@ -233,10 +279,7 @@ export const resolveSenderAvatarIcon = async ({
   label: string;
   fetchFn?: typeof fetch;
 }): Promise<string> => {
-  if (
-    senderAvatar &&
-    (senderAvatar.startsWith("https://") || senderAvatar.startsWith("http://"))
-  ) {
+  if (senderAvatar && isSafeRemoteAvatarUrl(senderAvatar)) {
     const cropped = await renderOffscreenRemoteAvatarPng(senderAvatar, fetchFn);
     if (cropped) return cropped;
   }

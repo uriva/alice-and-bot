@@ -180,7 +180,9 @@ const formatAttachment =
 const processWebhookMessage =
   (state: State, credentials: Credentials) =>
   async (msg: WebhookUpdate): Promise<DecodedMessage | null> => {
-    const result = await handleWebhookUpdate(msg, credentials);
+    const result = await handleWebhookUpdate(msg, credentials, {
+      requireServerSignature: true,
+    });
     if (!result) return null;
     const { conversationId, message, conversationKey } = result;
 

@@ -88,8 +88,15 @@ const emitOp = (sink: CanvasEvent[], current: () => string) =>
     },
   });
 
-// One registry per invocation: `emit` closes over its own sink, so overlapping
-// runs in a single tab cannot see each other's events.
+const blockedCanvasOps = new Set(["httpRequest"]);
+
+const stripBlockedOps = (
+  registry: ReadonlyMap<string, OpEntry>,
+): ReadonlyMap<string, OpEntry> =>
+  new Map(
+    [...registry.entries()].filter(([name]) => !blockedCanvasOps.has(name)),
+  );
+
 const registryFor = (sink: CanvasEvent[], current: () => string) => ({
   registry: new Map<string, OpEntry>([
     ...builtinRegistry,
@@ -105,7 +112,10 @@ const registryFor = (sink: CanvasEvent[], current: () => string) => ({
   unary: new Map<string, string>([...builtinUnaryFields, ["emit", "value"]]),
 });
 
-const executionContext = { fetch: globalThis.fetch.bind(globalThis) };
+const executionContext = {
+  fetch: (): Promise<Response> =>
+    Promise.reject(new Error("network access is disabled in canvas")),
+};
 
 // A safescript value can be anything its ops return, so normalise before it
 // becomes a canvas-event: drop undefined and functions, reject cycles.
@@ -136,15 +146,14 @@ const problem = (stage: CanvasStage, error: unknown): CanvasProblem => ({
 const isTimeout = (error: unknown) =>
   error instanceof Error && error.message.startsWith("timed out after");
 
-// computeSignature throws when a call names something that is neither a builtin
-// nor a function in the program, which is the most common authoring mistake.
-const policyProblems = (
+const entryPolicyProblems = (
   program: Program,
+  entryName: string,
   registry: ReadonlyMap<string, OpEntry>,
 ): CanvasProblem[] => {
   let signature;
   try {
-    signature = computeSignature(program, "view", registry);
+    signature = computeSignature(program, entryName, registry);
   } catch (error) {
     return [problem("parse", error)];
   }
@@ -170,6 +179,18 @@ const policyProblems = (
     }];
   }
   return [];
+};
+
+const policyProblems = (
+  program: Program,
+  registry: ReadonlyMap<string, OpEntry>,
+): CanvasProblem[] => {
+  const entries = program.functions.some((fn) => fn.name === "act")
+    ? ["view", "act"]
+    : ["view"];
+  return entries.flatMap((name) =>
+    entryPolicyProblems(program, name, registry)
+  );
 };
 
 type Tok = ReturnType<typeof tokenize>[number];
@@ -531,7 +552,7 @@ const prepare = (
   return {
     ok: true,
     program,
-    registry,
+    registry: stripBlockedOps(registry),
     hasAct: program.functions.some((fn) => fn.name === "act"),
   };
 };
