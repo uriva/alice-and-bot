@@ -18,10 +18,15 @@ import { accessAdminDb } from "./lit/core/instant-client.ts";
 import type { WidgetParams } from "./widget/src/widget.ts";
 export {
   aliasToPublicSignKey,
+  getTurnCredentialsSigned,
   getUploadUrl,
   sendTyping,
   setWebhook,
 } from "./backend/src/api.ts";
+export {
+  buildSignedRequest,
+  type SignedRequest,
+} from "./protocol/src/authClient.ts";
 export type { GetMessagesResult } from "./backend/src/api.ts";
 export {
   type Attachment,
