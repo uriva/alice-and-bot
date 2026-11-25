@@ -70,31 +70,6 @@ const verifyParticipant = async (
 
 const allowedUiElementTypes = new Set(["stream", "spinner", "progress"]);
 
-const isStrictUiUpdateAuthActive = (): boolean =>
-  Deno.env.get("ENFORCE_STRICT_UI_UPDATE_AUTH") === "1";
-
-const verifyConversationAndOptionalAuthor = async (
-  conversationId: string,
-  authorId?: string,
-): Promise<{ exists: boolean; authorAllowed: boolean }> => {
-  const { conversations } = await query({
-    conversations: {
-      participants: {},
-      $: { where: { id: conversationId } },
-    },
-  });
-  if (conversations.length === 0) {
-    return { exists: false, authorAllowed: false };
-  }
-  if (authorId === undefined) {
-    return { exists: true, authorAllowed: true };
-  }
-  const authorAllowed = conversations[0].participants.some(
-    (p: { publicSignKey: string }) => p.publicSignKey === authorId,
-  );
-  return { exists: true, authorAllowed };
-};
-
 export const handleUiUpdate = async (
   input: UiUpdateInput,
 ): Promise<UiUpdateResult> => {
@@ -131,59 +106,42 @@ export const handleUiUpdate = async (
     return { error: "text exceeds maximum length", status: 400 };
   }
 
-  if (auth === undefined && isStrictUiUpdateAuthActive()) {
+  if (
+    !auth ||
+    typeof auth.publicSignKey !== "string" ||
+    typeof auth.nonce !== "string" ||
+    typeof auth.authToken !== "string"
+  ) {
     return { error: "invalid-auth", status: 401 };
   }
-
-  if (auth !== undefined) {
-    if (
-      !auth ||
-      typeof auth.publicSignKey !== "string" ||
-      typeof auth.nonce !== "string" ||
-      typeof auth.authToken !== "string"
-    ) {
-      return { error: "invalid-auth", status: 401 };
-    }
-    const payloadWithoutAuth = {
-      elementId,
-      ...(conversationId !== undefined ? { conversationId } : {}),
-      ...(type !== undefined ? { type } : {}),
-      ...(text !== undefined ? { text } : {}),
-      ...(active !== undefined ? { active } : {}),
-      ...(percentage !== undefined ? { percentage } : {}),
-      ...(authorId !== undefined ? { authorId } : {}),
-    };
-    const authOk = await verifyAuthToken({
-      action: "uiUpdate",
-      payload: payloadWithoutAuth,
-      publicSignKey: auth.publicSignKey,
-      nonce: auth.nonce,
-      authToken: auth.authToken,
-    });
-    if (!authOk) {
-      return { error: "invalid-auth", status: 401 };
-    }
-    if (authorId !== undefined && authorId !== auth.publicSignKey) {
-      return { error: "invalid-auth", status: 401 };
-    }
-    if (conversationId) {
-      const allowed = await verifyParticipant(
-        conversationId,
-        auth.publicSignKey,
-      );
-      if (!allowed) {
-        return { error: "not-participant", status: 403 };
-      }
-    }
-  } else if (conversationId) {
-    const check = await verifyConversationAndOptionalAuthor(
+  const payloadWithoutAuth = {
+    elementId,
+    ...(conversationId !== undefined ? { conversationId } : {}),
+    ...(type !== undefined ? { type } : {}),
+    ...(text !== undefined ? { text } : {}),
+    ...(active !== undefined ? { active } : {}),
+    ...(percentage !== undefined ? { percentage } : {}),
+    ...(authorId !== undefined ? { authorId } : {}),
+  };
+  const authOk = await verifyAuthToken({
+    action: "uiUpdate",
+    payload: payloadWithoutAuth,
+    publicSignKey: auth.publicSignKey,
+    nonce: auth.nonce,
+    authToken: auth.authToken,
+  });
+  if (!authOk) {
+    return { error: "invalid-auth", status: 401 };
+  }
+  if (authorId !== undefined && authorId !== auth.publicSignKey) {
+    return { error: "invalid-auth", status: 401 };
+  }
+  if (conversationId) {
+    const allowed = await verifyParticipant(
       conversationId,
-      authorId,
+      auth.publicSignKey,
     );
-    if (!check.exists) {
-      return { error: "conversation not found", status: 400 };
-    }
-    if (!check.authorAllowed) {
+    if (!allowed) {
       return { error: "not-participant", status: 403 };
     }
   }
@@ -197,7 +155,7 @@ export const handleUiUpdate = async (
       elementId,
       text: text ?? "",
       active: active ?? true,
-      authorId: auth?.publicSignKey ?? authorId,
+      authorId: auth.publicSignKey,
       updatedAt: Date.now(),
     });
     return { success: true };

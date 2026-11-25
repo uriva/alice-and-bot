@@ -14,10 +14,6 @@
   },
   "compatibility_date": "2026-04-01",
   "compatibility_flags": ["nodejs_compat"],
-  "vars": {
-    "ENFORCE_STRICT_UI_UPDATE_AUTH": "1",
-    "ENFORCE_STRICT_MESSAGE_AUTH": "1"
-  },
   "limits": {
     "cpu_ms": 300000
   },

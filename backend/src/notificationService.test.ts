@@ -150,6 +150,35 @@ type ReceivedPush = {
   bodyBytes: number;
 };
 
+const buildSignedSendMessageArgs = async ({
+  conversation,
+  encryptedMessage,
+  publicSignKey,
+  privateSignKey,
+}: {
+  conversation: string;
+  encryptedMessage: string;
+  publicSignKey: string;
+  privateSignKey: string;
+}) => {
+  const nonce = await issueNonceHelper(publicSignKey);
+  const authToken = await sign(
+    privateSignKey,
+    await canonicalStringForAuthSignV2({
+      action: "sendMessage",
+      payload: { conversation, encryptedMessage },
+      publicSignKey,
+      nonce,
+    }),
+  );
+  return {
+    conversation,
+    encryptedMessage,
+    senderPublicSignKey: publicSignKey,
+    auth: { nonce, authToken },
+  };
+};
+
 Deno.test(
   "sendPushToParticipants delivers high-urgency push to recently active recipient while skipping sender",
   async () => {
@@ -181,7 +210,8 @@ Deno.test(
     const aliceStaleSubId = id();
     const botSubId = id();
     const aliceKey = `test-alice-${aliceId}`;
-    const botKey = `test-bot-${botId}`;
+    const botSign = await generateKeyPair("sign");
+    const botKey = botSign.publicKey;
 
     const [aliceSub, aliceStaleSub, botSub] = await Promise.all([
       makeRealPushSubscription(`http://127.0.0.1:${port}/alice`),
@@ -230,11 +260,14 @@ Deno.test(
 
     const bgTasks: Promise<unknown>[] = [];
     setRequestWaitUntil((p) => bgTasks.push(p));
-    const { messageId } = await endpoints.handlers.sendMessage({
-      conversation: convoId,
-      encryptedMessage: "test-ciphertext",
-      senderPublicSignKey: botKey,
-    });
+    const { messageId } = await endpoints.handlers.sendMessage(
+      await buildSignedSendMessageArgs({
+        conversation: convoId,
+        encryptedMessage: "test-ciphertext",
+        publicSignKey: botKey,
+        privateSignKey: botSign.privateKey,
+      }),
+    );
     await Promise.all(bgTasks);
     setRequestWaitUntil(undefined);
 
@@ -428,14 +461,16 @@ Deno.test(
       signature: await sign(senderSign.privateKey, msgToStr(msgPayload)),
     });
 
+    const signedEdgeMsg = await buildSignedSendMessageArgs({
+      conversation: convoId,
+      encryptedMessage,
+      publicSignKey: senderSign.publicKey,
+      privateSignKey: senderSign.privateKey,
+    });
     const bgTasks: Promise<unknown>[] = [];
     setRequestWaitUntil((p) => bgTasks.push(p));
     const { messageId } = await withCloudflareEdgeFetchConstraints(async () => {
-      const res = await endpoints.handlers.sendMessage({
-        conversation: convoId,
-        encryptedMessage,
-        senderPublicSignKey: senderSign.publicKey,
-      });
+      const res = await endpoints.handlers.sendMessage(signedEdgeMsg);
       await Promise.all(bgTasks);
       return res;
     });
@@ -549,30 +584,39 @@ Deno.test(
 
     const bgTasks1: Promise<unknown>[] = [];
     setRequestWaitUntil((p) => bgTasks1.push(p));
-    const { messageId: msg1 } = await endpoints.handlers.sendMessage({
-      conversation: convoId,
-      encryptedMessage: shortCiphertext,
-      senderPublicSignKey: botSign.publicKey,
-    });
+    const { messageId: msg1 } = await endpoints.handlers.sendMessage(
+      await buildSignedSendMessageArgs({
+        conversation: convoId,
+        encryptedMessage: shortCiphertext,
+        publicSignKey: botSign.publicKey,
+        privateSignKey: botSign.privateKey,
+      }),
+    );
     await Promise.all(bgTasks1);
 
     const largeCiphertext = "x".repeat(4200);
     const bgTasks2: Promise<unknown>[] = [];
     setRequestWaitUntil((p) => bgTasks2.push(p));
-    const { messageId: msg2 } = await endpoints.handlers.sendMessage({
-      conversation: convoId,
-      encryptedMessage: largeCiphertext,
-      senderPublicSignKey: botSign.publicKey,
-    });
+    const { messageId: msg2 } = await endpoints.handlers.sendMessage(
+      await buildSignedSendMessageArgs({
+        conversation: convoId,
+        encryptedMessage: largeCiphertext,
+        publicSignKey: botSign.publicKey,
+        privateSignKey: botSign.privateKey,
+      }),
+    );
     await Promise.all(bgTasks2);
 
     const bgTasks3: Promise<unknown>[] = [];
     setRequestWaitUntil((p) => bgTasks3.push(p));
-    const { messageId: msg3 } = await endpoints.handlers.sendMessage({
-      conversation: convoId,
-      encryptedMessage: shortCiphertext,
-      senderPublicSignKey: aliceSign.publicKey,
-    });
+    const { messageId: msg3 } = await endpoints.handlers.sendMessage(
+      await buildSignedSendMessageArgs({
+        conversation: convoId,
+        encryptedMessage: shortCiphertext,
+        publicSignKey: aliceSign.publicKey,
+        privateSignKey: aliceSign.privateKey,
+      }),
+    );
     await Promise.all(bgTasks3);
     setRequestWaitUntil(undefined);
 
@@ -715,11 +759,14 @@ Deno.test(
 
     const bgSend: Promise<unknown>[] = [];
     setRequestWaitUntil((p) => bgSend.push(p));
-    const { messageId } = await endpoints.handlers.sendMessage({
-      conversation: convoId,
-      encryptedMessage: "msg-cipher",
-      senderPublicSignKey: botSign.publicKey,
-    });
+    const { messageId } = await endpoints.handlers.sendMessage(
+      await buildSignedSendMessageArgs({
+        conversation: convoId,
+        encryptedMessage: "msg-cipher",
+        publicSignKey: botSign.publicKey,
+        privateSignKey: botSign.privateKey,
+      }),
+    );
     await Promise.all(bgSend);
 
     const bgDismiss1: Promise<unknown>[] = [];

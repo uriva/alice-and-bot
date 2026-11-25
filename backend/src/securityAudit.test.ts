@@ -24,12 +24,16 @@ import {
   generateSymmetricKey,
   sign,
 } from "../../protocol/src/crypto.ts";
-import { instantEmailFromPublicSignKey } from "../../protocol/src/instantAuth.ts";
+import {
+  instantEmailFromPublicSignKey,
+  registerCredentials,
+} from "../../protocol/src/instantAuth.ts";
 import { resetSeenWebhookMessages } from "../../protocol/src/webhookAuth.ts";
 import {
   backendApiSchema,
   canonicalStringForAuthSign,
   canonicalStringForAuthSignV2,
+  sendTyping,
 } from "./api.ts";
 import {
   getActiveNoncesCount,
@@ -464,11 +468,19 @@ Deno.test("[HIGH-03] sendMessage rejects non-participants and handleWebhookUpdat
       .link({ participants: [alice.identityId, bob.identityId] }),
   );
 
+  const outsiderMsgAuth = await signAuthPayload(outsider.creds, "sendMessage", {
+    conversation: convoId,
+    encryptedMessage: "ciphertext",
+  });
   await assertRejects(() =>
     endpoints.handlers.sendMessage({
       conversation: convoId,
       encryptedMessage: "ciphertext",
       senderPublicSignKey: outsider.creds.publicSignKey,
+      auth: {
+        nonce: outsiderMsgAuth.nonce,
+        authToken: outsiderMsgAuth.authToken,
+      },
     })
   );
 
@@ -908,6 +920,10 @@ Deno.test("callWebhooks signs HTTP and local-relay webhook updates with Ed25519 
     signature: await sign(sender.creds.privateSignKey, msgToStr(msgPayload)),
   });
 
+  const senderMsgAuth = await signAuthPayload(sender.creds, "sendMessage", {
+    conversation: convoId,
+    encryptedMessage,
+  });
   const bgTasks: Promise<unknown>[] = [];
   setRequestWaitUntil((p) => bgTasks.push(p));
   const { messageId } = await endpoints.handlers.sendMessage({
@@ -915,6 +931,7 @@ Deno.test("callWebhooks signs HTTP and local-relay webhook updates with Ed25519 
     encryptedMessage,
     senderPublicSignKey: sender.creds.publicSignKey,
     silent: true,
+    auth: { nonce: senderMsgAuth.nonce, authToken: senderMsgAuth.authToken },
   });
   await Promise.all(bgTasks);
   setRequestWaitUntil(undefined);
@@ -1081,7 +1098,7 @@ Deno.test("mintInstantToken verifies auth, backfills instantEmail on legacy iden
   ]);
 });
 
-Deno.test("getConversations, getConversationInfo, conversationKey, and getCanvasRow enforce participant auth and ENFORCE_STRICT_METADATA_AUTH", async () => {
+Deno.test("getConversations, getConversationInfo, conversationKey, and getCanvasRow enforce participant auth unconditionally", async () => {
   const alice = await makeTestIdentity("MetaAlice");
   const bob = await makeTestIdentity("MetaBob");
   const outsider = await makeTestIdentity("MetaOutsider");
@@ -1111,29 +1128,7 @@ Deno.test("getConversations, getConversationInfo, conversationKey, and getCanvas
   const savedCanvas = await endpoints.handlers.saveCanvas(saveCanvasReq);
   assertEquals(savedCanvas, { ok: true, version: 1 });
 
-  Deno.env.set("ENFORCE_STRICT_METADATA_AUTH", "0");
   const pairKeys = [alice.creds.publicSignKey, bob.creds.publicSignKey];
-
-  const legacyConvos = await endpoints.handlers.getConversations({
-    publicSignKeys: pairKeys,
-  });
-  assertEquals(
-    legacyConvos.conversations.some((c) => c.id === convoId),
-    true,
-  );
-  const legacyInfo = await endpoints.handlers.getConversationInfo({
-    conversationId: convoId,
-  });
-  assert("conversationInfo" in legacyInfo);
-  const legacyKey = await endpoints.handlers.conversationKey({
-    conversationId: convoId,
-    publicSignKey: alice.creds.publicSignKey,
-  });
-  assertEquals(legacyKey, { conversationKey: aliceEncKey });
-  const legacyCanvas = await endpoints.handlers.getCanvasRow({
-    conversationId: convoId,
-  });
-  assertExists(legacyCanvas.row);
 
   const outsiderConvosSigned = await signAuthPayload(
     outsider.creds,
@@ -1185,8 +1180,6 @@ Deno.test("getConversations, getConversationInfo, conversationKey, and getCanvas
     }),
     { row: null },
   );
-
-  Deno.env.delete("ENFORCE_STRICT_METADATA_AUTH");
 
   assertEquals(
     await endpoints.handlers.getConversations({ publicSignKeys: pairKeys }),
@@ -1484,7 +1477,7 @@ Deno.test("deposit helpers reject unconfirmed 0-conf transactions and convert BT
   assertEquals(satoshisToCents(100_000, 100_000), 10_000);
 });
 
-Deno.test("sendMessage rejects forged auth and supports ENFORCE_STRICT_MESSAGE_AUTH", async () => {
+Deno.test("sendMessage rejects unsigned or forged auth unconditionally", async () => {
   const alice = await makeTestIdentity("MsgAuthAlice");
   const bob = await makeTestIdentity("MsgAuthBob");
   const convoId = id();
@@ -1504,7 +1497,6 @@ Deno.test("sendMessage rejects forged auth and supports ENFORCE_STRICT_MESSAGE_A
     })
   );
 
-  Deno.env.set("ENFORCE_STRICT_MESSAGE_AUTH", "1");
   await assertRejects(() =>
     endpoints.handlers.sendMessage({
       conversation: convoId,
@@ -1524,7 +1516,6 @@ Deno.test("sendMessage rejects forged auth and supports ENFORCE_STRICT_MESSAGE_A
     silent: true,
     auth: { nonce: signed.nonce, authToken: signed.authToken },
   });
-  Deno.env.delete("ENFORCE_STRICT_MESSAGE_AUTH");
   assertExists(sent.messageId);
 
   await transact([
@@ -1535,7 +1526,62 @@ Deno.test("sendMessage rejects forged auth and supports ENFORCE_STRICT_MESSAGE_A
   ]);
 });
 
-Deno.test("/ui-update rejects invalid types/percentages, non-participant authorId, and enforces ENFORCE_STRICT_UI_UPDATE_AUTH", async () => {
+Deno.test("sendTyping signs requests using explicit or registered credentials under strict message auth", async () => {
+  const alice = await makeTestIdentity("TypingAlice");
+  const bob = await makeTestIdentity("TypingBob");
+  const convoId = id();
+
+  await transact(
+    tx.conversations[convoId]
+      .update({ title: "Typing Auth Chat", updatedAt: Date.now() })
+      .link({ participants: [alice.identityId, bob.identityId] }),
+  );
+
+  await endpoints.handlers.sendTyping({
+    conversation: convoId,
+    isTyping: true,
+    publicSignKey: alice.creds.publicSignKey,
+  });
+  const { typingStates: unsignedStates } = await query({
+    typingStates: {
+      $: {
+        where: {
+          "owner.publicSignKey": alice.creds.publicSignKey,
+          conversation: convoId,
+        },
+      },
+    },
+  });
+  assertEquals(unsignedStates.length, 0);
+
+  registerCredentials(alice.creds);
+  await sendTyping({
+    conversation: convoId,
+    isTyping: true,
+    publicSignKey: alice.creds.publicSignKey,
+  });
+  const { typingStates: signedStates } = await query({
+    typingStates: {
+      $: {
+        where: {
+          "owner.publicSignKey": alice.creds.publicSignKey,
+          conversation: convoId,
+        },
+      },
+    },
+  });
+  assertEquals(signedStates.length, 1);
+  assert(signedStates[0].updatedAt > 0);
+
+  await transact([
+    ...signedStates.map((s: { id: string }) => tx.typingStates[s.id].delete()),
+    tx.conversations[convoId].delete(),
+    tx.identities[alice.identityId].delete(),
+    tx.identities[bob.identityId].delete(),
+  ]);
+});
+
+Deno.test("/ui-update rejects invalid types/percentages, unsigned requests, and non-participant signed requests", async () => {
   const alice = await makeTestIdentity("UiAlice");
   const outsider = await makeTestIdentity("UiOutsider");
   const convoId = id();
@@ -1559,22 +1605,34 @@ Deno.test("/ui-update rejects invalid types/percentages, non-participant authorI
   );
   assertEquals(badType.status, 400);
 
+  const outsiderPayload = {
+    elementId: "el-spoof",
+    conversationId: convoId,
+    type: "stream",
+    text: "spoofed",
+    authorId: outsider.creds.publicSignKey,
+  };
+  const outsiderAuth = await signAuthPayload(
+    outsider.creds,
+    "uiUpdate",
+    outsiderPayload,
+  );
   const badAuthor = await handleRequest(
     new Request("http://localhost/ui-update", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        elementId: "el-spoof",
-        conversationId: convoId,
-        type: "stream",
-        text: "spoofed",
-        authorId: outsider.creds.publicSignKey,
+        ...outsiderPayload,
+        auth: {
+          publicSignKey: outsider.creds.publicSignKey,
+          nonce: outsiderAuth.nonce,
+          authToken: outsiderAuth.authToken,
+        },
       }),
     }),
   );
   assertEquals(badAuthor.status, 403);
 
-  Deno.env.set("ENFORCE_STRICT_UI_UPDATE_AUTH", "1");
   const unauthStrict = await handleRequest(
     new Request("http://localhost/ui-update", {
       method: "POST",
@@ -1587,7 +1645,6 @@ Deno.test("/ui-update rejects invalid types/percentages, non-participant authorI
       }),
     }),
   );
-  Deno.env.delete("ENFORCE_STRICT_UI_UPDATE_AUTH");
   assertEquals(unauthStrict.status, 401);
 
   await transact([

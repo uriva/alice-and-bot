@@ -196,13 +196,13 @@ const conversations = await getConversations([credentials.publicSignKey]);
 // [{ id, title, participants: [{ publicSignKey }] }]
 ```
 
-#### `getConversationInfo(conversationId)`
+#### `getConversationInfo(conversationId, credentials)`
 
 Get conversation metadata and participant profiles.
 
 ```typescript
 import { getConversationInfo } from "@alice-and-bot/core";
-const info = await getConversationInfo(conversationId);
+const info = await getConversationInfo(conversationId, credentials);
 // { conversationInfo: { participants: [{ publicSignKey, name?, avatar?, alias? }], isPartial } }
 ```
 
@@ -265,7 +265,7 @@ const result = await publicSignKeyToAlias(key);
 
 ### Typing indicators
 
-#### `sendTyping({ conversation, isTyping, publicSignKey })`
+#### `sendTyping({ conversation, isTyping, publicSignKey, credentials? })`
 
 Show/hide the typing indicator.
 
@@ -275,6 +275,7 @@ await sendTyping({
   conversation: conversationId,
   isTyping: true,
   publicSignKey: credentials.publicSignKey,
+  credentials,
 });
 ```
 

@@ -1050,58 +1050,10 @@ export const uiUpdateUrl: string = `${serverBaseUrl}/ui-update`;
 export const buildUiUpdateUrl = (elementId: string): string =>
   `${uiUpdateUrl}?elementId=${encodeURIComponent(elementId)}`;
 
-export const setPriceTagSigned = async ({
-  priceTag,
-  credentials,
-}: {
-  priceTag: number;
-  credentials: Credentials;
-}) =>
-  apiClient({
-    endpoint: "setPriceTag",
-    payload: await buildSignedRequest(credentials, "setPriceTag", {
-      priceTag,
-    }),
-  });
-
-export const getBalanceAndTransactionsSigned = async (
-  credentials: Credentials,
-) =>
-  apiClient({
-    endpoint: "getBalanceAndTransactions",
-    payload: await buildSignedRequest(
-      credentials,
-      "getBalanceAndTransactions",
-      {},
-    ),
-  });
-
-export const prepareCryptoPaymentSigned = async (
-  params: { amount: number; credentials: Credentials },
-) =>
-  apiClient({
-    endpoint: "prepareCryptoPayment",
-    payload: await buildSignedRequest(
-      params.credentials,
-      "prepareCryptoPayment",
-      { amount: params.amount },
-    ),
-  });
-
-export const checkCryptoPaymentSigned = async (
-  params: { paymentAddress: string; credentials: Credentials },
-) =>
-  apiClient({
-    endpoint: "checkCryptoPayment",
-    payload: await buildSignedRequest(
-      params.credentials,
-      "checkCryptoPayment",
-      { paymentAddress: params.paymentAddress },
-    ),
-  });
-
-export const getProfile = (publicSignKey: string) =>
-  apiClient({
-    endpoint: "getProfile",
-    payload: { publicSignKey },
-  });
+export {
+  checkCryptoPaymentSigned,
+  getBalanceAndTransactionsSigned,
+  getProfile,
+  prepareCryptoPaymentSigned,
+  setPriceTagSigned,
+} from "../../backend/src/api.ts";

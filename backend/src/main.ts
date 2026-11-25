@@ -38,15 +38,6 @@ import {
   receivedSatoshis,
 } from "@uri/crypto-utils";
 
-export const enforceStrictMetadataAuth =
-  Deno.env.get("ENFORCE_STRICT_METADATA_AUTH") !== "0";
-
-const isStrictMetadataAuthActive = (): boolean =>
-  Deno.env.get("ENFORCE_STRICT_METADATA_AUTH") !== "0";
-
-const isStrictMessageAuthActive = (): boolean =>
-  Deno.env.get("ENFORCE_STRICT_MESSAGE_AUTH") === "1";
-
 export const isConfirmedDepositTx = (tx: unknown): boolean => {
   if (typeof tx !== "object" || tx === null) return false;
   const status = Reflect.get(tx, "status");
@@ -193,18 +184,15 @@ export const endpoints: BackendApiImpl = {
   authenticate: (token: string) => auth.verifyToken(token),
   handlers: {
     conversationKey: async ({ conversationId, publicSignKey, auth }) => {
-      if (auth !== undefined) {
-        const authOk = await verifyAuthToken({
-          action: "conversationKey",
-          payload: { conversationId },
-          publicSignKey,
-          nonce: auth.nonce,
-          authToken: auth.authToken,
-        });
-        if (!authOk) return { error: "no-such-key" };
-      } else if (isStrictMetadataAuthActive()) {
-        return { error: "no-such-key" };
-      }
+      if (auth === undefined) return { error: "no-such-key" };
+      const authOk = await verifyAuthToken({
+        action: "conversationKey",
+        payload: { conversationId },
+        publicSignKey,
+        nonce: auth.nonce,
+        authToken: auth.authToken,
+      });
+      if (!authOk) return { error: "no-such-key" };
       const { identities } = await query({
         identities: {
           $: { where: { publicSignKey } },
@@ -226,21 +214,17 @@ export const endpoints: BackendApiImpl = {
         "[DEBUG sendMessage] received for conversation",
         conversation,
       );
-      if (auth !== undefined) {
-        if (!senderPublicSignKey) {
-          throw new Error("Invalid auth");
-        }
-        const authOk = await verifyAuthToken({
-          action: "sendMessage",
-          payload: { conversation, encryptedMessage },
-          publicSignKey: senderPublicSignKey,
-          nonce: auth.nonce,
-          authToken: auth.authToken,
-        });
-        if (!authOk) {
-          throw new Error("Invalid auth");
-        }
-      } else if (isStrictMessageAuthActive()) {
+      if (auth === undefined || !senderPublicSignKey) {
+        throw new Error("Invalid auth");
+      }
+      const authOk = await verifyAuthToken({
+        action: "sendMessage",
+        payload: { conversation, encryptedMessage },
+        publicSignKey: senderPublicSignKey,
+        nonce: auth.nonce,
+        authToken: auth.authToken,
+      });
+      if (!authOk) {
         throw new Error("Invalid auth");
       }
       const convResult = await fetchWebhookConversation(conversation);
@@ -309,18 +293,15 @@ export const endpoints: BackendApiImpl = {
       return { messageId };
     },
     sendTyping: async ({ conversation, isTyping, publicSignKey, auth }) => {
-      if (auth !== undefined) {
-        const authOk = await verifyAuthToken({
-          action: "sendTyping",
-          payload: { conversation, isTyping },
-          publicSignKey,
-          nonce: auth.nonce,
-          authToken: auth.authToken,
-        });
-        if (!authOk) return { success: true };
-      } else if (isStrictMessageAuthActive()) {
-        return { success: true };
-      }
+      if (auth === undefined) return { success: true };
+      const authOk = await verifyAuthToken({
+        action: "sendTyping",
+        payload: { conversation, isTyping },
+        publicSignKey,
+        nonce: auth.nonce,
+        authToken: auth.authToken,
+      });
+      if (!authOk) return { success: true };
       // Validate conversation & participant membership and fetch existing typingState in one query
       const { conversations, identities, typingStates } = await query({
         conversations: {
@@ -448,18 +429,15 @@ export const endpoints: BackendApiImpl = {
       return { profile: { name, avatar, alias, priceTag } };
     },
     getConversations: async ({ publicSignKeys, auth }) => {
-      if (auth !== undefined) {
-        const authOk = await verifyAuthToken({
-          action: "getConversations",
-          payload: { publicSignKeys },
-          publicSignKey: auth.publicSignKey,
-          nonce: auth.nonce,
-          authToken: auth.authToken,
-        });
-        if (!authOk || !publicSignKeys.includes(auth.publicSignKey)) {
-          return { conversations: [] };
-        }
-      } else if (isStrictMetadataAuthActive()) {
+      if (auth === undefined) return { conversations: [] };
+      const authOk = await verifyAuthToken({
+        action: "getConversations",
+        payload: { publicSignKeys },
+        publicSignKey: auth.publicSignKey,
+        nonce: auth.nonce,
+        authToken: auth.authToken,
+      });
+      if (!authOk || !publicSignKeys.includes(auth.publicSignKey)) {
         return { conversations: [] };
       }
       if (publicSignKeys.length === 0) return { conversations: [] };
@@ -488,18 +466,15 @@ export const endpoints: BackendApiImpl = {
       };
     },
     getConversationInfo: async ({ conversationId, auth }) => {
-      if (auth !== undefined) {
-        const authOk = await verifyAuthToken({
-          action: "getConversationInfo",
-          payload: { conversationId },
-          publicSignKey: auth.publicSignKey,
-          nonce: auth.nonce,
-          authToken: auth.authToken,
-        });
-        if (!authOk) return { error: "not-found" };
-      } else if (isStrictMetadataAuthActive()) {
-        return { error: "not-found" };
-      }
+      if (auth === undefined) return { error: "not-found" };
+      const authOk = await verifyAuthToken({
+        action: "getConversationInfo",
+        payload: { conversationId },
+        publicSignKey: auth.publicSignKey,
+        nonce: auth.nonce,
+        authToken: auth.authToken,
+      });
+      if (!authOk) return { error: "not-found" };
       const { conversations } = await query({
         conversations: {
           participants: {},
@@ -509,7 +484,6 @@ export const endpoints: BackendApiImpl = {
       });
       if (!conversations.length) return { error: "not-found" };
       if (
-        auth !== undefined &&
         !conversations[0].participants.some(
           (p: { publicSignKey: string }) =>
             p.publicSignKey === auth.publicSignKey,
@@ -1447,18 +1421,15 @@ export const endpoints: BackendApiImpl = {
       };
     },
     getCanvasRow: async ({ conversationId, auth }) => {
-      if (auth !== undefined) {
-        const authOk = await verifyAuthToken({
-          action: "getCanvasRow",
-          payload: { conversationId },
-          publicSignKey: auth.publicSignKey,
-          nonce: auth.nonce,
-          authToken: auth.authToken,
-        });
-        if (!authOk) return { row: null };
-      } else if (isStrictMetadataAuthActive()) {
-        return { row: null };
-      }
+      if (auth === undefined) return { row: null };
+      const authOk = await verifyAuthToken({
+        action: "getCanvasRow",
+        payload: { conversationId },
+        publicSignKey: auth.publicSignKey,
+        nonce: auth.nonce,
+        authToken: auth.authToken,
+      });
+      if (!authOk) return { row: null };
       const { conversations } = await query({
         conversations: {
           participants: {},
@@ -1468,7 +1439,6 @@ export const endpoints: BackendApiImpl = {
       });
       if (conversations.length === 0) return { row: null };
       if (
-        auth !== undefined &&
         !conversations[0].participants.some(
           (p: { publicSignKey: string }) =>
             p.publicSignKey === auth.publicSignKey,

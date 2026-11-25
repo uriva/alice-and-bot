@@ -942,10 +942,37 @@ export const dismissNotificationsSigned = async (
     ),
   });
 
-export const sendTyping = (
-  params: { conversation: string; isTyping: boolean; publicSignKey: string },
-): Promise<{ success: true }> =>
-  apiClient({ endpoint: "sendTyping", payload: params });
+export const sendTyping = async ({
+  conversation,
+  isTyping,
+  publicSignKey,
+  credentials,
+}: {
+  conversation: string;
+  isTyping: boolean;
+  publicSignKey: string;
+  credentials?: Credentials;
+}): Promise<{ success: true }> => {
+  const resolved = credentials ?? lookupRegisteredCredentials(publicSignKey);
+  const signed = resolved &&
+      (await canSignWithPrivateKey(resolved.privateSignKey))
+    ? await buildSignedRequest(resolved, "sendTyping", {
+      conversation,
+      isTyping,
+    })
+    : undefined;
+  return apiClient({
+    endpoint: "sendTyping",
+    payload: {
+      conversation,
+      isTyping,
+      publicSignKey,
+      ...(signed
+        ? { auth: { nonce: signed.nonce, authToken: signed.authToken } }
+        : {}),
+    },
+  });
+};
 
 export const storeTransferPayload = (
   encryptedPayload: string,
@@ -1095,21 +1122,10 @@ export const mintInstantTokenSigned = async (
       ? { conversationId: options.conversationId }
       : {}),
   };
-  const res = await apiClient({
+  return apiClient({
     endpoint: "mintInstantToken",
     payload: await buildSignedRequest(credentials, "mintInstantToken", payload),
   });
-  if (
-    "error" in res &&
-    res.error === "invalid-auth" &&
-    Object.keys(payload).length > 0
-  ) {
-    return apiClient({
-      endpoint: "mintInstantToken",
-      payload: await buildSignedRequest(credentials, "mintInstantToken", {}),
-    });
-  }
-  return res;
 };
 
 export const getCanvasRow = async (
