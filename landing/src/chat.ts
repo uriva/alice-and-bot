@@ -39,6 +39,7 @@ import {
   closeLocalNotificationsForConversation,
   dismissConversationNotifications,
   registerPush,
+  unregisterPush,
 } from "../../protocol/src/pushClient.ts";
 import {
   clearPushKeyStore,
@@ -52,7 +53,7 @@ import {
   triggerPwaInstall,
 } from "./pwaInstall.ts";
 import { copyToClipboard } from "../../lit/components/utils.ts";
-import { chatPath, homePath } from "./paths.ts";
+import { chatPath, homePath, privacyPath, termsPath } from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
 import { setActiveConversationGetter } from "./activeConversationBridge.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
@@ -1626,6 +1627,30 @@ const copyCredentialsRow = () => {
   `;
 };
 
+const legalLinkClass =
+  "underline hover:text-[#181715] dark:hover:text-[#f3f1ea] transition-colors";
+
+const handleSignOut = async () => {
+  if (
+    !confirm(
+      "Sign out and delete your key from this browser? Make sure you backed up your secret key first.",
+    )
+  ) return;
+  const activeCredentials = credentials;
+  if (activeCredentials) {
+    await unregisterPush(activeCredentials).catch(() => {});
+  }
+  localStorage.removeItem("alicebot_credentials");
+  localStorage.removeItem(conversationsCacheKey);
+  localStorage.removeItem(conversationPreviewsCacheKey);
+  await Promise.all([
+    clearPushKeyStore().catch(() => {}),
+    closeLocalNotificationsForConversation().catch(() => {}),
+  ]).finally(() => {
+    globalThis.location.reload();
+  });
+};
+
 const deleteCredentialsRow = () =>
   html`
     <div class="${settingsRowClass}">
@@ -1638,23 +1663,7 @@ const deleteCredentialsRow = () =>
       <button
         type="button"
         class="${buttonClass("destructive", "sm", "shrink-0")}"
-        @click="${() => {
-          if (
-            confirm(
-              "Sign out and delete your key from this browser? Make sure you backed up your secret key first.",
-            )
-          ) {
-            localStorage.removeItem("alicebot_credentials");
-            localStorage.removeItem(conversationsCacheKey);
-            localStorage.removeItem(conversationPreviewsCacheKey);
-            Promise.all([
-              clearPushKeyStore(),
-              closeLocalNotificationsForConversation(),
-            ]).finally(() => {
-              globalThis.location.reload();
-            });
-          }
-        }}"
+        @click="${handleSignOut}"
       >
         Sign Out
       </button>
@@ -2246,12 +2255,47 @@ const yourKey = () => {
                   </div>
                 `
                 : nothing}
+              <p class="text-[11px] text-[#78736a] dark:text-[#8c867c] leading-relaxed">
+                Non-bank custodial credits; Bitcoin deposits are irreversible.
+                See
+                <a
+                  href="${termsPath}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="${legalLinkClass}"
+                >Terms of Service</a>
+                and
+                <a
+                  href="${privacyPath}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="${legalLinkClass}"
+                >Privacy Policy</a>.
+              </p>
             </div>
           `
           : nothing}
       </div>
 
       ${dangerZone()}
+
+      <div
+        class="flex items-center justify-center gap-3 pt-1 text-xs text-[#78736a] dark:text-[#8c867c]"
+      >
+        <a
+          href="${privacyPath}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="${legalLinkClass}"
+        >Privacy Policy</a>
+        <span>·</span>
+        <a
+          href="${termsPath}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="${legalLinkClass}"
+        >Terms of Service</a>
+      </div>
     </div>
   `;
 };
@@ -2623,6 +2667,23 @@ const messengerLogin = () => {
                 I already have an account
               </button>
             </div>
+            <p
+              class="text-[11px] text-[#78736a] dark:text-[#8c867c] text-center mt-4 max-w-xs">
+              By continuing, you agree to the
+              <a
+                href="${termsPath}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="${legalLinkClass}"
+              >Terms of Service</a>
+              and
+              <a
+                href="${privacyPath}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="${legalLinkClass}"
+              >Privacy Policy</a>.
+            </p>
           </div>
         `
         : html`
@@ -2643,6 +2704,22 @@ const messengerLogin = () => {
                 </button>
               </div>
             </div>
+            <p
+              class="text-[11px] text-[#78736a] dark:text-[#8c867c] text-center mt-4 max-w-xs">
+              <a
+                href="${privacyPath}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="${legalLinkClass}"
+              >Privacy Policy</a>
+              ·
+              <a
+                href="${termsPath}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="${legalLinkClass}"
+              >Terms of Service</a>
+            </p>
           </div>
         `
         : html`

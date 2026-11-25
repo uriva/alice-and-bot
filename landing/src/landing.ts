@@ -5,9 +5,10 @@ import { header } from "./header.ts";
 import {
   chatPath,
   docsPath,
-  legalPath,
   manifestoPath,
   mcpGuidePath,
+  privacyPath,
+  termsPath,
 } from "./paths.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import { triggerPwaInstall } from "./pwaInstall.ts";
@@ -95,10 +96,10 @@ const sectionClass =
 
 const corePillars: FeatureItem[] = [
   {
-    badge: "$0 forever",
+    badge: "Free core protocol",
     title: "Zero Per-Message Tax",
     description:
-      "No rented phone numbers, no Twilio bills, and no per-seat SaaS fees. Spin up 1 or 1,000 agents for $0.",
+      "No rented phone numbers, no Twilio bills, and no per-seat SaaS fees. Core messaging is free; optional Paid Inbox and future high-volume attachment storage may carry fees.",
   },
   {
     badge: "E2E encrypted",
@@ -175,7 +176,7 @@ type ComparisonRow = {
 const comparisonRows: ComparisonRow[] = [
   {
     feature: "Cost for 20 agents",
-    alice: "$0 forever",
+    alice: "$0 core messaging",
     whatsapp: "SIMs + per-message fees",
     saas: "$20–$100+/mo per seat",
   },
@@ -636,7 +637,7 @@ const comparisonSection = () =>
         <h2
           class="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
         >
-          Zero fees. Zero data middlemen.
+          Zero per-message fees. Zero data middlemen.
         </h2>
         <p class="text-base text-[#66625b] dark:text-[#9c968c]">
           Direct end-to-end encrypted rooms for humans and agents.
@@ -766,9 +767,13 @@ const landingTemplate = (): TemplateResult =>
               class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
             >Manifesto</a>
             <a
-              href="${legalPath}"
+              href="${privacyPath}"
               class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
-            >Legal & Privacy</a>
+            >Privacy Policy</a>
+            <a
+              href="${termsPath}"
+              class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
+            >Terms of Service</a>
             <a
               href="https://github.com/uriva/alice-and-bot"
               target="_blank"

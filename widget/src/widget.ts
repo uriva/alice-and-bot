@@ -318,6 +318,17 @@ const darkModeOverrideForScheme = (
   return null;
 };
 
+const createPrivacyNoticeLink = (colors: WidgetModeColors) => {
+  const link = document.createElement("a");
+  link.href = "https://aliceandbot.com/privacy";
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.style.cssText =
+    `font-size:11px;color:${colors.text};opacity:0.6;text-decoration:underline;margin-top:2px`;
+  link.textContent = "Powered by Alice&Bot · Privacy";
+  return link;
+};
+
 const renderNameDialog = (
   { colors, mode, onClose, onSubmit, onImportRequested }: {
     colors: WidgetModeColors;
@@ -400,7 +411,14 @@ const renderNameDialog = (
   });
 
   actions.append(cancelBtn, continueBtn);
-  dialog.append(title, hint, input, actions, importLink);
+  dialog.append(
+    title,
+    hint,
+    input,
+    actions,
+    importLink,
+    createPrivacyNoticeLink(colors),
+  );
   overlay.append(dialog);
   document.body.appendChild(overlay);
   input.focus();
@@ -564,7 +582,13 @@ export const renderSecretIdentityDialog = (
   closeBtn.addEventListener("click", onClose);
 
   actions.append(copyBtn, closeBtn);
-  dialog.append(title, hint, qrContainer, actions);
+  dialog.append(
+    title,
+    hint,
+    qrContainer,
+    actions,
+    createPrivacyNoticeLink(colors),
+  );
   overlay.append(dialog);
   document.body.appendChild(overlay);
 

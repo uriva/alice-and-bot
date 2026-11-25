@@ -17,6 +17,8 @@ import {
   legalPath,
   manifestoPath,
   mcpGuidePath,
+  privacyPath,
+  termsPath,
 } from "./paths.ts";
 import "./app.css";
 
@@ -28,19 +30,37 @@ const analytics: { capture: (eventName: string) => void } = {
   capture: () => {},
 };
 
+const isChatRoute = (pathname: string) =>
+  pathname === chatPath || pathname.startsWith(`${chatPath}/`);
+
+const currentPathname = () => globalThis.location.pathname;
+
 if (typeof window !== "undefined") {
   installActiveConversationResponder();
   initPwaInstall();
-  setTimeout(() => {
-    import("posthog-js")
-      .then(({ posthog }) => {
-        posthog.init("phc_C5kWoUuyR7D4qa5Cgw5aQGQx5zkhu92EUpTJ69ES5yJL", {
-          api_host: "https://us.posthog.com",
-        });
-        analytics.capture = (eventName) => posthog.capture(eventName);
-      })
-      .catch(() => {});
-  }, 1500);
+  if (!isChatRoute(currentPathname())) {
+    setTimeout(() => {
+      if (isChatRoute(currentPathname())) return;
+      import("posthog-js")
+        .then(({ posthog }) => {
+          if (isChatRoute(currentPathname())) return;
+          posthog.init("phc_C5kWoUuyR7D4qa5Cgw5aQGQx5zkhu92EUpTJ69ES5yJL", {
+            api_host: "https://us.posthog.com",
+            autocapture: false,
+            disable_session_recording: true,
+            persistence: "memory",
+            before_send: (event) =>
+              isChatRoute(currentPathname()) ? null : event,
+          });
+          analytics.capture = (eventName) => {
+            if (!isChatRoute(currentPathname())) {
+              posthog.capture(eventName);
+            }
+          };
+        })
+        .catch(() => {});
+    }, 1500);
+  }
 }
 
 setErrorReporter((eventName) => {
@@ -99,6 +119,14 @@ initRouter({
     {
       path: legalPath,
       component: () => import("./legal.ts").then((m) => m.legal()),
+    },
+    {
+      path: privacyPath,
+      component: () => import("./legal.ts").then((m) => m.privacy()),
+    },
+    {
+      path: termsPath,
+      component: () => import("./legal.ts").then((m) => m.terms()),
     },
     {
       path: manifestoPath,
