@@ -195,3 +195,20 @@ Deno.test(
     );
   },
 );
+
+Deno.test(
+  "chat-box message input styles placeholder, focus ring, and contrast-aware text/icon colors",
+  () => {
+    const chatBoxCode = Deno.readTextFileSync(
+      new URL("./chat-box.ts", import.meta.url).pathname,
+    );
+    assertStringIncludes(chatBoxCode, "defaultInputBackground(isDark)");
+    assertStringIncludes(chatBoxCode, "inputTextColor(isDark, custom)");
+    assertStringIncludes(chatBoxCode, "inputBorderColor(isDark, custom)");
+    assertStringIncludes(
+      chatBoxCode,
+      '[data-testid="message-input"]::placeholder',
+    );
+    assertStringIncludes(chatBoxCode, '[data-testid="message-input"]:focus');
+  },
+);

@@ -63,7 +63,13 @@ import {
 import "./chat-box.ts";
 import "./user-profile-popup.ts";
 import "./chat-avatar.ts";
-import { avatarColor, defaultPrimary } from "./design.ts";
+import {
+  avatarColor,
+  defaultInputBackground,
+  defaultPrimary,
+  inputBorderColor,
+  inputTextColor,
+} from "./design.ts";
 import { faPen } from "./icons.ts";
 import {
   collectIdentityKeys,
@@ -520,11 +526,13 @@ const sidebarSearchInputStyle = (
   customColors?: CustomColors,
 ) =>
   `width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;border:1px solid ${
-    isDark ? "#333333" : "#e5e7eb"
+    inputBorderColor(isDark, customColors)
   };background:${
-    customColors?.inputBackground ?? (isDark ? "#1a1a1a" : "#f3f4f6")
+    customColors?.inputBackground ?? defaultInputBackground(isDark)
   };color:${
-    customColors?.text ?? (isDark ? "#f4f4f4" : "#111827")
+    customColors?.inputBackground
+      ? inputTextColor(isDark, customColors)
+      : (customColors?.text ?? (isDark ? "#f4f4f4" : "#111827"))
   };box-sizing:border-box`;
 
 const sidebarListStyle = (scrollbarColor?: string) =>

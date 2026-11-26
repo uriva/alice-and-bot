@@ -682,8 +682,7 @@ export class ChatMessage extends LitElement {
   };
 
   private _hoverIn = (e: Event) => {
-    const bg = this.customColors?.inputBackground ??
-      (this.isDark ? "#1e1e1e" : "#ffffff");
+    const bg = this.isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)";
     (e.currentTarget as HTMLElement).style.background = bg;
   };
 

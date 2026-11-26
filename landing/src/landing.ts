@@ -415,7 +415,7 @@ const heroMessengerPreview = () =>
             class="mt-3 pt-2.5 flex items-center gap-2"
           >
             <div
-              class="flex-1 text-xs text-[#8c867c] bg-white dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] rounded-full px-3.5 py-2 shadow-2xs"
+              class="flex-1 text-xs text-[#6b665d] dark:text-[#9c968c] bg-white dark:bg-[#23221f] border border-[#e3dfd4] dark:border-white/20 rounded-full px-3.5 py-2 shadow-2xs"
             >
               Type a message...
             </div>

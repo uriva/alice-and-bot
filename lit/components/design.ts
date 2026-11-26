@@ -48,6 +48,9 @@ export const centerFillStyle = (isDarkMode: boolean) =>
 export const defaultOtherBubble = (isDark: boolean) =>
   isDark ? "#171614" : "#ffffff";
 
+export const defaultInputBackground = (isDark: boolean) =>
+  isDark ? "#23221f" : "#ffffff";
+
 export const primaryHue = 215;
 const avatarHues = [primaryHue, 16, 36, 258, 342, 198, 28, 236];
 
@@ -62,21 +65,43 @@ export const avatarColor = (str: string, isDark: boolean) => {
   return `hsl(${h}, ${isDark ? 48 : 44}%, ${isDark ? 56 : 42}%)`;
 };
 
-const hexLightness = (hex: string) => {
-  const n = parseInt(hex.replace("#", ""), 16);
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  return (Math.max(r, g, b) + Math.min(r, g, b)) / 510;
+export const isLightColor = (color: string, isDark?: boolean) => {
+  const trimmed = color.trim().toLowerCase();
+  if (trimmed === "var(--widget-start-button-bg)") return isDark === true;
+  if (trimmed === "white") return true;
+  const parsed = parseCssHsl(trimmed);
+  return parsed ? parsed.l > 60 : false;
 };
 
-export const isLightColor = (color: string, isDark?: boolean) => {
-  if (color === "var(--widget-start-button-bg)") return isDark === true;
-  const hslMatch = color.match(/hsl\(\d+, *\d+%, *(\d+)%\)/);
-  if (hslMatch) return parseInt(hslMatch[1], 10) > 60;
-  if (color.startsWith("#")) return hexLightness(color) > 0.6;
-  return false;
+export const inputSurfaceIsLight = (
+  isDark: boolean,
+  custom?: CustomColors,
+) => {
+  const bg = custom?.inputBackground;
+  if (!bg || bg === "transparent") return !isDark;
+  return isLightColor(bg, isDark);
 };
+
+export const inputTextColor = (isDark: boolean, custom?: CustomColors) =>
+  inputSurfaceIsLight(isDark, custom) ? "#181715" : "#f3f1ea";
+
+export const inputPlaceholderColor = (
+  isDark: boolean,
+  custom?: CustomColors,
+) => (inputSurfaceIsLight(isDark, custom) ? "#6b665d" : "#9c968c");
+
+export const inputBorderColor = (isDark: boolean, custom?: CustomColors) =>
+  inputSurfaceIsLight(isDark, custom)
+    ? "rgba(24,23,21,0.14)"
+    : "rgba(255,255,255,0.2)";
+
+export const inputFocusBorderColor = (
+  isDark: boolean,
+  custom?: CustomColors,
+) =>
+  inputSurfaceIsLight(isDark, custom)
+    ? "rgba(24,23,21,0.32)"
+    : "rgba(255,255,255,0.4)";
 
 export const defaultPrimary = (isDark: boolean) =>
   isDark ? `hsl(${primaryHue}, 34%, 28%)` : `hsl(${primaryHue}, 38%, 36%)`;

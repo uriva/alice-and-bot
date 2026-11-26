@@ -6,8 +6,15 @@ import {
 } from "@std/assert";
 import {
   avatarColor,
+  defaultInputBackground,
   defaultOtherBubble,
   defaultPrimary,
+  inputBorderColor,
+  inputFocusBorderColor,
+  inputPlaceholderColor,
+  inputSurfaceIsLight,
+  inputTextColor,
+  isLightColor,
   primaryHue,
   quoteBarColor,
   suggestedMessageButtonStyle,
@@ -193,4 +200,47 @@ Deno.test("suggestion and quick-reply button text maintains high WCAG contrast a
     ),
   );
   assertEquals(contrastRatio(greenLight, lightSurface) >= 5.5, true);
+});
+
+Deno.test("isLightColor detects light and dark values across hex, rgb, hsl, and keywords", () => {
+  assertEquals(isLightColor("#fff"), true);
+  assertEquals(isLightColor("#ffffff"), true);
+  assertEquals(isLightColor("#e5e6eb"), true);
+  assertEquals(isLightColor("white"), true);
+  assertEquals(isLightColor("rgb(240, 240, 240)"), true);
+  assertEquals(isLightColor("#000"), false);
+  assertEquals(isLightColor("#171614"), false);
+  assertEquals(isLightColor("#23221f"), false);
+  assertEquals(isLightColor("var(--widget-start-button-bg)", true), true);
+  assertEquals(isLightColor("var(--widget-start-button-bg)", false), false);
+});
+
+Deno.test("dark input surface lifts clearly above dark background and adapts text/placeholder for light overrides", () => {
+  assertEquals(defaultInputBackground(false), "#ffffff");
+  assertEquals(defaultInputBackground(true), "#23221f");
+  assertFalse(defaultInputBackground(true) === defaultOtherBubble(true));
+
+  const darkInputBg = resolveCssRgb(defaultInputBackground(true));
+  const darkPlaceholder = resolveCssRgb(inputPlaceholderColor(true));
+  assertEquals(contrastRatio(darkPlaceholder, darkInputBg) >= 4.5, true);
+
+  assertEquals(inputSurfaceIsLight(true), false);
+  assertEquals(inputTextColor(true), "#f3f1ea");
+  assertEquals(inputSurfaceIsLight(false), true);
+  assertEquals(inputTextColor(false), "#181715");
+
+  const whiteOverride = { inputBackground: "#e5e6eb" };
+  assertEquals(inputSurfaceIsLight(true, whiteOverride), true);
+  assertEquals(inputTextColor(true, whiteOverride), "#181715");
+  const lightOverrideBg = resolveCssRgb("#e5e6eb");
+  const lightOverridePlaceholder = resolveCssRgb(
+    inputPlaceholderColor(true, whiteOverride),
+  );
+  assertEquals(
+    contrastRatio(lightOverridePlaceholder, lightOverrideBg) >= 4.5,
+    true,
+  );
+  assertStringIncludes(inputBorderColor(true), "rgba(255,255,255,");
+  assertStringIncludes(inputFocusBorderColor(true), "rgba(255,255,255,");
+  assertStringIncludes(inputBorderColor(true, whiteOverride), "rgba(24,23,21,");
 });

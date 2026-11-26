@@ -43,6 +43,7 @@ export type ExportedWidgetModeColors = {
   background: string;
   startButton: string;
   startButtonText: string;
+  inputBackground: string;
 };
 
 export type WidgetModeColors = {
@@ -99,8 +100,8 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     startButton: "hsl(215,34%,28%)",
     startButtonText: "#ffffff",
     startShadow: "0 4px 14px rgba(0, 0, 0, 0.45)",
-    inputBackground: "#171614",
-    inputBorder: "#292824",
+    inputBackground: "#23221f",
+    inputBorder: "#3a3833",
     inputText: "#f3f1ea",
   },
 };
@@ -111,7 +112,7 @@ type ResolvedAppearance = {
   colorSchemeValue: "light" | "dark" | "light dark";
 };
 
-const resolveAppearance = (
+export const resolveAppearance = (
   colorScheme: WidgetColorScheme | undefined,
   prefersDark: boolean,
 ): ResolvedAppearance => {
@@ -127,11 +128,19 @@ const resolveAppearance = (
     ? "dark"
     : "light";
   const modeColorScheme = colorScheme?.[mode];
+  const inputBg = modeColorScheme?.inputBackground;
+  const inputIsLight = inputBg
+    ? isLightColor(inputBg, mode === "dark")
+    : mode === "light";
   const colors = {
     ...defaultColors[mode],
     ...modeColorScheme,
     ...(modeColorScheme?.primary && !modeColorScheme.startButton &&
       { startButton: modeColorScheme.primary }),
+    ...(inputBg && {
+      inputText: inputIsLight ? "#181715" : "#f3f1ea",
+      inputBorder: inputIsLight ? "#e7e4dc" : "#3a3833",
+    }),
   };
   const colorSchemeValue: "light" | "dark" | "light dark" = hasLight && hasDark
     ? "light dark"

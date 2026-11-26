@@ -7,9 +7,15 @@ import {
   centerFillStyle,
   chatContainerStyle,
   contentMaxWidthStyle,
+  defaultInputBackground,
   defaultPrimary,
   emptyHeadingStyle,
   emptySuggestionsWrapStyle,
+  inputBorderColor,
+  inputFocusBorderColor,
+  inputPlaceholderColor,
+  inputSurfaceIsLight,
+  inputTextColor,
   isLightColor,
   loadingStyle,
   quoteBarColor,
@@ -317,8 +323,8 @@ const sendingIndicator = (
 
 const replyBarStyle = (isDark: boolean, custom?: CustomColors) =>
   `display:flex;align-items:center;gap:8px;padding:8px 12px;background:${
-    custom?.inputBackground ?? (isDark ? "#1a1a1a" : "#ffffff")
-  };border-top:1px solid ${isDark ? "#ffffff15" : "#00000015"}`;
+    custom?.inputBackground ?? defaultInputBackground(isDark)
+  };border-top:1px solid ${inputBorderColor(isDark, custom)}`;
 
 const replyBarQuoteStyle = (isDark: boolean, custom?: CustomColors) =>
   `flex:1;min-width:0;border-left:3px solid ${
@@ -330,12 +336,13 @@ const renderReplyBar = (
   isDark: boolean,
   onClear: () => void,
   custom?: CustomColors,
-) =>
-  html`
+) => {
+  const lightSurface = inputSurfaceIsLight(isDark, custom);
+  return html`
     <div style="${replyBarStyle(isDark, custom)}">
-      <span style="color:${isDark
-        ? "#9ca3af"
-        : "#6b7280"};font-size:16px;display:flex;align-items:center"
+      <span style="color:${lightSurface
+        ? "#6b7280"
+        : "#9ca3af"};font-size:16px;display:flex;align-items:center"
       >${faReply}</span>
       <div style="${replyBarQuoteStyle(isDark, custom)}">
         <div
@@ -347,9 +354,9 @@ const renderReplyBar = (
           ${reply.authorName}
         </div>
         <div
-          style="color:${isDark
-            ? "#9ca3af"
-            : "#6b7280"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+          style="color:${lightSurface
+            ? "#6b7280"
+            : "#9ca3af"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
         >
           ${reply.text || "Attachment"}
         </div>
@@ -357,7 +364,7 @@ const renderReplyBar = (
       <button
         type="button"
         @click="${onClear}"
-        style="background:none;border:none;cursor:pointer;color:${isDark
+        style="background:none;border:none;cursor:pointer;color:${lightSurface
           ? "#6b7280"
           : "#9ca3af"};font-size:18px;padding:4px;line-height:1"
       >
@@ -365,6 +372,7 @@ const renderReplyBar = (
       </button>
     </div>
   `;
+};
 
 const headerButtonStyle =
   "background:transparent;border:none;cursor:pointer;color:inherit;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;padding:0;font-size:16px;line-height:1;flex-shrink:0";
@@ -379,14 +387,14 @@ const isTransparentInput = (custom?: CustomColors) =>
 
 const sendButtonStyle = (isDark: boolean, custom?: CustomColors) => {
   const width = isTransparentInput(custom) ? "36px" : "44px";
-  return `width:${width};height:44px;min-width:${width};border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;padding:0;transition:background 0.2s,color 0.2s,transform 0.15s;flex-shrink:0;background:${
-    custom?.inputBackground ?? (isDark ? "#171614" : "#ffffff")
-  };color:${isDark ? "#f3f1ea" : "#181715"}`;
+  return `width:${width};height:44px;min-width:${width};border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;padding:0;transition:background 0.2s,color 0.2s,border-color 0.2s,transform 0.15s;flex-shrink:0;background:${
+    custom?.inputBackground ?? defaultInputBackground(isDark)
+  };color:${inputTextColor(isDark, custom)}`;
 };
 
-const attachButtonStyle = (isDark: boolean) =>
+const attachButtonStyle = (isDark: boolean, custom?: CustomColors) =>
   `background:none;border:none;cursor:pointer;color:${
-    isDark ? "#6b7280" : "#94a3b8"
+    inputSurfaceIsLight(isDark, custom) ? "#64748b" : "#a8a29e"
   };width:36px;height:36px;padding:0;border-radius:50%;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center`;
 
 const recordingIndicatorStyle = (isDark: boolean) =>
@@ -415,26 +423,34 @@ const charCountStyle = (isDark: boolean, isOver: boolean) =>
 
 const autocompleteDropdownStyle = (isDark: boolean, custom?: CustomColors) =>
   `position:absolute;bottom:calc(100% + 8px);left:0;right:0;background:${
-    custom?.inputBackground ?? (isDark ? "#1a1a1a" : "#ffffff")
+    custom?.inputBackground ?? defaultInputBackground(isDark)
   };border:1px solid ${
-    isDark ? "#ffffff15" : "#00000015"
+    inputBorderColor(isDark, custom)
   };border-radius:12px;box-shadow:0 8px 24px ${
     isDark ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.15)"
   };z-index:200;max-height:220px;overflow-y:auto;scrollbar-width:thin;display:flex;flex-direction:column;padding:4px 0`;
 
-const autocompleteItemStyle = (isSelected: boolean, isDark: boolean) =>
+const autocompleteItemStyle = (
+  isSelected: boolean,
+  isDark: boolean,
+  custom?: CustomColors,
+) =>
   `display:flex;align-items:center;gap:12px;padding:8px 16px;cursor:pointer;background:${
     isSelected
-      ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)")
+      ? (inputSurfaceIsLight(isDark, custom)
+        ? "rgba(0,0,0,0.05)"
+        : "rgba(255,255,255,0.08)")
       : "transparent"
   };transition:background 0.1s ease`;
 
-const autocompleteItemNameStyle = (isDark: boolean) =>
-  `font-size:14px;font-weight:500;color:${isDark ? "#f3f4f6" : "#1e293b"}`;
+const autocompleteItemNameStyle = (isDark: boolean, custom?: CustomColors) =>
+  `font-size:14px;font-weight:500;color:${
+    inputSurfaceIsLight(isDark, custom) ? "#1e293b" : "#f3f4f6"
+  }`;
 
-const autocompleteItemKeyStyle = (isDark: boolean) =>
+const autocompleteItemKeyStyle = (isDark: boolean, custom?: CustomColors) =>
   `font-size:11px;font-family:monospace;color:${
-    isDark ? "#9ca3af" : "#64748b"
+    inputSurfaceIsLight(isDark, custom) ? "#64748b" : "#9ca3af"
   }`;
 
 const textareaStyle = (
@@ -447,18 +463,18 @@ const textareaStyle = (
   const transparent = isTransparentInput(custom);
   const border = transparent
     ? "none"
-    : `1px solid ${isDark ? "rgba(255,255,255,0.09)" : "rgba(24,23,21,0.09)"}`;
+    : `1px solid ${inputBorderColor(isDark, custom)}`;
   const shadow = transparent
     ? "none"
     : isDark
-    ? "0 2px 10px rgba(0,0,0,0.28)"
+    ? "0 2px 10px rgba(0,0,0,0.32)"
     : "0 2px 10px rgba(24,23,21,0.05)";
   return `width:100%;box-sizing:border-box;padding:${
     enableAttachments ? "10px 40px 10px 16px" : "10px 16px"
   };border:${border};box-shadow:${shadow};border-radius:22px;background:${
-    custom?.inputBackground ?? (isDark ? "#171614" : "#ffffff")
+    custom?.inputBackground ?? defaultInputBackground(isDark)
   };color:${
-    isDark ? "#f3f1ea" : "#181715"
+    inputTextColor(isDark, custom)
   };font-size:15px;outline:none;resize:none;box-sizing:border-box;height:${height}px;min-height:${minTextareaHeight}px;margin:0;overflow-y:${overflow};overflow-x:hidden;max-height:${maxTextareaHeight}px;line-height:1.5;transition:background 0.2s,color 0.2s,border-color 0.2s,box-shadow 0.2s;font-family:inherit;letter-spacing:0.1px;scrollbar-color:${
     custom?.scrollbarColor ?? (isDark ? "#2a2824 #141412" : "#d6d2c7 #f6f4ee")
   };scrollbar-width:thin`;
@@ -1576,7 +1592,7 @@ export class ChatBox extends LitElement {
       (this._isRecording && this._isRecordingLocked);
     const showActionBtn = showMic || showStop || showSendBtn;
     const inputBgColor = customColors?.inputBackground ??
-      (isDark ? "#171614" : "#ffffff");
+      defaultInputBackground(isDark);
     const activePrimary = customColors?.primary ?? defaultPrimary(isDark);
     const headerIsLight = customColors?.primary
       ? isLightColor(customColors.primary, isDark)
@@ -1718,6 +1734,20 @@ export class ChatBox extends LitElement {
       .scroll-down-btn:active {
         transform: translateY(0);
       }
+      [data-testid="message-input"]::placeholder {
+        color: ${inputPlaceholderColor(isDark, customColors)};
+        opacity: 1;
+      }
+      ${isTransparentInput(customColors)
+        ? ""
+        : `[data-testid="message-input"]:focus {
+        border-color: ${inputFocusBorderColor(isDark, customColors)} !important;
+        box-shadow: ${
+          isDark
+            ? "0 2px 12px rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.08)"
+            : "0 2px 12px rgba(24,23,21,0.08), 0 0 0 2px rgba(24,23,21,0.06)"
+        } !important;
+      }`}
       @keyframes fadeInUp {
         from {
           opacity: 0;
@@ -2006,8 +2036,7 @@ export class ChatBox extends LitElement {
             )
             : nothing} ${!empty(this._pendingFiles)
             ? html`
-              <div style="background:${customColors?.inputBackground ??
-                (isDark ? "#1a1a1a" : "#ffffff")}">
+              <div style="background:${inputBgColor}">
                 <div style="display:flex;gap:8px;padding:8px 12px;flex-wrap:wrap;${contentMaxWidthStyle(
                   customColors,
                 )}">
@@ -2165,6 +2194,7 @@ export class ChatBox extends LitElement {
                               style="${autocompleteItemStyle(
                                 isSelected,
                                 isDark,
+                                customColors,
                               )}"
                               @click="${() => this._selectAutocompleteItem(p)}"
                               @mouseenter="${() => {
@@ -2184,9 +2214,11 @@ export class ChatBox extends LitElement {
                               <div style="display:flex;flex-direction:column;min-width:0;flex:1">
                                 <div style="${autocompleteItemNameStyle(
                                   isDark,
+                                  customColors,
                                 )}">${p.name}</div>
                                 <div style="${autocompleteItemKeyStyle(
                                   isDark,
+                                  customColors,
                                 )}">${compactPublicKey(p.publicSignKey)}</div>
                               </div>
                             </div>
@@ -2209,7 +2241,7 @@ export class ChatBox extends LitElement {
                         data-testid="attach-button"
                         type="button"
                         @click="${this._toggleAttachMenu}"
-                        style="${attachButtonStyle(isDark)}"
+                        style="${attachButtonStyle(isDark, customColors)}"
                         title="Attach"
                       >
                         ${faPaperclip}
@@ -2300,7 +2332,12 @@ export class ChatBox extends LitElement {
                   customColors,
                 )};display:${showActionBtn
                   ? "flex"
-                  : "none"};background:${showStop
+                  : "none"};border:${showStop || showSendBtn ||
+                    isTransparentInput(customColors)
+                  ? "none"
+                  : `1px solid ${
+                    inputBorderColor(isDark, customColors)
+                  }`};background:${showStop
                   ? "#dc2626"
                   : showSendBtn
                   ? activePrimary
@@ -2308,9 +2345,10 @@ export class ChatBox extends LitElement {
                   ? "#fff"
                   : showSendBtn
                   ? (isLightColor(activePrimary, isDark) ? "#222" : "#fff")
-                  : (isDark
-                    ? "#f3f1ea"
-                    : "#181715")};touch-action:none;position:relative;overflow:hidden"
+                  : inputTextColor(
+                    isDark,
+                    customColors,
+                  )};touch-action:none;position:relative;overflow:hidden"
                 title="${showMic
                   ? (this._isMobile ? "Hold to record" : "Record audio")
                   : showStop
