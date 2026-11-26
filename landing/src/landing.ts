@@ -360,10 +360,18 @@ const heroSection = () =>
           class="lg:col-span-5 flex flex-col items-center lg:items-start text-center lg:text-left"
         >
           <div
-            class="anim-rise inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] text-[#57534e] dark:text-[#a8a298] text-xs font-medium mb-5"
+            class="anim-rise flex flex-col sm:flex-row items-center gap-4 mb-5"
           >
-            <img src="icon.png" alt="Alice&Bot logo" class="w-4 h-4 anim-float" />
-            <span>Open source · End-to-end encrypted</span>
+            <img
+              src="/icon.png"
+              alt="Alice&Bot logo"
+              class="w-24 h-24 sm:w-28 sm:h-28 object-contain anim-float shrink-0 dark:bg-[#faf9f5] dark:rounded-2xl dark:p-2"
+            />
+            <div class="flex flex-col items-center sm:items-start gap-1.5">
+              <span
+                class="inline-flex items-center px-3 py-1 rounded-full bg-white/80 dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] text-[#57534e] dark:text-[#a8a298] text-xs font-medium"
+              >Open source · End-to-end encrypted</span>
+            </div>
           </div>
 
           <h1

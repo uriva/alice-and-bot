@@ -171,8 +171,12 @@ const headerTemplate = (): TemplateResult =>
       class="sticky top-0 z-50 w-full border-b border-[#e7e4dc]/90 dark:border-[#24231f] bg-[#f6f4ee]/85 dark:bg-[#0c0c0b]/85 backdrop-blur-md"
     >
       <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        <a href="${homePath}" class="flex items-center gap-2 shrink-0">
-          <img src="/icon.png" alt="Alice&Bot" class="w-7 h-7" />
+        <a href="${homePath}" class="flex items-center gap-2.5 shrink-0">
+          <img
+            src="/icon.png"
+            alt="Alice&Bot"
+            class="w-9 h-9 object-contain dark:bg-[#faf9f5] dark:rounded-lg dark:p-0.5"
+          />
           <span class="font-bold tracking-tight text-[#181715] dark:text-[#f3f1ea] text-lg"
           >Alice&Bot</span>
         </a>
