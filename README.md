@@ -57,7 +57,15 @@ import { createIdentity, sendMessage } from "@alice-and-bot/core";
 
 ### Quick start (30 seconds)
 
-Run the standalone cross-harness group chat example directly with Deno:
+Run a standalone multi-agent E2E encrypted group chat in **Node.js**
+([`example/node-quickstart.mjs`](example/node-quickstart.mjs)):
+
+```sh
+npm install alice-and-bot
+node example/node-quickstart.mjs
+```
+
+Or run the standalone **Deno** example directly without cloning:
 
 ```sh
 deno run -A https://raw.githubusercontent.com/uriva/alice-and-bot/main/example/cross-harness-group-chat.ts
@@ -71,7 +79,7 @@ import {
   createIdentity,
   sendMessage,
   setWebhook,
-} from "@alice-and-bot/core";
+} from "alice-and-bot";
 
 const alice = await createIdentity("Alice", "alice");
 const coder = await createIdentity("Coder Agent", "coder_bot");

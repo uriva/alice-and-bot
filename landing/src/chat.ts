@@ -63,7 +63,13 @@ import {
   triggerPwaInstall,
 } from "./pwaInstall.ts";
 import { copyToClipboard } from "../../lit/components/utils.ts";
-import { chatPath, homePath, privacyPath, termsPath } from "./paths.ts";
+import {
+  chatPath,
+  homePath,
+  mcpGuidePath,
+  privacyPath,
+  termsPath,
+} from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
 import { setActiveConversationGetter } from "./activeConversationBridge.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
@@ -1549,6 +1555,22 @@ const conversationListItem = (conv: Conversation, index: number) => {
 
 // --- Empty chats ---
 
+const emptyStateLinkClass =
+  "text-xs font-medium text-[#57534e] dark:text-[#a8a298] hover:text-[#181715] dark:hover:text-[#f3f1ea] underline underline-offset-4 decoration-[#d2cec3] dark:decoration-[#3a3832] transition-colors cursor-pointer";
+
+const copyCurrentInviteLink = () => {
+  if (!credentials) return;
+  chatWithMeLink(credentials.publicSignKey)
+    .then((link) => copyToClipboard(link))
+    .then((ok) =>
+      showToast(
+        ok ? "Invite link copied!" : "Failed to copy invite link",
+        ok ? "success" : "error",
+      )
+    )
+    .catch(() => showToast("Failed to copy invite link", "error"));
+};
+
 const emptyChatsView = (sq?: string, onNewChat?: () => void) => {
   const isEmpty = !sq?.trim();
   return html`
@@ -1561,10 +1583,15 @@ const emptyChatsView = (sq?: string, onNewChat?: () => void) => {
           <img
             src="/icon.png"
             alt="Alice&Bot"
-            class="w-12 h-12 mb-3 anim-float opacity-90"
+            class="block dark:hidden w-14 h-14 mb-3 anim-float opacity-95 object-contain"
+          />
+          <img
+            src="/icon-dark.png"
+            alt="Alice&Bot"
+            class="hidden dark:block w-14 h-14 mb-3 anim-float opacity-95 object-contain"
           />
           <p class="text-sm text-[#78736a] dark:text-[#8c867c] mb-5">
-            Start a conversation
+            Start a conversation with a person or an AI agent
           </p>
           <button
             type="button"
@@ -1573,6 +1600,22 @@ const emptyChatsView = (sq?: string, onNewChat?: () => void) => {
           >
             + New Chat
           </button>
+          <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <a href="${mcpGuidePath}" class="${emptyStateLinkClass}">
+              Connect an agent (MCP)
+            </a>
+            ${credentials
+              ? html`
+                <button
+                  type="button"
+                  class="${emptyStateLinkClass}"
+                  @click="${copyCurrentInviteLink}"
+                >
+                  Copy invite link
+                </button>
+              `
+              : nothing}
+          </div>
         `
         : html`
           <div class="text-sm text-[#78736a] dark:text-[#8c867c]">
@@ -1645,7 +1688,14 @@ const newChatScreen = (onChatCreated?: () => void) => {
               }
             }}"
           />
-          <div class="${hintStyle}">Separate multiple handles with commas.</div>
+          <div class="${hintStyle}">
+            Separate multiple handles with commas. Want to message your own AI
+            agent?
+            <a
+              href="${mcpGuidePath}"
+              class="underline underline-offset-2 hover:text-[#181715] dark:hover:text-[#f3f1ea]"
+            >Set up MCP</a>.
+          </div>
           <button
             type="button"
             class="${buttonClass("default", "default", "w-full")}"

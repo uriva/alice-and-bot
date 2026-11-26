@@ -78,8 +78,8 @@ jobs:
         run: |
           VERSION="${{ steps.check.outputs.version }}"
           for i in $(seq 1 30); do
-            if npm view "alice-and-bot-mcp@${VERSION}" version >/dev/null 2>&1; then
-              echo "alice-and-bot-mcp@${VERSION} is live on npm"
+            if curl -fsSL "https://registry.npmjs.org/alice-and-bot-mcp/${VERSION}" >/dev/null 2>&1; then
+              echo "alice-and-bot-mcp@${VERSION} is live on registry.npmjs.org"
               exit 0
             fi
             sleep 10
@@ -92,4 +92,11 @@ jobs:
         run: |
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar -xz mcp-publisher
           ./mcp-publisher login github-oidc
-          ./mcp-publisher publish
+          for attempt in 1 2 3 4; do
+            if ./mcp-publisher publish; then
+              exit 0
+            fi
+            echo "MCP Registry publish attempt ${attempt} failed; retrying in 15s..."
+            sleep 15
+          done
+          exit 1
