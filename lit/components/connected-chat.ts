@@ -1322,7 +1322,13 @@ export class ConnectedChat extends LitElement {
         conversation: targetId,
         message,
       });
-    sendPromise.catch((err) => console.error("Failed to send message", err));
+    sendPromise
+      .then(() => {
+        if ((this._activeConversationId || this.conversationId) === targetId) {
+          this._messagesStream?.reconcileAfterSend?.();
+        }
+      })
+      .catch((err) => console.error("Failed to send message", err));
     this._typingNotifier?.onBlurOrSend();
   };
 
@@ -1356,6 +1362,9 @@ export class ConnectedChat extends LitElement {
         message: { type: "text", text, attachments, replyTo },
         conversation: targetId,
       });
+      if ((this._activeConversationId || this.conversationId) === targetId) {
+        this._messagesStream?.reconcileAfterSend?.();
+      }
       this._typingNotifier?.onBlurOrSend();
     } catch (err) {
       console.error("Failed to send message with attachments", err);

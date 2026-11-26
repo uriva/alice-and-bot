@@ -429,11 +429,13 @@ export type ConversationMessagesStream = {
   setConversationKey: (key: string | null) => Promise<void>;
   feedBootstrapMessages: (messages: DbMessage[], canLoadMore: boolean) => void;
   mergeMessages: (messages: DbMessage[]) => void;
+  reconcileAfterSend?: () => void;
   unsubscribe: () => void;
 };
 
 const initialDecryptBatch = 20;
 const wakeupCatchUpCooldownMs = 1500;
+const postSendReconcileDelaysMs: readonly number[] = [1500, 5000, 12000];
 
 const pruneCoveredSupplemental = (
   raw: DbMessage[] | undefined,
@@ -692,6 +694,7 @@ export const makeSubscribeConversationMessagesStream = ({
   fetchMessages = getMessagesSigned,
   canFetchDirect = isBrowserAuthCapable,
   waitForAuth = ensureInstantAuth,
+  reconcileDelaysMs = postSendReconcileDelaysMs,
 }: {
   subscribeInfiniteQuery: (
     credentials: Credentials | undefined,
@@ -702,6 +705,7 @@ export const makeSubscribeConversationMessagesStream = ({
   fetchMessages?: typeof getMessagesSigned;
   canFetchDirect?: () => boolean;
   waitForAuth?: typeof ensureInstantAuth;
+  reconcileDelaysMs?: readonly number[];
 }) =>
 (
   conversationId: string,
@@ -713,16 +717,30 @@ export const makeSubscribeConversationMessagesStream = ({
   if (publicSignKey && conversationId) {
     hintColdBootstrap(publicSignKey, { conversationId });
   }
-  const stream = createConversationMessagesStream((query, cb) =>
-    subscribeInfiniteQuery(credentials, query, cb)
-  )(conversationId, onChange, initialKey);
-
+  const postSendTimers = new Set<ReturnType<typeof setTimeout>>();
+  const clearPostSendTimers = () => {
+    postSendTimers.forEach((timer) => clearTimeout(timer));
+    postSendTimers.clear();
+  };
   const syncState = {
     cancelled: false,
     bootstrapReceived: false,
     catchUpInFlight: false,
     lastCatchUpAt: 0,
+    awaitingPostSendLiveCount: 0,
   };
+  const stream = createConversationMessagesStream((query, cb) =>
+    subscribeInfiniteQuery(credentials, query, (resp) => {
+      if (resp.data?.messages && syncState.awaitingPostSendLiveCount > 0) {
+        syncState.awaitingPostSendLiveCount = Math.max(
+          0,
+          syncState.awaitingPostSendLiveCount - 1,
+        );
+        if (syncState.awaitingPostSendLiveCount === 0) clearPostSendTimers();
+      }
+      cb(resp);
+    })
+  )(conversationId, onChange, initialKey);
 
   const pullStoredPushMessages = () => {
     if (!conversationId) return;
@@ -831,12 +849,30 @@ export const makeSubscribeConversationMessagesStream = ({
       .catch(() => {});
   }
 
+  const reconcileAfterSend = () => {
+    if (syncState.cancelled || !credentials || !conversationId) return;
+    clearPostSendTimers();
+    // Expect two live snapshots after a user send (the sent message + reply).
+    // If the live WebSocket is stalled, fallback HTTP catch-ups display both
+    // without requiring a page reload; healthy live snapshots cancel timers.
+    syncState.awaitingPostSendLiveCount = 2;
+    reconcileDelaysMs.forEach((delayMs) => {
+      const timer = setTimeout(() => {
+        postSendTimers.delete(timer);
+        catchUpFromBackend(true);
+      }, delayMs);
+      postSendTimers.add(timer);
+    });
+  };
+
   return {
     setConversationKey: stream.setConversationKey,
     feedBootstrapMessages: stream.feedBootstrapMessages,
     mergeMessages: stream.mergeMessages,
+    reconcileAfterSend,
     unsubscribe: () => {
       syncState.cancelled = true;
+      clearPostSendTimers();
       if (typeof globalThis.removeEventListener === "function") {
         globalThis.removeEventListener("focus", onVisibilityOrFocus);
       }

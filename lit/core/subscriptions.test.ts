@@ -961,3 +961,102 @@ Deno.test("opening a notification resolves conversationKey and pushed message fr
   unsubKey();
   stream.unsubscribe();
 });
+
+Deno.test("reconcileAfterSend fetches sent message and instant bot reply when live WebSocket is stalled, and cancels fallback timers when live updates arrive", async () => {
+  const keyStore = createMemoryPushKeyStore();
+  const [signPair, encPair] = await Promise.all([
+    generateKeyPair("sign"),
+    generateKeyPair("encrypt"),
+  ]);
+  const credentials = {
+    publicSignKey: signPair.publicKey,
+    privateSignKey: signPair.privateKey,
+    privateEncryptKey: encPair.privateKey,
+  };
+  const symKey = await generateSymmetricKey();
+  const conversationId = crypto.randomUUID();
+  const makeMsg = async (id: string, text: string, timestamp: number) => {
+    const inner = {
+      type: "text" as const,
+      text,
+      conversationId,
+      sentAt: timestamp,
+    };
+    const payload = await encryptSymmetric(symKey, {
+      payload: inner,
+      publicSignKey: signPair.publicKey,
+      signature: await sign(signPair.privateKey, msgToStr(inner)),
+    });
+    return { id, payload, timestamp };
+  };
+  const initialMsg = await makeMsg("m0", "earlier message", 1000);
+  const sentMsg = await makeMsg("m1", ".", 2000);
+  const botReply = await makeMsg("m2", "Sigo aquí.", 2500);
+
+  const fetchTracker = {
+    count: 0,
+    messages: [initialMsg] as Array<{
+      id: string;
+      payload: EncryptedMessage;
+      timestamp: number;
+    }>,
+  };
+  const liveHolder: {
+    push: (
+      msgs: Array<{ id: string; payload: EncryptedMessage; timestamp: number }>,
+    ) => void;
+  } = { push: () => {} };
+
+  const subscribeStream = makeSubscribeConversationMessagesStream({
+    subscribeInfiniteQuery: (_creds, _query, cb) => {
+      liveHolder.push = (messages) =>
+        cb({ data: { messages }, canLoadNextPage: false });
+      return { unsubscribe: () => {}, loadNextPage: () => {} };
+    },
+    keyStore,
+    fetchMessages: () => {
+      fetchTracker.count += 1;
+      return Promise.resolve({
+        messages: fetchTracker.messages,
+        hasMore: false,
+      });
+    },
+    canFetchDirect: () => true,
+    waitForAuth: () => Promise.resolve(),
+    reconcileDelaysMs: [15, 45],
+  });
+
+  const emitted: string[][] = [];
+  const stream = subscribeStream(
+    conversationId,
+    credentials,
+    (res) => {
+      if (res.messages) emitted.push(res.messages.map((m) => m.text));
+    },
+    symKey,
+  );
+
+  // Initial live snapshot arrives
+  liveHolder.push([initialMsg]);
+  await new Promise((r) => setTimeout(r, 30));
+  assertEquals(emitted.at(-1), ["earlier message"]);
+
+  // Live WebSocket stalls; user sends "." and bot replies instantaneously on backend
+  fetchTracker.messages = [botReply, sentMsg, initialMsg];
+  const fetchesBeforeSend = fetchTracker.count;
+  stream.reconcileAfterSend?.();
+
+  await new Promise((r) => setTimeout(r, 80));
+  assertEquals(fetchTracker.count > fetchesBeforeSend, true);
+  assertEquals(emitted.at(-1), ["Sigo aquí.", ".", "earlier message"]);
+
+  // When live WebSocket IS healthy and delivers both snapshots, fallback timers cancel with 0 HTTP fetches
+  const fetchesBeforeHealthySend = fetchTracker.count;
+  stream.reconcileAfterSend?.();
+  liveHolder.push([sentMsg, initialMsg]);
+  liveHolder.push([botReply, sentMsg, initialMsg]);
+  await new Promise((r) => setTimeout(r, 80));
+  assertEquals(fetchTracker.count, fetchesBeforeHealthySend);
+
+  stream.unsubscribe();
+});
