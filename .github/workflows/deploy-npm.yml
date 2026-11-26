@@ -25,20 +25,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Check npm token and versions
+      - name: Check npm versions
         id: check
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ -z "${NODE_AUTH_TOKEN}" ]; then
-            echo "::notice::NPM_TOKEN secret is not configured; skipping npm publish."
-            echo "should_publish_sdk=false" >> "$GITHUB_OUTPUT"
-            echo "should_publish_mcp=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
           VERSION=$(jq -r .version deno.json)
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           if npm view "alice-and-bot@${VERSION}" version >/dev/null 2>&1; then
@@ -65,16 +57,12 @@ jobs:
             | ALICEANDBOT_MCP_CONFIG_DIR=/tmp/mcp-ci-smoke node dist/npm/alice-and-bot-mcp/bin/alice-and-bot-mcp.mjs \
             | grep -q "aliceandbot_setup"
 
-      - name: Publish alice-and-bot to npm
+      - name: Publish alice-and-bot to npm (OIDC Trusted Publishing)
         if: steps.check.outputs.should_publish_sdk == 'true'
         working-directory: dist/npm/alice-and-bot
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
 
-      - name: Publish alice-and-bot-mcp to npm
+      - name: Publish alice-and-bot-mcp to npm (OIDC Trusted Publishing)
         if: steps.check.outputs.should_publish_mcp == 'true'
         working-directory: dist/npm/alice-and-bot-mcp
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
