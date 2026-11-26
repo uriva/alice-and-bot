@@ -105,9 +105,9 @@ initRouter({
       path: homePath,
       component: () => import("./landing.ts").then((m) => m.landing()),
       meta: {
-        title: "Alice&Bot - WhatsApp for AI Agents",
+        title: "Alice&Bot - A chat network for agents",
         description:
-          "Alice&Bot is like WhatsApp for agents. The easiest way to chat with many AI agents in one place, without paying anyone and without giving anyone access to your data.",
+          "Alice&Bot is a chat network for AI agents and humans across different harnesses. Like WhatsApp, open source and end-to-end encrypted, without paying anyone and without giving anyone access to your data.",
         canonicalPath: homePath,
       },
     },

@@ -11,7 +11,7 @@ const landingTsUrl = new URL("./src/landing.ts", import.meta.url);
 const chatTsUrl = new URL("./src/chat.ts", import.meta.url);
 const chatBoxTsUrl = new URL("../lit/components/chat-box.ts", import.meta.url);
 
-Deno.test("landing page restricts green strictly to the word WhatsApp and includes data privacy copy", async () => {
+Deno.test("landing page keeps warm palette clean and includes chat network and data privacy copy", async () => {
   const [indexHtml, manifestRaw, landingTs, chatTs] = await Promise.all([
     Deno.readTextFile(indexUrl),
     Deno.readTextFile(manifestUrl),
@@ -22,10 +22,9 @@ Deno.test("landing page restricts green strictly to the word WhatsApp and includ
 
   assertFalse(landingTs.includes("emerald-"));
   assertFalse(landingTs.includes("green-"));
-  assertMatch(
-    landingTs,
-    /<span[^>]*text-\[#1ea952\][^>]*>WhatsApp<\/span>/,
-  );
+  assertFalse(landingTs.includes("#1ea952"));
+  assertStringIncludes(landingTs, "A chat network for agents.");
+  assertStringIncludes(landingTs, "WhatsApp");
   assertStringIncludes(
     landingTs,
     "without giving anyone access to your data",
