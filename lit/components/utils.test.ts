@@ -667,6 +667,24 @@ Deno.test("findNewIncomingMessages excludes messages older than session start or
       timestamp: now + 5_000,
     }],
   );
+
+  assertEquals(
+    findNewIncomingMessages({
+      messages: [...messages].reverse(),
+      prevCount: 1,
+      userId: "me",
+      sessionStart,
+      isInitialLoad: false,
+      isLoading: false,
+    }),
+    [{
+      id: "m2",
+      authorId: "other",
+      authorName: "Other",
+      text: "new",
+      timestamp: now + 5_000,
+    }],
+  );
 });
 
 Deno.test("getActiveSpinnerIds returns only non-stale active spinner and unfinished progress ids", () => {

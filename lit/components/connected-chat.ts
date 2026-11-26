@@ -698,7 +698,9 @@ export const processChatState = ({
       )
       : ephemeralStreams;
   return {
-    chatMessages: withReactions.map(resolveReplyTo(msgMap)),
+    chatMessages: sortKey((m: AbstracChatMessage) => m.timestamp)(
+      withReactions.map(resolveReplyTo(msgMap)),
+    ),
     // Canvas events reach every participant but are never part of the chat
     // transcript; `chatMessages` above is already narrowed to text and edits.
     canvasEvents: verifiedMessages.filter(isCanvasEvent),

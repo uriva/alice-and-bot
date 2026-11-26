@@ -1,3 +1,4 @@
+import { sortKey } from "@uri/gamla";
 import type { AbstracChatMessage } from "./types.ts";
 import { editWindowMs } from "./utils.ts";
 
@@ -95,12 +96,24 @@ export const nextThreadId = (
   return ids[(currentIndex + delta + ids.length) % ids.length];
 };
 
+const chronological = (
+  messages: readonly AbstracChatMessage[],
+): AbstracChatMessage[] =>
+  sortKey((m: AbstracChatMessage) => m.timestamp)([...messages]);
+
+export const findLatestMessage = (
+  messages: readonly AbstracChatMessage[],
+): AbstracChatMessage | null => {
+  const ordered = chronological(messages);
+  return ordered.length > 0 ? ordered[ordered.length - 1] : null;
+};
+
 export const findLastEditableMessageId = (
   messages: readonly AbstracChatMessage[],
   userId: string,
   now: number,
 ): string | null =>
-  [...messages]
+  chronological(messages)
     .reverse()
     .find(
       (m) => m.authorId === userId && now - m.timestamp < editWindowMs,
@@ -111,16 +124,17 @@ export const stepSelectedMessageId = (
   selectedId: string | null,
   direction: ShortcutDirection,
 ): string | null => {
-  if (messages.length === 0) return null;
+  const ordered = chronological(messages);
+  if (ordered.length === 0) return null;
   if (!selectedId) {
-    return direction === "prev" ? messages[messages.length - 1].id : null;
+    return direction === "prev" ? ordered[ordered.length - 1].id : null;
   }
-  const idx = messages.findIndex((m) => m.id === selectedId);
-  if (idx === -1) return messages[messages.length - 1].id;
+  const idx = ordered.findIndex((m) => m.id === selectedId);
+  if (idx === -1) return ordered[ordered.length - 1].id;
   if (direction === "prev") {
-    return messages[Math.max(0, idx - 1)].id;
+    return ordered[Math.max(0, idx - 1)].id;
   }
-  return idx >= messages.length - 1 ? null : messages[idx + 1].id;
+  return idx >= ordered.length - 1 ? null : ordered[idx + 1].id;
 };
 
 export const shortcutHelpGroups = (

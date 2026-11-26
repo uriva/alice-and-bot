@@ -609,4 +609,35 @@ test.describe("Messenger (landing /chat)", () => {
     await expect(page.getByTestId("shortcuts-modal")).toHaveCount(0);
     await expect(page.getByTestId("title-text")).toContainText("Alpha Project");
   });
+
+  test("ArrowUp edits the newest own message and Ctrl+ArrowUp selects the newest message", async ({ page }) => {
+    await setupMessengerMocks(page, data);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    await page.getByText("Test Conversation").first().click();
+    await expect(
+      page.getByTestId("message-list").getByText(
+        "Just building some E2E tests.",
+      ),
+    ).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const input = page.getByTestId("message-input");
+    await input.click();
+    await input.press("ArrowUp");
+
+    const editInput = page.getByTestId("edit-message-input");
+    await expect(editInput).toBeVisible();
+    await expect(editInput).toHaveValue("Just building some E2E tests.");
+
+    await editInput.press("Escape");
+    await expect(input).toBeFocused();
+
+    await input.press("Control+ArrowUp");
+    const lastMsg = page.getByTestId("message").last();
+    await expect(lastMsg).toHaveAttribute("data-keyboard-selected", "");
+    await expect(lastMsg).toContainText("Just building some E2E tests.");
+  });
 });

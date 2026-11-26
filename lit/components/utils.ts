@@ -836,6 +836,6 @@ export const findNewIncomingMessages = ({
 }): AbstracChatMessage[] =>
   isLoading || isInitialLoad || prevCount <= 0 || messages.length <= prevCount
     ? []
-    : messages
+    : sortKey((m: AbstracChatMessage) => m.timestamp)(messages)
       .slice(prevCount)
       .filter((m) => m.authorId !== userId && m.timestamp > sessionStart);

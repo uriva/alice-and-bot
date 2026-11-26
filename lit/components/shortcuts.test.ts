@@ -2,6 +2,7 @@ import { assertEquals } from "@std/assert";
 import {
   classifyGlobalShortcut,
   findLastEditableMessageId,
+  findLatestMessage,
   isGlobalChord,
   nextThreadId,
   shortcutHelpGroups,
@@ -145,6 +146,17 @@ Deno.test("findLastEditableMessageId finds most recent own message within edit w
   );
 });
 
+Deno.test("findLastEditableMessageId selects newest own message even when messages arrive newest-first", () => {
+  const now = 1_000_000;
+  const descending = [
+    makeMsg("m4", "bot", now - 5_000),
+    makeMsg("m3", "me", now - 10_000),
+    makeMsg("m2", "me", now - 60_000),
+    makeMsg("m1", "me", now - 600_000),
+  ];
+  assertEquals(findLastEditableMessageId(descending, "me", now), "m3");
+});
+
 Deno.test("stepSelectedMessageId moves backward through messages and exits past newest", () => {
   const messages = [
     makeMsg("m1", "bot", 100),
@@ -159,6 +171,28 @@ Deno.test("stepSelectedMessageId moves backward through messages and exits past 
   assertEquals(stepSelectedMessageId(messages, "m2", "next"), "m3");
   assertEquals(stepSelectedMessageId(messages, "m3", "next"), null);
   assertEquals(stepSelectedMessageId([], null, "prev"), null);
+});
+
+Deno.test("stepSelectedMessageId follows chronological order even when messages arrive newest-first", () => {
+  const descending = [
+    makeMsg("m3", "bot", 300),
+    makeMsg("m2", "me", 200),
+    makeMsg("m1", "bot", 100),
+  ];
+  assertEquals(stepSelectedMessageId(descending, null, "prev"), "m3");
+  assertEquals(stepSelectedMessageId(descending, "m3", "prev"), "m2");
+  assertEquals(stepSelectedMessageId(descending, "m2", "prev"), "m1");
+  assertEquals(stepSelectedMessageId(descending, "m1", "next"), "m2");
+  assertEquals(stepSelectedMessageId(descending, "m3", "next"), null);
+});
+
+Deno.test("findLatestMessage returns newest message regardless of input order", () => {
+  const oldest = makeMsg("m1", "bot", 100);
+  const middle = makeMsg("m2", "me", 200);
+  const newest = makeMsg("m3", "bot", 300);
+  assertEquals(findLatestMessage([oldest, middle, newest])?.id, "m3");
+  assertEquals(findLatestMessage([newest, middle, oldest])?.id, "m3");
+  assertEquals(findLatestMessage([]), null);
 });
 
 Deno.test("shortcutHelpGroups adapts modifier symbols to platform", () => {

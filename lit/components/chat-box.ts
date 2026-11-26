@@ -59,6 +59,7 @@ import {
 } from "./emoji.ts";
 import {
   findLastEditableMessageId,
+  findLatestMessage,
   isGlobalChord,
   isTextInputTarget,
   stepSelectedMessageId,
@@ -853,6 +854,7 @@ export class ChatBox extends LitElement {
   private _touchStart: { x: number; y: number } | null = null;
   private _prevActiveSpinnerIds = new Set<string>();
   private _prevMessageCount = 0;
+  private _pendingEditLastOwn = false;
   private _stuckToBottom = true;
   private _loadingMore = false;
   private _prevScrollHeight = 0;
@@ -1473,9 +1475,7 @@ export class ChatBox extends LitElement {
       const replied = this.messages.find((m) => m.id === this._replyingTo?.id);
       if (replied) return replied;
     }
-    return this.messages.length > 0
-      ? this.messages[this.messages.length - 1]
-      : null;
+    return findLatestMessage(this.messages);
   }
 
   private async _handleSend() {
@@ -1702,6 +1702,7 @@ export class ChatBox extends LitElement {
       this._input = textarea.value;
     }
     this._selectedMessageId = null;
+    this._pendingEditLastOwn = false;
     this._resizeTextarea(textarea);
     this.onInputActivity?.();
     this._updateAutocomplete();
@@ -1765,6 +1766,7 @@ export class ChatBox extends LitElement {
       }
     }
     if (e.key === "Escape") {
+      this._pendingEditLastOwn = false;
       if (this._replyingTo) {
         e.preventDefault();
         e.stopPropagation();
@@ -1795,6 +1797,16 @@ export class ChatBox extends LitElement {
       e.key === "ArrowUp" && !e.ctrlKey && !e.metaKey && !e.altKey &&
       !e.shiftKey && this._input === ""
     ) {
+      const pendingOwn = pruneOptimistic(
+        this.messages,
+        this._optimisticMessages,
+        this.userId,
+      );
+      if (nonempty(pendingOwn)) {
+        e.preventDefault();
+        this._pendingEditLastOwn = true;
+        return;
+      }
       const editableId = findLastEditableMessageId(
         this.messages,
         this.userId,
@@ -1969,6 +1981,7 @@ export class ChatBox extends LitElement {
     if (changed.has("title") && prevTitle !== undefined) {
       this._isEditingTitle = false;
       this._selectedMessageId = null;
+      this._pendingEditLastOwn = false;
     }
     if (
       this._selectedMessageId &&
@@ -1997,6 +2010,17 @@ export class ChatBox extends LitElement {
     );
     if (pruned !== this._optimisticMessages) {
       this._optimisticMessages = pruned;
+    }
+    if (this._pendingEditLastOwn && empty(pruned)) {
+      this._pendingEditLastOwn = false;
+      if (this._input === "") {
+        const editableId = findLastEditableMessageId(
+          this.messages,
+          this.userId,
+          Date.now(),
+        );
+        if (editableId) this._findMessageComponent(editableId)?.startEdit();
+      }
     }
 
     if (this._isSending) {
@@ -2521,7 +2545,6 @@ export class ChatBox extends LitElement {
                   (entry) =>
                     this._renderTimelineEntry(
                       entry,
-                      allMsgs,
                       customColors,
                       isDark,
                       quickReplyEntryId,
@@ -3037,7 +3060,6 @@ export class ChatBox extends LitElement {
 
   private _renderTimelineEntry(
     entry: TimelineEntry,
-    allMsgs: AbstracChatMessage[],
     customColors: CustomColors | undefined,
     isDark: boolean,
     quickReplyEntryId: string | null,
@@ -3074,13 +3096,10 @@ export class ChatBox extends LitElement {
       text: entry.stream.text,
       timestamp: entry.stream.timestamp,
     };
-    const prevMsg = allMsgs.filter((message) =>
-      message.timestamp <= entry.stream.timestamp
-    ).pop();
     return html`
       <chat-message
         .msg="${streamMsg}"
-        .prev="${prevMsg}"
+        .prev="${entry.prevMsg}"
         .isOwn="${streamMsg.authorId === this.userId}"
         .streamActive="${entry.stream.active}"
         .hideQuickReplies="${entry.stream.elementId !== quickReplyEntryId}"
