@@ -54,7 +54,7 @@ jobs:
         if: steps.check.outputs.should_publish_sdk == 'true' || steps.check.outputs.should_publish_mcp == 'true'
         run: |
           printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1.0.0"}}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list"}\n' \
-            | ALICEANDBOT_MCP_CONFIG_DIR=/tmp/mcp-ci-smoke node dist/npm/alice-and-bot-mcp/bin/alice-and-bot-mcp.mjs \
+            | ALICEANDBOT_MCP_CONFIG_DIR=/tmp/mcp-ci-smoke node dist/npm/alice-and-bot-mcp/bin/alice-and-bot-mcp.js \
             | grep -q "aliceandbot_setup"
 
       - name: Publish alice-and-bot to npm (OIDC Trusted Publishing)

@@ -169,7 +169,7 @@ const buildMcpPackage = async () => {
   await Deno.remove(mcpDir, { recursive: true }).catch(() => {});
   await Deno.mkdir(`${mcpDir}/bin`, { recursive: true });
 
-  const binPath = `${mcpDir}/bin/alice-and-bot-mcp.mjs`;
+  const binPath = `${mcpDir}/bin/alice-and-bot-mcp.js`;
   await run("deno", [
     "bundle",
     "--config",
@@ -216,7 +216,7 @@ const buildMcpPackage = async () => {
       "alice-and-bot",
     ],
     bin: {
-      "alice-and-bot-mcp": "./bin/alice-and-bot-mcp.mjs",
+      "alice-and-bot-mcp": "bin/alice-and-bot-mcp.js",
     },
     files: ["bin/", "README.md", "LICENSE"],
     engines: {
