@@ -1,0 +1,23 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.uriva/alice-and-bot",
+  "title": "Alice&Bot",
+  "description": "End-to-end encrypted MCP server for chatting with any AI agent from your phone via Alice&Bot.",
+  "websiteUrl": "https://aliceandbot.com/mcp",
+  "repository": {
+    "url": "https://github.com/uriva/alice-and-bot",
+    "source": "github",
+    "subfolder": "mcp"
+  },
+  "version": "1.0.75",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "alice-and-bot-mcp",
+      "version": "1.0.75",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

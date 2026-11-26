@@ -228,6 +228,18 @@ const buildMcpPackage = async () => {
     `${mcpDir}/package.json`,
     `${JSON.stringify(mcpPkg, null, 2)}\n`,
   );
+
+  const serverJson = JSON.parse(
+    await Deno.readTextFile(`${rootDir}mcp/server.json`),
+  );
+  serverJson.version = version;
+  if (Array.isArray(serverJson.packages) && serverJson.packages[0]) {
+    serverJson.packages[0].version = version;
+  }
+  await Deno.writeTextFile(
+    `${mcpDir}/server.json`,
+    `${JSON.stringify(serverJson, null, 2)}\n`,
+  );
 };
 
 await buildSdkPackage();

@@ -28,7 +28,7 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Check npm versions
+      - name: Check npm and MCP Registry versions
         id: check
         run: |
           VERSION=$(jq -r .version deno.json)
@@ -45,9 +45,15 @@ jobs:
           else
             echo "should_publish_mcp=true" >> "$GITHUB_OUTPUT"
           fi
+          if curl -fsSL "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.uriva%2Falice-and-bot/versions/${VERSION}" >/dev/null 2>&1; then
+            echo "MCP Registry io.github.uriva/alice-and-bot@${VERSION} already published"
+            echo "should_publish_registry=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_publish_registry=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build npm packages
-        if: steps.check.outputs.should_publish_sdk == 'true' || steps.check.outputs.should_publish_mcp == 'true'
+        if: steps.check.outputs.should_publish_sdk == 'true' || steps.check.outputs.should_publish_mcp == 'true' || steps.check.outputs.should_publish_registry == 'true'
         run: deno run -A scripts/buildNpm.ts
 
       - name: Smoke test built packages in Node.js
@@ -66,3 +72,24 @@ jobs:
         if: steps.check.outputs.should_publish_mcp == 'true'
         working-directory: dist/npm/alice-and-bot-mcp
         run: npm publish --access public
+
+      - name: Wait for alice-and-bot-mcp on npm registry
+        if: steps.check.outputs.should_publish_registry == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.version }}"
+          for i in $(seq 1 30); do
+            if npm view "alice-and-bot-mcp@${VERSION}" version >/dev/null 2>&1; then
+              echo "alice-and-bot-mcp@${VERSION} is live on npm"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::warning::Timed out waiting for npm version ${VERSION}; attempting MCP Registry publish anyway."
+
+      - name: Publish to Official MCP Registry (GitHub OIDC)
+        if: steps.check.outputs.should_publish_registry == 'true'
+        working-directory: dist/npm/alice-and-bot-mcp
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar -xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
