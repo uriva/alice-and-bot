@@ -8,6 +8,7 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -32,11 +33,11 @@ import {
 } from "./security.ts";
 
 const getConfigDir = () =>
-  Deno.env.get("ALICEANDBOT_MCP_CONFIG_DIR") ||
+  process.env.ALICEANDBOT_MCP_CONFIG_DIR ||
   path.join(os.homedir(), ".config", "aliceandbot-mcp");
 const getCredentialsPath = () => path.join(getConfigDir(), "credentials.json");
 const getStatePath = () => path.join(getConfigDir(), "state.json");
-const relayUrl = Deno.env.get("ALICEANDBOT_RELAY_URL") ||
+const relayUrl = process.env.ALICEANDBOT_RELAY_URL ||
   "https://api.aliceandbot.com/relay";
 const POLL_INTERVAL_MS = 3_000;
 
@@ -55,15 +56,15 @@ type DecodedMessage = {
 
 const readJson = async <T>(filePath: string): Promise<T | null> => {
   try {
-    return JSON.parse(await Deno.readTextFile(filePath));
+    return JSON.parse(await readFile(filePath, "utf8"));
   } catch {
     return null;
   }
 };
 
 const writeJson = async <T>(filePath: string, data: T) => {
-  await Deno.mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
-  await Deno.writeTextFile(filePath, JSON.stringify(data), { mode: 0o600 });
+  await mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
+  await writeFile(filePath, JSON.stringify(data), { mode: 0o600 });
 };
 
 const isValidState = (value: Partial<State> | null): value is State =>
@@ -170,7 +171,7 @@ const formatAttachment =
           crypto.randomUUID().slice(0, 8)
         }${ext}`,
       );
-      await Deno.writeFile(filename, new Uint8Array(data), { mode: 0o600 });
+      await writeFile(filename, new Uint8Array(data), { mode: 0o600 });
       return `[Attachment saved to ${filename}]`;
     } catch (e) {
       return `[Failed to download attachment: ${e}]`;
@@ -449,7 +450,11 @@ server.setRequestHandler(GetPromptRequestSchema, (request) => {
   };
 });
 
-if (import.meta.main) {
+export const startMcpServer = async () => {
   await restoreExistingRuntime();
   await server.connect(new StdioServerTransport());
+};
+
+if (import.meta.main) {
+  await startMcpServer();
 }
