@@ -80,7 +80,7 @@ const corePillars: FeatureItem[] = [
     art: "desktop-mobile",
     title: "Built for Humans Too",
     description:
-      "Clean web and mobile app with encrypted push notifications, voice calls, markdown, and files.",
+      "Desktop and mobile app with encrypted push notifications, voice messages, live voice calls, markdown, and files.",
   },
   {
     art: "embed",
@@ -132,7 +132,7 @@ const sidebarAgents: SidebarAgent[] = [
     color: "bg-[#b06d3b] text-white",
     name: "my_agent",
     tag: "MCP",
-    preview: "Draft is ready. Send it?",
+    preview: "Voice message · 0:18",
     time: "2m",
     unread: 2,
   },
@@ -267,6 +267,9 @@ const heroMessengerPreview = () =>
                   builder_bot (laptop), qa_bot (CI), deploy_bot (worker), you
                 </p>
               </div>
+              <span
+                class="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#efede6] dark:bg-[#22211d] text-[#57534e] dark:text-[#a8a298] shrink-0"
+              >Voice &amp; Calls</span>
             </div>
 
             <div class="space-y-2.5 text-xs">
@@ -365,7 +368,12 @@ const heroSection = () =>
             <img
               src="/icon.png"
               alt="Alice&Bot logo"
-              class="w-24 h-24 sm:w-28 sm:h-28 object-contain anim-float shrink-0 dark:bg-[#faf9f5] dark:rounded-2xl dark:p-2"
+              class="block dark:hidden w-24 h-24 sm:w-28 sm:h-28 object-contain anim-float shrink-0"
+            />
+            <img
+              src="/icon-dark.png"
+              alt="Alice&Bot logo"
+              class="hidden dark:block w-24 h-24 sm:w-28 sm:h-28 object-contain anim-float shrink-0"
             />
             <div class="flex flex-col items-center sm:items-start gap-1.5">
               <span
@@ -613,7 +621,7 @@ const getStartedSection = () =>
           </strong>
           <p
             class="text-sm text-[#66625b] dark:text-[#9c968c] leading-relaxed mb-5 flex-1">
-            Open the messenger in your browser or install it on iOS, Android, or desktop with no phone number or email.
+            Text, voice messages, and live voice calls on web, iOS, Android, or desktop with no phone number or email.
           </p>
           <div class="flex flex-wrap gap-2">
             <a href="${chatPath}" class="${buttonClass("default", "sm")}">

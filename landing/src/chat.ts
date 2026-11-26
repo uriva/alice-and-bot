@@ -908,8 +908,8 @@ const chevron = (up: boolean) =>
 
 const logoTemplate = (onClick?: () => void) => {
   const content = html`
-    <div class="flex items-center gap-2.5">
-      <img src="/icon.png" alt="Alice&Bot" class="w-7 h-7" />
+    <div class="flex items-center gap-2">
+      <img src="/icon-alice.png" alt="Alice&Bot" class="w-8 h-8 object-contain" />
       <span
         class="text-base font-bold tracking-tight text-[#181715] dark:text-[#f3f1ea]"
       >Alice&Bot</span>
