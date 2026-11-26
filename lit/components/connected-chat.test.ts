@@ -436,16 +436,19 @@ Deno.test(
   },
 );
 
-Deno.test("chat-box renders Rename Chat option and dispatches rename-conversation event", async () => {
+Deno.test("chat-box renames inline in the header without a redundant context menu item", async () => {
   const code = await Deno.readTextFile("./lit/components/chat-box.ts");
-  assertEquals(code.includes("Rename Chat"), true);
+  assertEquals(code.includes("Rename Chat"), false);
+  assertEquals(code.includes("menu-rename-chat"), false);
+  assertEquals(code.includes('data-testid="rename-conversation-input"'), true);
   assertEquals(code.includes("rename-conversation"), true);
 });
 
-Deno.test("connected-chat connects rename-conversation event and calls renameConversation", async () => {
+Deno.test("connected-chat handles inline rename-conversation event without a modal dialog", async () => {
   const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
   assertEquals(code.includes("@rename-conversation"), true);
   assertEquals(code.includes("renameConversation("), true);
+  assertEquals(code.includes("Rename Chat"), false);
 });
 
 Deno.test("connected-chat subscribes to messages in parallel with conversation key without re-subscribing", async () => {

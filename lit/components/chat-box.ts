@@ -377,6 +377,13 @@ const renderReplyBar = (
 const headerButtonStyle =
   "background:transparent;border:none;cursor:pointer;color:inherit;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;padding:0;font-size:16px;line-height:1;flex-shrink:0";
 
+const inlineTitleInputStyle = (headerIsLight: boolean) =>
+  `width:100%;max-width:240px;box-sizing:border-box;padding:1px 8px;margin:0;border-radius:6px;border:1px solid ${
+    headerIsLight ? "rgba(24,23,21,0.22)" : "rgba(255,255,255,0.22)"
+  };background:${
+    headerIsLight ? "rgba(24,23,21,0.05)" : "rgba(255,255,255,0.08)"
+  };color:inherit;font:inherit;letter-spacing:inherit;text-align:center;outline:none;line-height:1.35`;
+
 const messageContainerStyle = (isDark: boolean, custom?: CustomColors) =>
   `flex-grow:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-color:${
     custom?.scrollbarColor ?? (isDark ? "#2a2a2a #111" : "#cbd5e1 #e2e8f0")
@@ -595,6 +602,8 @@ export class ChatBox extends LitElement {
     _replyingTo: { state: true },
     _autocompleteState: { state: true },
     _showScrollDownButton: { state: true },
+    _isEditingTitle: { state: true },
+    _titleDraft: { state: true },
   };
 
   declare messages: AbstracChatMessage[];
@@ -685,6 +694,8 @@ export class ChatBox extends LitElement {
     selectedIndex: number;
   } | null;
   declare private _showScrollDownButton: boolean;
+  declare private _isEditingTitle: boolean;
+  declare private _titleDraft: string;
 
   constructor() {
     super();
@@ -728,6 +739,8 @@ export class ChatBox extends LitElement {
     this._replyingTo = null;
     this._autocompleteState = null;
     this._showScrollDownButton = false;
+    this._isEditingTitle = false;
+    this._titleDraft = "";
   }
 
   private _messagesContainerEl: HTMLDivElement | null = null;
@@ -836,12 +849,55 @@ export class ChatBox extends LitElement {
     this.onStartCall?.();
   }
 
-  private _handleMenuRenameConversation = (e: Event) => {
+  private _startEditingTitle = (e: Event) => {
+    if (!this.credentials) return;
     e.stopPropagation();
     this._showMenu = false;
+    this._titleDraft = this.title;
+    this._isEditingTitle = true;
+    this.updateComplete.then(() => {
+      const input = this.shadowRoot?.querySelector<HTMLInputElement>(
+        '[data-testid="rename-conversation-input"]',
+      );
+      input?.focus();
+      input?.select();
+    }).catch(() => {});
+  };
+
+  private _onTitleDraftInput = (e: Event) => {
+    if (e.target instanceof HTMLInputElement) {
+      this._titleDraft = e.target.value;
+    }
+  };
+
+  private _cancelEditingTitle = () => {
+    this._isEditingTitle = false;
+    this._titleDraft = "";
+  };
+
+  private _commitEditingTitle = () => {
+    if (!this._isEditingTitle) return;
+    const trimmed = this._titleDraft.trim();
+    this._isEditingTitle = false;
+    this._titleDraft = "";
+    if (!trimmed || trimmed === this.title) return;
     this.dispatchEvent(
-      new CustomEvent("rename-conversation", { bubbles: true, composed: true }),
+      new CustomEvent("rename-conversation", {
+        bubbles: true,
+        composed: true,
+        detail: { title: trimmed },
+      }),
     );
+  };
+
+  private _onTitleDraftKeydown = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      this._commitEditingTitle();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      this._cancelEditingTitle();
+    }
   };
 
   private _handleMenuNewThread = (e: Event) => {
@@ -889,13 +945,6 @@ export class ChatBox extends LitElement {
         `
         : nothing} ${this.credentials
         ? html`
-          <div
-            class="menu-item"
-            data-testid="menu-rename-chat"
-            @click="${this._handleMenuRenameConversation}"
-          >
-            Rename Chat
-          </div>
           <div
             class="menu-item"
             @click="${this._handleMenuNewThread}"
@@ -1489,6 +1538,9 @@ export class ChatBox extends LitElement {
     }
 
     const prevTitle = changed.get("title");
+    if (changed.has("title") && prevTitle !== undefined) {
+      this._isEditingTitle = false;
+    }
     if (
       changed.has("title") &&
       prevTitle !== undefined &&
@@ -1812,20 +1864,36 @@ export class ChatBox extends LitElement {
                   `
                   : nothing}
                 <div style="flex:1;display:flex;justify-content:center;min-width:0;overflow:hidden">
-                  <div
-                    data-testid="title-text"
-                    class="${this.credentials ? "title-editable" : ""}"
-                    title="${this.credentials ? "Rename chat" : ""}"
-                    @click="${this.credentials
-                      ? this._handleMenuRenameConversation
-                      : undefined}"
-                    style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-                  >
-                    <span style="overflow:hidden;text-overflow:ellipsis">${this
-                      .title}</span>${this.credentials
-                      ? html`<span class="title-edit-icon">${faPen}</span>`
-                      : nothing}
-                  </div>
+                  ${this._isEditingTitle
+                    ? html`
+                      <input
+                        type="text"
+                        data-testid="rename-conversation-input"
+                        maxlength="100"
+                        aria-label="Rename chat"
+                        .value="${this._titleDraft}"
+                        style="${inlineTitleInputStyle(headerIsLight)}"
+                        @input="${this._onTitleDraftInput}"
+                        @keydown="${this._onTitleDraftKeydown}"
+                        @blur="${this._commitEditingTitle}"
+                      />
+                    `
+                    : html`
+                      <div
+                        data-testid="title-text"
+                        class="${this.credentials ? "title-editable" : ""}"
+                        title="${this.credentials ? "Click to rename" : ""}"
+                        @click="${this.credentials
+                          ? this._startEditingTitle
+                          : undefined}"
+                        style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                      >
+                        <span style="overflow:hidden;text-overflow:ellipsis">${this
+                          .title}</span>${this.credentials
+                          ? html`<span class="title-edit-icon">${faPen}</span>`
+                          : nothing}
+                      </div>
+                    `}
                 </div>
                 ${this._renderHeaderMenu()} ${this.onClose
                   ? html`

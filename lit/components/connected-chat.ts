@@ -244,12 +244,14 @@ const closeButtonStyle = (isDark: boolean) =>
     isDark ? "#f4f4f4" : "#222"
   };transition:background 0.15s;align-self:center;margin-top:8px`;
 
-const popupInputStyle = (isDark: boolean) =>
-  `width:100%;padding:10px 12px;border-radius:8px;border:1px solid ${
-    isDark ? "#4b5563" : "#d1d5db"
-  };background:${isDark ? "#2a2a2a" : "#ffffff"};color:${
-    isDark ? "#ffffff" : "#000000"
-  };font-size:14px;box-sizing:border-box;outline:none`;
+const sidebarInlineRenameInputStyle = (isDark: boolean) =>
+  `width:100%;box-sizing:border-box;padding:1px 6px;margin:0;border-radius:4px;border:1px solid ${
+    isDark ? "rgba(255,255,255,0.24)" : "rgba(24,23,21,0.22)"
+  };background:${
+    isDark ? "rgba(255,255,255,0.08)" : "rgba(24,23,21,0.05)"
+  };color:${
+    isDark ? "#f3f1ea" : "#181715"
+  };font-size:13px;font-weight:500;line-height:18px;outline:none`;
 
 const sidebarRenameButtonStyle = (
   isDark: boolean,
@@ -816,9 +818,8 @@ export class ConnectedChat extends LitElement {
   private _copiedParticipantId: string | null = null;
   private _showSecretIdentityPopup = false;
   private _showImportIdentityPopup = false;
-  private _showRenamePopup = false;
-  private _renameTargetId = "";
-  private _renameInput = "";
+  private _editingSidebarConvId: string | null = null;
+  private _sidebarRenameInput = "";
   private _renaming = false;
   private _qrCodeDataUrl = "";
   private _transferUrl = "";
@@ -1491,51 +1492,61 @@ export class ConnectedChat extends LitElement {
       );
   }
 
-  private _openRenamePopup = (convId: string, currentTitle: string) => {
+  private _startSidebarRename = (convId: string, currentTitle: string) => {
     if (!this.credentials || !convId) return;
-    this._renameTargetId = convId;
-    this._renameInput = currentTitle;
-    this._renaming = false;
-    this._showRenamePopup = true;
+    this._editingSidebarConvId = convId;
+    this._sidebarRenameInput = currentTitle;
     this.requestUpdate();
     this.updateComplete.then(() => {
       const input = this.querySelector<HTMLInputElement>(
-        "#rename-conversation-input",
+        '[data-testid="sidebar-rename-input"]',
       );
       input?.focus();
       input?.select();
     }).catch(() => {});
   };
 
-  private _handleOpenRename = () => {
-    const targetId = this._activeConversationId || this.conversationId;
-    this._openRenamePopup(targetId, this._currentDisplayTitle());
-  };
-
-  private _handleCloseRename = () => {
-    this._showRenamePopup = false;
-    this._renaming = false;
-    this.requestUpdate();
-  };
-
-  private _handleRenameInput = (e: Event) => {
-    this._renameInput = (e.target as HTMLInputElement).value;
-  };
-
-  private _handleRenameKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      this._handleRenameSubmit();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      this._handleCloseRename();
+  private _onSidebarRenameInput = (e: Event) => {
+    if (e.target instanceof HTMLInputElement) {
+      this._sidebarRenameInput = e.target.value;
     }
   };
 
-  private _handleRenameSubmit = async () => {
-    const trimmed = this._renameInput.trim();
-    const convId = this._renameTargetId || this._activeConversationId ||
-      this.conversationId;
+  private _cancelSidebarRename = () => {
+    this._editingSidebarConvId = null;
+    this._sidebarRenameInput = "";
+    this.requestUpdate();
+  };
+
+  private _commitSidebarRename = () => {
+    const convId = this._editingSidebarConvId;
+    if (!convId) return;
+    const trimmed = this._sidebarRenameInput.trim();
+    this._editingSidebarConvId = null;
+    this._sidebarRenameInput = "";
+    this.requestUpdate();
+    if (trimmed) this._submitRename(convId, trimmed);
+  };
+
+  private _onSidebarRenameKeydown = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      this._commitSidebarRename();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      this._cancelSidebarRename();
+    }
+  };
+
+  private _handleRenameConversation = (
+    e: CustomEvent<{ title?: string }>,
+  ) => {
+    const trimmed = e.detail?.title?.trim();
+    const convId = this._activeConversationId || this.conversationId;
+    if (trimmed && convId) this._submitRename(convId, trimmed);
+  };
+
+  private _submitRename = async (convId: string, trimmed: string) => {
     if (!trimmed || !this.credentials || !convId || this._renaming) return;
     this._renaming = true;
     this.requestUpdate();
@@ -1567,7 +1578,6 @@ export class ConnectedChat extends LitElement {
           }),
         );
       }
-      this._showRenamePopup = false;
     } catch (err) {
       if (convId === activeId) this._conversationTitle = prevTitle;
       console.error("Failed to rename conversation", err);
@@ -1886,14 +1896,30 @@ export class ConnectedChat extends LitElement {
           ></chat-avatar>
           <div style="${sidebarItemBodyStyle}">
             <div style="${sidebarItemTopRowStyle}">
-              <div style="${sidebarItemTitleStyle(
-                isDark,
-                isSelected,
-                this.customColors,
-              )}">
-                ${displayName}
-              </div>
-              ${timeLabel
+              ${this._editingSidebarConvId === conv.id
+                ? html`
+                  <input
+                    type="text"
+                    data-testid="sidebar-rename-input"
+                    maxlength="100"
+                    aria-label="Rename chat"
+                    .value="${this._sidebarRenameInput}"
+                    style="${sidebarInlineRenameInputStyle(isDark)}"
+                    @click="${(e: Event) => e.stopPropagation()}"
+                    @input="${this._onSidebarRenameInput}"
+                    @keydown="${this._onSidebarRenameKeydown}"
+                    @blur="${this._commitSidebarRename}"
+                  />
+                `
+                : html`
+                  <div style="${sidebarItemTitleStyle(
+                    isDark,
+                    isSelected,
+                    this.customColors,
+                  )}">
+                    ${displayName}
+                  </div>
+                `} ${timeLabel && this._editingSidebarConvId !== conv.id
                 ? html`
                   <span style="${sidebarItemTimeStyle(
                     isDark,
@@ -1917,7 +1943,7 @@ export class ConnectedChat extends LitElement {
             style="${sidebarRenameButtonStyle(isDark, this.customColors)}"
             @click="${(e: Event) => {
               e.stopPropagation();
-              this._openRenamePopup(conv.id, displayName);
+              this._startSidebarRename(conv.id, displayName);
             }}"
           >
             ${faPen}
@@ -2004,7 +2030,7 @@ export class ConnectedChat extends LitElement {
         .emptyMessage="${this.emptyMessage}"
         .suggestedMessages="${this.suggestedMessages}"
         @new-thread="${this._handleNewThread}"
-        @rename-conversation="${this._handleOpenRename}"
+        @rename-conversation="${this._handleRenameConversation}"
         @show-participants="${this._handleShowParticipants}"
         @secret-identity="${this._handleSecretIdentity}"
         @import-identity="${this._handleImportIdentity}"
@@ -2228,52 +2254,6 @@ export class ConnectedChat extends LitElement {
                     @click="${this._handleImportSubmit}"
                   >
                     ${this._importing ? "Importing..." : "Import"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          `
-          : nothing} ${this._showRenamePopup
-          ? html`
-            <div style="${participantsOverlayStyle}" @click="${this
-              ._handleCloseRename}">
-              <div style="${participantsPopupStyle(isDark)}" @click="${(
-                e: Event,
-              ) => e.stopPropagation()}">
-                <h3 style="${popupTitleStyle(isDark)}">Rename Chat</h3>
-                <input
-                  type="text"
-                  id="rename-conversation-input"
-                  data-testid="rename-conversation-input"
-                  maxlength="100"
-                  placeholder="Chat name"
-                  .value="${this._renameInput}"
-                  style="${popupInputStyle(isDark)}"
-                  @input="${this._handleRenameInput}"
-                  @keydown="${this._handleRenameKeyDown}"
-                />
-                <div style="display:flex;gap:8px;justify-content:center;width:100%">
-                  <button
-                    type="button"
-                    style="${closeButtonStyle(
-                      isDark,
-                    )};flex:1;padding:10px;border-radius:8px;cursor:pointer;margin-top:0"
-                    @click="${this._handleCloseRename}"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    data-testid="rename-conversation-save"
-                    style="${copyButtonStyle(
-                      isDark,
-                    )};flex:1;padding:10px;border-radius:8px;background:${isDark
-                      ? "#3b82f6"
-                      : "#2563eb"};color:#ffffff;cursor:pointer"
-                    ?disabled="${this._renaming || !this._renameInput.trim()}"
-                    @click="${this._handleRenameSubmit}"
-                  >
-                    ${this._renaming ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>
