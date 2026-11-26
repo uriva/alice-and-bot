@@ -28,6 +28,11 @@ const maxStackedLines = 5;
 const maxPreviewLength = 160;
 const avatarSizePx = 192;
 const avatarHues = [215, 16, 36, 258, 342, 198, 28, 236];
+const dmAlertCooldownsMs = [15_000, 60_000, 180_000];
+const groupAlertCooldownsMs = [30_000, 120_000, 300_000];
+const globalBurstCooldownMs = 4_000;
+const gentleMessageVibratePattern = [70];
+const incomingCallVibratePattern = [250, 150, 250, 150, 250];
 
 export type PushPayloadData = {
   type?: string;
@@ -43,6 +48,15 @@ export type PushPayloadData = {
   timestamp?: number;
   lines?: string[];
   unreadCount?: number;
+  lastAlertedAt?: number;
+  alertCount?: number;
+};
+
+export type NotificationAlertDecision = {
+  shouldAlert: boolean;
+  silent: boolean;
+  renotify: boolean;
+  vibrate?: number[];
 };
 
 export type NotificationActionDef = {
@@ -60,6 +74,7 @@ export type ShownNotificationRecord = {
   badge: string;
   silent: boolean;
   renotify: boolean;
+  vibrate?: number[];
   data: Record<string, unknown>;
   actions: NotificationActionDef[];
   close: () => void;
@@ -533,12 +548,103 @@ const readStoredLines = (existingData: unknown): string[] => {
   );
 };
 
-const readStoredUnreadCount = (existingData: unknown): number =>
-  isPlainObject(existingData) &&
-    typeof existingData.unreadCount === "number" &&
-    existingData.unreadCount > 0
-    ? existingData.unreadCount
+const readStoredPositiveNumber = (
+  existingData: unknown,
+  key: string,
+): number => {
+  if (!isPlainObject(existingData)) return 0;
+  const value = existingData[key];
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
     : 0;
+};
+
+const readStoredUnreadCount = (existingData: unknown): number =>
+  readStoredPositiveNumber(existingData, "unreadCount");
+
+const findLastGlobalAlertedAt = (
+  notifications: readonly { data?: unknown }[],
+): number =>
+  notifications.reduce(
+    (latest, n) =>
+      Math.max(latest, readStoredPositiveNumber(n.data, "lastAlertedAt")),
+    0,
+  );
+
+const isAnyChatWindowVisible = (
+  clients: readonly WindowClientLike[],
+): boolean =>
+  clients.some(
+    (client) =>
+      isWindowClientVisible(client) &&
+      parseUrlSafe(client.url)?.pathname === "/chat",
+  );
+
+const silentAlertDecision: NotificationAlertDecision = {
+  shouldAlert: false,
+  silent: true,
+  renotify: false,
+};
+
+export const decideNotificationAlert = ({
+  messageType,
+  isGroupChat,
+  anyChatWindowVisible,
+  hasExistingConversationNotification,
+  prevAlertCount,
+  prevLastAlertedAt,
+  lastGlobalAlertedAt,
+  now,
+}: {
+  messageType?: InternalMessage["type"];
+  isGroupChat?: boolean;
+  anyChatWindowVisible: boolean;
+  hasExistingConversationNotification: boolean;
+  prevAlertCount: number;
+  prevLastAlertedAt: number;
+  lastGlobalAlertedAt: number;
+  now: number;
+}): NotificationAlertDecision => {
+  if (messageType === "call") {
+    return {
+      shouldAlert: true,
+      silent: false,
+      renotify: true,
+      vibrate: incomingCallVibratePattern,
+    };
+  }
+  if (messageType === "edit" || messageType === "reaction") {
+    return silentAlertDecision;
+  }
+  if (anyChatWindowVisible) {
+    return silentAlertDecision;
+  }
+  if (
+    hasExistingConversationNotification &&
+    prevAlertCount > 0 &&
+    prevLastAlertedAt > 0
+  ) {
+    const schedule = isGroupChat ? groupAlertCooldownsMs : dmAlertCooldownsMs;
+    const cooldownMs =
+      schedule[Math.min(prevAlertCount - 1, schedule.length - 1)];
+    const elapsed = now - prevLastAlertedAt;
+    if (elapsed >= 0 && elapsed < cooldownMs) {
+      return silentAlertDecision;
+    }
+  }
+  if (lastGlobalAlertedAt > 0) {
+    const globalElapsed = now - lastGlobalAlertedAt;
+    if (globalElapsed >= 0 && globalElapsed < globalBurstCooldownMs) {
+      return silentAlertDecision;
+    }
+  }
+  return {
+    shouldAlert: true,
+    silent: false,
+    renotify: true,
+    vibrate: gentleMessageVibratePattern,
+  };
+};
 
 export const syncAppBadgeFromNotifications = async ({
   registration,
@@ -683,6 +789,7 @@ export const handleServiceWorkerPush = async ({
   clearAppBadge,
   fetchLatestCiphertext = defaultFetchLatestCiphertext,
   fetchFn = globalThis.fetch,
+  now = Date.now,
 }: {
   data: PushPayloadData;
   registration: NotificationRegistrationLike;
@@ -692,6 +799,7 @@ export const handleServiceWorkerPush = async ({
   clearAppBadge?: () => Promise<unknown>;
   fetchLatestCiphertext?: typeof defaultFetchLatestCiphertext;
   fetchFn?: typeof fetch;
+  now?: () => number;
 }): Promise<void> => {
   const tag = data.conversationId || "alice-chat";
   const windowClients = await clients.matchAll({
@@ -749,21 +857,7 @@ export const handleServiceWorkerPush = async ({
     : fallbackPreviewBody(data);
   if (preview === null) return;
 
-  const existing = await registration.getNotifications({ tag });
-  const prevData = existing[0]?.data;
-  const prevLines = readStoredLines(prevData);
-  const prevCount = readStoredUnreadCount(prevData);
-  const nextLine = formatLineForStack(data, preview);
-  const isEdit = decrypted?.type === "edit" && nonempty(prevLines);
-  const lines = isEdit
-    ? [...prevLines.slice(0, -1), nextLine]
-    : [...prevLines, nextLine].slice(-maxStackedLines);
-  const unreadCount = isEdit ? prevCount : prevCount + 1;
   const baseTitle = resolveBaseTitle(data);
-  const title = unreadCount > 1
-    ? `${baseTitle} (${unreadCount} messages)`
-    : baseTitle;
-
   const icon = await resolveSenderAvatarIcon({
     senderAvatar: data.senderAvatar,
     senderPublicSignKey: data.senderPublicSignKey,
@@ -771,19 +865,58 @@ export const handleServiceWorkerPush = async ({
     fetchFn,
   }).catch(() => defaultNotificationIconPath);
 
+  const currentNow = now();
+  const allExisting = await registration.getNotifications();
+  const existing = allExisting.filter((n) => n.tag === tag);
+  const prevData = existing[0]?.data;
+  const prevLines = readStoredLines(prevData);
+  const prevCount = readStoredUnreadCount(prevData);
+  const prevAlertCount = readStoredPositiveNumber(prevData, "alertCount");
+  const prevLastAlertedAt = readStoredPositiveNumber(prevData, "lastAlertedAt");
+  const lastGlobalAlertedAt = findLastGlobalAlertedAt(allExisting);
+  const nextLine = formatLineForStack(data, preview);
+  const isEdit = decrypted?.type === "edit" && nonempty(prevLines);
+  const lines = isEdit
+    ? [...prevLines.slice(0, -1), nextLine]
+    : [...prevLines, nextLine].slice(-maxStackedLines);
+  const unreadCount = isEdit ? prevCount : prevCount + 1;
+  const title = unreadCount > 1
+    ? `${baseTitle} (${unreadCount} messages)`
+    : baseTitle;
+
+  const alertDecision = decideNotificationAlert({
+    messageType: decrypted?.type,
+    isGroupChat: data.isGroupChat,
+    anyChatWindowVisible: isAnyChatWindowVisible(windowClients),
+    hasExistingConversationNotification: nonempty(existing),
+    prevAlertCount,
+    prevLastAlertedAt,
+    lastGlobalAlertedAt,
+    now: currentNow,
+  });
+  const nextAlertCount = alertDecision.shouldAlert
+    ? prevAlertCount + 1
+    : prevAlertCount;
+  const nextLastAlertedAt = alertDecision.shouldAlert
+    ? currentNow
+    : prevLastAlertedAt;
+
   await registration.showNotification(title, {
     body: lines.join("\n"),
     icon,
     badge: notificationBadgePath,
     tag,
-    renotify: !isEdit,
-    silent: isEdit,
-    timestamp: data.timestamp ?? Date.now(),
+    renotify: alertDecision.renotify,
+    silent: alertDecision.silent,
+    ...(alertDecision.vibrate ? { vibrate: alertDecision.vibrate } : {}),
+    timestamp: data.timestamp ?? currentNow,
     actions: defaultNotificationActions,
     data: {
       ...data,
       lines,
       unreadCount,
+      lastAlertedAt: nextLastAlertedAt,
+      alertCount: nextAlertCount,
     },
   });
 

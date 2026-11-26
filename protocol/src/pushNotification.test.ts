@@ -80,6 +80,13 @@ const createFakeRegistration = () => {
           badge: typeof options.badge === "string" ? options.badge : "",
           silent: Boolean(options.silent),
           renotify: Boolean(options.renotify),
+          ...(Array.isArray(options.vibrate)
+            ? {
+              vibrate: options.vibrate.filter((n): n is number =>
+                typeof n === "number"
+              ),
+            }
+            : {}),
           data: isPlainRecord(options.data) ? options.data : {},
           actions: Array.isArray(options.actions) ? options.actions : [],
           close: () => {
@@ -817,4 +824,276 @@ Deno.test("isSafeRemoteAvatarUrl rejects http://, localhost, and private IP avat
     isSafeRemoteAvatarUrl("https://cdn.example.com/avatar.png"),
     true,
   );
+});
+
+Deno.test("handleServiceWorkerPush applies WhatsApp-style DM progressive cooldown, gentle vibrate, and reset on dismiss", async () => {
+  const [alice, bot] = await Promise.all([
+    makeTestParticipant(),
+    makeTestParticipant(),
+  ]);
+  const symKey = await generateSymmetricKey();
+  const aliceEncryptedConvKey = await encryptAsymmetric(
+    alice.publicEncryptKey,
+    symKey,
+  );
+  const keyStore = createMemoryPushKeyStore();
+  await keyStore.setCredentials(alice.credentials);
+
+  const { active, registration } = createFakeRegistration();
+  const clock = { now: 1_700_000_000_000 };
+  const sendDm = async (id: string, text: string) => {
+    const cipher = await makeEncryptedSignedMessage(
+      symKey,
+      bot.credentials,
+      "conv-dm",
+      { type: "text", text },
+    );
+    await handleServiceWorkerPush({
+      data: {
+        type: "message",
+        messageId: id,
+        conversationId: "conv-dm",
+        conversationTitle: "Bot",
+        senderName: "Bot",
+        senderPublicSignKey: bot.credentials.publicSignKey,
+        isGroupChat: false,
+        conversationKey: aliceEncryptedConvKey,
+        encryptedMessage: cipher,
+        timestamp: clock.now,
+      },
+      registration,
+      clients: { matchAll: () => Promise.resolve([]) },
+      keyStore,
+      now: () => clock.now,
+    });
+  };
+
+  await sendDm("m1", "Hey");
+  assertEquals(active.get("conv-dm")?.silent, false);
+  assertEquals(active.get("conv-dm")?.renotify, true);
+  assertEquals(active.get("conv-dm")?.vibrate, [70]);
+
+  clock.now += 3_000;
+  await sendDm("m2", "Quick follow-up");
+  assertEquals(active.get("conv-dm")?.silent, true);
+  assertEquals(active.get("conv-dm")?.renotify, false);
+  assertEquals(active.get("conv-dm")?.vibrate, undefined);
+  assertEquals(active.get("conv-dm")?.body, "Hey\nQuick follow-up");
+
+  clock.now += 13_000;
+  await sendDm("m3", "After 16s total");
+  assertEquals(active.get("conv-dm")?.silent, false);
+  assertEquals(active.get("conv-dm")?.renotify, true);
+  assertEquals(active.get("conv-dm")?.vibrate, [70]);
+
+  clock.now += 25_000;
+  await sendDm("m4", "Within 60s second-stage backoff");
+  assertEquals(active.get("conv-dm")?.silent, true);
+  assertEquals(active.get("conv-dm")?.renotify, false);
+  assertEquals(active.get("conv-dm")?.vibrate, undefined);
+
+  clock.now += 40_000;
+  await sendDm("m5", "After 65s since second alert");
+  assertEquals(active.get("conv-dm")?.silent, false);
+  assertEquals(active.get("conv-dm")?.renotify, true);
+
+  active.get("conv-dm")?.close();
+  clock.now += 5_000;
+  await sendDm("m6", "Fresh after dismiss");
+  assertEquals(active.get("conv-dm")?.silent, false);
+  assertEquals(active.get("conv-dm")?.renotify, true);
+  assertEquals(active.get("conv-dm")?.vibrate, [70]);
+});
+
+Deno.test("handleServiceWorkerPush uses longer cooldown for group chats and throttles rapid cross-chat bursts", async () => {
+  const [alice, bot] = await Promise.all([
+    makeTestParticipant(),
+    makeTestParticipant(),
+  ]);
+  const symKey = await generateSymmetricKey();
+  const aliceEncryptedConvKey = await encryptAsymmetric(
+    alice.publicEncryptKey,
+    symKey,
+  );
+  const keyStore = createMemoryPushKeyStore();
+  await keyStore.setCredentials(alice.credentials);
+
+  const { active, registration } = createFakeRegistration();
+  const clock = { now: 1_700_000_000_000 };
+  const pushMsg = async (
+    conversationId: string,
+    id: string,
+    text: string,
+    isGroupChat: boolean,
+  ) => {
+    const cipher = await makeEncryptedSignedMessage(
+      symKey,
+      bot.credentials,
+      conversationId,
+      { type: "text", text },
+    );
+    await handleServiceWorkerPush({
+      data: {
+        type: "message",
+        messageId: id,
+        conversationId,
+        conversationTitle: isGroupChat ? "Team" : "DM",
+        senderName: "Bot",
+        senderPublicSignKey: bot.credentials.publicSignKey,
+        isGroupChat,
+        conversationKey: aliceEncryptedConvKey,
+        encryptedMessage: cipher,
+        timestamp: clock.now,
+      },
+      registration,
+      clients: { matchAll: () => Promise.resolve([]) },
+      keyStore,
+      now: () => clock.now,
+    });
+  };
+
+  await pushMsg("grp-1", "g1", "First group msg", true);
+  assertEquals(active.get("grp-1")?.silent, false);
+
+  clock.now += 1_500;
+  await pushMsg("dm-other", "d1", "Arrived 1.5s after group alert", false);
+  assertEquals(active.get("dm-other")?.silent, true);
+  assertEquals(active.get("dm-other")?.renotify, false);
+  assertEquals(active.get("dm-other")?.vibrate, undefined);
+
+  clock.now += 4_000;
+  await pushMsg("dm-third", "d2", "Arrived after global cooldown", false);
+  assertEquals(active.get("dm-third")?.silent, false);
+  assertEquals(active.get("dm-third")?.vibrate, [70]);
+
+  clock.now += 15_000;
+  await pushMsg(
+    "grp-1",
+    "g2",
+    "20.5s after first group msg is still silent",
+    true,
+  );
+  assertEquals(active.get("grp-1")?.silent, true);
+  assertEquals(active.get("grp-1")?.renotify, false);
+
+  clock.now += 12_000;
+  await pushMsg(
+    "grp-1",
+    "g3",
+    "32.5s after first group msg alerts again",
+    true,
+  );
+  assertEquals(active.get("grp-1")?.silent, false);
+  assertEquals(active.get("grp-1")?.renotify, true);
+});
+
+Deno.test("handleServiceWorkerPush silences foreground other-chat notifications, reactions, and edits, while incoming calls always alert", async () => {
+  const [alice, bot] = await Promise.all([
+    makeTestParticipant(),
+    makeTestParticipant(),
+  ]);
+  const symKey = await generateSymmetricKey();
+  const aliceEncryptedConvKey = await encryptAsymmetric(
+    alice.publicEncryptKey,
+    symKey,
+  );
+  const keyStore = createMemoryPushKeyStore();
+  await keyStore.setCredentials(alice.credentials);
+
+  const { active, registration } = createFakeRegistration();
+  const clock = { now: 1_700_000_000_000 };
+
+  const pushInternal = async (
+    conversationId: string,
+    id: string,
+    message: InternalMessage,
+    visibleChatUrl?: string,
+  ) => {
+    const cipher = await makeEncryptedSignedMessage(
+      symKey,
+      bot.credentials,
+      conversationId,
+      message,
+    );
+    await handleServiceWorkerPush({
+      data: {
+        type: "message",
+        messageId: id,
+        conversationId,
+        conversationTitle: "Bot",
+        senderName: "Bot",
+        senderPublicSignKey: bot.credentials.publicSignKey,
+        conversationKey: aliceEncryptedConvKey,
+        encryptedMessage: cipher,
+        timestamp: clock.now,
+      },
+      registration,
+      clients: {
+        matchAll: () =>
+          Promise.resolve(
+            visibleChatUrl
+              ? [{ visibilityState: "visible", url: visibleChatUrl }]
+              : [],
+          ),
+      },
+      keyStore,
+      now: () => clock.now,
+    });
+  };
+
+  await pushInternal(
+    "conv-b",
+    "m1",
+    { type: "text", text: "Quiet while user is in another chat" },
+    "https://aliceandbot.com/chat?c=conv-a",
+  );
+  assertEquals(active.get("conv-b")?.silent, true);
+  assertEquals(active.get("conv-b")?.renotify, false);
+  assertEquals(active.get("conv-b")?.vibrate, undefined);
+
+  clock.now += 2_000;
+  await pushInternal("conv-b", "m2", {
+    type: "text",
+    text: "Now backgrounded so first real alert fires",
+  });
+  assertEquals(active.get("conv-b")?.silent, false);
+  assertEquals(active.get("conv-b")?.renotify, true);
+  assertEquals(active.get("conv-b")?.vibrate, [70]);
+
+  clock.now += 10_000;
+  await pushInternal("conv-react", "r1", {
+    type: "reaction",
+    reactTo: "m1",
+    emoji: "👍",
+  });
+  assertEquals(active.get("conv-react")?.silent, true);
+  assertEquals(active.get("conv-react")?.vibrate, undefined);
+
+  clock.now += 1_000;
+  await pushInternal("conv-react", "r2", {
+    type: "text",
+    text: "Real reply after silent reaction still alerts",
+  });
+  assertEquals(active.get("conv-react")?.silent, false);
+  assertEquals(active.get("conv-react")?.vibrate, [70]);
+
+  clock.now += 10_000;
+  await pushInternal("conv-edit", "e1", {
+    type: "edit",
+    editOf: "old",
+    text: "Standalone edit stays silent",
+  });
+  assertEquals(active.get("conv-edit")?.silent, true);
+  assertEquals(active.get("conv-edit")?.vibrate, undefined);
+
+  clock.now += 500;
+  await pushInternal(
+    "conv-b",
+    "c1",
+    { type: "call", callId: "call-1", action: "offer" },
+    "https://aliceandbot.com/chat?c=conv-a",
+  );
+  assertEquals(active.get("conv-b")?.silent, false);
+  assertEquals(active.get("conv-b")?.renotify, true);
+  assertEquals(active.get("conv-b")?.vibrate, [250, 150, 250, 150, 250]);
 });
