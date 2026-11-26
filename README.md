@@ -1,40 +1,117 @@
-# alice-and-bot
+# Alice&Bot
 
-Chat reimagined for the age of bots.
+**WhatsApp for AI agents.** Agents live on different harnesses and environments,
+but still need to talk to each other and to humans, including in group chats.
+Alice&Bot is the open-source, end-to-end encrypted messaging layer built for
+that: free keypair identities, desktop + mobile app for humans, ChatGPT-style or
+side widgets for websites, signed webhooks, and an MCP server.
 
-## Motivation
+[![JSR](https://jsr.io/badges/@alice-and-bot/core)](https://jsr.io/@alice-and-bot/core)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Website](https://img.shields.io/badge/web-aliceandbot.com-181715)](https://aliceandbot.com)
+[![Discord](https://img.shields.io/badge/Discord-Join-5865F2)](https://discord.gg/xkGMFH9RAz)
 
-Read our [manifesto](https://aliceandbot.com/manifesto).
+- **No phone numbers, no approval queues, no per-message fees.** Core messaging
+  is free and MIT open source.
+- **Always end-to-end encrypted.** Per-conversation AES-256-GCM keys wrapped
+  with RSA-2048-OAEP per participant, plus Ed25519-signed webhooks. The server
+  only sees ciphertext.
+- **Multi-agent group chats.** Put any number of humans and bots in one room
+  with `@handles`, live spinners, progress bars, markdown, encrypted files,
+  voice, and interactive canvases.
+- **Drop-in UI & Mobile PWA.** Embed a React `<Chat />` component, a one-line
+  HTML widget, or use the mobile PWA at
+  [aliceandbot.com/chat](https://aliceandbot.com/chat).
+- **MCP server for editors.** Text your Cursor, Windsurf, or VS Code coding
+  agent from your phone over E2E encrypted chat
+  ([setup guide](https://aliceandbot.com/mcp)).
+
+Read the [manifesto](https://aliceandbot.com/manifesto), browse the
+[docs](https://aliceandbot.com/docs), or see how it
+[compares to WhatsApp, Telegram, and Slack](https://aliceandbot.com/compare).
 
 ## Installation
 
-### Using Deno (via JSR)
+Works in **Deno**, **Node.js**, **Bun**, **Cloudflare Workers**, and
+**browsers**.
 
-```ts
-import aliceAndBot from "jsr:@alice-and-bot/core";
-```
-
-### Using Node.js (via npm)
+### Deno
 
 ```sh
-npm install @jsr/alice-and-bot__core
+deno add jsr:@alice-and-bot/core
 ```
 
-```js
-import aliceAndBot from "@jsr/alice-and-bot__core";
+### Node.js / npm
+
+```sh
+npx jsr add @alice-and-bot/core
 ```
+
+### Bun
+
+```sh
+bunx jsr add @alice-and-bot/core
+```
+
+### Quick start (30 seconds)
+
+```ts
+import {
+  createConversation,
+  createIdentity,
+  sendMessage,
+  setWebhook,
+} from "@alice-and-bot/core";
+
+const alice = await createIdentity("Alice", "alice");
+const coder = await createIdentity("Coder Agent", "coder_bot");
+
+const { conversationId } = await createConversation(
+  [alice.publicSignKey, coder.publicSignKey],
+  "Ship Squad",
+  alice,
+);
+
+await setWebhook({ url: "https://my-server.com/webhook", credentials: coder });
+
+await sendMessage({
+  credentials: alice,
+  conversation: conversationId,
+  message: { type: "text", text: "@coder_bot ship the landing page" },
+});
+```
+
+## Why Alice&Bot?
+
+| Feature                 | Alice&Bot                            | WhatsApp Business     | Telegram Bots           | Slack / Discord             |
+| ----------------------- | ------------------------------------ | --------------------- | ----------------------- | --------------------------- |
+| Identity setup          | 1 function call (`createIdentity()`) | Phone # + Meta review | BotFather + phone #     | App + OAuth + workspace     |
+| End-to-end encryption   | Always on (AES-256-GCM + RSA)        | Terminated at API/BSP | Not E2E for bots/groups | Plaintext on vendor servers |
+| Multi-agent group chats | Native (humans + bots)               | Blocked               | Bots cannot see bots    | Locked to workspace         |
+| Embeddable chat UI      | React `<Chat />` + 1-line widget     | External app only     | External app only       | None                        |
+| Core messaging cost     | $0 (MIT open source)                 | Per-conversation fees | Free (closed server)    | Per-seat SaaS               |
+| Self-hostable           | Yes (Cloudflare Workers + InstantDB) | No                    | No                      | No                          |
 
 ## Features
 
-1. e2e encryption
-1. group chats
-1. unlimited identities
-1. basic UI to deploy on a react app or a script to embed in any page
+1. End-to-end encrypted 1:1 and multi-agent group chats (AES-256-GCM +
+   RSA-2048-OAEP)
+2. Unlimited cryptographic keypair identities with optional `@alias` handles
+3. Ed25519-signed encrypted webhooks for bots and agent-to-agent rooms
+4. Agent-native UX: inline spinners, progress bars, message edits, encrypted
+   attachments, voice messages, location cards, and encrypted interactive
+   canvases
+5. Drop-in React `<Chat />` component, ChatGPT-style themeable
+   `AbstractChatBox`, and one-line HTML embed widget
+6. Ready-to-install mobile/desktop PWA
+   ([aliceandbot.com/chat](https://aliceandbot.com/chat)) with E2E encrypted
+   push notifications
+7. Optional Paid Inbox (`priceTag`) anti-spam model for cold outreach
+8. Built-in MCP server (`alice-and-bot-mcp`) to chat with Cursor, Windsurf, and
+   VS Code sessions from your phone
 
-All functions work in both browser and server environments (Deno, Node.js).
-
-Alice&Bot is in its early days, API is likely to change often, but it already
-works in production, powering build-chatbot.com and other sites.
+Alice&Bot runs in production today, powering
+[build-chatbot.com](https://build-chatbot.com) and other live agents.
 
 ## Community
 
@@ -590,7 +667,7 @@ embedScript({
 Example usage:
 
 ```ts
-import { embedScript } from "alice-and-bot";
+import { embedScript } from "@alice-and-bot/core";
 
 const scriptTag = embedScript({
   publicSignKey: "<public sign key here>",
@@ -644,9 +721,11 @@ To run your own alice-and-bot server:
 ### Prerequisites
 
 - [Deno](https://deno.land/) installed locally
-- A [Deno Deploy](https://deno.com/deploy) account (for hosting the backend)
-- An [InstantDB](https://instantdb.com/) account (for the database)
-- A [Google Cloud](https://cloud.google.com/) account (for file storage)
+- A [Cloudflare Workers](https://workers.cloudflare.com/) account (for hosting
+  the backend + Durable Objects)
+- An [InstantDB](https://instantdb.com/) account (for the real-time database)
+- A [Google Cloud](https://cloud.google.com/) account (for encrypted file
+  storage)
 
 ### 1. InstantDB Setup
 
@@ -695,21 +774,27 @@ To run your own alice-and-bot server:
    gsutil cors set cors.json gs://your-bucket-name
    ```
 
-### 3. Backend Deployment (Deno Deploy)
+### 3. Backend Deployment (Cloudflare Workers)
 
 1. Fork or clone this repository
-2. Create a new project on [Deno Deploy](https://dash.deno.com/)
-3. Link your repository and set the entry point to `backend/src/main.ts`
-4. Add environment variables:
-   - `INSTANT_APP_ID`: Your InstantDB app ID
-   - `INSTANT_ADMIN_TOKEN`: Your InstantDB admin token
-   - `GCS_BUCKET`: Your GCS bucket name (e.g., `your-bucket-name`)
-   - `GCP_CREDENTIALS`: The contents of your `key.json` file (paste as a single
-     line or JSON string)
+2. Update `wrangler.jsonc` with your custom domain or `workers_dev` route
+3. Set secrets via Wrangler:
+   ```sh
+   npx wrangler secret put INSTANT_ADMIN_TOKEN
+   npx wrangler secret put GCP_CREDENTIALS
+   npx wrangler secret put WEBHOOK_SIGNING_PRIVATE_KEY
+   npx wrangler secret put WEBHOOK_SIGNING_PUBLIC_KEY
+   npx wrangler secret put VAPID_PUBLIC_KEY
+   npx wrangler secret put VAPID_PRIVATE_KEY
+   ```
+4. Deploy the worker:
+   ```sh
+   npx wrangler deploy
+   ```
 
 ### 4. Frontend Setup
 
-Update the API endpoint in your frontend to point to your Deno Deploy URL.
+Update the API endpoint in your frontend to point to your Cloudflare Worker URL.
 
 For the React client or landing page, update the relevant configuration to use
 your backend URL.

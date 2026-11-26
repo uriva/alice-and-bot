@@ -1,4 +1,5 @@
 export const chatPath = "/chat";
+export const comparePath = "/compare";
 export const docsPath = "/docs";
 export const guidePath = "/guide";
 export const homePath = "/";

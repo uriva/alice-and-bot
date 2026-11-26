@@ -11,6 +11,7 @@ import { initRouter } from "./router.ts";
 import { initPwaInstall } from "./pwaInstall.ts";
 import {
   chatPath,
+  comparePath,
   docsPath,
   guidePath,
   homePath,
@@ -103,38 +104,101 @@ initRouter({
     {
       path: homePath,
       component: () => import("./landing.ts").then((m) => m.landing()),
+      meta: {
+        title: "Alice&Bot - WhatsApp for AI Agents",
+        description:
+          "Alice&Bot is like WhatsApp for agents. The easiest way to chat with many AI agents in one place, without paying anyone and without giving anyone access to your data.",
+        canonicalPath: homePath,
+      },
     },
     {
       path: chatPath,
       component: () => import("./chat.ts").then((m) => m.chat()),
+      meta: {
+        title: "Messenger - Alice&Bot",
+        description:
+          "End-to-end encrypted web and mobile messenger for humans and AI agents.",
+        canonicalPath: chatPath,
+      },
     },
     {
       path: docsPath,
       component: () => import("./guide.ts").then((m) => m.guide()),
+      meta: {
+        title: "Docs - Alice&Bot TypeScript SDK & Widget",
+        description:
+          "Build encrypted AI agents, multi-agent group chats, webhooks, React chat components, and HTML widgets with @alice-and-bot/core.",
+        canonicalPath: docsPath,
+      },
     },
     {
       path: guidePath,
       component: () => import("./guide.ts").then((m) => m.guide()),
+      meta: {
+        title: "Docs - Alice&Bot TypeScript SDK & Widget",
+        description:
+          "Build encrypted AI agents, multi-agent group chats, webhooks, React chat components, and HTML widgets with @alice-and-bot/core.",
+        canonicalPath: docsPath,
+      },
+    },
+    {
+      path: comparePath,
+      component: () => import("./compare.ts").then((m) => m.compare()),
+      meta: {
+        title: "Alice&Bot vs WhatsApp, Telegram, Slack & Custom Chat",
+        description:
+          "Compare Alice&Bot with WhatsApp Business API, Telegram bots, Slack/Discord, and custom WebSocket stacks for AI agent messaging.",
+        canonicalPath: comparePath,
+      },
     },
     {
       path: legalPath,
       component: () => import("./legal.ts").then((m) => m.legal()),
+      meta: {
+        title: "Legal - Alice&Bot",
+        description: "Privacy Policy and Terms of Service for Alice&Bot.",
+        canonicalPath: legalPath,
+      },
     },
     {
       path: privacyPath,
       component: () => import("./legal.ts").then((m) => m.privacy()),
+      meta: {
+        title: "Privacy Policy - Alice&Bot",
+        description:
+          "How Alice&Bot handles end-to-end encryption, metadata, and privacy.",
+        canonicalPath: privacyPath,
+      },
     },
     {
       path: termsPath,
       component: () => import("./legal.ts").then((m) => m.terms()),
+      meta: {
+        title: "Terms of Service - Alice&Bot",
+        description: "Terms of Service for using Alice&Bot.",
+        canonicalPath: termsPath,
+      },
     },
     {
       path: manifestoPath,
       component: () => import("./manifesto.ts").then((m) => m.manifesto()),
+      meta: {
+        title: "The Alice&Bot Manifesto - Unbreaking Chat for the AI Era",
+        description:
+          "Why chat needs cryptographic keypair identities, open protocols, and pay-to-contact anti-spam instead of phone numbers and platform monopolies.",
+        canonicalPath: manifestoPath,
+      },
     },
     {
       path: mcpGuidePath,
       component: () => import("./mcp-guide.ts").then((m) => m.mcpGuide()),
+      meta: {
+        title:
+          "MCP Server - Chat With Cursor, Windsurf & VS Code From Your Phone",
+        description:
+          "Install alice-and-bot-mcp to message your AI coding sessions in Cursor, Windsurf, or VS Code from your phone with end-to-end encryption.",
+        canonicalPath: mcpGuidePath,
+      },
     },
   ],
   notFound,

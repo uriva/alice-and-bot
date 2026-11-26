@@ -1,8 +1,36 @@
 import { render, type TemplateResult } from "lit";
 
+type RouteMeta = {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+};
+
 type Route = {
   path: string;
   component: () => TemplateResult | Promise<TemplateResult>;
+  meta?: RouteMeta;
+};
+
+const siteOrigin = "https://aliceandbot.com";
+
+const setMetaTag = (attr: "name" | "property", key: string, value: string) => {
+  const el = document.querySelector(`meta[${attr}="${key}"]`);
+  if (el) el.setAttribute("content", value);
+};
+
+const applyRouteMeta = (pathname: string, meta?: RouteMeta) => {
+  if (typeof document === "undefined" || !meta) return;
+  document.title = meta.title;
+  setMetaTag("name", "description", meta.description);
+  setMetaTag("property", "og:title", meta.title);
+  setMetaTag("property", "og:description", meta.description);
+  setMetaTag("name", "twitter:title", meta.title);
+  setMetaTag("name", "twitter:description", meta.description);
+  const canonicalUrl = `${siteOrigin}${meta.canonicalPath ?? pathname}`;
+  setMetaTag("property", "og:url", canonicalUrl);
+  const canonical = document.querySelector('link[rel="canonical"]');
+  if (canonical) canonical.setAttribute("href", canonicalUrl);
 };
 
 let routes: Route[] = [];
@@ -25,6 +53,7 @@ const renderRoute = () => {
     }
     currentPath = pathname;
     const match = matchRoute(pathname);
+    applyRouteMeta(pathname, match?.meta);
     const template = match ? await match.component() : notFound();
     render(template, rootEl);
   })().catch((err) => {

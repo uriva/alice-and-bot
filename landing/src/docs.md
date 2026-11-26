@@ -7,20 +7,28 @@ All functions work in both browser and server environments (Deno, Node.js).
 
 ## Installation
 
-### Using Deno (via JSR)
-
-```ts
-import aliceAndBot from "jsr:@alice-and-bot/core";
-```
-
-### Using Node.js (via npm)
+### Deno
 
 ```sh
-npm install @jsr/alice-and-bot__core
+deno add jsr:@alice-and-bot/core
 ```
 
-```js
-import aliceAndBot from "@jsr/alice-and-bot__core";
+### Node.js / npm
+
+```sh
+npx jsr add @alice-and-bot/core
+```
+
+### Bun
+
+```sh
+bunx jsr add @alice-and-bot/core
+```
+
+Then import from `@alice-and-bot/core`:
+
+```ts
+import { createIdentity, sendMessage } from "@alice-and-bot/core";
 ```
 
 ## Creating an identity
@@ -599,7 +607,7 @@ Embed a chat widget on any HTML page with a single script tag:
 ### Generating the embed script programmatically
 
 ```ts
-import { embedScript } from "alice-and-bot";
+import { embedScript } from "@alice-and-bot/core";
 
 const scriptTag = embedScript({
   publicSignKey: "<public sign key here>",
@@ -787,9 +795,11 @@ downloadAttachment({
 ### Prerequisites
 
 - [Deno](https://deno.land/) installed locally
-- A [Deno Deploy](https://deno.com/deploy) account (for hosting the backend)
-- An [InstantDB](https://instantdb.com/) account (for the database)
-- A [Google Cloud](https://cloud.google.com/) account (for file storage)
+- A [Cloudflare Workers](https://workers.cloudflare.com/) account (for hosting
+  the backend + Durable Objects)
+- An [InstantDB](https://instantdb.com/) account (for the real-time database)
+- A [Google Cloud](https://cloud.google.com/) account (for encrypted file
+  storage)
 
 ### 1. InstantDB setup
 
@@ -837,21 +847,18 @@ downloadAttachment({
    gsutil cors set cors.json gs://your-bucket-name
    ```
 
-### 3. Backend deployment (Deno Deploy)
+### 3. Backend deployment (Cloudflare Workers)
 
 1. Fork or clone the repository
-2. Create a new project on [Deno Deploy](https://dash.deno.com/)
-3. Link your repository and set the entry point to `backend/src/main.ts`
-4. Add environment variables:
-   - `INSTANT_APP_ID`: Your InstantDB app ID
-   - `INSTANT_ADMIN_TOKEN`: Your InstantDB admin token
-   - `GCS_BUCKET`: Your GCS bucket name (e.g., `your-bucket-name`)
-   - `GCP_CREDENTIALS`: The contents of your `key.json` file (paste as a single
-     line or JSON string)
+2. Update `wrangler.jsonc` with your custom domain or `workers_dev` route
+3. Set secrets via Wrangler (`INSTANT_ADMIN_TOKEN`, `GCP_CREDENTIALS`,
+   `WEBHOOK_SIGNING_PRIVATE_KEY`, `WEBHOOK_SIGNING_PUBLIC_KEY`,
+   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`)
+4. Deploy with `npx wrangler deploy`
 
 ### 4. Frontend setup
 
-Update the API endpoint in your frontend to point to your Deno Deploy URL.
+Update the API endpoint in your frontend to point to your Cloudflare Worker URL.
 
 ### 5. Widget hosting (optional)
 

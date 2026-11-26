@@ -6,8 +6,9 @@ import { copyToClipboard } from "../../lit/components/utils.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import manifestoText from "./manifesto.md?raw";
 import { baseUrl } from "../../protocol/src/clientApi.ts";
+import { manifestoPath } from "./paths.ts";
 
-const manifestoUrl = baseUrl + "/";
+const manifestoUrl = `${baseUrl}${manifestoPath}`;
 
 const shareText = encodeURIComponent(
   "Check out the Alice&Bot Manifesto! It's time to unbreak chat for the AI era.",

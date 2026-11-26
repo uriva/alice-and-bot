@@ -3,6 +3,7 @@ import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { buttonClass } from "./components.ts";
 import {
   chatPath,
+  comparePath,
   docsPath,
   homePath,
   manifestoPath,
@@ -71,6 +72,7 @@ const navLinks = [
   { href: manifestoPath, label: "Manifesto" },
   { href: docsPath, label: "Docs" },
   { href: mcpGuidePath, label: "MCP" },
+  { href: comparePath, label: "Compare" },
 ];
 
 const navLinkClass = (isActive: boolean) =>

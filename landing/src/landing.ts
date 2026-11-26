@@ -4,6 +4,7 @@ import { buttonClass, codeBlock, shellCode } from "./components.ts";
 import { header } from "./header.ts";
 import {
   chatPath,
+  comparePath,
   docsPath,
   manifestoPath,
   mcpGuidePath,
@@ -471,10 +472,18 @@ const setTab = (tab: Tab) => () => {
   rerenderLanding();
 };
 
+const sdkInstallCommand = `# Deno
+deno add jsr:@alice-and-bot/core
+
+# Node.js / npm
+npx jsr add @alice-and-bot/core`;
+
 const codersTab = () =>
   html`
     <div class="w-full min-w-0">
-      ${twoColFeatureGrid(developerFeatures)} ${codeBlock({
+      ${twoColFeatureGrid(developerFeatures)}
+      ${shellCode(sdkInstallCommand)}
+      ${codeBlock({
         code: codeExample,
         lang: "typescript",
         filename: "multi-agent-chat.ts",
@@ -671,6 +680,14 @@ const comparisonSection = () =>
           </tbody>
         </table>
       </div>
+      <div class="mt-5">
+        <a
+          href="${comparePath}"
+          class="text-sm font-medium text-[#57534e] dark:text-[#a8a298] hover:text-[#181715] dark:hover:text-[#f3f1ea] underline underline-offset-4 transition-colors"
+        >
+          Full comparison: Alice&Bot vs WhatsApp, Telegram, Slack & custom chat
+        </a>
+      </div>
     </section>
   `;
 
@@ -762,6 +779,14 @@ const landingTemplate = (): TemplateResult =>
               href="${docsPath}"
               class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
             >Docs</a>
+            <a
+              href="${mcpGuidePath}"
+              class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
+            >MCP</a>
+            <a
+              href="${comparePath}"
+              class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
+            >Compare</a>
             <a
               href="${manifestoPath}"
               class="text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] transition"
