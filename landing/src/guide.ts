@@ -1,6 +1,8 @@
+import { map } from "@uri/gamla";
 import { html, type TemplateResult } from "lit";
 import { renderMarkdown } from "./markdown.ts";
 import { header } from "./header.ts";
+import { siteFooter } from "./footer.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import docsText from "./docs.md?raw";
 
@@ -21,26 +23,29 @@ const navItems = [
   { id: "self-hosting", label: "Self-hosting" },
 ];
 
+const renderNavItem = ({ id, label }: { id: string; label: string }) =>
+  html`
+    <li>
+      <a
+        href="${`#${id}`}"
+        class="block px-2.5 py-1.5 text-sm text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] hover:bg-[#f2efe8] dark:hover:bg-[#1e1d19] rounded-lg transition-colors"
+      >${label}</a>
+    </li>
+  `;
+
 const navSidebar = () =>
   html`
-    <nav class="w-64 shrink-0 hidden lg:block">
+    <nav class="w-60 shrink-0 hidden lg:block">
       <div
-        class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto bg-white dark:bg-[#111] rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 p-4"
+        class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)] p-4"
       >
-        <h3 class="font-semibold text-gray-900 dark:text-white mb-4 px-2">
+        <p
+          class="text-[11px] font-mono uppercase tracking-wider text-[#8c867c] mb-3 px-2.5"
+        >
           Contents
-        </h3>
-        <ul class="space-y-1">
-          ${navItems.map(({ id, label }) =>
-            html`
-              <li>
-                <a
-                  href="${`#${id}`}"
-                  class="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-                >${label}</a>
-              </li>
-            `
-          )}
+        </p>
+        <ul class="space-y-0.5">
+          ${map(renderNavItem)(navItems)}
         </ul>
       </div>
     </nav>
@@ -50,19 +55,39 @@ export const guide = (): TemplateResult => {
   useClearViewportStyles();
   return html`
     ${header()}
-    <main class="min-h-screen bg-[#f8f7f4] dark:bg-[#0a0a0a] py-8 px-4">
-      <div class="max-w-6xl mx-auto flex gap-8">
-        ${navSidebar()}
-        <div class="flex-1 min-w-0">
-          <div
-            class="bg-white dark:bg-[#111] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
+    <main
+      class="surface-dots min-h-screen text-[#181715] dark:text-[#f3f1ea] pt-10 sm:pt-14 flex flex-col"
+    >
+      <div class="max-w-6xl mx-auto w-full px-4 sm:px-6 flex-1 flex flex-col gap-8">
+        <section class="max-w-3xl">
+          <p
+            class="text-xs font-mono uppercase tracking-wider text-[#66625b] dark:text-[#9c968c] mb-3"
           >
-            <div class="px-6 py-8 lg:px-10">
-              ${renderMarkdown(docsText)}
+            Documentation
+          </p>
+          <h1
+            class="text-3xl sm:text-5xl font-extrabold tracking-[-0.035em] leading-[1.08] mb-3"
+          >
+            SDK, webhooks, and widgets
+          </h1>
+          <p class="text-base sm:text-lg text-[#57534e] dark:text-[#a8a298] leading-relaxed">
+            Everything you need to create keypair identities, wire encrypted
+            agent rooms, or embed Alice&Bot on your site.
+          </p>
+        </section>
+
+        <div class="flex gap-8 items-start">
+          ${navSidebar()}
+          <article
+            class="flex-1 min-w-0 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)] overflow-hidden"
+          >
+            <div class="px-6 py-8 sm:px-10 sm:py-10">
+              ${renderMarkdown(docsText, { stripLeadingH1: true })}
             </div>
-          </div>
+          </article>
         </div>
       </div>
+      ${siteFooter()}
     </main>
   `;
 };

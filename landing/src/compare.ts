@@ -2,14 +2,8 @@ import { map } from "@uri/gamla";
 import { html, type TemplateResult } from "lit";
 import { buttonClass, shellCode } from "./components.ts";
 import { header } from "./header.ts";
-import {
-  chatPath,
-  docsPath,
-  manifestoPath,
-  mcpGuidePath,
-  privacyPath,
-  termsPath,
-} from "./paths.ts";
+import { siteFooter } from "./footer.ts";
+import { chatPath, docsPath, mcpGuidePath } from "./paths.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 
 type CompareRow = {
@@ -190,9 +184,9 @@ export const compare = (): TemplateResult => {
   return html`
     ${header()}
     <main
-      class="surface-dots min-h-screen text-[#181715] dark:text-[#f3f1ea] py-12 sm:py-16 px-4 sm:px-6"
+      class="surface-dots min-h-screen text-[#181715] dark:text-[#f3f1ea] pt-12 sm:pt-16 flex flex-col"
     >
-      <div class="max-w-6xl mx-auto flex flex-col gap-14">
+      <div class="max-w-6xl mx-auto w-full px-4 sm:px-6 flex-1 flex flex-col gap-14">
         <section class="max-w-3xl">
           <p
             class="text-xs font-mono uppercase tracking-wider text-[#66625b] dark:text-[#9c968c] mb-3"
@@ -294,37 +288,8 @@ export const compare = (): TemplateResult => {
             </a>
           </div>
         </section>
-
-        <footer
-          class="border-t border-[#e5e1d6] dark:border-[#22211d] pt-8 flex flex-wrap justify-between items-center gap-4 text-sm text-[#66625b] dark:text-[#9c968c]"
-        >
-          <nav class="flex flex-wrap gap-5">
-            <a
-              href="${docsPath}"
-              class="hover:text-[#181715] dark:hover:text-[#f3f1ea]"
-            >Docs</a>
-            <a
-              href="${mcpGuidePath}"
-              class="hover:text-[#181715] dark:hover:text-[#f3f1ea]"
-            >MCP</a>
-            <a
-              href="${manifestoPath}"
-              class="hover:text-[#181715] dark:hover:text-[#f3f1ea]"
-            >Manifesto</a>
-            <a
-              href="${privacyPath}"
-              class="hover:text-[#181715] dark:hover:text-[#f3f1ea]"
-            >Privacy Policy</a>
-            <a
-              href="${termsPath}"
-              class="hover:text-[#181715] dark:hover:text-[#f3f1ea]"
-            >Terms of Service</a>
-          </nav>
-          <span class="text-xs text-[#8c867c]">
-            MIT Open Source · End-to-end encrypted
-          </span>
-        </footer>
       </div>
+      ${siteFooter()}
     </main>
   `;
 };

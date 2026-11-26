@@ -1,6 +1,7 @@
 import { html, type TemplateResult } from "lit";
 import { renderMarkdown } from "./markdown.ts";
 import { header } from "./header.ts";
+import { siteFooter } from "./footer.ts";
 import { buttonClass } from "./components.ts";
 import { copyToClipboard } from "../../lit/components/utils.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
@@ -19,7 +20,7 @@ const showToast = (message: string) => {
   const el = Object.assign(document.createElement("div"), {
     textContent: message,
     style:
-      "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 20px;border-radius:8px;z-index:9999;font-size:14px;transition:opacity 0.3s",
+      "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#181715;color:#faf9f5;padding:8px 20px;border-radius:999px;z-index:9999;font-size:13px;font-weight:500;transition:opacity 0.3s",
   });
   document.body.appendChild(el);
   setTimeout(() => {
@@ -40,50 +41,55 @@ const handleCopy = async () => {
   }
 };
 
-const shareLinkClass =
-  "px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#1a1a1a] hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium text-sm transition-colors";
-
 export const manifesto = (): TemplateResult => {
   useClearViewportStyles();
   return html`
     ${header()}
-    <main class="min-h-screen bg-[#f8f7f4] dark:bg-[#0a0a0a] py-12 px-4">
-      <div class="max-w-3xl mx-auto">
-        <div
-          class="bg-white dark:bg-[#111] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
-        >
-          <div
-            class="bg-gray-800 dark:bg-gray-950 px-6 py-4 border-b border-gray-700 dark:border-gray-800"
+    <main
+      class="surface-dots min-h-screen text-[#181715] dark:text-[#f3f1ea] pt-12 sm:pt-16 flex flex-col"
+    >
+      <div class="max-w-3xl mx-auto w-full px-4 sm:px-6 flex-1 flex flex-col gap-8">
+        <section>
+          <p
+            class="text-xs font-mono uppercase tracking-wider text-[#66625b] dark:text-[#9c968c] mb-3"
           >
-            <h1 class="text-2xl font-bold text-white text-center">
-              The Alice&Bot Manifesto
-            </h1>
+            Manifesto
+          </p>
+          <h1
+            class="text-3xl sm:text-5xl font-extrabold tracking-[-0.035em] leading-[1.08] mb-5"
+          >
+            The Alice&Bot Manifesto
+          </h1>
+          <div class="flex flex-wrap gap-2.5">
+            <a
+              href="${`https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareText}`}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="${buttonClass("secondary", "sm")}"
+            >Share on X</a>
+            <a
+              href="${`https://www.linkedin.com/shareArticle?mini=true&url=${shareUrl}&title=${shareText}`}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="${buttonClass("secondary", "sm")}"
+            >Share on LinkedIn</a>
+            <button
+              type="button"
+              class="${buttonClass("outline", "sm")}"
+              @click="${handleCopy}"
+            >
+              Copy Link
+            </button>
           </div>
-          <div class="px-6 py-8">
-            <div class="flex flex-wrap gap-3 justify-center mb-8">
-              <a
-                href="${`https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareText}`}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="${shareLinkClass}"
-              >Share on Twitter/X</a>
-              <a
-                href="${`https://www.linkedin.com/shareArticle?mini=true&url=${shareUrl}&title=${shareText}`}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="${shareLinkClass}"
-              >Share on LinkedIn</a>
-              <button type="button" class="${buttonClass(
-                "secondary",
-                "sm",
-              )}" @click="${handleCopy}">
-                Copy Link
-              </button>
-            </div>
-            ${renderMarkdown(manifestoText)}
-          </div>
-        </div>
+        </section>
+
+        <article
+          class="bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)] px-6 py-8 sm:px-10 sm:py-10"
+        >
+          ${renderMarkdown(manifestoText, { stripLeadingH1: true })}
+        </article>
       </div>
+      ${siteFooter()}
     </main>
   `;
 };

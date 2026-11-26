@@ -1,6 +1,7 @@
 import { html, type TemplateResult } from "lit";
 import { renderMarkdown } from "./markdown.ts";
 import { header } from "./header.ts";
+import { siteFooter } from "./footer.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import mcpGuideText from "./mcp-guide.md?raw";
 
@@ -8,21 +9,34 @@ export const mcpGuide = (): TemplateResult => {
   useClearViewportStyles();
   return html`
     ${header()}
-    <main class="min-h-screen bg-[#f8f7f4] dark:bg-[#0a0a0a] py-12 px-4">
-      <div class="max-w-3xl mx-auto">
-        <div
-          class="bg-white dark:bg-[#111] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
-        >
-          <div
-            class="bg-gray-800 dark:bg-gray-950 px-6 py-4 border-b border-gray-700 dark:border-gray-800"
+    <main
+      class="surface-dots min-h-screen text-[#181715] dark:text-[#f3f1ea] pt-12 sm:pt-16 flex flex-col"
+    >
+      <div class="max-w-3xl mx-auto w-full px-4 sm:px-6 flex-1 flex flex-col gap-8">
+        <section>
+          <p
+            class="text-xs font-mono uppercase tracking-wider text-[#66625b] dark:text-[#9c968c] mb-3"
           >
-            <h1 class="text-2xl font-bold text-white text-center">MCP Guide</h1>
-          </div>
-          <div class="px-6 py-8">
-            ${renderMarkdown(mcpGuideText)}
-          </div>
-        </div>
+            MCP Server
+          </p>
+          <h1
+            class="text-3xl sm:text-5xl font-extrabold tracking-[-0.035em] leading-[1.08] mb-3"
+          >
+            Connect any MCP client
+          </h1>
+          <p class="text-base sm:text-lg text-[#57534e] dark:text-[#a8a298] leading-relaxed">
+            Pair your phone with any MCP-compatible agent or app over
+            end-to-end encrypted chat.
+          </p>
+        </section>
+
+        <article
+          class="bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)] px-6 py-8 sm:px-10 sm:py-10"
+        >
+          ${renderMarkdown(mcpGuideText, { stripLeadingH1: true })}
+        </article>
       </div>
+      ${siteFooter()}
     </main>
   `;
 };

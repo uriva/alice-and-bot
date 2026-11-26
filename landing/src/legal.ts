@@ -11,7 +11,7 @@ const operatorUrl = "https://uriv.me";
 type LegalPageId = "legal" | "privacy" | "terms";
 
 const pageMainClass =
-  "min-h-screen w-full bg-[#f6f4ee] dark:bg-[#0c0c0b] text-[#181715] dark:text-[#f3f1ea] py-10 sm:py-14 px-4";
+  "surface-dots min-h-screen w-full bg-[#f6f4ee] dark:bg-[#0c0c0b] text-[#181715] dark:text-[#f3f1ea] py-10 sm:py-14 px-4";
 const containerClass = "max-w-4xl mx-auto flex flex-col gap-6";
 const cardClass =
   "bg-white dark:bg-[#151513] border border-[#e7e4dc] dark:border-[#252420] rounded-2xl p-6 sm:p-10 shadow-[0_1px_2px_rgba(24,23,21,0.04)]";
