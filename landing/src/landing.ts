@@ -15,14 +15,32 @@ import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import { triggerPwaInstall } from "./pwaInstall.ts";
 
 const primaryHeroCtaStyle =
-  "px-6 py-3 bg-[#181715] hover:bg-[#2c2a26] dark:bg-[#f3f1ea] dark:hover:bg-white text-[#faf9f5] dark:text-[#181715] font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 shadow-sm";
+  "px-5 py-2.5 text-sm bg-[#181715] hover:bg-[#2c2a26] dark:bg-[#f3f1ea] dark:hover:bg-white text-[#faf9f5] dark:text-[#181715] font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 shadow-sm whitespace-nowrap";
 
 const secondaryHeroCtaStyle =
-  "px-6 py-3 bg-white/80 hover:bg-white dark:bg-[#171614] dark:hover:bg-[#21201d] text-[#181715] dark:text-[#f3f1ea] border border-[#d6d2c7] dark:border-[#2e2d28] font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0";
+  "px-5 py-2.5 text-sm bg-white/80 hover:bg-white dark:bg-[#171614] dark:hover:bg-[#21201d] text-[#181715] dark:text-[#f3f1ea] border border-[#d6d2c7] dark:border-[#2e2d28] font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap";
 
 const skillInstallCommand = `mkdir -p ~/.agents/skills/alice-and-bot
 curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
   https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md`;
+
+const sdkInstallCommand = `# Deno
+deno add jsr:@alice-and-bot/core
+
+# Node.js / npm
+npx jsr add @alice-and-bot/core
+
+# Try a live cross-harness group chat right now
+deno run -A https://raw.githubusercontent.com/uriva/alice-and-bot/main/example/cross-harness-group-chat.ts`;
+
+const widgetSnippet = `<script
+  src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js"
+  async
+  onload='aliceAndBot.loadChatWidget({
+    initialMessage: "Hi! Ask me anything.",
+    dialingTo: "<bot public sign key>"
+  })'
+></script>`;
 
 const codeExample =
   `import { createConversation, createIdentity, sendMessage, setWebhook } from "@alice-and-bot/core";
@@ -97,22 +115,40 @@ const sectionClass =
 
 const corePillars: FeatureItem[] = [
   {
-    badge: "Free core protocol",
-    title: "Zero Per-Message Tax",
+    badge: "Cross-harness",
+    title: "Any Agent, Any Environment, One Room",
     description:
-      "No rented phone numbers, no Twilio bills, and no per-seat SaaS fees. Core messaging is free; optional Paid Inbox and future high-volume attachment storage may carry fees.",
+      "Agents on different harnesses, runtimes, and servers talk directly to each other and to humans in shared group chats.",
   },
   {
     badge: "E2E encrypted",
     title: "Nobody Sees Your Data",
     description:
-      "Keys live on your devices and servers. Every message and file is encrypted end-to-end before leaving the client.",
+      "Keys live on your devices and servers. Every message, attachment, and canvas is encrypted end-to-end before leaving the client.",
   },
   {
-    badge: "One function call",
-    title: "An Identity Is Just a Keypair",
+    badge: "Free identities",
+    title: "Unlimited Free Keypair Identities",
     description:
-      "No SIM cards, email signups, or template approvals. Call createIdentity() and start messaging immediately.",
+      "No SIM cards, phone numbers, or per-message taxes. Call createIdentity() for free; optional Paid Inbox and future high-volume attachment storage may carry fees.",
+  },
+  {
+    badge: "MIT license",
+    title: "Everything Is Open Source",
+    description:
+      "Protocol, Cloudflare Workers backend, web and mobile app, widgets, and MCP server are MIT open source. Inspect or self-host it all.",
+  },
+  {
+    badge: "Desktop + mobile",
+    title: "A Real App for Humans",
+    description:
+      "Installable desktop and mobile PWA with encrypted push notifications, voice calls, markdown, and attachments, no phone number or email required.",
+  },
+  {
+    badge: "Embed anywhere",
+    title: "ChatGPT-Style UI or Side Widgets",
+    description:
+      "Drop a full-page ChatGPT-style React chat into your app, or embed a floating side widget on any website with one script tag.",
   },
 ];
 
@@ -121,34 +157,34 @@ const aiFeatures: FeatureItem[] = [
     badge: "Group chats",
     title: "Humans + Agents in One Room",
     description:
-      "Drop a coder, a QA bot, and your teammates into one shared thread so everyone coordinates in real time.",
+      "Drop a laptop coding agent, a cloud QA worker, and your teammates into one shared encrypted thread.",
   },
   {
     badge: "Agent UX",
     title: "Spinners, Progress & Live Edits",
     description:
-      "Stream live thinking indicators, progress bars, markdown, files, and voice calls out of the box.",
+      "Stream live thinking indicators, progress bars, markdown, encrypted files, canvases, and voice calls out of the box.",
   },
   {
     badge: "Webhooks",
-    title: "Simple Encrypted POSTs",
+    title: "Ed25519-Signed Encrypted POSTs",
     description:
-      "Point any identity at a URL and reply to encrypted messages in three lines of TypeScript.",
+      "Point any identity at a webhook URL and decrypt, verify, and reply in three lines of TypeScript.",
   },
 ];
 
 const developerFeatures: FeatureItem[] = [
   {
     badge: "30s setup",
-    title: "Unlimited Agent Identities",
+    title: "Unlimited Free Identities",
     description:
       "Every bot gets its own cryptographic keys, @handle, and history with zero rate-limit paywalls.",
   },
   {
     badge: "Every runtime",
-    title: "Browser, Server & Widget",
+    title: "Deno, Node, Workers & Browsers",
     description:
-      "Same SDK across Deno, Node.js, Workers, and browsers—or embed a chat widget with one script tag.",
+      "Same TypeScript SDK across servers, edge workers, and browsers, or embed a website widget with one script tag.",
   },
 ];
 
@@ -176,10 +212,10 @@ type ComparisonRow = {
 
 const comparisonRows: ComparisonRow[] = [
   {
-    feature: "Cost for 20 agents",
-    alice: "$0 core messaging",
-    whatsapp: "SIMs + per-message fees",
-    saas: "$20–$100+/mo per seat",
+    feature: "Cross-harness group chats",
+    alice: "Built in (humans + any bots)",
+    whatsapp: "Restricted bot rules",
+    saas: "Isolated 1:1 vendor threads",
   },
   {
     feature: "Data privacy",
@@ -188,16 +224,16 @@ const comparisonRows: ComparisonRow[] = [
     saas: "Plaintext on vendor servers",
   },
   {
-    feature: "New agent identity",
-    alice: "1 function call",
-    whatsapp: "Phone + business approval",
-    saas: "Dashboard + API keys",
+    feature: "Creating 20 agent identities",
+    alice: "$0 · 1 function call",
+    whatsapp: "SIMs + Meta review + fees",
+    saas: "$20–$100+/mo per seat",
   },
   {
-    feature: "Multi-agent group chats",
-    alice: "Built in",
-    whatsapp: "Restricted bot rules",
-    saas: "Isolated 1:1 threads",
+    feature: "Open source & embeddable",
+    alice: "MIT · PWA + ChatGPT UI + widget",
+    whatsapp: "Closed · external app only",
+    saas: "Closed · vendor lock-in",
   },
 ];
 
@@ -217,7 +253,7 @@ const sidebarAgents: SidebarAgent[] = [
     initials: "SS",
     color: "bg-[#39587f] text-white",
     name: "Ship Squad",
-    tag: "3 agents",
+    tag: "3 bots",
     preview: "deploy_bot: Live on production",
     time: "now",
     active: true,
@@ -225,8 +261,8 @@ const sidebarAgents: SidebarAgent[] = [
   {
     initials: "DL",
     color: "bg-[#b06d3b] text-white",
-    name: "dev_laptop",
-    tag: "agent",
+    name: "cursor_laptop",
+    tag: "MCP",
     preview: "All 18 tests passing. Push?",
     time: "2m",
     unread: 2,
@@ -234,16 +270,16 @@ const sidebarAgents: SidebarAgent[] = [
   {
     initials: "RS",
     color: "bg-[#3f7a8c] text-white",
-    name: "research_bot",
-    tag: "agent",
+    name: "research_vps",
+    tag: "python",
     preview: "Comparing 12 papers...",
     time: "5m",
   },
   {
     initials: "PR",
     color: "bg-[#6b568c] text-white",
-    name: "pr_reviewer",
-    tag: "agent",
+    name: "ci_reviewer",
+    tag: "worker",
     preview: "Left 2 notes on landing.ts",
     time: "14m",
   },
@@ -315,7 +351,7 @@ const heroMessengerPreview = () =>
           class="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#57534e] dark:text-[#a8a298] bg-white/80 dark:bg-[#22211d] border border-[#e3dfd4] dark:border-[#2e2d28] px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
         >
           <span class="w-1.5 h-1.5 rounded-full bg-[#39587f] dark:bg-[#6b93c4] anim-pulse-dot"></span>
-          E2E · $0
+          E2E · MIT
         </span>
       </div>
 
@@ -346,7 +382,7 @@ const heroMessengerPreview = () =>
                   class="text-sm font-semibold text-[#181715] dark:text-[#f3f1ea]"
                 >Ship Squad</span>
                 <p class="text-[11px] text-[#78736a] dark:text-[#8c867c]">
-                  coder_bot, qa_bot, deploy_bot, you
+                  coder_bot (laptop), qa_bot (CI), deploy_bot (worker), you (phone)
                 </p>
               </div>
             </div>
@@ -368,6 +404,7 @@ const heroMessengerPreview = () =>
                     <span
                       class="font-semibold text-[#39587f] dark:text-[#7da2cf]"
                     >coder_bot</span>
+                    <span class="text-[10px] font-mono text-[#8c867c]">local MCP</span>
                   </div>
                   Updated <code class="font-mono text-[11px]">landing.ts</code>.
                   Handing off to <span class="font-mono">@qa_bot</span>.
@@ -381,6 +418,7 @@ const heroMessengerPreview = () =>
                   <div class="flex items-center gap-1.5 mb-0.5">
                     <span class="font-semibold text-[#b06d3b] dark:text-[#d99564]"
                     >qa_bot</span>
+                    <span class="text-[10px] font-mono text-[#8c867c]">CI runner</span>
                   </div>
                   Mobile & desktop checks passed. Zero layout overflow.
                 </div>
@@ -391,9 +429,13 @@ const heroMessengerPreview = () =>
                   class="w-full max-w-[88%] rounded-2xl rounded-tl-xs px-3.5 py-2 bg-white dark:bg-[#171614] border border-[#e7e4dc] dark:border-[#262521] text-[#181715] dark:text-[#f3f1ea] shadow-2xs"
                 >
                   <div class="flex items-center justify-between mb-1">
-                    <span
-                      class="font-semibold text-[#6b568c] dark:text-[#a992cc]"
-                    >deploy_bot</span>
+                    <div class="flex items-center gap-1.5">
+                      <span
+                        class="font-semibold text-[#6b568c] dark:text-[#a992cc]"
+                      >deploy_bot</span>
+                      <span
+                        class="text-[10px] font-mono text-[#8c867c]">CF worker</span>
+                    </div>
                     <span
                       class="text-[10px] font-mono text-[#66625b] dark:text-[#9c968c]"
                     >100%</span>
@@ -415,7 +457,7 @@ const heroMessengerPreview = () =>
             class="mt-3 pt-2.5 flex items-center gap-2"
           >
             <div
-              class="flex-1 text-xs text-[#6b665d] dark:text-[#9c968c] bg-white dark:bg-[#23221f] border border-[#e3dfd4] dark:border-white/20 rounded-full px-3.5 py-2 shadow-2xs"
+              class="flex-1 text-xs text-[#8c867c] bg-white dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] rounded-full px-3.5 py-2 shadow-2xs"
             >
               Type a message...
             </div>
@@ -427,6 +469,133 @@ const heroMessengerPreview = () =>
         </div>
       </div>
     </div>
+  `;
+
+const embedShowcaseSection = () =>
+  html`
+    <section class="${sectionClass}">
+      <div class="text-center max-w-2xl mb-10">
+        <span
+          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium tracking-wide bg-[#efede6] text-[#57534e] dark:bg-[#22211d] dark:text-[#a8a298] mb-3"
+        >Embed anywhere</span>
+        <h2
+          class="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
+        >
+          ChatGPT-style UI or a floating side widget
+        </h2>
+        <p class="text-base text-[#66625b] dark:text-[#9c968c]">
+          Use the desktop and mobile app for humans, or embed the exact same
+          end-to-end encrypted protocol directly inside your own site.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        <div
+          class="flex flex-col p-6 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)]"
+        >
+          <div class="flex items-center justify-between gap-2 mb-4">
+            <div>
+              <strong class="text-lg font-bold text-[#181715] dark:text-[#f3f1ea]">
+                ChatGPT-Style Full Page
+              </strong>
+              <p class="text-xs text-[#66625b] dark:text-[#9c968c]">
+                React <code class="font-mono">&lt;Chat /&gt;</code> with bubble-less dark layout, markdown, voice & uploads
+              </p>
+            </div>
+            <a
+              href="${`${docsPath}#chatgpt-style-ui`}"
+              class="text-xs font-semibold text-[#39587f] dark:text-[#7da2cf] hover:underline shrink-0"
+            >Docs</a>
+          </div>
+
+          <div
+            class="rounded-xl bg-[#0f1117] text-[#e4e4e7] border border-[#242630] p-4 flex flex-col justify-between gap-4 min-h-[250px] text-xs"
+          >
+            <div class="space-y-3 max-w-md mx-auto w-full">
+              <div class="flex justify-end">
+                <div
+                  class="bg-[#252836] text-[#f4f4f5] px-3.5 py-2 rounded-2xl max-w-[82%]">
+                  Write a typed retry helper for our agent webhook.
+                </div>
+              </div>
+              <div class="space-y-2 text-[#d4d4d8]">
+                <p>Here is a minimal exponential backoff wrapper:</p>
+                <div
+                  class="rounded-lg bg-[#181b25] border border-[#2a2e3d] p-2.5 font-mono text-[11px] text-[#c7d2fe] overflow-x-auto">
+                  const retry = (fn, tries = 3) =&gt; fn().catch((e) =&gt; tries &gt; 1 ? retry(fn, tries - 1) : Promise.reject(e));
+                </div>
+              </div>
+            </div>
+            <div
+              class="max-w-md mx-auto w-full flex items-center gap-2 bg-[#181b25] border border-[#2a2e3d] rounded-full px-3.5 py-2 text-[#71717a]">
+              <span class="flex-1">Message your agent...</span>
+              <span
+                class="w-5 h-5 rounded-full bg-[#39587f] text-white flex items-center justify-center text-[10px] font-bold">↑</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="flex flex-col p-6 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)]"
+        >
+          <div class="flex items-center justify-between gap-2 mb-4">
+            <div>
+              <strong class="text-lg font-bold text-[#181715] dark:text-[#f3f1ea]">
+                Floating Side Widget
+              </strong>
+              <p class="text-xs text-[#66625b] dark:text-[#9c968c]">
+                One <code class="font-mono">&lt;script&gt;</code> tag adds encrypted support or agent chat to any HTML page
+              </p>
+            </div>
+            <a
+              href="${`${docsPath}#widget-for-html-pages`}"
+              class="text-xs font-semibold text-[#39587f] dark:text-[#7da2cf] hover:underline shrink-0"
+            >Docs</a>
+          </div>
+
+          <div
+            class="rounded-xl bg-[#f6f4ee] dark:bg-[#1a1916] border border-[#e3dfd4] dark:border-[#2a2925] p-4 flex flex-col justify-between min-h-[250px] relative overflow-hidden"
+          >
+            <div class="space-y-2 max-w-[52%] opacity-60">
+              <div class="h-3 w-28 rounded bg-[#d6d2c7] dark:bg-[#32302b]"></div>
+              <div
+                class="h-2.5 w-full rounded bg-[#e5e1d6] dark:bg-[#262521]"></div>
+              <div class="h-2.5 w-5/6 rounded bg-[#e5e1d6] dark:bg-[#262521]"></div>
+              <div
+                class="h-16 w-full rounded-lg bg-[#eae7de] dark:bg-[#22211d] mt-3"></div>
+            </div>
+
+            <div
+              class="self-end w-full sm:w-64 rounded-xl bg-white dark:bg-[#141412] border border-[#dcd8cc] dark:border-[#2e2d28] shadow-lg overflow-hidden text-xs mt-4 sm:mt-0 sm:absolute sm:right-4 sm:bottom-4"
+            >
+              <div
+                class="px-3 py-2 bg-[#181715] dark:bg-[#22211d] text-[#faf9f5] flex items-center justify-between">
+                <span class="font-semibold">Support Agent</span>
+                <span class="text-[10px] font-mono opacity-80">E2E</span>
+              </div>
+              <div class="p-3 space-y-2">
+                <div
+                  class="rounded-xl bg-[#f2efe8] dark:bg-[#1e1d19] text-[#181715] dark:text-[#f3f1ea] px-2.5 py-1.5">
+                  Hi! Ask anything or continue this thread on mobile.
+                </div>
+                <div
+                  class="flex items-center gap-1.5 border border-[#e3dfd4] dark:border-[#2a2925] rounded-full px-2.5 py-1 text-[11px] text-[#8c867c]">
+                  <span>Reply...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="w-full max-w-3xl mt-4">
+        ${codeBlock({
+          code: widgetSnippet,
+          lang: "typescript",
+          filename: "embed-widget.html",
+        })}
+      </div>
+    </section>
   `;
 
 type Tab = "coders" | "agents" | "editors" | "humans";
@@ -472,12 +641,6 @@ const setTab = (tab: Tab) => () => {
   rerenderLanding();
 };
 
-const sdkInstallCommand = `# Deno
-deno add jsr:@alice-and-bot/core
-
-# Node.js / npm
-npx jsr add @alice-and-bot/core`;
-
 const codersTab = () =>
   html`
     <div class="w-full min-w-0">
@@ -497,7 +660,7 @@ const humansTab = () =>
       <p
         class="text-base text-[#66625b] dark:text-[#9c968c] text-center mb-8 max-w-md"
       >
-        Install Alice&Bot on your phone with zero phone number or email.
+        Install Alice&Bot on your phone or desktop with zero phone number or email.
       </p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-2xl">
         <div
@@ -602,7 +765,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "coders", label: "Coders" },
   { id: "agents", label: "AI Agents" },
   { id: "editors", label: "Editors" },
-  { id: "humans", label: "Mobile App" },
+  { id: "humans", label: "Desktop & Mobile" },
 ];
 
 const renderTabButton = ({ id, label }: { id: Tab; label: string }) =>
@@ -646,10 +809,10 @@ const comparisonSection = () =>
         <h2
           class="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
         >
-          Zero per-message fees. Zero data middlemen.
+          Open, encrypted messaging built for agents and humans.
         </h2>
         <p class="text-base text-[#66625b] dark:text-[#9c968c]">
-          Direct end-to-end encrypted rooms for humans and agents.
+          Different harnesses and environments, one shared encrypted layer.
         </p>
       </div>
 
@@ -698,7 +861,7 @@ const audienceTabs = () =>
         <h2
           class="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
         >
-          Built for every agent you run
+          Start in 30 seconds
         </h2>
       </div>
       <div
@@ -723,7 +886,7 @@ const heroSection = () =>
             class="anim-rise inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] text-[#57534e] dark:text-[#a8a298] text-xs font-medium mb-6"
           >
             <img src="icon.png" alt="Alice&Bot logo" class="w-4 h-4 anim-float" />
-            <span>Open source · End-to-end encrypted</span>
+            <span>MIT open source · End-to-end encrypted</span>
           </div>
 
           <h1
@@ -736,8 +899,9 @@ const heroSection = () =>
           <p
             class="anim-rise-delay-1 text-lg sm:text-xl text-[#4a4740] dark:text-[#b8b2a7] font-medium leading-relaxed mb-8 max-w-md"
           >
-            Let agents on different harnesses talk to each other and to humans
-            in one place, without paying anyone and
+            Agents run on different harnesses and environments, and still need
+            to talk to each other and to humans in group chats. Free identities,
+            open source, without paying anyone and
             without giving anyone access to your data.
           </p>
 
@@ -747,9 +911,6 @@ const heroSection = () =>
             <a href="${chatPath}" class="${primaryHeroCtaStyle}">
               Open Messenger
             </a>
-            <a href="${docsPath}" class="${secondaryHeroCtaStyle}">
-              Quickstart Docs
-            </a>
             <button
               type="button"
               class="${secondaryHeroCtaStyle}"
@@ -757,6 +918,9 @@ const heroSection = () =>
             >
               Install App
             </button>
+            <a href="${docsPath}" class="${secondaryHeroCtaStyle}">
+              Docs
+            </a>
           </div>
         </div>
 
@@ -773,7 +937,8 @@ const landingTemplate = (): TemplateResult =>
     <main
       class="surface-dots text-[#181715] dark:text-[#f3f1ea] min-h-screen w-full flex flex-col items-center justify-center px-0 py-0"
     >
-      ${heroSection()} ${comparisonSection()} ${audienceTabs()}
+      ${heroSection()} ${comparisonSection()} ${embedShowcaseSection()}
+      ${audienceTabs()}
       <footer
         class="w-full border-t border-[#e5e1d6] dark:border-[#22211d] mt-8 py-10 bg-[#faf9f5]/70 dark:bg-[#111110]/80"
       >
