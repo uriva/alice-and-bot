@@ -193,10 +193,9 @@ initRouter({
       path: mcpGuidePath,
       component: () => import("./mcp-guide.ts").then((m) => m.mcpGuide()),
       meta: {
-        title:
-          "MCP Server - Chat With Cursor, Windsurf & VS Code From Your Phone",
+        title: "MCP Server - Chat With Any AI Agent From Your Phone",
         description:
-          "Install alice-and-bot-mcp to message your AI coding sessions in Cursor, Windsurf, or VS Code from your phone with end-to-end encryption.",
+          "Install alice-and-bot-mcp to message any MCP-compatible AI agent or app from your phone with end-to-end encryption.",
         canonicalPath: mcpGuidePath,
       },
     },

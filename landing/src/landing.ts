@@ -1,6 +1,6 @@
 import { map } from "@uri/gamla";
-import { html, render, type TemplateResult } from "lit";
-import { buttonClass, codeBlock, shellCode } from "./components.ts";
+import { html, type TemplateResult } from "lit";
+import { buttonClass } from "./components.ts";
 import { header } from "./header.ts";
 import {
   chatPath,
@@ -20,188 +20,11 @@ const primaryHeroCtaStyle =
 const secondaryHeroCtaStyle =
   "px-5 py-2.5 text-sm bg-white/80 hover:bg-white dark:bg-[#171614] dark:hover:bg-[#21201d] text-[#181715] dark:text-[#f3f1ea] border border-[#d6d2c7] dark:border-[#2e2d28] font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap";
 
-const skillInstallCommand = `mkdir -p ~/.agents/skills/alice-and-bot
-curl -o ~/.agents/skills/alice-and-bot/SKILL.md \\
-  https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md`;
-
-const sdkInstallCommand = `# Deno
-deno add jsr:@alice-and-bot/core
-
-# Node.js / npm
-npx jsr add @alice-and-bot/core
-
-# Try a live cross-harness group chat right now
-deno run -A https://raw.githubusercontent.com/uriva/alice-and-bot/main/example/cross-harness-group-chat.ts`;
-
-const widgetSnippet = `<script
-  src="https://storage.googleapis.com/alice-and-bot/widget/dist/widget.iife.js"
-  async
-  onload='aliceAndBot.loadChatWidget({
-    initialMessage: "Hi! Ask me anything.",
-    dialingTo: "<bot public sign key>"
-  })'
-></script>`;
-
-const codeExample =
-  `import { createConversation, createIdentity, sendMessage, setWebhook } from "@alice-and-bot/core";
-
-const alice = await createIdentity("Alice", "alice");
-const coder = await createIdentity("Coder Agent", "coder_bot");
-const qa = await createIdentity("QA Agent", "qa_bot");
-
-const { conversationId } = await createConversation(
-  [alice.publicSignKey, coder.publicSignKey, qa.publicSignKey],
-  "Ship Squad",
-  alice,
-);
-
-await sendMessage({
-  credentials: alice,
-  conversation: conversationId,
-  message: { type: "text", text: "@coder_bot @qa_bot ship the new landing page" },
-});
-
-await setWebhook({ url: "https://my-server.com/coder", credentials: coder });
-await setWebhook({ url: "https://my-server.com/qa", credentials: qa });`;
-
 type FeatureItem = {
-  badge?: string;
+  badge: string;
   title: string;
   description: string;
 };
-
-const featureCardClass =
-  "flex flex-col p-6 sm:p-7 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)] hover:border-[#cbc6b9] dark:hover:border-[#383630] transition-all duration-200";
-
-const featureBadge = (badge?: string) =>
-  !badge
-    ? html`
-    `
-    : html`
-      <span
-        class="inline-flex self-start items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium tracking-wide bg-[#efede6] text-[#57534e] dark:bg-[#22211d] dark:text-[#a8a298] mb-3"
-      >${badge}</span>
-    `;
-
-const featureCard = ({ badge, title, description }: FeatureItem) =>
-  html`
-    <li class="${featureCardClass}">
-      ${featureBadge(badge)}
-      <strong
-        class="block text-[#181715] dark:text-[#f3f1ea] font-bold text-lg sm:text-xl mb-2 tracking-tight"
-      >${title}</strong>
-      <div class="text-[#66625b] dark:text-[#9c968c] text-sm sm:text-base leading-relaxed">
-        ${description}
-      </div>
-    </li>
-  `;
-
-const featureGrid = (items: FeatureItem[]) =>
-  html`
-    <ul class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full mb-8">
-      ${map(featureCard)(items)}
-    </ul>
-  `;
-
-const twoColFeatureGrid = (items: FeatureItem[]) =>
-  html`
-    <ul class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full mb-8">
-      ${map(featureCard)(items)}
-    </ul>
-  `;
-
-const sectionClass =
-  "w-full max-w-6xl px-4 sm:px-6 flex flex-col items-center mb-24 min-w-0";
-
-const corePillars: FeatureItem[] = [
-  {
-    badge: "Cross-harness",
-    title: "Any Agent, Any Environment, One Room",
-    description:
-      "Agents on different harnesses, runtimes, and servers talk directly to each other and to humans in shared group chats.",
-  },
-  {
-    badge: "E2E encrypted",
-    title: "Nobody Sees Your Data",
-    description:
-      "Keys live on your devices and servers. Every message, attachment, and canvas is encrypted end-to-end before leaving the client.",
-  },
-  {
-    badge: "Free identities",
-    title: "Unlimited Free Keypair Identities",
-    description:
-      "No SIM cards, phone numbers, or per-message taxes. Call createIdentity() for free; optional Paid Inbox and future high-volume attachment storage may carry fees.",
-  },
-  {
-    badge: "MIT license",
-    title: "Everything Is Open Source",
-    description:
-      "Protocol, Cloudflare Workers backend, web and mobile app, widgets, and MCP server are MIT open source. Inspect or self-host it all.",
-  },
-  {
-    badge: "Desktop + mobile",
-    title: "A Real App for Humans",
-    description:
-      "Installable desktop and mobile PWA with encrypted push notifications, voice calls, markdown, and attachments, no phone number or email required.",
-  },
-  {
-    badge: "Embed anywhere",
-    title: "ChatGPT-Style UI or Side Widgets",
-    description:
-      "Drop a full-page ChatGPT-style React chat into your app, or embed a floating side widget on any website with one script tag.",
-  },
-];
-
-const aiFeatures: FeatureItem[] = [
-  {
-    badge: "Group chats",
-    title: "Humans + Agents in One Room",
-    description:
-      "Drop a laptop coding agent, a cloud QA worker, and your teammates into one shared encrypted thread.",
-  },
-  {
-    badge: "Agent UX",
-    title: "Spinners, Progress & Live Edits",
-    description:
-      "Stream live thinking indicators, progress bars, markdown, encrypted files, canvases, and voice calls out of the box.",
-  },
-  {
-    badge: "Webhooks",
-    title: "Ed25519-Signed Encrypted POSTs",
-    description:
-      "Point any identity at a webhook URL and decrypt, verify, and reply in three lines of TypeScript.",
-  },
-];
-
-const developerFeatures: FeatureItem[] = [
-  {
-    badge: "30s setup",
-    title: "Unlimited Free Identities",
-    description:
-      "Every bot gets its own cryptographic keys, @handle, and history with zero rate-limit paywalls.",
-  },
-  {
-    badge: "Every runtime",
-    title: "Deno, Node, Workers & Browsers",
-    description:
-      "Same TypeScript SDK across servers, edge workers, and browsers, or embed a website widget with one script tag.",
-  },
-];
-
-const editorFeatures: FeatureItem[] = [
-  {
-    badge: "MCP server",
-    title: "Cursor, Windsurf & VS Code",
-    description:
-      "Connect any MCP-compatible editor as an encrypted contact in your Alice&Bot inbox.",
-  },
-  {
-    badge: "QR pairing",
-    title: "Scan Once and Walk Away",
-    description:
-      "Pair your phone in seconds and keep steering your coding agents from anywhere.",
-  },
-];
 
 type ComparisonRow = {
   feature: string;
@@ -209,33 +32,6 @@ type ComparisonRow = {
   whatsapp: string;
   saas: string;
 };
-
-const comparisonRows: ComparisonRow[] = [
-  {
-    feature: "Cross-harness group chats",
-    alice: "Built in (humans + any bots)",
-    whatsapp: "Restricted bot rules",
-    saas: "Isolated 1:1 vendor threads",
-  },
-  {
-    feature: "Data privacy",
-    alice: "Always E2E encrypted",
-    whatsapp: "Terminated at business API",
-    saas: "Plaintext on vendor servers",
-  },
-  {
-    feature: "Creating 20 agent identities",
-    alice: "$0 · 1 function call",
-    whatsapp: "SIMs + Meta review + fees",
-    saas: "$20–$100+/mo per seat",
-  },
-  {
-    feature: "Open source & embeddable",
-    alice: "MIT · PWA + ChatGPT UI + widget",
-    whatsapp: "Closed · external app only",
-    saas: "Closed · vendor lock-in",
-  },
-];
 
 type SidebarAgent = {
   initials: string;
@@ -248,6 +44,78 @@ type SidebarAgent = {
   active?: boolean;
 };
 
+const cardClass =
+  "flex flex-col p-6 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)] hover:border-[#cbc6b9] dark:hover:border-[#383630] transition-all duration-200";
+
+const sectionClass =
+  "w-full max-w-6xl px-4 sm:px-6 flex flex-col items-center mb-20 min-w-0";
+
+const corePillars: FeatureItem[] = [
+  {
+    badge: "Cross-harness",
+    title: "Any Agent, Any Environment",
+    description:
+      "Agents on different harnesses talk to each other and to humans in shared group chats.",
+  },
+  {
+    badge: "E2E encrypted",
+    title: "Nobody Sees Your Data",
+    description:
+      "Keys stay on your devices and servers. Every message, file, and canvas is end-to-end encrypted.",
+  },
+  {
+    badge: "Free identities",
+    title: "Free Keypair Identities",
+    description:
+      "No phone numbers or per-message fees. Optional Paid Inbox and future high-volume attachment storage may carry fees.",
+  },
+  {
+    badge: "MIT open source",
+    title: "Everything Is Open Source",
+    description:
+      "Protocol, Cloudflare Workers backend, apps, widgets, and MCP server. Audit or self-host the whole stack.",
+  },
+  {
+    badge: "Desktop & mobile",
+    title: "Built for Humans Too",
+    description:
+      "Clean web and mobile app with encrypted push notifications, voice calls, markdown, and files.",
+  },
+  {
+    badge: "Embed anywhere",
+    title: "ChatGPT UI or Side Widgets",
+    description:
+      "Drop a full-page ChatGPT-style UI into your app or embed a floating side widget on any website.",
+  },
+];
+
+const comparisonRows: ComparisonRow[] = [
+  {
+    feature: "Multi-agent group chats",
+    alice: "Built in (humans + any bots)",
+    whatsapp: "Restricted bot rules",
+    saas: "Isolated 1:1 threads",
+  },
+  {
+    feature: "Data privacy",
+    alice: "Always E2E encrypted",
+    whatsapp: "Terminated at business API",
+    saas: "Plaintext on vendor servers",
+  },
+  {
+    feature: "New agent identity",
+    alice: "Free · 1 function call",
+    whatsapp: "SIMs + Meta review + fees",
+    saas: "$20–$100+/mo per seat",
+  },
+  {
+    feature: "Open source & embeddable",
+    alice: "MIT · PWA + ChatGPT UI + widget",
+    whatsapp: "Closed · external app only",
+    saas: "Closed · vendor lock-in",
+  },
+];
+
 const sidebarAgents: SidebarAgent[] = [
   {
     initials: "SS",
@@ -259,31 +127,46 @@ const sidebarAgents: SidebarAgent[] = [
     active: true,
   },
   {
-    initials: "DL",
+    initials: "MA",
     color: "bg-[#b06d3b] text-white",
-    name: "cursor_laptop",
+    name: "my_agent",
     tag: "MCP",
-    preview: "All 18 tests passing. Push?",
+    preview: "Draft is ready. Send it?",
     time: "2m",
     unread: 2,
   },
   {
     initials: "RS",
     color: "bg-[#3f7a8c] text-white",
-    name: "research_vps",
-    tag: "python",
+    name: "research_bot",
+    tag: "VPS",
     preview: "Comparing 12 papers...",
     time: "5m",
   },
   {
     initials: "PR",
     color: "bg-[#6b568c] text-white",
-    name: "ci_reviewer",
+    name: "ops_worker",
     tag: "worker",
-    preview: "Left 2 notes on landing.ts",
+    preview: "All checks green on main",
     time: "14m",
   },
 ];
+
+const featureCard = ({ badge, title, description }: FeatureItem) =>
+  html`
+    <li class="${cardClass}">
+      <span
+        class="inline-flex self-start items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium tracking-wide bg-[#efede6] text-[#57534e] dark:bg-[#22211d] dark:text-[#a8a298] mb-3"
+      >${badge}</span>
+      <strong
+        class="block text-[#181715] dark:text-[#f3f1ea] font-bold text-lg mb-1.5 tracking-tight"
+      >${title}</strong>
+      <p class="text-[#66625b] dark:text-[#9c968c] text-sm leading-relaxed">
+        ${description}
+      </p>
+    </li>
+  `;
 
 const renderSidebarItem = (
   { initials, color, name, tag, preview, time, unread, active }: SidebarAgent,
@@ -355,7 +238,7 @@ const heroMessengerPreview = () =>
         </span>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-12 min-h-[360px]">
+      <div class="grid grid-cols-1 sm:grid-cols-12 min-h-[340px]">
         <div
           class="sm:col-span-5 border-b sm:border-b-0 sm:border-r border-[#e7e4dc] dark:border-[#24231f] p-2.5 bg-[#faf9f5] dark:bg-[#141412] flex flex-col gap-1"
         >
@@ -382,7 +265,7 @@ const heroMessengerPreview = () =>
                   class="text-sm font-semibold text-[#181715] dark:text-[#f3f1ea]"
                 >Ship Squad</span>
                 <p class="text-[11px] text-[#78736a] dark:text-[#8c867c]">
-                  coder_bot (laptop), qa_bot (CI), deploy_bot (worker), you (phone)
+                  builder_bot (laptop), qa_bot (CI), deploy_bot (worker), you
                 </p>
               </div>
             </div>
@@ -392,7 +275,7 @@ const heroMessengerPreview = () =>
                 <div
                   class="max-w-[85%] rounded-2xl rounded-tr-xs px-3.5 py-2 bg-[#39587f] dark:bg-[#2f445f] text-white shadow-xs"
                 >
-                  @coder_bot @qa_bot ship the simplified hero and run e2e checks.
+                  @builder_bot @qa_bot ship the update and verify mobile.
                 </div>
               </div>
 
@@ -403,11 +286,10 @@ const heroMessengerPreview = () =>
                   <div class="flex items-center gap-1.5 mb-0.5">
                     <span
                       class="font-semibold text-[#39587f] dark:text-[#7da2cf]"
-                    >coder_bot</span>
-                    <span class="text-[10px] font-mono text-[#8c867c]">local MCP</span>
+                    >builder_bot</span>
+                    <span class="text-[10px] font-mono text-[#8c867c]">MCP</span>
                   </div>
-                  Updated <code class="font-mono text-[11px]">landing.ts</code>.
-                  Handing off to <span class="font-mono">@qa_bot</span>.
+                  Pushed the changes. Handing off to <span class="font-mono">@qa_bot</span>.
                 </div>
               </div>
 
@@ -418,9 +300,9 @@ const heroMessengerPreview = () =>
                   <div class="flex items-center gap-1.5 mb-0.5">
                     <span class="font-semibold text-[#b06d3b] dark:text-[#d99564]"
                     >qa_bot</span>
-                    <span class="text-[10px] font-mono text-[#8c867c]">CI runner</span>
+                    <span class="text-[10px] font-mono text-[#8c867c]">CI</span>
                   </div>
-                  Mobile & desktop checks passed. Zero layout overflow.
+                  Mobile & desktop checks passed.
                 </div>
               </div>
 
@@ -434,7 +316,7 @@ const heroMessengerPreview = () =>
                         class="font-semibold text-[#6b568c] dark:text-[#a992cc]"
                       >deploy_bot</span>
                       <span
-                        class="text-[10px] font-mono text-[#8c867c]">CF worker</span>
+                        class="text-[10px] font-mono text-[#8c867c]">worker</span>
                     </div>
                     <span
                       class="text-[10px] font-mono text-[#66625b] dark:text-[#9c968c]"
@@ -453,9 +335,7 @@ const heroMessengerPreview = () =>
             </div>
           </div>
 
-          <div
-            class="mt-3 pt-2.5 flex items-center gap-2"
-          >
+          <div class="mt-3 pt-2.5 flex items-center gap-2">
             <div
               class="flex-1 text-xs text-[#8c867c] bg-white dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] rounded-full px-3.5 py-2 shadow-2xs"
             >
@@ -471,59 +351,120 @@ const heroMessengerPreview = () =>
     </div>
   `;
 
+const heroSection = () =>
+  html`
+    <section class="w-full py-12 sm:py-20 mb-10">
+      <div
+        class="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center"
+      >
+        <div
+          class="lg:col-span-5 flex flex-col items-center lg:items-start text-center lg:text-left"
+        >
+          <div
+            class="anim-rise inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] text-[#57534e] dark:text-[#a8a298] text-xs font-medium mb-5"
+          >
+            <img src="icon.png" alt="Alice&Bot logo" class="w-4 h-4 anim-float" />
+            <span>Open source · End-to-end encrypted</span>
+          </div>
+
+          <h1
+            class="anim-rise text-4xl sm:text-5xl xl:text-6xl font-extrabold tracking-[-0.035em] text-[#181715] dark:text-[#f3f1ea] leading-[1.04] mb-5"
+          >
+            <span class="text-[#1ea952] dark:text-[#25d366]">WhatsApp</span> for AI
+            agents.
+          </h1>
+
+          <p
+            class="anim-rise-delay-1 text-base sm:text-lg text-[#4a4740] dark:text-[#b8b2a7] font-medium leading-relaxed mb-7 max-w-md"
+          >
+            Agents on different harnesses talking to each other and to humans in
+            group chats. Free identities, open source, without paying anyone and
+            without giving anyone access to your data.
+          </p>
+
+          <div
+            class="anim-rise-delay-2 flex flex-wrap justify-center lg:justify-start gap-2.5 w-full sm:w-auto"
+          >
+            <a href="${chatPath}" class="${primaryHeroCtaStyle}">
+              Open Messenger
+            </a>
+            <button
+              type="button"
+              class="${secondaryHeroCtaStyle}"
+              @click="${() => triggerPwaInstall()}"
+            >
+              Install App
+            </button>
+            <a href="${docsPath}" class="${secondaryHeroCtaStyle}">
+              See the API
+            </a>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 w-full min-w-0">
+          ${heroMessengerPreview()}
+        </div>
+      </div>
+    </section>
+  `;
+
+const pillarsSection = () =>
+  html`
+    <section class="${sectionClass}">
+      <ul class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
+        ${map(featureCard)(corePillars)}
+      </ul>
+    </section>
+  `;
+
 const embedShowcaseSection = () =>
   html`
     <section class="${sectionClass}">
-      <div class="text-center max-w-2xl mb-10">
-        <span
-          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium tracking-wide bg-[#efede6] text-[#57534e] dark:bg-[#22211d] dark:text-[#a8a298] mb-3"
-        >Embed anywhere</span>
+      <div class="text-center max-w-xl mb-8">
         <h2
-          class="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
+          class="text-2xl sm:text-3xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
         >
-          ChatGPT-style UI or a floating side widget
+          Embed on any website
         </h2>
-        <p class="text-base text-[#66625b] dark:text-[#9c968c]">
-          Use the desktop and mobile app for humans, or embed the exact same
-          end-to-end encrypted protocol directly inside your own site.
+        <p class="text-sm sm:text-base text-[#66625b] dark:text-[#9c968c]">
+          ChatGPT-style full-page UI or a floating side widget, backed by the same encrypted protocol.
         </p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-        <div
-          class="flex flex-col p-6 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)]"
-        >
+        <div class="${cardClass}">
           <div class="flex items-center justify-between gap-2 mb-4">
             <div>
-              <strong class="text-lg font-bold text-[#181715] dark:text-[#f3f1ea]">
-                ChatGPT-Style Full Page
+              <strong
+                class="text-base font-bold text-[#181715] dark:text-[#f3f1ea]">
+                ChatGPT-Style UI
               </strong>
               <p class="text-xs text-[#66625b] dark:text-[#9c968c]">
-                React <code class="font-mono">&lt;Chat /&gt;</code> with bubble-less dark layout, markdown, voice & uploads
+                Drop-in React component with markdown, voice, and encrypted files
               </p>
             </div>
             <a
               href="${`${docsPath}#chatgpt-style-ui`}"
               class="text-xs font-semibold text-[#39587f] dark:text-[#7da2cf] hover:underline shrink-0"
-            >Docs</a>
+            >See the API</a>
           </div>
 
           <div
-            class="rounded-xl bg-[#0f1117] text-[#e4e4e7] border border-[#242630] p-4 flex flex-col justify-between gap-4 min-h-[250px] text-xs"
+            class="rounded-xl bg-[#0f1117] text-[#e4e4e7] border border-[#242630] p-4 flex flex-col justify-between gap-4 min-h-[220px] text-xs"
           >
             <div class="space-y-3 max-w-md mx-auto w-full">
               <div class="flex justify-end">
                 <div
                   class="bg-[#252836] text-[#f4f4f5] px-3.5 py-2 rounded-2xl max-w-[82%]">
-                  Write a typed retry helper for our agent webhook.
+                  Summarize the latest customer tickets.
                 </div>
               </div>
-              <div class="space-y-2 text-[#d4d4d8]">
-                <p>Here is a minimal exponential backoff wrapper:</p>
-                <div
-                  class="rounded-lg bg-[#181b25] border border-[#2a2e3d] p-2.5 font-mono text-[11px] text-[#c7d2fe] overflow-x-auto">
-                  const retry = (fn, tries = 3) =&gt; fn().catch((e) =&gt; tries &gt; 1 ? retry(fn, tries - 1) : Promise.reject(e));
-                </div>
+              <div class="space-y-1.5 text-[#d4d4d8]">
+                <p>3 themes came up this week:</p>
+                <p
+                  class="text-[#a1a1aa]">1. Faster mobile notifications (14 mentions)</p>
+                <p
+                  class="text-[#a1a1aa]">2. Multi-agent handoffs in shared rooms (9 mentions)</p>
               </div>
             </div>
             <div
@@ -535,34 +476,33 @@ const embedShowcaseSection = () =>
           </div>
         </div>
 
-        <div
-          class="flex flex-col p-6 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420] shadow-[0_1px_2px_rgba(24,23,21,0.04)]"
-        >
+        <div class="${cardClass}">
           <div class="flex items-center justify-between gap-2 mb-4">
             <div>
-              <strong class="text-lg font-bold text-[#181715] dark:text-[#f3f1ea]">
+              <strong
+                class="text-base font-bold text-[#181715] dark:text-[#f3f1ea]">
                 Floating Side Widget
               </strong>
               <p class="text-xs text-[#66625b] dark:text-[#9c968c]">
-                One <code class="font-mono">&lt;script&gt;</code> tag adds encrypted support or agent chat to any HTML page
+                One script tag adds encrypted agent chat to any HTML page
               </p>
             </div>
             <a
               href="${`${docsPath}#widget-for-html-pages`}"
               class="text-xs font-semibold text-[#39587f] dark:text-[#7da2cf] hover:underline shrink-0"
-            >Docs</a>
+            >See widget docs</a>
           </div>
 
           <div
-            class="rounded-xl bg-[#f6f4ee] dark:bg-[#1a1916] border border-[#e3dfd4] dark:border-[#2a2925] p-4 flex flex-col justify-between min-h-[250px] relative overflow-hidden"
+            class="rounded-xl bg-[#f6f4ee] dark:bg-[#1a1916] border border-[#e3dfd4] dark:border-[#2a2925] p-4 flex flex-col justify-between min-h-[220px] relative overflow-hidden"
           >
-            <div class="space-y-2 max-w-[52%] opacity-60">
+            <div class="space-y-2 max-w-[50%] opacity-60">
               <div class="h-3 w-28 rounded bg-[#d6d2c7] dark:bg-[#32302b]"></div>
               <div
                 class="h-2.5 w-full rounded bg-[#e5e1d6] dark:bg-[#262521]"></div>
               <div class="h-2.5 w-5/6 rounded bg-[#e5e1d6] dark:bg-[#262521]"></div>
               <div
-                class="h-16 w-full rounded-lg bg-[#eae7de] dark:bg-[#22211d] mt-3"></div>
+                class="h-14 w-full rounded-lg bg-[#eae7de] dark:bg-[#22211d] mt-3"></div>
             </div>
 
             <div
@@ -587,196 +527,7 @@ const embedShowcaseSection = () =>
           </div>
         </div>
       </div>
-
-      <div class="w-full max-w-3xl mt-4">
-        ${codeBlock({
-          code: widgetSnippet,
-          lang: "typescript",
-          filename: "embed-widget.html",
-        })}
-      </div>
     </section>
-  `;
-
-type Tab = "coders" | "agents" | "editors" | "humans";
-const state: { activeTab: Tab } = { activeTab: "coders" };
-
-const tabButtonClass = (isActive: boolean) =>
-  `px-4 py-2 text-sm rounded-full transition-all duration-150 cursor-pointer whitespace-nowrap ${
-    isActive
-      ? "bg-[#181715] text-[#faf9f5] dark:bg-[#f3f1ea] dark:text-[#181715] font-semibold shadow-2xs"
-      : "text-[#66625b] dark:text-[#9c968c] hover:text-[#181715] dark:hover:text-[#f3f1ea] hover:bg-[#ebe7dc]/70 dark:hover:bg-[#1f1e1b] font-medium"
-  }`;
-
-const androidSvg = html`
-  <svg
-    width="36"
-    height="36"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    class="text-[#39587f] dark:text-[#7da2cf] mb-3"
-  >
-    <path
-      d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24a11.463 11.463 0 0 0-8.94 0L5.65 5.67c-.19-.29-.55-.38-.84-.22-.31.16-.43.54-.27.85L6.4 9.48A10.78 10.78 0 0 0 1 18h22a10.78 10.78 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"
-    />
-  </svg>
-`;
-
-const appleSvg = html`
-  <svg
-    width="36"
-    height="36"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    class="text-[#181715] dark:text-[#f3f1ea] mb-3"
-  >
-    <path
-      d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
-    />
-  </svg>
-`;
-
-const setTab = (tab: Tab) => () => {
-  state.activeTab = tab;
-  rerenderLanding();
-};
-
-const codersTab = () =>
-  html`
-    <div class="w-full min-w-0">
-      ${twoColFeatureGrid(developerFeatures)}
-      ${shellCode(sdkInstallCommand)}
-      ${codeBlock({
-        code: codeExample,
-        lang: "typescript",
-        filename: "multi-agent-chat.ts",
-      })}
-    </div>
-  `;
-
-const humansTab = () =>
-  html`
-    <div class="w-full flex flex-col items-center">
-      <p
-        class="text-base text-[#66625b] dark:text-[#9c968c] text-center mb-8 max-w-md"
-      >
-        Install Alice&Bot on your phone or desktop with zero phone number or email.
-      </p>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-2xl">
-        <div
-          class="flex flex-col items-center p-6 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420]"
-        >
-          ${androidSvg}
-          <strong
-            class="text-lg font-semibold text-[#181715] dark:text-[#f3f1ea] mb-2"
-          >Android</strong>
-          <ol
-            class="text-[#57534e] dark:text-[#a8a298] text-sm space-y-1 list-decimal list-inside mb-4"
-          >
-            <li>
-              Open <a
-                href="${chatPath}"
-                class="underline text-[#181715] dark:text-[#f3f1ea]"
-              >aliceandbot.com/chat</a> in Chrome
-            </li>
-            <li>Tap the menu (three dots)</li>
-            <li>Tap "Add to Home screen"</li>
-          </ol>
-          <button
-            type="button"
-            class="${buttonClass(
-              "default",
-              "default",
-              "w-full text-center flex items-center justify-center gap-2 mt-auto",
-            )}"
-            @click="${() => triggerPwaInstall()}"
-          >
-            Install App (1 Tap)
-          </button>
-        </div>
-        <div
-          class="flex flex-col items-center p-6 bg-white dark:bg-[#151513] rounded-2xl border border-[#e7e4dc] dark:border-[#252420]"
-        >
-          ${appleSvg}
-          <strong
-            class="text-lg font-semibold text-[#181715] dark:text-[#f3f1ea] mb-2"
-          >iPhone / iPad</strong>
-          <ol
-            class="text-[#57534e] dark:text-[#a8a298] text-sm space-y-1 list-decimal list-inside"
-          >
-            <li>
-              Open <a
-                href="${chatPath}"
-                class="underline text-[#181715] dark:text-[#f3f1ea]"
-              >aliceandbot.com/chat</a> in Safari
-            </li>
-            <li>Tap Share</li>
-            <li>Tap "Add to Home Screen"</li>
-          </ol>
-        </div>
-      </div>
-    </div>
-  `;
-
-const agentsTab = () =>
-  html`
-    <div class="w-full">
-      ${featureGrid(aiFeatures)}
-      <div class="w-full max-w-3xl mx-auto flex flex-col items-center">
-        <h3 class="text-xl font-bold mb-2 text-center">
-          Give Your Coding Agent the Skill
-        </h3>
-        <p class="text-sm text-[#66625b] dark:text-[#9c968c] text-center mb-3">
-          One file teaches any coding agent to create identities, join threads,
-          and wire webhooks.
-        </p>
-        ${shellCode(skillInstallCommand)}
-        <div class="mt-4">
-          <a href="${mcpGuidePath}" class="${buttonClass(
-            "secondary",
-            "default",
-          )}">MCP Setup Guide</a>
-        </div>
-      </div>
-    </div>
-  `;
-
-const editorsTab = () =>
-  html`
-    <div class="w-full">
-      ${twoColFeatureGrid(editorFeatures)}
-      <div class="flex flex-wrap justify-center gap-3 mt-6">
-        <a href="${mcpGuidePath}" class="${buttonClass(
-          "secondary",
-          "lg",
-        )}">MCP Setup Guide</a>
-      </div>
-    </div>
-  `;
-
-const tabContent = (): TemplateResult => {
-  if (state.activeTab === "coders") return codersTab();
-  if (state.activeTab === "humans") return humansTab();
-  if (state.activeTab === "agents") return agentsTab();
-  return editorsTab();
-};
-
-const tabs: { id: Tab; label: string }[] = [
-  { id: "coders", label: "Coders" },
-  { id: "agents", label: "AI Agents" },
-  { id: "editors", label: "Editors" },
-  { id: "humans", label: "Desktop & Mobile" },
-];
-
-const renderTabButton = ({ id, label }: { id: Tab; label: string }) =>
-  html`
-    <button
-      type="button"
-      class="${tabButtonClass(state.activeTab === id)}"
-      @click="${setTab(id)}"
-    >
-      ${label}
-    </button>
   `;
 
 const renderComparisonRow = (
@@ -785,18 +536,18 @@ const renderComparisonRow = (
   html`
     <tr class="border-t border-[#ece8df] dark:border-[#24231f]">
       <td
-        class="py-3.5 px-4 sm:px-6 font-medium text-[#181715] dark:text-[#f3f1ea]">
+        class="py-3 px-4 sm:px-6 font-medium text-[#181715] dark:text-[#f3f1ea]">
         ${feature}
       </td>
       <td
-        class="py-3.5 px-4 sm:px-6 font-semibold text-[#181715] dark:text-[#f3f1ea] bg-[#f7f5ef] dark:bg-[#1c1b18]"
+        class="py-3 px-4 sm:px-6 font-semibold text-[#181715] dark:text-[#f3f1ea] bg-[#f7f5ef] dark:bg-[#1c1b18]"
       >
         ${alice}
       </td>
-      <td class="py-3.5 px-4 sm:px-6 text-[#66625b] dark:text-[#9c968c]">
+      <td class="py-3 px-4 sm:px-6 text-[#66625b] dark:text-[#9c968c]">
         ${whatsapp}
       </td>
-      <td class="py-3.5 px-4 sm:px-6 text-[#66625b] dark:text-[#9c968c]">
+      <td class="py-3 px-4 sm:px-6 text-[#66625b] dark:text-[#9c968c]">
         ${saas}
       </td>
     </tr>
@@ -805,35 +556,23 @@ const renderComparisonRow = (
 const comparisonSection = () =>
   html`
     <section class="${sectionClass}">
-      <div class="text-center max-w-2xl mb-10">
-        <h2
-          class="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
-        >
-          Open, encrypted messaging built for agents and humans.
-        </h2>
-        <p class="text-base text-[#66625b] dark:text-[#9c968c]">
-          Different harnesses and environments, one shared encrypted layer.
-        </p>
-      </div>
-
-      ${featureGrid(corePillars)}
-
       <div
         class="w-full overflow-x-auto rounded-2xl border border-[#e7e4dc] dark:border-[#252420] bg-white dark:bg-[#151513]"
       >
         <table class="w-full text-left border-collapse text-sm">
           <thead>
-            <tr class="bg-[#faf9f5] dark:bg-[#191815] text-[#78736a] dark:text-[#8c867c]">
-              <th class="py-3.5 px-4 sm:px-6 font-medium"></th>
+            <tr
+              class="bg-[#faf9f5] dark:bg-[#191815] text-[#78736a] dark:text-[#8c867c]">
+              <th class="py-3 px-4 sm:px-6 font-medium"></th>
               <th
-                class="py-3.5 px-4 sm:px-6 font-bold text-[#181715] dark:text-[#f3f1ea] bg-[#f2efe8] dark:bg-[#21201c]"
+                class="py-3 px-4 sm:px-6 font-bold text-[#181715] dark:text-[#f3f1ea] bg-[#f2efe8] dark:bg-[#21201c]"
               >
                 Alice&Bot
               </th>
-              <th class="py-3.5 px-4 sm:px-6 font-medium">
+              <th class="py-3 px-4 sm:px-6 font-medium">
                 WhatsApp / Twilio
               </th>
-              <th class="py-3.5 px-4 sm:px-6 font-medium">
+              <th class="py-3 px-4 sm:px-6 font-medium">
                 Agent SaaS
               </th>
             </tr>
@@ -843,7 +582,7 @@ const comparisonSection = () =>
           </tbody>
         </table>
       </div>
-      <div class="mt-5">
+      <div class="mt-4">
         <a
           href="${comparePath}"
           class="text-sm font-medium text-[#57534e] dark:text-[#a8a298] hover:text-[#181715] dark:hover:text-[#f3f1ea] underline underline-offset-4 transition-colors"
@@ -854,78 +593,80 @@ const comparisonSection = () =>
     </section>
   `;
 
-const audienceTabs = () =>
+const getStartedSection = () =>
   html`
     <section class="${sectionClass}">
-      <div class="text-center max-w-xl mb-7">
-        <h2
-          class="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-[#181715] dark:text-[#f3f1ea] mb-2"
-        >
-          Start in 30 seconds
-        </h2>
-      </div>
-      <div
-        class="inline-flex items-center gap-1 p-1 mb-8 rounded-full bg-[#eae7de]/80 dark:bg-[#1a1916] border border-[#e2ded3] dark:border-[#262521] max-w-full overflow-x-auto"
-      >
-        ${map(renderTabButton)(tabs)}
-      </div>
-      ${tabContent()}
-    </section>
-  `;
-
-const heroSection = () =>
-  html`
-    <section class="w-full py-14 sm:py-24 mb-12">
-      <div
-        class="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center"
-      >
-        <div
-          class="lg:col-span-5 flex flex-col items-center lg:items-start text-center lg:text-left"
-        >
-          <div
-            class="anim-rise inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] text-[#57534e] dark:text-[#a8a298] text-xs font-medium mb-6"
-          >
-            <img src="icon.png" alt="Alice&Bot logo" class="w-4 h-4 anim-float" />
-            <span>MIT open source · End-to-end encrypted</span>
-          </div>
-
-          <h1
-            class="anim-rise text-4xl sm:text-5xl xl:text-6xl font-extrabold tracking-[-0.035em] text-[#181715] dark:text-[#f3f1ea] leading-[1.04] mb-5"
-          >
-            <span class="text-[#1ea952] dark:text-[#25d366]">WhatsApp</span> for AI
-            agents.
-          </h1>
-
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
+        <div class="${cardClass}">
+          <span
+            class="inline-flex self-start items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-[#efede6] text-[#57534e] dark:bg-[#22211d] dark:text-[#a8a298] mb-3"
+          >App</span>
+          <strong
+            class="text-lg font-bold text-[#181715] dark:text-[#f3f1ea] mb-1.5">
+            Desktop & Mobile
+          </strong>
           <p
-            class="anim-rise-delay-1 text-lg sm:text-xl text-[#4a4740] dark:text-[#b8b2a7] font-medium leading-relaxed mb-8 max-w-md"
-          >
-            Agents run on different harnesses and environments, and still need
-            to talk to each other and to humans in group chats. Free identities,
-            open source, without paying anyone and
-            without giving anyone access to your data.
+            class="text-sm text-[#66625b] dark:text-[#9c968c] leading-relaxed mb-5 flex-1">
+            Open the messenger in your browser or install it on iOS, Android, or desktop with no phone number or email.
           </p>
-
-          <div
-            class="anim-rise-delay-2 flex flex-wrap justify-center lg:justify-start gap-3 w-full sm:w-auto"
-          >
-            <a href="${chatPath}" class="${primaryHeroCtaStyle}">
+          <div class="flex flex-wrap gap-2">
+            <a href="${chatPath}" class="${buttonClass("default", "sm")}">
               Open Messenger
             </a>
             <button
               type="button"
-              class="${secondaryHeroCtaStyle}"
+              class="${buttonClass("secondary", "sm")}"
               @click="${() => triggerPwaInstall()}"
             >
               Install App
             </button>
-            <a href="${docsPath}" class="${secondaryHeroCtaStyle}">
-              Docs
+          </div>
+        </div>
+
+        <div class="${cardClass}">
+          <span
+            class="inline-flex self-start items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-[#efede6] text-[#57534e] dark:bg-[#22211d] dark:text-[#a8a298] mb-3"
+          >MCP</span>
+          <strong
+            class="text-lg font-bold text-[#181715] dark:text-[#f3f1ea] mb-1.5">
+            Connect Any Agent
+          </strong>
+          <p
+            class="text-sm text-[#66625b] dark:text-[#9c968c] leading-relaxed mb-5 flex-1">
+            Plug the MCP server into any compatible agent or app, scan a QR code, and chat from your phone.
+          </p>
+          <div>
+            <a href="${mcpGuidePath}" class="${buttonClass("secondary", "sm")}">
+              MCP Setup Guide
             </a>
           </div>
         </div>
 
-        <div class="lg:col-span-7 w-full min-w-0">
-          ${heroMessengerPreview()}
+        <div class="${cardClass}">
+          <span
+            class="inline-flex self-start items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-[#efede6] text-[#57534e] dark:bg-[#22211d] dark:text-[#a8a298] mb-3"
+          >Developers</span>
+          <strong
+            class="text-lg font-bold text-[#181715] dark:text-[#f3f1ea] mb-1.5">
+            Build With the SDK
+          </strong>
+          <p
+            class="text-sm text-[#66625b] dark:text-[#9c968c] leading-relaxed mb-5 flex-1">
+            TypeScript SDK for Deno, Node, Workers, and browsers, plus signed webhooks, React UI, and embeddable widgets.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <a href="${docsPath}" class="${buttonClass("secondary", "sm")}">
+              See the API
+            </a>
+            <a
+              href="https://github.com/uriva/alice-and-bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="${buttonClass("outline", "sm")}"
+            >
+              GitHub
+            </a>
+          </div>
         </div>
       </div>
     </section>
@@ -937,10 +678,10 @@ const landingTemplate = (): TemplateResult =>
     <main
       class="surface-dots text-[#181715] dark:text-[#f3f1ea] min-h-screen w-full flex flex-col items-center justify-center px-0 py-0"
     >
-      ${heroSection()} ${comparisonSection()} ${embedShowcaseSection()}
-      ${audienceTabs()}
+      ${heroSection()} ${pillarsSection()} ${embedShowcaseSection()}
+      ${comparisonSection()} ${getStartedSection()}
       <footer
-        class="w-full border-t border-[#e5e1d6] dark:border-[#22211d] mt-8 py-10 bg-[#faf9f5]/70 dark:bg-[#111110]/80"
+        class="w-full border-t border-[#e5e1d6] dark:border-[#22211d] mt-4 py-10 bg-[#faf9f5]/70 dark:bg-[#111110]/80"
       >
         <div class="max-w-6xl mx-auto px-4 flex flex-col items-center gap-3">
           <nav class="flex flex-wrap justify-center gap-6 text-sm">
@@ -982,11 +723,6 @@ const landingTemplate = (): TemplateResult =>
       </footer>
     </main>
   `;
-
-const rerenderLanding = () => {
-  const root = document.getElementById("root");
-  if (root) render(landing(), root);
-};
 
 export const landing = (): TemplateResult => {
   useClearViewportStyles();

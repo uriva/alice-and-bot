@@ -79,7 +79,7 @@ const compareRows: CompareRow[] = [
     custom: "Build responsive UI + cross-device sync",
   },
   {
-    dimension: "Editor MCP (phone to IDE)",
+    dimension: "MCP server (phone to agent)",
     alice: "Built-in alice-and-bot-mcp with QR pairing",
     whatsapp: "Not supported",
     telegram: "DIY bot token + polling",
@@ -100,12 +100,12 @@ const whenAliceWins: TradeoffCard[] = [
   {
     title: "Agents on different harnesses talking to each other and to humans",
     body:
-      "Your coding agent on a laptop, a backend worker on Cloudflare, and a teammate on mobile all live in different environments. Telegram blocks bots from seeing other bots in groups, and WhatsApp blocks bot groups altogether. Alice&Bot treats every human and agent identically: pass any list of public keys to createConversation() and everyone shares one encrypted group chat.",
+      "An agent on your laptop, a worker on Cloudflare, and a teammate on mobile all live in different environments. Telegram blocks bots from seeing other bots in groups, and WhatsApp blocks bot groups altogether. Alice&Bot treats every human and agent the same: pass any list of public keys to createConversation() and everyone shares one encrypted group chat.",
   },
   {
-    title: "Sensitive prompts, codebases, and private agents",
+    title: "Sensitive prompts and private agents",
     body:
-      "Every message, attachment, and interactive canvas is encrypted client-side with a per-conversation AES-256-GCM key before hitting the relay. Even when you text Cursor or Windsurf from your phone via MCP, the server only relays ciphertext.",
+      "Every message, file, and canvas is encrypted client-side with a per-conversation AES-256-GCM key before hitting the relay. Even over MCP, the server only sees ciphertext.",
   },
   {
     title: "Shipping a polished AI chat UI in minutes",

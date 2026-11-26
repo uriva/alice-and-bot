@@ -1,41 +1,35 @@
-# Chat With Your Coding Sessions
+# Chat With Any AI Agent From Your Phone
 
-Talk to your AI code editor from your phone — end-to-end encrypted via
-Alice&Bot.
+Message any MCP-compatible agent, app, or editor from your phone, end-to-end
+encrypted via Alice&Bot.
 
-Works with **Cursor**, **Windsurf**, **VS Code (Copilot)**, and any editor or
-client that supports [MCP](https://modelcontextprotocol.io/).
+Works with any client that supports [MCP](https://modelcontextprotocol.io/),
+including desktop assistants, agent harnesses, Cursor, Windsurf, and VS Code.
 
 ## How It Works
 
-Your editor runs a local MCP server that creates an Alice&Bot identity. You scan
-a QR code, send a one-time pairing code to pin your device, and you're chatting
-— encrypted end-to-end.
+Your MCP client runs a local server with its own Alice&Bot keypair. Scan a QR
+code, send a one-time pairing code to authorize your phone, and start chatting.
 
-**Phone** sends a message through **Alice&Bot**, which forwards it to a
-**Relay**, which delivers it to the **MCP Server** running in your **Editor** —
-and replies flow back the same way. The relay never sees plaintext.
+**Phone** -> **Alice&Bot** -> **Relay** -> **Local MCP Server** (and back). The
+relay only sees ciphertext.
 
-## Step 1: Install the MCP Server
-
-A single command downloads the binary for your platform:
+## Step 1: Install
 
 ```bash
 curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
 ```
 
-This installs `alice-and-bot-mcp` to `~/.local/bin/`.
+Installs `alice-and-bot-mcp` to `~/.local/bin/`.
 
-The binary is ~100MB because Deno embeds its entire runtime — even a hello world
-is ~90MB. The actual MCP server code adds very little on top.
+The binary is ~100MB because Deno embeds its runtime.
 
-## Step 2: Configure Your Editor
+## Step 2: Add to Your MCP Client
 
-Add the MCP server to your editor's configuration.
+### Standard MCP config (`mcp.json`)
 
-### Cursor
-
-Add to `.cursor/mcp.json`:
+Works with Cursor (`.cursor/mcp.json`), Windsurf (`.windsurf/mcp.json`), and
+most MCP clients:
 
 ```json
 {
@@ -47,23 +41,9 @@ Add to `.cursor/mcp.json`:
 }
 ```
 
-### Windsurf
+### VS Code
 
-Add to `.windsurf/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "aliceandbot": {
-      "command": "alice-and-bot-mcp"
-    }
-  }
-}
-```
-
-### VS Code (GitHub Copilot)
-
-Add to your VS Code `settings.json`:
+Add to `settings.json`:
 
 ```json
 {
@@ -77,35 +57,27 @@ Add to your VS Code `settings.json`:
 }
 ```
 
-## Step 3: Start Chatting
+## Step 3: Pair & Chat
 
-1. Ask your AI agent to **"set up Alice&Bot"** (or use the `aliceandbot` prompt
-   if your editor supports MCP prompts)
-2. It will show a **QR code** and a **pairing code** — scan the QR code with
-   your phone
-3. Send the pairing code as your first message in Alice&Bot to authorize your
-   device
-4. Send messages from your phone — ask your agent to read them with
-   `aliceandbot_read` (or let editors supporting `tools/list_changed` notify it
-   automatically)
-5. The agent replies back with `aliceandbot_reply`
+1. Tell your agent to **"set up Alice&Bot"** (or run the `aliceandbot` prompt).
+2. Scan the **QR code** with your phone.
+3. Send the **pairing code** as your first message to authorize your device.
+4. Message your agent from your phone. It reads messages with `aliceandbot_read`
+   (or automatically via `tools/list_changed`) and replies with
+   `aliceandbot_reply`.
 
-That's it. You're chatting with your coding session from your phone, with
-end-to-end encryption.
+## Tools
 
-## Available Tools
-
-| Tool                | What it does                                                                           |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| `aliceandbot_setup` | Creates your identity (first run only), registers the webhook, shows QR & pairing code |
-| `aliceandbot_read`  | Polls for and decrypts new messages from your paired device                            |
-| `aliceandbot_reply` | Sends an encrypted reply back to a conversation                                        |
+| Tool                | What it does                                                        |
+| ------------------- | ------------------------------------------------------------------- |
+| `aliceandbot_setup` | Creates identity (first run), sets webhook, shows QR & pairing code |
+| `aliceandbot_read`  | Polls and decrypts incoming messages from your paired device        |
+| `aliceandbot_reply` | Sends an encrypted reply back to the conversation                   |
 
 ## Notes
 
-- Your identity and paired device persist across sessions at
-  `~/.config/aliceandbot-mcp/` — you only set them up once
-- One session at a time receives messages (the last one to call setup wins)
-- Messages are polled in the background every 3 seconds and on demand whenever
-  `aliceandbot_read` is called
-- All messages are end-to-end encrypted; the relay only stores ciphertext
+- Your identity and paired device are saved at `~/.config/aliceandbot-mcp/` so
+  you only pair once.
+- One active session receives messages at a time (the latest `setup` wins).
+- Background polling runs every 3 seconds, plus on demand in `aliceandbot_read`.
+- Everything is end-to-end encrypted. The relay only stores ciphertext.

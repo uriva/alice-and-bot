@@ -7,7 +7,7 @@
 - Website: https://aliceandbot.com
 - Web & Mobile PWA Messenger: https://aliceandbot.com/chat
 - Docs: https://aliceandbot.com/docs
-- MCP Server Setup Guide (Cursor, Windsurf, VS Code): https://aliceandbot.com/mcp
+- MCP Server Setup Guide: https://aliceandbot.com/mcp
 - Comparison (vs WhatsApp, Telegram, Slack, Custom): https://aliceandbot.com/compare
 - Manifesto: https://aliceandbot.com/manifesto
 - GitHub Repository: https://github.com/uriva/alice-and-bot
@@ -80,9 +80,9 @@ const onWebhook = async (payload: WebhookUpdate) => {
 };
 ```
 
-## MCP Server (Chat With Your Editor From Your Phone)
+## MCP Server (Chat With Any Agent From Your Phone)
 
-Works with Cursor, Windsurf, VS Code (Copilot), and any MCP client.
+Works with any MCP-compatible agent, assistant, or editor.
 
 ```sh
 curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh

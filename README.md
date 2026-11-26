@@ -22,9 +22,8 @@ side widgets for websites, signed webhooks, and an MCP server.
 - **Drop-in UI & Mobile PWA.** Embed a React `<Chat />` component, a one-line
   HTML widget, or use the mobile PWA at
   [aliceandbot.com/chat](https://aliceandbot.com/chat).
-- **MCP server for editors.** Text your Cursor, Windsurf, or VS Code coding
-  agent from your phone over E2E encrypted chat
-  ([setup guide](https://aliceandbot.com/mcp)).
+- **MCP server.** Message any MCP-compatible agent or app from your phone over
+  E2E encrypted chat ([setup guide](https://aliceandbot.com/mcp)).
 
 Read the [manifesto](https://aliceandbot.com/manifesto), browse the
 [docs](https://aliceandbot.com/docs), or see how it
@@ -115,8 +114,8 @@ await sendMessage({
    ([aliceandbot.com/chat](https://aliceandbot.com/chat)) with E2E encrypted
    push notifications
 7. Optional Paid Inbox (`priceTag`) anti-spam model for cold outreach
-8. Built-in MCP server (`alice-and-bot-mcp`) to chat with Cursor, Windsurf, and
-   VS Code sessions from your phone
+8. Built-in MCP server (`alice-and-bot-mcp`) to chat with any MCP-compatible AI
+   agent from your phone
 
 Alice&Bot runs in production today, powering
 [build-chatbot.com](https://build-chatbot.com) and other live agents.
@@ -684,26 +683,24 @@ const scriptTag = embedScript({
 // Insert scriptTag into your HTML
 ```
 
-## MCP Server (AI Code Editors)
+## MCP Server
 
-Chat with your coding sessions from your phone. The MCP server gives your AI
-code editor three tools — `aliceandbot_setup`, `aliceandbot_read`, and
-`aliceandbot_reply` — that let you open an encrypted Alice&Bot conversation with
-any active session.
+Chat with any MCP-compatible AI agent from your phone. Gives any MCP client
+three tools (`aliceandbot_setup`, `aliceandbot_read`, `aliceandbot_reply`) to
+open an end-to-end encrypted Alice&Bot conversation.
 
-Works with Cursor, Windsurf, VS Code (Copilot), and any editor that supports
-MCP.
+Works with desktop assistants, agent harnesses, Cursor, Windsurf, VS Code, and
+any client that supports MCP.
 
 ### Quick start
 
-1. Install the MCP server binary:
+1. Install the binary:
 
    ```bash
    curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
    ```
 
-2. Add the MCP server to your editor's config (e.g. `.cursor/mcp.json`,
-   `.windsurf/mcp.json`, or VS Code settings):
+2. Add to your MCP client config (e.g. `mcp.json` or VS Code settings):
 
    ```json
    {
@@ -715,12 +712,11 @@ MCP.
    }
    ```
 
-3. Ask your AI agent to "set up Alice&Bot". It calls `aliceandbot_setup`, shows
-   a QR code and pairing code — scan it with your phone and send the pairing
-   code to start messaging.
+3. Tell your agent to "set up Alice&Bot". Scan the QR code with your phone and
+   send the pairing code to start messaging.
 
-See [`mcp/README.md`](mcp/README.md) for full details, or the
-[setup guide](https://aliceandbot.com/mcp).
+See [`mcp/README.md`](mcp/README.md) or the
+[MCP guide](https://aliceandbot.com/mcp).
 
 ## Self-Hosting
 
