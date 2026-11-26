@@ -231,6 +231,12 @@ chatBox.isDark = true;
 if (!loadMoreEnabled) chatBox.customColors = chatGptColors;
 chatBox.enableAttachments = true;
 chatBox.enableAudioRecording = true;
+chatBox.onEdit = (messageId: string, newText: string) => {
+  messages = messages.map((m) =>
+    m.id !== messageId ? m : { ...m, text: newText }
+  );
+  chatBox.messages = messages;
+};
 chatBox.onReact = (messageId: string, emoji: string, remove?: boolean) => {
   messages = messages.map((m) =>
     m.id !== messageId ? m : {

@@ -60,9 +60,10 @@ import {
   createVoiceCall,
   type VoiceCallController,
 } from "../core/voice-call.ts";
-import "./chat-box.ts";
+import { ChatBox } from "./chat-box.ts";
 import "./user-profile-popup.ts";
 import "./chat-avatar.ts";
+import { classifyGlobalShortcut, nextThreadId } from "./shortcuts.ts";
 import {
   avatarColor,
   defaultInputBackground,
@@ -833,6 +834,13 @@ export class ConnectedChat extends LitElement {
     null;
   private _voiceCall: VoiceCallController | null = null;
 
+  public focusInput = (): void => {
+    this.updateComplete.then(() => {
+      const box = this.querySelector("chat-box");
+      if (box instanceof ChatBox) box.focusInput();
+    }).catch(() => {});
+  };
+
   override createRenderRoot(): HTMLElement {
     return this;
   }
@@ -847,6 +855,7 @@ export class ConnectedChat extends LitElement {
     this.style.maxWidth = "100%";
     this._activeConversationId = this.conversationId;
     this.addEventListener("click", this._handleClick);
+    globalThis.addEventListener("keydown", this._handleGlobalKeydown);
     if (this.enableChatSwitching) {
       this._responsiveUnsub = subscribeIsMobile((m) => {
         this._isMobile = m;
@@ -859,6 +868,7 @@ export class ConnectedChat extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     this.removeEventListener("click", this._handleClick);
+    globalThis.removeEventListener("keydown", this._handleGlobalKeydown);
     this._teardown();
   }
 
@@ -928,6 +938,9 @@ export class ConnectedChat extends LitElement {
         !sameCredentials(this._subscribedCredentials, this.credentials));
     if (conversationNeedsSetup) {
       this._setupConversationSubscriptions();
+      if (!this.disableAutoFocus && !this._isMobile) {
+        this.focusInput();
+      }
     } else if (
       changed.has("initialConversation") &&
       this._participants.length === 0
@@ -1081,6 +1094,9 @@ export class ConnectedChat extends LitElement {
       }),
     );
     this.requestUpdate();
+    if (!this.disableAutoFocus && !this._isMobile) {
+      this.focusInput();
+    }
   }
 
   private _applyInitialConversation(targetId: string) {
@@ -1813,9 +1829,77 @@ export class ConnectedChat extends LitElement {
     this.requestUpdate();
   };
 
+  private _filteredConversations(): Conversation[] {
+    if (!this._conversations) return [];
+    const myKey = this.credentials?.publicSignKey ?? "";
+    const query = this._searchQuery.trim().toLowerCase();
+    return query
+      ? this._conversations.filter((c) =>
+        resolveConversationDisplayName(
+          c,
+          myKey,
+          this._nameCache,
+          this._identityDetails,
+        ).toLowerCase().includes(query)
+      )
+      : this._conversations;
+  }
+
+  private _handleGlobalKeydown = (e: KeyboardEvent) => {
+    if (!this.enableChatSwitching || !this.credentials || e.defaultPrevented) {
+      return;
+    }
+    const action = classifyGlobalShortcut(e);
+    if (!action) return;
+    if (action.type === "prev-thread" || action.type === "next-thread") {
+      const ids = this._filteredConversations().map((c) => c.id);
+      const currentId = this._activeConversationId || this.conversationId ||
+        null;
+      const nextId = nextThreadId(
+        ids,
+        currentId,
+        action.type === "prev-thread" ? "prev" : "next",
+      );
+      if (nextId) {
+        e.preventDefault();
+        this._selectConversation(nextId);
+      }
+      return;
+    }
+    if (action.type === "focus-search") {
+      const input = this.querySelector<HTMLInputElement>(
+        '[data-testid="sidebar-search-input"]',
+      );
+      if (input) {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    }
+  };
+
   private _handleSearchInput = (e: Event) => {
     this._searchQuery = (e.target as HTMLInputElement).value;
     this.requestUpdate();
+  };
+
+  private _handleSearchKeydown = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      const first = this._filteredConversations()[0];
+      if (first) {
+        e.preventDefault();
+        this._searchQuery = "";
+        this._selectConversation(first.id);
+      }
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      this._searchQuery = "";
+      this.requestUpdate();
+      this.focusInput();
+    }
   };
 
   private _renderConversationList(isDark: boolean) {
@@ -1829,17 +1913,7 @@ export class ConnectedChat extends LitElement {
       `;
     }
     const myKey = this.credentials?.publicSignKey ?? "";
-    const filtered = this._searchQuery.trim()
-      ? this._conversations.filter((c) => {
-        const name = resolveConversationDisplayName(
-          c,
-          myKey,
-          this._nameCache,
-          this._identityDetails,
-        );
-        return name.toLowerCase().includes(this._searchQuery.toLowerCase());
-      })
-      : this._conversations;
+    const filtered = this._filteredConversations();
 
     if (empty(filtered)) {
       return html`
@@ -2286,9 +2360,11 @@ export class ConnectedChat extends LitElement {
               ?.text ?? (isDark ? "#fff" : "#111")}">Chats</div>
             <input
               type="text"
+              data-testid="sidebar-search-input"
               placeholder="Search chats..."
               .value="${this._searchQuery}"
               @input="${this._handleSearchInput}"
+              @keydown="${this._handleSearchKeydown}"
               style="${sidebarSearchInputStyle(isDark, this.customColors)}"
             />
           </div>
@@ -2331,9 +2407,11 @@ export class ConnectedChat extends LitElement {
           <div style="${sidebarHeaderStyle(isDark)}">
             <input
               type="text"
+              data-testid="sidebar-search-input"
               placeholder="Search chats..."
               .value="${this._searchQuery}"
               @input="${this._handleSearchInput}"
+              @keydown="${this._handleSearchKeydown}"
               style="${sidebarSearchInputStyle(isDark, this.customColors)}"
             />
           </div>

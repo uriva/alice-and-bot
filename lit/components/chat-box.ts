@@ -40,12 +40,29 @@ import {
   faStop,
   faTimes,
 } from "./icons.ts";
-import "./chat-message.ts";
+import { ChatMessage } from "./chat-message.ts";
 import "./chat-typing-indicator.ts";
 import "./chat-avatar.ts";
 import { textDirection } from "./markdown.ts";
 import { isTouchOnlyDevice } from "../core/responsive.ts";
 import { compactPublicKey } from "../core/subscriptions.ts";
+import {
+  convertCompletedShortcodeAtCursor,
+  type EmojiEntry,
+  getEmojiAutocompleteState,
+  insertEmoji,
+  parseReactionCommand,
+  quickReactionEmojis,
+  type ReactionMode,
+  replaceEmojiShortcodes,
+  searchEmojis,
+} from "./emoji.ts";
+import {
+  findLastEditableMessageId,
+  isGlobalChord,
+  isTextInputTarget,
+  stepSelectedMessageId,
+} from "./shortcuts.ts";
 import type {
   AbstracChatMessage,
   ActiveProgress,
@@ -59,6 +76,7 @@ import {
   buildTimeline,
   charCountThreshold,
   computeTextareaResize,
+  copyToClipboard,
   estimateSerializedLength,
   eventOutside,
   filterParticipants,
@@ -374,6 +392,56 @@ const renderReplyBar = (
   `;
 };
 
+const reactionPreviewKeyStyle = (isDark: boolean, custom?: CustomColors) =>
+  `font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;padding:2px 6px;border-radius:6px;flex-shrink:0;background:${
+    inputSurfaceIsLight(isDark, custom)
+      ? "rgba(24,23,21,0.08)"
+      : "rgba(255,255,255,0.1)"
+  };color:${inputSurfaceIsLight(isDark, custom) ? "#374151" : "#d1d5db"}`;
+
+const renderReactionPreviewBar = ({
+  emoji,
+  remove,
+  target,
+  isDark,
+  custom,
+}: {
+  emoji: string;
+  remove: boolean;
+  target: { authorName: string; text: string };
+  isDark: boolean;
+  custom?: CustomColors;
+}) => {
+  const lightSurface = inputSurfaceIsLight(isDark, custom);
+  return html`
+    <div
+      data-testid="reaction-command-preview"
+      style="${replyBarStyle(isDark, custom)}"
+    >
+      <span style="font-size:18px;line-height:1;flex-shrink:0">${emoji}</span>
+      <div style="${replyBarQuoteStyle(isDark, custom)}">
+        <div
+          style="font-weight:600;color:${quoteBarColor(
+            isDark,
+            custom,
+          )};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+        >
+          ${remove ? "Remove reaction from" : "React to"} ${target.authorName ||
+            "previous message"}
+        </div>
+        <div
+          style="color:${lightSurface
+            ? "#6b7280"
+            : "#9ca3af"};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+        >
+          ${target.text || "Attachment"}
+        </div>
+      </div>
+      <kbd style="${reactionPreviewKeyStyle(isDark, custom)}">Enter</kbd>
+    </div>
+  `;
+};
+
 const headerButtonStyle =
   "background:transparent;border:none;cursor:pointer;color:inherit;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;padding:0;font-size:16px;line-height:1;flex-shrink:0";
 
@@ -465,6 +533,31 @@ const autocompleteItemKeyStyle = (isDark: boolean, custom?: CustomColors) =>
   `font-size:11px;font-family:monospace;color:${
     inputSurfaceIsLight(isDark, custom) ? "#64748b" : "#9ca3af"
   }`;
+
+const autocompleteHeaderStyle = (isDark: boolean, custom?: CustomColors) =>
+  `padding:6px 16px;font-size:11px;font-weight:600;color:${
+    inputSurfaceIsLight(isDark, custom) ? "#64748b" : "#9ca3af"
+  };border-bottom:1px solid ${inputBorderColor(isDark, custom)}`;
+
+const emojiAutocompleteGlyphStyle =
+  "font-size:18px;line-height:1;width:24px;text-align:center;flex-shrink:0";
+
+type AutocompleteState =
+  | {
+    kind: "mention";
+    triggerIndex: number;
+    filter: string;
+    filtered: { publicSignKey: string; name: string; avatar: string }[];
+    selectedIndex: number;
+  }
+  | {
+    kind: "emoji";
+    triggerIndex: number;
+    filter: string;
+    reactionMode: ReactionMode | null;
+    items: readonly EmojiEntry[];
+    selectedIndex: number;
+  };
 
 const textareaStyle = (
   isDark: boolean,
@@ -601,6 +694,7 @@ export class ChatBox extends LitElement {
     _inputAreaHeight: { state: true },
     _replyingTo: { state: true },
     _autocompleteState: { state: true },
+    _selectedMessageId: { state: true },
     _showScrollDownButton: { state: true },
     _isEditingTitle: { state: true },
     _titleDraft: { state: true },
@@ -687,12 +781,8 @@ export class ChatBox extends LitElement {
   declare private _replyingTo:
     | { id: string; authorName: string; text: string }
     | null;
-  declare private _autocompleteState: {
-    triggerIndex: number;
-    filter: string;
-    filtered: { publicSignKey: string; name: string; avatar: string }[];
-    selectedIndex: number;
-  } | null;
+  declare private _autocompleteState: AutocompleteState | null;
+  declare private _selectedMessageId: string | null;
   declare private _showScrollDownButton: boolean;
   declare private _isEditingTitle: boolean;
   declare private _titleDraft: string;
@@ -738,6 +828,7 @@ export class ChatBox extends LitElement {
     this._inputAreaHeight = 72;
     this._replyingTo = null;
     this._autocompleteState = null;
+    this._selectedMessageId = null;
     this._showScrollDownButton = false;
     this._isEditingTitle = false;
     this._titleDraft = "";
@@ -768,9 +859,21 @@ export class ChatBox extends LitElement {
   private _resizeObserver: ResizeObserver | null = null;
   private _inputResizeObserver: ResizeObserver | null = null;
   private _inputAreaEl: HTMLDivElement | null = null;
-  private _escHandler: ((e: KeyboardEvent) => void) | null = null;
   private _attachOutsideHandler: ((e: MouseEvent) => void) | null = null;
   private _isMobile = false;
+
+  public focusInput = (): void => {
+    if (
+      !shouldAutoFocusInput({
+        isMobile: this._isMobile || isMobileCheck(),
+        disableAutoFocus: this.disableAutoFocus,
+        isTouchDevice: isTouchOnlyDevice(),
+      })
+    ) {
+      return;
+    }
+    this.updateComplete.then(() => this._inputEl?.focus()).catch(() => {});
+  };
 
   override createRenderRoot(): HTMLElement {
     return this;
@@ -785,21 +888,13 @@ export class ChatBox extends LitElement {
     this.style.minWidth = "0";
     this.style.maxWidth = "100%";
     this._isMobile = isMobileCheck();
-    if (this.onClose || this.onBack) {
-      this._escHandler = (e: KeyboardEvent) => {
-        if (e.key === "Escape") (this.onClose ?? this.onBack)?.();
-      };
-      globalThis.addEventListener("keydown", this._escHandler);
-    }
+    globalThis.addEventListener("keydown", this._globalKeydownHandler);
     globalThis.addEventListener("click", this._outsideClickHandler);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    if (this._escHandler) {
-      globalThis.removeEventListener("keydown", this._escHandler);
-      this._escHandler = null;
-    }
+    globalThis.removeEventListener("keydown", this._globalKeydownHandler);
     globalThis.removeEventListener("click", this._outsideClickHandler);
     if (this._resizeObserver) {
       this._resizeObserver.disconnect();
@@ -812,6 +907,177 @@ export class ChatBox extends LitElement {
     this._removeAttachOutside();
     if (this._recordingInterval) clearInterval(this._recordingInterval);
   }
+
+  private _messageComponents(): ChatMessage[] {
+    return Array.from(this.querySelectorAll("chat-message")).filter(
+      (el): el is ChatMessage => el instanceof ChatMessage,
+    );
+  }
+
+  private _findMessageComponent(messageId: string): ChatMessage | null {
+    return this._messageComponents().find((el) => el.msg?.id === messageId) ??
+      null;
+  }
+
+  private _scrollMessageIntoView(messageId: string) {
+    this.updateComplete.then(() => {
+      const target = this._findMessageComponent(messageId);
+      target?.scrollIntoView({ block: "nearest" });
+    }).catch(() => {});
+  }
+
+  private _enterMessageSelection() {
+    const nextId = stepSelectedMessageId(
+      this.messages,
+      this._selectedMessageId,
+      "prev",
+    );
+    if (!nextId) return;
+    this._selectedMessageId = nextId;
+    this._inputEl?.blur();
+    this._scrollMessageIntoView(nextId);
+  }
+
+  private _stepMessageSelection(direction: "prev" | "next") {
+    const nextId = stepSelectedMessageId(
+      this.messages,
+      this._selectedMessageId,
+      direction,
+    );
+    this._selectedMessageId = nextId;
+    if (nextId) {
+      this._scrollMessageIntoView(nextId);
+    } else {
+      this.focusInput();
+    }
+  }
+
+  private _handleEditFinished = () => {
+    this.focusInput();
+  };
+
+  private _dismissAnyMessagePopup(): boolean {
+    return this._messageComponents().some((el) => el.dismissActivePopup());
+  }
+
+  private _handleSelectedMessageKeydown(e: KeyboardEvent): boolean {
+    if (!this._selectedMessageId) return false;
+    if (isTextInputTarget(e.target)) return false;
+    if (e.altKey || e.ctrlKey || e.metaKey) return false;
+
+    const selectedId = this._selectedMessageId;
+    const key = e.key.toLowerCase();
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      if (this._dismissAnyMessagePopup()) return true;
+      this._selectedMessageId = null;
+      this.focusInput();
+      return true;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      this._selectedMessageId = null;
+      this.focusInput();
+      return true;
+    }
+    if (e.key === "ArrowUp" || key === "k") {
+      e.preventDefault();
+      this._stepMessageSelection("prev");
+      return true;
+    }
+    if (e.key === "ArrowDown" || key === "j") {
+      e.preventDefault();
+      this._stepMessageSelection("next");
+      return true;
+    }
+    if (/^[1-5]$/.test(e.key) && this.onReact) {
+      e.preventDefault();
+      const emoji = quickReactionEmojis[Number(e.key) - 1];
+      this._findMessageComponent(selectedId)?.toggleReaction(emoji);
+      this._selectedMessageId = null;
+      this.focusInput();
+      return true;
+    }
+    if ((e.key === "+" || e.key === ":" || key === "a") && this.onReact) {
+      e.preventDefault();
+      this._findMessageComponent(selectedId)?.openReactionPicker();
+      return true;
+    }
+    if (key === "r") {
+      e.preventDefault();
+      this._selectedMessageId = null;
+      this._handleReply(selectedId);
+      return true;
+    }
+    if (key === "e") {
+      const started = this._findMessageComponent(selectedId)?.startEdit();
+      if (started) {
+        e.preventDefault();
+        this._selectedMessageId = null;
+        return true;
+      }
+      return false;
+    }
+    if (key === "c") {
+      const msg = this.messages.find((m) => m.id === selectedId);
+      if (msg) {
+        e.preventDefault();
+        copyToClipboard(msg.text);
+        this._selectedMessageId = null;
+        this.focusInput();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private _globalKeydownHandler = (e: KeyboardEvent) => {
+    if (e.defaultPrevented) return;
+    if (
+      e.key === "ArrowUp" && e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey
+    ) {
+      if (this.messages.length > 0) {
+        e.preventDefault();
+        this._enterMessageSelection();
+      }
+      return;
+    }
+    if (this._handleSelectedMessageKeydown(e)) return;
+    if (e.key === "Escape") {
+      if (this._dismissAnyMessagePopup()) {
+        e.preventDefault();
+        return;
+      }
+      if (this._showMenu) {
+        this._showMenu = false;
+        e.preventDefault();
+        return;
+      }
+      if (this._showAttachMenu) {
+        this._showAttachMenu = false;
+        this._removeAttachOutside();
+        e.preventDefault();
+        return;
+      }
+      if (this._autocompleteState) {
+        this._autocompleteState = null;
+        e.preventDefault();
+        return;
+      }
+      if (this._replyingTo) {
+        this._replyingTo = null;
+        e.preventDefault();
+        return;
+      }
+      if (this._isEditingTitle) {
+        this._cancelEditingTitle();
+        e.preventDefault();
+        return;
+      }
+      (this.onClose ?? this.onBack)?.();
+    }
+  };
 
   private _outsideClickHandler = (e: MouseEvent) => {
     if (this._showMenu) {
@@ -1202,10 +1468,46 @@ export class ChatBox extends LitElement {
     requestAnimationFrame(() => this._scrollToBottom());
   };
 
+  private _reactionTargetMessage(): AbstracChatMessage | null {
+    if (this._replyingTo) {
+      const replied = this.messages.find((m) => m.id === this._replyingTo?.id);
+      if (replied) return replied;
+    }
+    return this.messages.length > 0
+      ? this.messages[this.messages.length - 1]
+      : null;
+  }
+
   private async _handleSend() {
-    const text = this._input.trim();
+    const rawText = this._input.trim();
     const files = [...this._pendingFiles];
-    if (!text && files.length === 0) return;
+    if (!rawText && files.length === 0) return;
+
+    if (files.length === 0 && this.onReact) {
+      const reactionCmd = parseReactionCommand(rawText);
+      const target = reactionCmd ? this._reactionTargetMessage() : null;
+      if (reactionCmd && target) {
+        this._input = "";
+        this._textareaHeight = minTextareaHeight;
+        this._textareaOverflow = "hidden";
+        this._replyingTo = null;
+        this._autocompleteState = null;
+        this.onReact(
+          target.id,
+          reactionCmd.emoji,
+          reactionCmd.remove || undefined,
+        );
+        setTimeout(() => {
+          if (this._inputEl) {
+            this._inputEl.style.height = `${minTextareaHeight}px`;
+            this.focusInput();
+          }
+        }, 0);
+        return;
+      }
+    }
+
+    const text = replaceEmojiShortcodes(rawText);
     if (files.length === 0 && estimateSerializedLength(text) > maxTextLength) {
       return;
     }
@@ -1215,6 +1517,7 @@ export class ChatBox extends LitElement {
     this._textareaOverflow = "hidden";
     this._pendingFiles = [];
     this._replyingTo = null;
+    this._autocompleteState = null;
     this.onInputActivity?.();
 
     if (files.length > 0 && this.onSendWithAttachments) {
@@ -1282,6 +1585,30 @@ export class ChatBox extends LitElement {
       this._autocompleteState = null;
       return;
     }
+    const emojiMatch = getEmojiAutocompleteState(
+      textarea.value,
+      textarea.selectionStart,
+    );
+    if (
+      emojiMatch &&
+      (!emojiMatch.reactionMode ||
+        (Boolean(this.onReact) && Boolean(this._reactionTargetMessage())))
+    ) {
+      const items = searchEmojis(emojiMatch.filter);
+      if (nonempty(items)) {
+        const prevIndex = this._autocompleteState?.kind === "emoji" &&
+            this._autocompleteState.triggerIndex === emojiMatch.triggerIndex
+          ? this._autocompleteState.selectedIndex
+          : 0;
+        this._autocompleteState = {
+          kind: "emoji",
+          ...emojiMatch,
+          items,
+          selectedIndex: Math.min(prevIndex, items.length - 1),
+        };
+        return;
+      }
+    }
     const state = getAutocompleteState(textarea.value, textarea.selectionStart);
     if (!state) {
       this._autocompleteState = null;
@@ -1292,30 +1619,34 @@ export class ChatBox extends LitElement {
       this._autocompleteState = null;
       return;
     }
+    const prevIndex = this._autocompleteState?.kind === "mention" &&
+        this._autocompleteState.triggerIndex === state.triggerIndex
+      ? this._autocompleteState.selectedIndex
+      : 0;
     this._autocompleteState = {
+      kind: "mention",
       ...state,
       filtered,
-      selectedIndex: Math.min(
-        this._autocompleteState?.selectedIndex ?? 0,
-        filtered.length - 1,
-      ),
+      selectedIndex: Math.min(prevIndex, filtered.length - 1),
     };
   }
 
-  private _onTextareaClickOrKeyup = () => {
+  private _onTextareaClick = () => {
+    this._selectedMessageId = null;
     this._updateAutocomplete();
   };
 
-  private _selectAutocompleteItem(participant: { name: string }) {
-    const textarea = this._inputEl;
-    if (!textarea || !this._autocompleteState) return;
-    const { triggerIndex } = this._autocompleteState;
-    const { newText, newCursorIndex } = insertMention(
-      textarea.value,
-      triggerIndex,
-      textarea.selectionStart,
-      participant.name,
-    );
+  private _onTextareaKeyup = (e: KeyboardEvent) => {
+    if (
+      e.key === "Escape" || e.key === "ArrowUp" || e.key === "ArrowDown" ||
+      e.key === "Enter" || e.key === "Tab"
+    ) {
+      return;
+    }
+    this._updateAutocomplete();
+  };
+
+  private _applyAutocompleteText(newText: string, newCursorIndex: number) {
     this._input = newText;
     this._autocompleteState = null;
     this.updateComplete
@@ -1330,9 +1661,48 @@ export class ChatBox extends LitElement {
       .catch(() => {});
   }
 
+  private _selectAutocompleteItem(participant: { name: string }) {
+    const textarea = this._inputEl;
+    if (!textarea || this._autocompleteState?.kind !== "mention") return;
+    const { newText, newCursorIndex } = insertMention(
+      textarea.value,
+      this._autocompleteState.triggerIndex,
+      textarea.selectionStart,
+      participant.name,
+    );
+    this._applyAutocompleteText(newText, newCursorIndex);
+  }
+
+  private _selectEmojiAutocompleteItem(entry: EmojiEntry) {
+    const textarea = this._inputEl;
+    if (!textarea || this._autocompleteState?.kind !== "emoji") return;
+    const { newText, newCursorIndex } = insertEmoji(
+      textarea.value,
+      this._autocompleteState.triggerIndex,
+      textarea.selectionStart,
+      entry.emoji,
+      this._autocompleteState.reactionMode,
+    );
+    this._applyAutocompleteText(newText, newCursorIndex);
+  }
+
   private _onTextareaInput = (e: InputEvent) => {
-    this._input = (e.target as HTMLTextAreaElement).value;
-    this._resizeTextarea(e.target as HTMLTextAreaElement);
+    const textarea = e.target;
+    if (!(textarea instanceof HTMLTextAreaElement)) return;
+    const converted = convertCompletedShortcodeAtCursor(
+      textarea.value,
+      textarea.selectionStart,
+    );
+    if (converted) {
+      textarea.value = converted.text;
+      textarea.selectionStart = converted.cursorIndex;
+      textarea.selectionEnd = converted.cursorIndex;
+      this._input = converted.text;
+    } else {
+      this._input = textarea.value;
+    }
+    this._selectedMessageId = null;
+    this._resizeTextarea(textarea);
     this.onInputActivity?.();
     this._updateAutocomplete();
   };
@@ -1350,31 +1720,89 @@ export class ChatBox extends LitElement {
   };
 
   private _onTextareaKeydown = (e: KeyboardEvent) => {
-    e.stopPropagation();
+    if (isGlobalChord(e)) return;
+    if (
+      e.key === "ArrowUp" && e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey
+    ) {
+      if (this.messages.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._enterMessageSelection();
+      }
+      return;
+    }
     if (this._autocompleteState) {
+      e.stopPropagation();
       const state = this._autocompleteState;
+      const listLen = state.kind === "mention"
+        ? state.filtered.length
+        : state.items.length;
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        state.selectedIndex = (state.selectedIndex + 1) % state.filtered.length;
+        state.selectedIndex = (state.selectedIndex + 1) % listLen;
         this.requestUpdate();
         return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        state.selectedIndex =
-          (state.selectedIndex - 1 + state.filtered.length) %
-          state.filtered.length;
+        state.selectedIndex = (state.selectedIndex - 1 + listLen) % listLen;
         this.requestUpdate();
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        this._selectAutocompleteItem(state.filtered[state.selectedIndex]);
+        if (state.kind === "mention") {
+          this._selectAutocompleteItem(state.filtered[state.selectedIndex]);
+        } else {
+          this._selectEmojiAutocompleteItem(state.items[state.selectedIndex]);
+        }
         return;
       }
       if (e.key === "Escape") {
         e.preventDefault();
         this._autocompleteState = null;
+        return;
+      }
+    }
+    if (e.key === "Escape") {
+      if (this._replyingTo) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._replyingTo = null;
+        return;
+      }
+      if (this._selectedMessageId) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._selectedMessageId = null;
+        return;
+      }
+      if (this._input.length > 0) {
+        e.stopPropagation();
+      }
+      return;
+    }
+    e.stopPropagation();
+    if (
+      e.key === "ArrowUp" && (e.ctrlKey || e.metaKey) && !e.altKey &&
+      !e.shiftKey && this._input === "" && this.messages.length > 0
+    ) {
+      e.preventDefault();
+      this._enterMessageSelection();
+      return;
+    }
+    if (
+      e.key === "ArrowUp" && !e.ctrlKey && !e.metaKey && !e.altKey &&
+      !e.shiftKey && this._input === ""
+    ) {
+      const editableId = findLastEditableMessageId(
+        this.messages,
+        this.userId,
+        Date.now(),
+      );
+      if (editableId) {
+        e.preventDefault();
+        this._findMessageComponent(editableId)?.startEdit();
         return;
       }
     }
@@ -1540,6 +1968,13 @@ export class ChatBox extends LitElement {
     const prevTitle = changed.get("title");
     if (changed.has("title") && prevTitle !== undefined) {
       this._isEditingTitle = false;
+      this._selectedMessageId = null;
+    }
+    if (
+      this._selectedMessageId &&
+      !this.messages.some((m) => m.id === this._selectedMessageId)
+    ) {
+      this._selectedMessageId = null;
     }
     if (
       changed.has("title") &&
@@ -1723,6 +2158,14 @@ export class ChatBox extends LitElement {
           ? "scale(1) rotate(0deg)"
           : `scale(0) rotate(${reverse ? "-" : ""}90deg)`
       };opacity:${active ? 1 : 0}`;
+
+    const reactionPreview = this.onReact && empty(this._pendingFiles)
+      ? (() => {
+        const cmd = parseReactionCommand(this._input);
+        const target = cmd ? this._reactionTargetMessage() : null;
+        return cmd && target ? { ...cmd, target } : null;
+      })()
+      : null;
 
     const remaining = maxTextLength - estimateSerializedLength(this._input);
 
@@ -2111,7 +2554,15 @@ export class ChatBox extends LitElement {
           data-input-area
           style="position:absolute;bottom:0;left:0;right:0;z-index:10"
         >
-          ${this._replyingTo
+          ${reactionPreview
+            ? renderReactionPreviewBar({
+              emoji: reactionPreview.emoji,
+              remove: reactionPreview.remove,
+              target: reactionPreview.target,
+              isDark,
+              custom: customColors,
+            })
+            : this._replyingTo
             ? renderReplyBar(
               this._replyingTo,
               isDark,
@@ -2267,12 +2718,16 @@ export class ChatBox extends LitElement {
               <div
                 style="position:relative;flex-grow:1;display:flex;align-items:flex-end"
               >
-                ${this._autocompleteState
+                ${this._autocompleteState?.kind === "mention"
                   ? html`
-                    <div class="autocomplete-dropdown" style="${autocompleteDropdownStyle(
-                      isDark,
-                      customColors,
-                    )}">
+                    <div
+                      class="autocomplete-dropdown"
+                      data-testid="mention-autocomplete"
+                      style="${autocompleteDropdownStyle(
+                        isDark,
+                        customColors,
+                      )}"
+                    >
                       ${repeat(
                         this._autocompleteState.filtered,
                         (p) => p.publicSignKey,
@@ -2315,6 +2770,74 @@ export class ChatBox extends LitElement {
                           `;
                         },
                       )}
+                    </div>
+                  `
+                  : this._autocompleteState?.kind === "emoji"
+                  ? html`
+                    <div
+                      class="autocomplete-dropdown"
+                      data-testid="emoji-autocomplete"
+                      style="${autocompleteDropdownStyle(
+                        isDark,
+                        customColors,
+                      )}"
+                    >
+                      ${this._autocompleteState.reactionMode
+                        ? html`
+                          <div style="${autocompleteHeaderStyle(
+                            isDark,
+                            customColors,
+                          )}">
+                            ${this._autocompleteState.reactionMode === "remove"
+                              ? "Remove reaction from"
+                              : "React to"} ${this._reactionTargetMessage()
+                              ?.authorName || "previous message"}
+                          </div>
+                        `
+                        : nothing} ${repeat(
+                          this._autocompleteState.items,
+                          (entry) => entry.shortcode,
+                          (entry, index) => {
+                            const isSelected =
+                              this._autocompleteState!.selectedIndex === index;
+                            return html`
+                              <div
+                                data-testid="emoji-autocomplete-item"
+                                data-shortcode="${entry.shortcode}"
+                                style="${autocompleteItemStyle(
+                                  isSelected,
+                                  isDark,
+                                  customColors,
+                                )}"
+                                @mousedown="${(e: Event) => e.preventDefault()}"
+                                @click="${() =>
+                                  this._selectEmojiAutocompleteItem(entry)}"
+                                @mouseenter="${() => {
+                                  this._autocompleteState!.selectedIndex =
+                                    index;
+                                  this.requestUpdate();
+                                }}"
+                              >
+                                <span style="${emojiAutocompleteGlyphStyle}"
+                                >${entry.emoji}</span>
+                                <div style="display:flex;align-items:baseline;gap:8px;min-width:0;flex:1">
+                                  <span style="${autocompleteItemNameStyle(
+                                    isDark,
+                                    customColors,
+                                  )}">:${entry.shortcode}:</span>
+                                  ${entry.aliases && entry.aliases.length > 0
+                                    ? html`
+                                      <span style="${autocompleteItemKeyStyle(
+                                        isDark,
+                                        customColors,
+                                      )}">${entry.aliases[0]}</span>
+                                    `
+                                    : nothing}
+                                </div>
+                              </div>
+                            `;
+                          },
+                        )}
                     </div>
                   `
                   : nothing} ${this.enableAttachments
@@ -2395,8 +2918,8 @@ export class ChatBox extends LitElement {
                   .value="${this._input}"
                   @input="${this._onTextareaInput}"
                   @paste="${this._onTextareaPaste}"
-                  @click="${this._onTextareaClickOrKeyup}"
-                  @keyup="${this._onTextareaClickOrKeyup}"
+                  @click="${this._onTextareaClick}"
+                  @keyup="${this._onTextareaKeyup}"
                   @blur="${() => this.onInputActivity?.()}"
                   @keydown="${this._onTextareaKeydown}"
                   style="${textareaStyle(
@@ -2504,8 +3027,10 @@ export class ChatBox extends LitElement {
         .customColors="${customColors}"
         .isDark="${isDark}"
         .isGroupChat="${this.isGroupChat}"
+        .isKeyboardSelected="${this._selectedMessageId === entry.msg.id}"
         @quick-reply="${(e: CustomEvent<{ text: string }>) =>
           this._handleQuickReply(e.detail.text)}"
+        @edit-finished="${this._handleEditFinished}"
       ></chat-message>
     `;
   }

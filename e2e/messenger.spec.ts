@@ -534,4 +534,79 @@ test.describe("Messenger (landing /chat)", () => {
       0,
     );
   });
+
+  test("desktop keyboard shortcuts switch between threads with Alt+ArrowDown/ArrowUp while composer is focused", async ({ page }) => {
+    const now = Date.now();
+    await setupMessengerMocks(page, data, [
+      { id: "conv-second", title: "Second Thread", updatedAt: now - 10_000 },
+      { id: "conv-third", title: "Third Thread", updatedAt: now - 20_000 },
+    ]);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    await expect(page.getByText("Test Conversation").first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText("Second Thread").first()).toBeVisible();
+    await expect(page.getByText("Third Thread").first()).toBeVisible();
+
+    await page.keyboard.press("Alt+ArrowDown");
+    await expect(page.getByTestId("title-text")).toContainText(
+      "Test Conversation",
+      { timeout: 10_000 },
+    );
+    const input = page.getByTestId("message-input");
+    await expect(input).toBeFocused({ timeout: 5_000 });
+
+    await input.press("Alt+ArrowDown");
+    await expect(page.getByTestId("title-text")).toContainText(
+      "Second Thread",
+      { timeout: 10_000 },
+    );
+    await expect(input).toBeFocused({ timeout: 5_000 });
+
+    await input.press("Alt+ArrowDown");
+    await expect(page.getByTestId("title-text")).toContainText("Third Thread", {
+      timeout: 10_000,
+    });
+
+    await input.press("Alt+ArrowUp");
+    await expect(page.getByTestId("title-text")).toContainText(
+      "Second Thread",
+      { timeout: 10_000 },
+    );
+  });
+
+  test("desktop Ctrl+K searches threads and Enter opens match, and Ctrl+/ toggles shortcuts modal", async ({ page }) => {
+    const now = Date.now();
+    await setupMessengerMocks(page, data, [
+      { id: "conv-alpha", title: "Alpha Project", updatedAt: now - 10_000 },
+    ]);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    await expect(page.getByText("Alpha Project").first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await page.keyboard.press("Control+k");
+    const search = page.getByTestId("chat-search-input");
+    await expect(search).toBeFocused();
+    await search.fill("Alpha");
+    await search.press("Enter");
+
+    await expect(page.getByTestId("title-text")).toContainText(
+      "Alpha Project",
+      { timeout: 10_000 },
+    );
+    await expect(page.getByTestId("message-input")).toBeFocused({
+      timeout: 5_000,
+    });
+
+    await page.keyboard.press("Control+/");
+    await expect(page.getByTestId("shortcuts-modal")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("shortcuts-modal")).toHaveCount(0);
+    await expect(page.getByTestId("title-text")).toContainText("Alpha Project");
+  });
 });

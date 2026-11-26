@@ -1,5 +1,11 @@
 import { html, nothing, render, type TemplateResult } from "lit";
-import "../../lit/components/connected-chat.ts";
+import { ConnectedChat } from "../../lit/components/connected-chat.ts";
+import {
+  classifyGlobalShortcut,
+  isMacPlatform,
+  nextThreadId,
+  shortcutHelpGroups,
+} from "../../lit/components/shortcuts.ts";
 import { buttonClass } from "./components.ts";
 import {
   avatarColor,
@@ -210,6 +216,9 @@ let showArchived = false;
 let renameModalConvId: string | null = null;
 let renameModalInput = "";
 let renameModalSaving = false;
+let shortcutsModalOpen = false;
+let searchHighlightIndex = 0;
+let searchInputFocused = false;
 
 // Touch/Swipe state for conversation list items on mobile
 let activeSwipeConvId: string | null = null;
@@ -1015,6 +1024,22 @@ const moonSvg = html`
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
   </svg>
 `;
+const keyboardSvg = html`
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
+    <path
+      d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10" />
+  </svg>
+`;
 
 const archiveSvg = html`
   <svg
@@ -1123,6 +1148,75 @@ const submitRenameModal = async () => {
     renameModalSaving = false;
     rerenderChat();
   }
+};
+
+const closeShortcutsModal = () => {
+  shortcutsModalOpen = false;
+  rerenderChat();
+};
+
+const shortcutsModalTemplate = () => {
+  if (!shortcutsModalOpen) return nothing;
+  const groups = shortcutHelpGroups(isMacPlatform());
+  return html`
+    <div
+      data-testid="shortcuts-modal"
+      class="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4"
+      @click="${closeShortcutsModal}"
+    >
+      <div
+        class="anim-rise bg-white dark:bg-[#171614] border border-[#e7e4dc] dark:border-[#292824] rounded-2xl p-6 w-full max-w-md max-h-[82vh] overflow-y-auto shadow-xl flex flex-col gap-5"
+        @click="${(e: Event) => e.stopPropagation()}"
+      >
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-[#181715] dark:text-[#f3f1ea]">
+            Keyboard Shortcuts
+          </h3>
+          <button
+            type="button"
+            class="w-7 h-7 rounded-full flex items-center justify-center text-[#78736a] hover:bg-black/6 dark:hover:bg-white/10 hover:text-[#181715] dark:hover:text-[#f3f1ea] transition-colors"
+            aria-label="Close keyboard shortcuts"
+            @click="${closeShortcutsModal}"
+          >
+            ✕
+          </button>
+        </div>
+        ${groups.map(
+          (group) =>
+            html`
+              <div class="flex flex-col gap-2">
+                <div
+                  class="text-[11px] font-semibold uppercase tracking-wider text-[#78736a] dark:text-[#8c867c]"
+                >
+                  ${group.title}
+                </div>
+                <div class="divide-y divide-[#efede6] dark:divide-[#24231f]">
+                  ${group.items.map(
+                    (item) =>
+                      html`
+                        <div class="flex items-center justify-between gap-3 py-1.5 text-sm">
+                          <span class="text-[#3d3a35] dark:text-[#d8d4ca]">${item
+                            .label}</span>
+                          <span class="flex items-center gap-1 shrink-0">
+                            ${item.keys.map(
+                              (k) =>
+                                html`
+                                  <kbd
+                                    class="px-1.5 py-0.5 text-xs font-mono rounded-md bg-[#f2efe8] dark:bg-[#24231f] border border-[#dcd8cc] dark:border-[#34322d] text-[#181715] dark:text-[#f3f1ea]"
+                                  >${k}</kbd>
+                                `,
+                            )}
+                          </span>
+                        </div>
+                      `,
+                  )}
+                </div>
+              </div>
+            `,
+        )}
+      </div>
+    </div>
+  `;
 };
 
 const renameModalTemplate = () =>
@@ -1242,7 +1336,7 @@ const syncPreviewTargets = () => {
 
 // --- Conversation list item ---
 
-const conversationListItem = (conv: Conversation) => {
+const conversationListItem = (conv: Conversation, index: number) => {
   if (!credentials) {
     return html`
     `;
@@ -1255,6 +1349,8 @@ const conversationListItem = (conv: Conversation) => {
     nameCache.get(otherKey) ?? null;
   const displayName = conv.title || participantName;
   const isSelected = selectedConversation === conv.id;
+  const isSearchHighlighted = !currentIsMobile && searchInputFocused &&
+    index === searchHighlightIndex;
   const isCurrentlyArchived = isArchived(conv);
   const isGroupChat = conv.participants.length > 2;
   const preview = conversationPreviews[conv.id];
@@ -1282,7 +1378,10 @@ const conversationListItem = (conv: Conversation) => {
     : swipeTransition;
 
   return html`
-    <li class="relative group overflow-hidden px-2 py-0.5">
+    <li
+      data-conversation-id="${conv.id}"
+      class="relative group overflow-hidden px-2 py-0.5"
+    >
       <!-- Swipe background reveal on mobile -->
       ${activeSwipeConvId === conv.id && activeSwipeOffset < 0
         ? html`
@@ -1339,6 +1438,10 @@ const conversationListItem = (conv: Conversation) => {
           isSelected
             ? "bg-[#ebe7dc] dark:bg-[#24231f]"
             : "hover:bg-[#f0ede4] dark:hover:bg-[#1c1b18]"
+        }${
+          isSearchHighlighted
+            ? " ring-2 ring-[#39587f]/50 dark:ring-[#7da2cf]/50"
+            : ""
         }`}" @click="${() => {
           if (wasSwiping) return;
           selectConversation(conv.id);
@@ -2776,6 +2879,21 @@ const desktopSidebar = () => {
       <div class="flex-grow"></div>
       <button
         type="button"
+        data-testid="shortcuts-button"
+        class="${buttonClass("ghost", "icon", "w-11 h-11")}"
+        title="${`Keyboard shortcuts (${
+          isMacPlatform() ? "⌘/" : "Ctrl+/"
+        } or ?)`}"
+        aria-label="Keyboard shortcuts"
+        @click="${() => {
+          shortcutsModalOpen = !shortcutsModalOpen;
+          rerenderChat();
+        }}"
+      >
+        ${keyboardSvg}
+      </button>
+      <button
+        type="button"
         class="${buttonClass("ghost", "icon", "w-11 h-11")}"
         title="${currentDark ? "Switch to light mode" : "Switch to dark mode"}"
         @click="${toggleDark}"
@@ -3139,8 +3257,69 @@ const mobileChatView = () => {
 
 // --- Desktop view ---
 
-const desktopChatsView = () =>
-  html`
+const focusActiveComposer = () => {
+  const el = document.querySelector("#desktop-chat-panel alice-connected-chat");
+  if (el instanceof ConnectedChat) el.focusInput();
+};
+
+const scrollConversationItemIntoView = (convId: string) => {
+  const item = document.querySelector(`[data-conversation-id="${convId}"]`);
+  item?.scrollIntoView({ block: "nearest" });
+};
+
+const handleDesktopSearchKeydown = (e: KeyboardEvent) => {
+  const list = visibleConversations(searchQuery);
+  if (e.key === "ArrowDown") {
+    if (list.length > 0) {
+      e.preventDefault();
+      searchHighlightIndex = (searchHighlightIndex + 1) % list.length;
+      rerenderChat();
+      scrollConversationItemIntoView(list[searchHighlightIndex].id);
+    }
+    return;
+  }
+  if (e.key === "ArrowUp") {
+    if (list.length > 0) {
+      e.preventDefault();
+      searchHighlightIndex = (searchHighlightIndex - 1 + list.length) %
+        list.length;
+      rerenderChat();
+      scrollConversationItemIntoView(list[searchHighlightIndex].id);
+    }
+    return;
+  }
+  if (e.key === "Enter") {
+    const target = list[searchHighlightIndex] ?? list[0];
+    if (target) {
+      e.preventDefault();
+      searchQuery = "";
+      searchHighlightIndex = 0;
+      searchInputFocused = false;
+      syncPreviewTargets();
+      selectConversation(target.id);
+      requestAnimationFrame(() => {
+        scrollConversationItemIntoView(target.id);
+        focusActiveComposer();
+      });
+    }
+    return;
+  }
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    searchQuery = "";
+    searchHighlightIndex = 0;
+    searchInputFocused = false;
+    syncPreviewTargets();
+    if (e.target instanceof HTMLElement) e.target.blur();
+    rerenderChat();
+    focusActiveComposer();
+  }
+};
+
+const desktopChatsView = () => {
+  const searchHint = isMacPlatform() ? "⌘K" : "Ctrl K";
+  return html`
     <div
       style="display:flex;flex:0 0 320px;flex-direction:column;overflow:hidden"
       class="border-r border-[#e5e1d6] dark:border-[#24231f] bg-[#faf9f5] dark:bg-[#141412]"
@@ -3163,17 +3342,39 @@ const desktopChatsView = () =>
         </div>
       </div>
       <div class="px-3 py-2">
-        <input
-          type="text"
-          placeholder="Search chats..."
-          .value="${searchQuery}"
-          @input="${(e: Event) => {
-            searchQuery = (e.target as HTMLInputElement).value;
-            syncPreviewTargets();
-            rerenderChat();
-          }}"
-          class="w-full px-3.5 py-2 rounded-full bg-[#efede6] dark:bg-[#1e1d1a] text-[#181715] dark:text-[#f3f1ea] placeholder-[#8c867c] focus:outline-none focus:ring-2 focus:ring-[#39587f]/30 text-sm"
-        />
+        <div class="relative">
+          <input
+            id="desktop-chat-search"
+            data-testid="chat-search-input"
+            type="text"
+            placeholder="Search chats..."
+            .value="${searchQuery}"
+            @focus="${() => {
+              searchInputFocused = true;
+              searchHighlightIndex = 0;
+              rerenderChat();
+            }}"
+            @blur="${() => {
+              searchInputFocused = false;
+              rerenderChat();
+            }}"
+            @input="${(e: Event) => {
+              searchQuery = (e.target as HTMLInputElement).value;
+              searchHighlightIndex = 0;
+              syncPreviewTargets();
+              rerenderChat();
+            }}"
+            @keydown="${handleDesktopSearchKeydown}"
+            class="w-full pl-3.5 pr-14 py-2 rounded-full bg-[#efede6] dark:bg-[#1e1d1a] text-[#181715] dark:text-[#f3f1ea] placeholder-[#8c867c] focus:outline-none focus:ring-2 focus:ring-[#39587f]/30 text-sm"
+          />
+          ${!searchQuery
+            ? html`
+              <kbd
+                class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono rounded bg-[#e5e1d6] dark:bg-[#2a2925] text-[#78736a] dark:text-[#9c968c]"
+              >${searchHint}</kbd>
+            `
+            : nothing}
+        </div>
       </div>
       <div
         style="display:flex;flex-grow:1;flex-direction:column;overflow-y:auto;padding-top:4px;${scrollbarStyle()}"
@@ -3197,6 +3398,7 @@ const desktopChatsView = () =>
       </div>
     </div>
   `;
+};
 
 const desktopContentArea = () => {
   if (view === "chats") {
@@ -3287,7 +3489,7 @@ const chatTemplate = (): TemplateResult =>
         : html`
         `} ${credentialsChecked && !credentials ? messengerLogin() : html`
       `} ${credentialsChecked && credentials ? loggedInMessenger() : html`
-      `} ${renameModalTemplate()}
+      `} ${renameModalTemplate()} ${shortcutsModalTemplate()}
     </div>
   `;
 
@@ -3318,6 +3520,71 @@ const onWindowFocusOrVisible = () => {
 
 const onPageHide = () => {
   blurActiveInputOnMobile();
+};
+
+const onMessengerKeydown = (e: KeyboardEvent) => {
+  if (e.defaultPrevented) return;
+  if (e.key === "Escape") {
+    if (shortcutsModalOpen) {
+      e.preventDefault();
+      closeShortcutsModal();
+      return;
+    }
+    if (renameModalConvId) {
+      e.preventDefault();
+      closeRenameModal();
+      return;
+    }
+    return;
+  }
+  if (!credentials || currentIsMobile) return;
+  const action = classifyGlobalShortcut(e);
+  if (!action) return;
+  if (action.type === "toggle-shortcuts-help") {
+    e.preventDefault();
+    shortcutsModalOpen = !shortcutsModalOpen;
+    rerenderChat();
+    return;
+  }
+  if (action.type === "focus-search") {
+    e.preventDefault();
+    if (shortcutsModalOpen) shortcutsModalOpen = false;
+    if (view !== "chats") {
+      view = "chats";
+      syncUrlFromState();
+    }
+    searchHighlightIndex = 0;
+    rerenderChat();
+    requestAnimationFrame(() => {
+      const el = document.getElementById("desktop-chat-search");
+      if (el instanceof HTMLInputElement) {
+        el.focus();
+        el.select();
+      }
+    });
+    return;
+  }
+  if (action.type === "prev-thread" || action.type === "next-thread") {
+    if (shortcutsModalOpen || renameModalConvId) return;
+    if (view !== "chats") {
+      view = "chats";
+      syncUrlFromState();
+    }
+    const list = visibleConversations(searchQuery);
+    const nextId = nextThreadId(
+      list.map((c) => c.id),
+      selectedConversation,
+      action.type === "prev-thread" ? "prev" : "next",
+    );
+    if (nextId) {
+      e.preventDefault();
+      selectConversation(nextId);
+      requestAnimationFrame(() => {
+        scrollConversationItemIntoView(nextId);
+        focusActiveComposer();
+      });
+    }
+  }
 };
 
 const onServiceWorkerMessage = (event: MessageEvent) => {
@@ -3452,6 +3719,7 @@ const cleanup = () => {
   nameCache.clear();
   notificationAckState.lastRemoteAckKey = "";
   globalThis.removeEventListener("popstate", onPopstate);
+  globalThis.removeEventListener("keydown", onMessengerKeydown);
   globalThis.removeEventListener("focus", onWindowFocusOrVisible);
   globalThis.removeEventListener("pagehide", onPageHide);
   globalThis.document?.removeEventListener(
@@ -3477,6 +3745,9 @@ export const chat = (): TemplateResult => {
   conversationPreviews = {};
   typingByConversation = {};
   searchQuery = "";
+  shortcutsModalOpen = false;
+  searchHighlightIndex = 0;
+  searchInputFocused = false;
   initializedFromQuery = false;
   handledChatWith = null;
   chatWithInFlight = false;
@@ -3535,6 +3806,7 @@ export const chat = (): TemplateResult => {
       view === "chats" ? selectedConversation : null
     );
     globalThis.addEventListener("popstate", onPopstate);
+    globalThis.addEventListener("keydown", onMessengerKeydown);
     globalThis.addEventListener("focus", onWindowFocusOrVisible);
     globalThis.addEventListener("pagehide", onPageHide);
     globalThis.document?.addEventListener(

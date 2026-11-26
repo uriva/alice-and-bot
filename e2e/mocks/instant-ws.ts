@@ -193,9 +193,16 @@ export type WsMock = {
   pushTypingSnapshot: (updatedAt: number) => void;
 };
 
+export type ExtraConversation = {
+  id: string;
+  title: string;
+  updatedAt: number;
+};
+
 export const setupInstantWsMock = async (
   page: Page,
   data: TestData,
+  extraConversations: readonly ExtraConversation[] = [],
 ): Promise<WsMock> => {
   const messageQueries: Array<{ q: unknown }> = [];
   const keyQueries: Array<{ q: unknown }> = [];
@@ -258,6 +265,26 @@ export const setupInstantWsMock = async (
       tx,
     ),
     link("identities", "keys", data.aliceIdentityId, data.keyId, tx),
+    ...extraConversations.flatMap((conv): Triple[] => {
+      const convKeyId = `key-${conv.id}`;
+      return [
+        ...fieldTriples(conv.id, "conversations", {
+          title: conv.title,
+          updatedAt: conv.updatedAt,
+        }, tx),
+        link(
+          "conversations",
+          "participants",
+          conv.id,
+          data.aliceIdentityId,
+          tx,
+        ),
+        link("conversations", "participants", conv.id, data.bobIdentityId, tx),
+        ...fieldTriples(convKeyId, "keys", { key: data.aliceEncryptedKey }, tx),
+        link("conversations", "keys", conv.id, convKeyId, tx),
+        link("identities", "keys", data.aliceIdentityId, convKeyId, tx),
+      ];
+    }),
   ];
 
   const buildTypingTriples = (updatedAt: number, tx: number): Triple[] => {
@@ -333,19 +360,32 @@ export const setupInstantWsMock = async (
           const tid = ++state.txCounter;
           if (ns === "keys") {
             keyQueries.push({ q: msg.q });
+            const requestedConvId =
+              (msg.q?.keys?.$?.where?.["conversation.id"] as
+                | string
+                | undefined) ?? data.conversationId;
+            const matchedExtra = extraConversations.find((c) =>
+              c.id === requestedConvId
+            );
+            const targetConvId = matchedExtra
+              ? matchedExtra.id
+              : data.conversationId;
+            const targetKeyId = matchedExtra
+              ? `key-${matchedExtra.id}`
+              : data.keyId;
             const triples: Triple[] = [
-              ...fieldTriples(data.keyId, "keys", {
+              ...fieldTriples(targetKeyId, "keys", {
                 key: data.aliceEncryptedKey,
               }, tx),
-              idTriple(data.conversationId, "conversations", tx),
+              idTriple(targetConvId, "conversations", tx),
               link(
                 "conversations",
                 "keys",
-                data.conversationId,
-                data.keyId,
+                targetConvId,
+                targetKeyId,
                 tx,
               ),
-              link("identities", "keys", data.aliceIdentityId, data.keyId, tx),
+              link("identities", "keys", data.aliceIdentityId, targetKeyId, tx),
               ...fieldTriples(data.aliceIdentityId, "identities", {
                 publicSignKey: data.alice.publicSignKey,
                 publicEncryptKey: data.alice.publicEncryptKey,
@@ -399,22 +439,35 @@ export const setupInstantWsMock = async (
           }
 
           if (ns === "conversations") {
+            const requestedId =
+              (msg.q?.conversations?.$?.where?.id as string | undefined) ??
+                data.conversationId;
+            const matchedExtra = extraConversations.find((c) =>
+              c.id === requestedId
+            );
+            const convId = matchedExtra ? matchedExtra.id : data.conversationId;
+            const convTitle = matchedExtra
+              ? matchedExtra.title
+              : "Test Conversation";
+            const convUpdatedAt = matchedExtra
+              ? matchedExtra.updatedAt
+              : Date.now();
             const triples: Triple[] = [
-              ...fieldTriples(data.conversationId, "conversations", {
-                title: "Test Conversation",
-                updatedAt: Date.now(),
+              ...fieldTriples(convId, "conversations", {
+                title: convTitle,
+                updatedAt: convUpdatedAt,
               }, tx),
               link(
                 "conversations",
                 "participants",
-                data.conversationId,
+                convId,
                 data.aliceIdentityId,
                 tx,
               ),
               link(
                 "conversations",
                 "participants",
-                data.conversationId,
+                convId,
                 data.bobIdentityId,
                 tx,
               ),

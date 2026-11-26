@@ -1,6 +1,9 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { setupInstantWsMock } from "./mocks/instant-ws.ts";
+import {
+  type ExtraConversation,
+  setupInstantWsMock,
+} from "./mocks/instant-ws.ts";
 import { setupBackendApiMock } from "./mocks/backend-api.ts";
 import { setupGcsMock } from "./mocks/gcs.ts";
 import type { TestCredentials, TestData } from "./mocks/test-data.ts";
@@ -82,8 +85,12 @@ export const setupWidgetMocks = async (
   );
 };
 
-export const setupMessengerMocks = async (page: Page, data: TestData) => {
-  const wsMock = await setupInstantWsMock(page, data);
+export const setupMessengerMocks = async (
+  page: Page,
+  data: TestData,
+  extraConversations: readonly ExtraConversation[] = [],
+) => {
+  const wsMock = await setupInstantWsMock(page, data, extraConversations);
   const apiMock = await setupBackendApiMock(page, data);
   await setupGcsMock(page);
   return { wsMock, apiMock };

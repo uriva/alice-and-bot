@@ -54,6 +54,7 @@ import {
   wordDiff,
 } from "./utils.ts";
 import { empty } from "@uri/gamla";
+import { quickReactionEmojis } from "./emoji.ts";
 
 const clearSelection = () => globalThis.getSelection?.()?.removeAllRanges();
 
@@ -113,7 +114,26 @@ const saveButtonStyle = (isDark: boolean) =>
 const cancelButtonStyle =
   "padding:4px 8px;border-radius:6px;border:none;background:transparent;cursor:pointer;font-size:12px;opacity:0.7";
 
-const quickEmojis = ["👍", "❤️", "😂", "😮", "🙏"];
+const quickEmojis = quickReactionEmojis;
+
+const keyboardSelectedRowStyle = (isDark: boolean) =>
+  `;border-radius:14px;padding:4px 6px;margin:-4px -6px;background:${
+    isDark ? "rgba(125,162,207,0.12)" : "rgba(57,88,127,0.08)"
+  };outline:1.5px solid ${
+    isDark ? "rgba(125,162,207,0.45)" : "rgba(57,88,127,0.38)"
+  };outline-offset:1px;transition:background 0.15s,outline-color 0.15s`;
+
+const keyboardHintBarStyle = (isDark: boolean) =>
+  `display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:2px 8px;border-radius:999px;font-size:11px;background:${
+    isDark ? "#1e1d1a" : "#f3f1ea"
+  };border:1px solid ${isDark ? "#2e2d28" : "#dcd8cc"};color:${
+    isDark ? "#b8b2a6" : "#5a564f"
+  };user-select:none`;
+
+const keyboardHintKeyStyle = (isDark: boolean) =>
+  `font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;padding:0 4px;border-radius:4px;background:${
+    isDark ? "#2c2b26" : "#e5e1d6"
+  };color:${isDark ? "#f3f1ea" : "#181715"}`;
 
 const longPressHighlightCss =
   `@keyframes msg-highlight{0%{transform:scale(1);box-shadow:none}100%{transform:scale(1.02);box-shadow:0 0 16px rgba(57,88,127,0.22)}}`;
@@ -441,6 +461,7 @@ export class ChatMessage extends LitElement {
     isGroupChat: { type: Boolean },
     streamActive: { type: Boolean },
     hideQuickReplies: { type: Boolean },
+    isKeyboardSelected: { type: Boolean },
     _isEditing: { state: true },
     _editText: { state: true },
     _showHistory: { state: true },
@@ -471,6 +492,7 @@ export class ChatMessage extends LitElement {
   declare isGroupChat: boolean;
   declare streamActive: boolean;
   declare hideQuickReplies: boolean;
+  declare isKeyboardSelected: boolean;
 
   declare private _isEditing: boolean;
   declare private _editText: string;
@@ -505,6 +527,7 @@ export class ChatMessage extends LitElement {
     this.isGroupChat = false;
     this.streamActive = false;
     this.hideQuickReplies = false;
+    this.isKeyboardSelected = false;
     this.userId = "";
     this._isEditing = false;
     this._editText = "";
@@ -660,16 +683,85 @@ export class ChatMessage extends LitElement {
     }
   };
 
+  public startEdit = (): boolean => {
+    if (
+      !this.isOwn || !this.onEdit ||
+      Date.now() - this.msg.timestamp >= editWindowMs
+    ) {
+      return false;
+    }
+    this._startEdit();
+    return true;
+  };
+
+  public openReactionPicker = (): boolean => {
+    if (!this.onReact) return false;
+    this._showQuickEmojis = false;
+    this._showEmojiPicker = true;
+    return true;
+  };
+
+  public toggleReaction = (emoji: string): void => {
+    this._toggleReaction(emoji);
+  };
+
+  public dismissActivePopup = (): boolean => {
+    if (this._showEmojiPicker) {
+      this._showEmojiPicker = false;
+      return true;
+    }
+    if (this._showQuickEmojis) {
+      this._showQuickEmojis = false;
+      document.removeEventListener("mousedown", this._dismissQuickEmojis);
+      return true;
+    }
+    if (this._showHistory) {
+      this._showHistory = false;
+      return true;
+    }
+    if (this._isEditing) {
+      this._cancelEdit();
+      return true;
+    }
+    if (this._menuOpen) {
+      this._menuOpen = false;
+      this._removeOutsideClick();
+      return true;
+    }
+    if (this._showMobileContext) {
+      this._closeMobileContext();
+      return true;
+    }
+    return false;
+  };
+
+  private _dispatchEditFinished() {
+    this.dispatchEvent(
+      new CustomEvent("edit-finished", { bubbles: true, composed: true }),
+    );
+  }
+
   private _startEdit = () => {
     this._menuOpen = false;
     this._removeOutsideClick();
     this._editText = this.msg.text;
     this._isEditing = true;
+    this.updateComplete.then(() => {
+      const textarea = this.querySelector<HTMLTextAreaElement>(
+        '[data-testid="edit-message-input"]',
+      );
+      if (textarea) {
+        textarea.focus();
+        textarea.selectionStart = textarea.value.length;
+        textarea.selectionEnd = textarea.value.length;
+      }
+    }).catch(() => {});
   };
 
   private _cancelEdit = () => {
     this._isEditing = false;
     this._editText = this.msg.text;
+    this._dispatchEditFinished();
   };
 
   private _submitEdit = () => {
@@ -679,6 +771,20 @@ export class ChatMessage extends LitElement {
       this.onEdit(this._editText);
     }
     this._isEditing = false;
+    this._dispatchEditFinished();
+  };
+
+  private _onEditKeydown = (e: KeyboardEvent) => {
+    e.stopPropagation();
+    if (e.key === "Escape") {
+      e.preventDefault();
+      this._cancelEdit();
+      return;
+    }
+    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !this.isMobile) {
+      e.preventDefault();
+      this._submitEdit();
+    }
   };
 
   private _hoverIn = (e: Event) => {
@@ -847,10 +953,14 @@ export class ChatMessage extends LitElement {
       </style>
       <div
         data-testid="message"
+        data-message-id="${this.msg.id}"
+        ?data-keyboard-selected="${this.isKeyboardSelected}"
         style="display:flex;gap:6px;align-items:flex-start;flex-direction:${isOwn
           ? "row-reverse"
           : "row"};min-width:0${isLiveNew
           ? ";animation:msg-enter .22s cubic-bezier(0.16, 1, 0.3, 1)"
+          : ""}${this.isKeyboardSelected
+          ? keyboardSelectedRowStyle(isDark)
           : ""}"
       >
         ${showAvatar
@@ -932,11 +1042,12 @@ export class ChatMessage extends LitElement {
               ? html`
                 <div style="margin-top:4px">
                   <textarea
+                    data-testid="edit-message-input"
                     .value="${this._editText}"
                     @input="${(e: InputEvent) => {
                       this._editText = (e.target as HTMLTextAreaElement).value;
                     }}"
-                    @keydown="${(e: KeyboardEvent) => e.stopPropagation()}"
+                    @keydown="${this._onEditKeydown}"
                     style="${editTextareaStyle}"
                   ></textarea>
                   <div style="display:flex;gap:4px;margin-top:4px">
@@ -1147,6 +1258,40 @@ export class ChatMessage extends LitElement {
               isDark,
               (emoji: string) => this._toggleReaction(emoji),
             )
+            : nothing} ${this.isKeyboardSelected && !this.isMobile &&
+              !this._isEditing
+            ? html`
+              <div
+                data-testid="message-keyboard-hint"
+                style="${keyboardHintBarStyle(isDark)}"
+              >
+                ${this.onReact
+                  ? html`
+                    <span><kbd style="${keyboardHintKeyStyle(
+                      isDark,
+                    )}">1–5</kbd> react</span>
+                    <span><kbd style="${keyboardHintKeyStyle(
+                      isDark,
+                    )}">+</kbd> emoji</span>
+                  `
+                  : nothing} ${this.onReply
+                  ? html`
+                    <span><kbd style="${keyboardHintKeyStyle(
+                      isDark,
+                    )}">r</kbd> reply</span>
+                  `
+                  : nothing} ${canEdit
+                  ? html`
+                    <span><kbd style="${keyboardHintKeyStyle(
+                      isDark,
+                    )}">e</kbd> edit</span>
+                  `
+                  : nothing}
+                <span><kbd style="${keyboardHintKeyStyle(
+                  isDark,
+                )}">Esc</kbd> back</span>
+              </div>
+            `
             : nothing}
         </div>
         ${this._showMobileContext

@@ -1198,3 +1198,87 @@ test("quick-reply suggestion buttons hide on older messages when a new message o
 
   await expect(page.locator(".chat-quick-reply-btn")).toHaveCount(0);
 });
+
+test("emoji autocomplete inserts thumbs up on :+1 and inline :+1: converts immediately", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+
+  const input = page.locator(tid("message-input"));
+  await input.click();
+  await input.type(":+1");
+  const dropdown = page.locator(tid("emoji-autocomplete"));
+  await expect(dropdown).toBeVisible();
+  await expect(dropdown.locator(tid("emoji-autocomplete-item")).first())
+    .toContainText("👍");
+
+  await input.press("Tab");
+  await expect(dropdown).toHaveCount(0);
+  await expect(input).toHaveValue("👍 ");
+
+  await input.fill("");
+  await input.type("ship it :rocket:");
+  await expect(input).toHaveValue("ship it 🚀");
+  await input.press("Enter");
+  await expect(page.getByText("ship it 🚀")).toBeVisible();
+});
+
+test("reacting on previous message via +:+1: adds reaction and -:+1: removes it without sending a text message", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+
+  const countBefore = await page.locator(tid("message")).count();
+  const input = page.locator(tid("message-input"));
+  await input.click();
+
+  await input.type("+:+1");
+  const dropdown = page.locator(tid("emoji-autocomplete"));
+  await expect(dropdown).toBeVisible();
+  await expect(dropdown).toContainText("React to");
+  await input.type(":");
+  await expect(input).toHaveValue("+👍");
+  await expect(page.locator(tid("reaction-command-preview"))).toBeVisible();
+
+  await input.press("Enter");
+  await expect(input).toHaveValue("");
+  expect(await page.locator(tid("message")).count()).toBe(countBefore);
+  const lastMsg = page.locator(tid("message")).last();
+  await expect(lastMsg.getByRole("button", { name: /👍/ })).toBeVisible();
+
+  await input.type("-:+1:");
+  await input.press("Enter");
+  await expect(lastMsg.getByRole("button", { name: /👍/ })).toHaveCount(0);
+});
+
+test("Ctrl+ArrowUp selects previous message for quick react (1) and reply (r), and ArrowUp edits last own message", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+
+  const input = page.locator(tid("message-input"));
+  await input.click();
+  await input.press("Control+ArrowUp");
+
+  const lastMsg = page.locator(tid("message")).last();
+  await expect(lastMsg).toHaveAttribute("data-keyboard-selected", "");
+  await expect(lastMsg.locator(tid("message-keyboard-hint"))).toBeVisible();
+
+  await page.keyboard.press("1");
+  await expect(lastMsg.getByRole("button", { name: /👍/ })).toBeVisible();
+  await expect(input).toBeFocused();
+
+  await input.press("Control+ArrowUp");
+  await expect(lastMsg).toHaveAttribute("data-keyboard-selected", "");
+  await page.keyboard.press("r");
+  await expect(input).toBeFocused();
+  await page.keyboard.press("Escape");
+
+  await input.fill("Editable message");
+  await input.press("Enter");
+  await expect(page.getByText("Editable message")).toBeVisible();
+
+  await input.press("ArrowUp");
+  const editInput = page.locator(tid("edit-message-input"));
+  await expect(editInput).toBeVisible();
+  await editInput.fill("Edited via keyboard");
+  await editInput.press("Enter");
+  await expect(page.getByText("Edited via keyboard")).toBeVisible();
+});
