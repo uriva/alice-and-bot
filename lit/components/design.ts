@@ -49,7 +49,7 @@ export const defaultOtherBubble = (isDark: boolean) =>
   isDark ? "#171614" : "#ffffff";
 
 export const defaultInputBackground = (isDark: boolean) =>
-  isDark ? "#23221f" : "#ffffff";
+  isDark ? "#1c1b19" : "#ffffff";
 
 export const primaryHue = 215;
 const avatarHues = [primaryHue, 16, 36, 258, 342, 198, 28, 236];
@@ -88,20 +88,20 @@ export const inputTextColor = (isDark: boolean, custom?: CustomColors) =>
 export const inputPlaceholderColor = (
   isDark: boolean,
   custom?: CustomColors,
-) => (inputSurfaceIsLight(isDark, custom) ? "#6b665d" : "#9c968c");
+) => (inputSurfaceIsLight(isDark, custom) ? "#6b665d" : "#8c877d");
 
 export const inputBorderColor = (isDark: boolean, custom?: CustomColors) =>
   inputSurfaceIsLight(isDark, custom)
-    ? "rgba(24,23,21,0.14)"
-    : "rgba(255,255,255,0.2)";
+    ? "rgba(24,23,21,0.11)"
+    : "rgba(255,255,255,0.12)";
 
 export const inputFocusBorderColor = (
   isDark: boolean,
   custom?: CustomColors,
 ) =>
   inputSurfaceIsLight(isDark, custom)
-    ? "rgba(24,23,21,0.32)"
-    : "rgba(255,255,255,0.4)";
+    ? "rgba(24,23,21,0.24)"
+    : "rgba(255,255,255,0.24)";
 
 export const defaultPrimary = (isDark: boolean) =>
   isDark ? `hsl(${primaryHue}, 34%, 28%)` : `hsl(${primaryHue}, 38%, 36%)`;
@@ -157,15 +157,15 @@ export const shouldShowName = (
 ) => isStartOfSequence && !isOwn && !hideNames && isGroupChat;
 
 export const titleStyle = (isDark: boolean, custom?: CustomColors) => {
-  if (custom?.primary) {
-    return `display:flex;align-items:center;justify-content:center;font-weight:600;padding:12px 0;font-size:15px;letter-spacing:-0.01em;background:${custom.primary};color:${
-      isLightColor(custom.primary, isDark) ? "#222" : "#fff"
+  if (custom?.headerBackground) {
+    return `display:flex;align-items:center;justify-content:center;font-weight:600;padding:13px 0;font-size:15px;letter-spacing:-0.01em;background:${custom.headerBackground};color:${
+      isLightColor(custom.headerBackground, isDark) ? "#222" : "#fff"
     };transition:background 0.2s,color 0.2s`;
   }
   const bg = isDark ? "#141412" : "#faf9f5";
   const fg = isDark ? "#f3f1ea" : "#181715";
   const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(24,23,21,0.08)";
-  return `display:flex;align-items:center;justify-content:center;font-weight:600;padding:12px 0;font-size:15px;letter-spacing:-0.01em;background:${bg};color:${fg};border-bottom:1px solid ${border};transition:background 0.2s,color 0.2s,border-color 0.2s`;
+  return `display:flex;align-items:center;justify-content:center;font-weight:600;padding:13px 0;font-size:15px;letter-spacing:-0.01em;background:${bg};color:${fg};border-bottom:1px solid ${border};transition:background 0.2s,color 0.2s,border-color 0.2s`;
 };
 
 export const emptySuggestionsWrapStyle =

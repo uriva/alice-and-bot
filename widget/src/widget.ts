@@ -100,8 +100,8 @@ const defaultColors: Record<WidgetMode, WidgetModeColors> = {
     startButton: "hsl(215,34%,28%)",
     startButtonText: "#ffffff",
     startShadow: "0 4px 14px rgba(0, 0, 0, 0.45)",
-    inputBackground: "#23221f",
-    inputBorder: "#3a3833",
+    inputBackground: "#1c1b19",
+    inputBorder: "#2e2d29",
     inputText: "#f3f1ea",
   },
 };
@@ -139,7 +139,7 @@ export const resolveAppearance = (
       { startButton: modeColorScheme.primary }),
     ...(inputBg && {
       inputText: inputIsLight ? "#181715" : "#f3f1ea",
-      inputBorder: inputIsLight ? "#e7e4dc" : "#3a3833",
+      inputBorder: inputIsLight ? "#e7e4dc" : "#2e2d29",
     }),
   };
   const colorSchemeValue: "light" | "dark" | "light dark" = hasLight && hasDark
@@ -238,9 +238,13 @@ export const containerCss = (
       ? `position:absolute;top:0;left:0;width:100%;height:${
         viewportHeight ? `${viewportHeight}px` : "100%"
       };display:flex;flex-direction:column;overflow:hidden;background:#fff;animation:widget-mobile-open 0.28s cubic-bezier(0.16, 1, 0.3, 1)`
-      : `position:absolute;right:24px;bottom:24px;flex-direction:column;width:min(400px, 90vw);height:min(80dvh, 720px);max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);box-shadow:${
-        isDark ? "0 10px 30px rgba(0,0,0,0.5)" : "0 10px 30px rgba(0,0,0,0.12)"
-      };display:flex;border-radius:12px;overflow:hidden;transform-origin:bottom right;animation:widget-open 0.28s cubic-bezier(0.16, 1, 0.3, 1)`
+      : `position:absolute;right:24px;bottom:24px;flex-direction:column;width:min(400px, 90vw);height:min(80dvh, 720px);max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);border:1px solid ${
+        isDark ? "rgba(255,255,255,0.11)" : "rgba(24,23,21,0.09)"
+      };box-shadow:${
+        isDark
+          ? "0 20px 50px rgba(0,0,0,0.72)"
+          : "0 18px 44px rgba(24,23,21,0.12),0 2px 8px rgba(24,23,21,0.05)"
+      };display:flex;border-radius:16px;overflow:hidden;transform-origin:bottom right;animation:widget-open 0.28s cubic-bezier(0.16, 1, 0.3, 1)`
     : "position:absolute;right:24px;bottom:24px;display:flex;flex-direction:column";
 
 const chatWrapperCss =
@@ -706,9 +710,11 @@ export const createWidget = (
 
   const updateShadowContent = () => {
     const app = appearance();
-    const isLight = isLightColor(app.colors.primary, app.mode === "dark");
-    const headerColor = isLight ? "#222" : "#fff";
-    const hoverBg = isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.15)";
+    const headerIsLight = app.mode === "light";
+    const headerColor = headerIsLight ? "#181715" : "#f3f1ea";
+    const hoverBg = headerIsLight
+      ? "rgba(24,23,21,0.06)"
+      : "rgba(255,255,255,0.1)";
     styleEl.textContent = widgetBaseCss({
       colorScheme: app.colorSchemeValue,
       headerColor,

@@ -72,6 +72,7 @@ export type CustomColors = {
   background?: string;
   text?: string;
   primary?: string;
+  headerBackground?: string;
   otherBubble?: string;
   hideTitle?: boolean;
   hideOwnAvatar?: boolean;

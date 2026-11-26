@@ -108,9 +108,9 @@ Deno.test("chat-box title-bar inner padding-right is beautiful and dynamic to av
 });
 
 Deno.test("resolveAppearance elevates dark input surface and adapts inputText for custom light inputBackground", async () => {
-  const { resolveAppearance } = await import("./widget.ts");
+  const { containerCss, resolveAppearance } = await import("./widget.ts");
   const darkDefault = resolveAppearance(undefined, true);
-  assertMatch(darkDefault.colors.inputBackground, /^#23221f$/);
+  assertMatch(darkDefault.colors.inputBackground, /^#1c1b19$/);
   assertMatch(darkDefault.colors.inputText, /^#f3f1ea$/);
 
   const darkWithLightInput = resolveAppearance(
@@ -119,4 +119,12 @@ Deno.test("resolveAppearance elevates dark input surface and adapts inputText fo
   );
   assertMatch(darkWithLightInput.colors.inputBackground, /^#e5e6eb$/);
   assertMatch(darkWithLightInput.colors.inputText, /^#181715$/);
+
+  const darkDesktopContainer = containerCss({
+    isMobile: false,
+    isDark: true,
+    isOpen: true,
+  });
+  assertMatch(darkDesktopContainer, /border:1px solid rgba\(255,255,255,/);
+  assertMatch(darkDesktopContainer, /border-radius:16px/);
 });

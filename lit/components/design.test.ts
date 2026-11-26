@@ -38,16 +38,19 @@ Deno.test("chat surfaces match warm paper and carbon landing palette", () => {
   assertEquals(defaultOtherBubble(true), "#171614");
 });
 
-Deno.test("chat header uses clean neutral surface by default and custom primary when specified", () => {
-  const lightCss = titleStyle(false);
-  const darkCss = titleStyle(true);
+Deno.test("chat header uses clean neutral surface even with custom primary and supports explicit headerBackground", () => {
+  const lightCss = titleStyle(false, { primary: "#1b1c1f" });
+  const darkCss = titleStyle(true, { primary: "#e5e6eb" });
+  assertStringIncludes(lightCss, "background:#faf9f5");
   assertStringIncludes(lightCss, "color:#181715");
+  assertStringIncludes(darkCss, "background:#141412");
   assertStringIncludes(darkCss, "color:#f3f1ea");
-  assertFalse(lightCss.includes(defaultPrimary(false)));
+  assertFalse(lightCss.includes("#1b1c1f"));
+  assertFalse(darkCss.includes("#e5e6eb"));
 
-  const customCss = titleStyle(false, { primary: "#181715" });
-  assertMatch(customCss, /background:#181715/);
-  assertMatch(customCss, /color:#fff/);
+  const customHeaderCss = titleStyle(false, { headerBackground: "#181715" });
+  assertMatch(customHeaderCss, /background:#181715/);
+  assertMatch(customHeaderCss, /color:#fff/);
 });
 
 Deno.test("avatar palette avoids harsh green hues", () => {
@@ -217,7 +220,7 @@ Deno.test("isLightColor detects light and dark values across hex, rgb, hsl, and 
 
 Deno.test("dark input surface lifts clearly above dark background and adapts text/placeholder for light overrides", () => {
   assertEquals(defaultInputBackground(false), "#ffffff");
-  assertEquals(defaultInputBackground(true), "#23221f");
+  assertEquals(defaultInputBackground(true), "#1c1b19");
   assertFalse(defaultInputBackground(true) === defaultOtherBubble(true));
 
   const darkInputBg = resolveCssRgb(defaultInputBackground(true));

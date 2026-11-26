@@ -386,16 +386,22 @@ const isTransparentInput = (custom?: CustomColors) =>
   custom?.inputBackground === "transparent";
 
 const sendButtonStyle = (isDark: boolean, custom?: CustomColors) => {
-  const width = isTransparentInput(custom) ? "36px" : "44px";
-  return `width:${width};height:44px;min-width:${width};border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;padding:0;transition:background 0.2s,color 0.2s,border-color 0.2s,transform 0.15s;flex-shrink:0;background:${
+  const transparent = isTransparentInput(custom);
+  const width = transparent ? "36px" : "44px";
+  const shadow = transparent
+    ? "none"
+    : isDark
+    ? "0 2px 10px rgba(0,0,0,0.32)"
+    : "0 2px 8px rgba(24,23,21,0.06)";
+  return `width:${width};height:44px;min-width:${width};border-radius:50%;border:none;box-shadow:${shadow};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;padding:0;transition:background 0.2s,color 0.2s,border-color 0.2s,box-shadow 0.2s,transform 0.15s;flex-shrink:0;background:${
     custom?.inputBackground ?? defaultInputBackground(isDark)
   };color:${inputTextColor(isDark, custom)}`;
 };
 
 const attachButtonStyle = (isDark: boolean, custom?: CustomColors) =>
   `background:none;border:none;cursor:pointer;color:${
-    inputSurfaceIsLight(isDark, custom) ? "#64748b" : "#a8a29e"
-  };width:36px;height:36px;padding:0;border-radius:50%;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center`;
+    inputSurfaceIsLight(isDark, custom) ? "#78736a" : "#8c877d"
+  };width:36px;height:36px;padding:0;border-radius:50%;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:color 0.15s,background 0.15s`;
 
 const recordingIndicatorStyle = (isDark: boolean) =>
   `background:${
@@ -467,7 +473,7 @@ const textareaStyle = (
   const shadow = transparent
     ? "none"
     : isDark
-    ? "0 2px 10px rgba(0,0,0,0.32)"
+    ? "0 2px 12px rgba(0,0,0,0.36)"
     : "0 2px 10px rgba(24,23,21,0.05)";
   return `width:100%;box-sizing:border-box;padding:${
     enableAttachments ? "10px 40px 10px 16px" : "10px 16px"
@@ -1395,12 +1401,12 @@ export class ChatBox extends LitElement {
   };
 
   private _hoverBtnIn = (e: Event) => {
-    const headerIsLight = this.customColors?.primary
-      ? isLightColor(this.customColors.primary, this._effectiveDark)
+    const headerIsLight = this.customColors?.headerBackground
+      ? isLightColor(this.customColors.headerBackground, this._effectiveDark)
       : !this._effectiveDark;
     (e.currentTarget as HTMLElement).style.background = headerIsLight
       ? "rgba(24,23,21,0.06)"
-      : "rgba(255,255,255,0.14)";
+      : "rgba(255,255,255,0.1)";
   };
 
   private _hoverBtnOut = (e: Event) => {
@@ -1594,8 +1600,8 @@ export class ChatBox extends LitElement {
     const inputBgColor = customColors?.inputBackground ??
       defaultInputBackground(isDark);
     const activePrimary = customColors?.primary ?? defaultPrimary(isDark);
-    const headerIsLight = customColors?.primary
-      ? isLightColor(customColors.primary, isDark)
+    const headerIsLight = customColors?.headerBackground
+      ? isLightColor(customColors.headerBackground, isDark)
       : !isDark;
 
     const handleButtonClick = () => {
@@ -1744,10 +1750,22 @@ export class ChatBox extends LitElement {
         border-color: ${inputFocusBorderColor(isDark, customColors)} !important;
         box-shadow: ${
           isDark
-            ? "0 2px 12px rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.08)"
-            : "0 2px 12px rgba(24,23,21,0.08), 0 0 0 2px rgba(24,23,21,0.06)"
+            ? "0 4px 18px rgba(0,0,0,0.48)"
+            : "0 4px 16px rgba(24,23,21,0.09)"
         } !important;
       }`}
+      [data-testid="attach-button"]:hover {
+        color: ${inputTextColor(isDark, customColors)} !important;
+        background: ${inputSurfaceIsLight(isDark, customColors)
+          ? "rgba(24,23,21,0.05)"
+          : "rgba(255,255,255,0.07)"} !important;
+      }
+      [data-testid="send-button"]:hover {
+        transform: scale(1.04);
+      }
+      [data-testid="send-button"]:active {
+        transform: scale(0.96);
+      }
       @keyframes fadeInUp {
         from {
           opacity: 0;
@@ -2138,12 +2156,16 @@ export class ChatBox extends LitElement {
             `
             : nothing}
 
-          <div>
+          <div style="${isTransparentInput(customColors)
+            ? ""
+            : `background:linear-gradient(to top, ${
+              customColors?.background ?? (isDark ? "#0c0c0b" : "#f6f4ee")
+            } 62%, transparent)`}">
             <div style="display:flex;align-items:flex-end;padding:${isTransparentInput(
                 customColors,
               )
               ? "0"
-              : "8px 12px calc(12px + env(safe-area-inset-bottom, 0px))"};gap:${isTransparentInput(
+              : "10px 14px calc(14px + env(safe-area-inset-bottom, 0px))"};gap:${isTransparentInput(
                 customColors,
               )
               ? "0px"
