@@ -6,6 +6,7 @@ Alice&Bot is the open-source, end-to-end encrypted messaging layer built for
 that: free keypair identities, desktop + mobile app for humans, ChatGPT-style or
 side widgets for websites, signed webhooks, and an MCP server.
 
+[![npm](https://img.shields.io/npm/v/alice-and-bot)](https://www.npmjs.com/package/alice-and-bot)
 [![JSR](https://jsr.io/badges/@alice-and-bot/core)](https://jsr.io/@alice-and-bot/core)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/web-aliceandbot.com-181715)](https://aliceandbot.com)
@@ -31,25 +32,27 @@ Read the [manifesto](https://aliceandbot.com/manifesto), browse the
 
 ## Installation
 
-Works in **Deno**, **Node.js**, **Bun**, **Cloudflare Workers**, and
+Works in **Node.js**, **Deno**, **Bun**, **Cloudflare Workers**, and
 **browsers**.
 
-### Deno
+### npm (Node.js / Bun)
+
+```sh
+npm install alice-and-bot
+```
+
+```ts
+import { createIdentity, sendMessage } from "alice-and-bot";
+```
+
+### Deno (JSR)
 
 ```sh
 deno add jsr:@alice-and-bot/core
 ```
 
-### Node.js / npm
-
-```sh
-npx jsr add @alice-and-bot/core
-```
-
-### Bun
-
-```sh
-bunx jsr add @alice-and-bot/core
+```ts
+import { createIdentity, sendMessage } from "@alice-and-bot/core";
 ```
 
 ### Quick start (30 seconds)
@@ -694,25 +697,23 @@ any client that supports MCP.
 
 ### Quick start
 
-1. Install the binary:
-
-   ```bash
-   curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
-   ```
-
-2. Add to your MCP client config (e.g. `mcp.json` or VS Code settings):
+1. Add `alice-and-bot-mcp` to your MCP client config (e.g. `mcp.json`):
 
    ```json
    {
      "mcpServers": {
        "aliceandbot": {
-         "command": "alice-and-bot-mcp"
+         "command": "npx",
+         "args": ["-y", "alice-and-bot-mcp"]
        }
      }
    }
    ```
 
-3. Tell your agent to "set up Alice&Bot". Scan the QR code with your phone and
+   _(Or install the standalone binary:
+   `curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh`)_
+
+2. Tell your agent to "set up Alice&Bot". Scan the QR code with your phone and
    send the pairing code to start messaging.
 
 See [`mcp/README.md`](mcp/README.md) or the

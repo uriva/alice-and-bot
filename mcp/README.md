@@ -14,17 +14,9 @@ Cursor, Windsurf, VS Code, and more.
 4. Message your agent from your phone and get replies back.
 5. Everything is end-to-end encrypted. The relay only sees ciphertext.
 
-## Install
+## Quick Start
 
-### 1. Download the binary
-
-```bash
-curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
-```
-
-Installs `alice-and-bot-mcp` to `~/.local/bin/` (~100MB standalone Deno binary).
-
-### 2. Add to your MCP client
+### 1. Add to your MCP client
 
 Standard `mcp.json` (Cursor, Windsurf, and most MCP clients):
 
@@ -32,7 +24,8 @@ Standard `mcp.json` (Cursor, Windsurf, and most MCP clients):
 {
   "mcpServers": {
     "aliceandbot": {
-      "command": "alice-and-bot-mcp"
+      "command": "npx",
+      "args": ["-y", "alice-and-bot-mcp"]
     }
   }
 }
@@ -45,14 +38,19 @@ VS Code (`settings.json`):
   "mcp": {
     "servers": {
       "aliceandbot": {
-        "command": "alice-and-bot-mcp"
+        "command": "npx",
+        "args": ["-y", "alice-and-bot-mcp"]
       }
     }
   }
 }
 ```
 
-### 3. Pair & chat
+_(Prefer a standalone binary without Node.js? Run
+`curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh`
+and set `"command": "alice-and-bot-mcp"`.)_
+
+### 2. Pair & chat
 
 Ask your agent to "set up Alice&Bot" (or invoke the `aliceandbot` prompt). It
 calls `aliceandbot_setup` and displays a QR code and pairing code. Scan it on

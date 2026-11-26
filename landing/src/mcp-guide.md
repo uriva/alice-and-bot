@@ -14,17 +14,10 @@ code, send a one-time pairing code to authorize your phone, and start chatting.
 **Phone** -> **Alice&Bot** -> **Relay** -> **Local MCP Server** (and back). The
 relay only sees ciphertext.
 
-## Step 1: Install
+## Step 1: Add to Your MCP Client
 
-```bash
-curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
-```
-
-Installs `alice-and-bot-mcp` to `~/.local/bin/`.
-
-The binary is ~100MB because Deno embeds its runtime.
-
-## Step 2: Add to Your MCP Client
+No manual install needed. `npx -y alice-and-bot-mcp` runs directly with Node.js
+(>= 20).
 
 ### Standard MCP config (`mcp.json`)
 
@@ -35,7 +28,8 @@ most MCP clients:
 {
   "mcpServers": {
     "aliceandbot": {
-      "command": "alice-and-bot-mcp"
+      "command": "npx",
+      "args": ["-y", "alice-and-bot-mcp"]
     }
   }
 }
@@ -50,14 +44,24 @@ Add to `settings.json`:
   "mcp": {
     "servers": {
       "aliceandbot": {
-        "command": "alice-and-bot-mcp"
+        "command": "npx",
+        "args": ["-y", "alice-and-bot-mcp"]
       }
     }
   }
 }
 ```
 
-## Step 3: Pair & Chat
+### Alternative: Standalone Binary (No Node.js Required)
+
+```bash
+curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
+```
+
+Installs `alice-and-bot-mcp` to `~/.local/bin/` (then use
+`"command": "alice-and-bot-mcp"` with no `args`).
+
+## Step 2: Pair & Chat
 
 1. Tell your agent to **"set up Alice&Bot"** (or run the `aliceandbot` prompt).
 2. Scan the **QR code** with your phone.

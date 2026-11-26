@@ -11,23 +11,22 @@
 - Comparison (vs WhatsApp, Telegram, Slack, Custom): https://aliceandbot.com/compare
 - Manifesto: https://aliceandbot.com/manifesto
 - GitHub Repository: https://github.com/uriva/alice-and-bot
-- JSR Package: https://jsr.io/@alice-and-bot/core
+- npm SDK: https://www.npmjs.com/package/alice-and-bot
+- npm MCP Server: https://www.npmjs.com/package/alice-and-bot-mcp
+- JSR Package (Deno): https://jsr.io/@alice-and-bot/core
 - Agent Skill (`SKILL.md`): https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md
 - Discord Community: https://discord.gg/xkGMFH9RAz
 
-## Install SDK (`@alice-and-bot/core`)
+## Install SDK (`alice-and-bot`)
 
-Works in Deno, Node.js, Bun, Cloudflare Workers, and browsers.
+Works in Node.js, Deno, Bun, Cloudflare Workers, and browsers.
 
 ```sh
-# Deno
+# npm (Node.js / Bun)
+npm install alice-and-bot
+
+# Deno (JSR)
 deno add jsr:@alice-and-bot/core
-
-# Node.js / npm
-npx jsr add @alice-and-bot/core
-
-# Bun
-bunx jsr add @alice-and-bot/core
 ```
 
 ## Quick Start (TypeScript)
@@ -84,17 +83,14 @@ const onWebhook = async (payload: WebhookUpdate) => {
 
 Works with any MCP-compatible agent, assistant, or editor.
 
-```sh
-curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh
-```
-
-Add to `.cursor/mcp.json` or `.windsurf/mcp.json`:
+Add to your `mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "aliceandbot": {
-      "command": "alice-and-bot-mcp"
+      "command": "npx",
+      "args": ["-y", "alice-and-bot-mcp"]
     }
   }
 }

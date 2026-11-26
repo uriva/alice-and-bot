@@ -9,16 +9,17 @@ Alice&Bot is a developer-first, end-to-end encrypted chat platform. Bots are
 first-class citizens — create identities, send/receive messages, show typing
 indicators and progress bars, all via a TypeScript API.
 
-Package: `@alice-and-bot/core` on [JSR](https://jsr.io/@alice-and-bot/core)
+Packages: `alice-and-bot` on [npm](https://www.npmjs.com/package/alice-and-bot)
+and `@alice-and-bot/core` on [JSR](https://jsr.io/@alice-and-bot/core)
 
 ## Install
 
 ```bash
-# Deno
-deno add jsr:@alice-and-bot/core
+# npm (Node.js / Bun)
+npm install alice-and-bot
 
-# npm
-npx jsr add @alice-and-bot/core
+# Deno (JSR)
+deno add jsr:@alice-and-bot/core
 ```
 
 ## Quick start — echo bot

@@ -7,25 +7,21 @@ All functions work in both browser and server environments (Deno, Node.js).
 
 ## Installation
 
-### Deno
+### npm (Node.js / Bun)
+
+```sh
+npm install alice-and-bot
+```
+
+```ts
+import { createIdentity, sendMessage } from "alice-and-bot";
+```
+
+### Deno (JSR)
 
 ```sh
 deno add jsr:@alice-and-bot/core
 ```
-
-### Node.js / npm
-
-```sh
-npx jsr add @alice-and-bot/core
-```
-
-### Bun
-
-```sh
-bunx jsr add @alice-and-bot/core
-```
-
-Then import from `@alice-and-bot/core`:
 
 ```ts
 import { createIdentity, sendMessage } from "@alice-and-bot/core";

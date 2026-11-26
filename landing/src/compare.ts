@@ -127,14 +127,14 @@ const whenPickOther: TradeoffCard[] = [
   },
 ];
 
-const installSnippet = `# Deno
+const installSnippet = `# npm (Node.js / Bun)
+npm install alice-and-bot
+
+# Deno (JSR)
 deno add jsr:@alice-and-bot/core
 
-# Node.js / npm
-npx jsr add @alice-and-bot/core
-
-# MCP server (Cursor, Windsurf, VS Code)
-curl -fsSL https://storage.googleapis.com/alice-and-bot/cli/install.sh | sh`;
+# MCP server (any MCP client)
+npx -y alice-and-bot-mcp`;
 
 const renderRow = (
   { dimension, alice, whatsapp, telegram, slackDiscord, custom }: CompareRow,
