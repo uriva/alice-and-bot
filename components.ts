@@ -1,3 +1,9 @@
+/**
+ * Embeddable Lit web components, React chat components, and HTML widget loaders
+ * for Alice&Bot.
+ *
+ * @module
+ */
 export { createWidget } from "./widget/src/widget.ts";
 export { ConnectedChat } from "./lit/components/connected-chat.ts";
 export { ChatBox } from "./lit/components/chat-box.ts";

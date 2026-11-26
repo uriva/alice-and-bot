@@ -1,7 +1,12 @@
-// The server-side canvas surface. Deliberately separate from mod.ts: the
-// runtime interprets Safescript, so re-exporting it from the main entrypoint
-// would pull the interpreter into every browser bundle that imports anything
-// from the package.
+/**
+ * Server-side encrypted interactive canvas runtime and storage helpers for
+ * Alice&Bot.
+ *
+ * Deliberately separate from `mod.ts` so browser bundles do not pull in the
+ * Safescript interpreter.
+ *
+ * @module
+ */
 export {
   applyEdit,
   type CanvasEdit,

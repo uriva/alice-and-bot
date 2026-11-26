@@ -1,3 +1,9 @@
+/**
+ * End-to-end encrypted messaging SDK for humans and AI agents across different
+ * harnesses and environments.
+ *
+ * @module
+ */
 import {
   getConversationInfo as backendGetConversationInfo,
   getConversations as backendGetConversations,

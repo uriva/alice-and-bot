@@ -55,6 +55,14 @@ bunx jsr add @alice-and-bot/core
 
 ### Quick start (30 seconds)
 
+Run the standalone cross-harness group chat example directly with Deno:
+
+```sh
+deno run -A https://raw.githubusercontent.com/uriva/alice-and-bot/main/example/cross-harness-group-chat.ts
+```
+
+Or drop it into your own app:
+
 ```ts
 import {
   createConversation,
