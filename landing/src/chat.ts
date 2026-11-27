@@ -115,6 +115,23 @@ import {
   formatConversationTypingLabel,
   subscribeAllTypingStates,
 } from "../../lit/core/conversation-previews.ts";
+import {
+  computeConversationUnread,
+  formatDocumentTitle,
+  formatUnreadBadgeLabel,
+  latestKnownConversationTimestamp,
+  markConversationRead,
+  markConversationUnread,
+  readUnreadState,
+  seedUnreadState,
+  type StoredUnreadState,
+  subscribeUnreadStateStorage,
+  summarizeUnreadCounts,
+  syncFaviconDot,
+  syncNavigatorAppBadge,
+  unreadStateStorageKey,
+  writeUnreadState,
+} from "../../lit/core/unread-state.ts";
 
 // --- Styles ---
 
@@ -158,6 +175,10 @@ let view: View = "chats";
 let conversations: Conversation[] | null = null;
 let conversationPreviews: ConversationPreviewMap = {};
 let typingByConversation: ConversationTypingMap = {};
+let unreadState: StoredUnreadState | null = null;
+let openChatUnreadBanner:
+  | { conversationId: string; readAtBeforeOpen: number }
+  | null = null;
 let searchQuery = "";
 let initializedFromQuery = false;
 let handledChatWith: string | null = null;
@@ -170,6 +191,9 @@ let overflowCleanup: (() => void) | null = null;
 let conversationsUnsub: (() => void) | null = null;
 let previewsManager: ConversationPreviewsManager | null = null;
 let allTypingUnsub: (() => void) | null = null;
+let unreadStorageUnsub: (() => void) | null = null;
+
+const chatRouteBaseTitle = "Messenger - Alice&Bot";
 
 const conversationsCacheKey = "alicebot_conversations_cache";
 
@@ -761,11 +785,17 @@ const syncStateFromUrl = () => {
   }
   if (c) {
     if (view !== "chats") view = "chats";
-    if (selectedConversation !== c) selectedConversation = c;
-    acknowledgeActiveConversation();
+    if (selectedConversation !== c) {
+      openChatUnreadBanner = null;
+      selectedConversation = c;
+    }
+    acknowledgeActiveConversation(true);
   } else {
     if (view !== "chats") view = "chats";
-    if (selectedConversation !== null) selectedConversation = null;
+    if (selectedConversation !== null) {
+      openChatUnreadBanner = null;
+      selectedConversation = null;
+    }
   }
   if (!initializedFromQuery) initializedFromQuery = true;
   rerenderChat();
@@ -908,10 +938,92 @@ const mountChatPanels = () => {
   if (mobilePanel) renderChatPanel(mobilePanel);
 };
 
+const isConversationVisiblyOpen = (conversationId: string): boolean =>
+  view === "chats" &&
+  selectedConversation === conversationId &&
+  globalThis.document?.visibilityState !== "hidden";
+
+const ensureUnreadState = (): StoredUnreadState | null => {
+  if (!credentials) return null;
+  if (unreadState && unreadState.publicSignKey === credentials.publicSignKey) {
+    return unreadState;
+  }
+  if (conversations === null) return null;
+  const seeded = seedUnreadState(
+    unreadState,
+    credentials.publicSignKey,
+    conversations,
+  );
+  unreadState = seeded;
+  writeUnreadState(seeded);
+  return seeded;
+};
+
+const unreadStatusFor = (conv: Conversation) =>
+  computeConversationUnread({
+    conversationId: conv.id,
+    preview: conversationPreviews[conv.id],
+    selfPublicSignKey: credentials?.publicSignKey ?? "",
+    state: unreadState,
+    isActivelyViewing: isConversationVisiblyOpen(conv.id),
+  });
+
+const unreadSummary = () =>
+  summarizeUnreadCounts(conversations, unreadStatusFor, isArchived);
+
+const syncBrowserUnreadIndicators = () => {
+  if (!credentials) {
+    syncFaviconDot(false);
+    return;
+  }
+  const summary = unreadSummary();
+  if (typeof document !== "undefined") {
+    document.title = formatDocumentTitle(
+      chatRouteBaseTitle,
+      summary.activeUnreadChats,
+    );
+  }
+  syncFaviconDot(summary.activeUnreadChats > 0);
+  syncNavigatorAppBadge(summary.activeUnreadMessages);
+};
+
+const markConversationAsRead = (
+  conversationId: string,
+  explicitTimestamp?: number,
+) => {
+  const current = ensureUnreadState();
+  if (!current) return;
+  const conv = conversations?.find((c) => c.id === conversationId);
+  const preview = conversationPreviews[conversationId];
+  const readTs = Math.max(
+    explicitTimestamp ?? 0,
+    latestKnownConversationTimestamp(conv, preview),
+  );
+  const next = markConversationRead(current, conversationId, readTs);
+  if (next === current) return;
+  unreadState = next;
+  writeUnreadState(next);
+  syncBrowserUnreadIndicators();
+};
+
+const markConversationAsUnread = (conversationId: string) => {
+  const current = ensureUnreadState();
+  if (!current) return;
+  const next = markConversationUnread(current, conversationId);
+  if (next === current) return;
+  unreadState = next;
+  writeUnreadState(next);
+  if (openChatUnreadBanner?.conversationId === conversationId) {
+    openChatUnreadBanner = null;
+  }
+  rerenderChat();
+};
+
 const rerenderChat = () => {
   if (!chatContainer?.isConnected) return;
   render(chatTemplate(), chatContainer);
   mountChatPanels();
+  syncBrowserUnreadIndicators();
 };
 
 // --- Chevron SVG ---
@@ -1108,6 +1220,40 @@ const renameSvg = html`
       stroke-linecap="round"
       stroke-linejoin="round"
       d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+    />
+  </svg>
+`;
+
+const markUnreadSvg = html`
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-4 h-4"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
+    />
+  </svg>
+`;
+
+const markReadSvg = html`
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-4 h-4"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M21.75 9v.906a2.25 2.25 0 0 1-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 0 0 1.183 1.981l6.478 3.488m8.839 2.51-4.66-2.51m0 0-1.023-.55a2.25 2.25 0 0 0-2.134 0l-1.022.55m0 0-4.661 2.51m16.5 1.615a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V8.844a2.25 2.25 0 0 1 1.183-1.981l7.5-4.039a2.25 2.25 0 0 1 2.134 0l7.5 4.039a2.25 2.25 0 0 1 1.183 1.98V19.5Z"
     />
   </svg>
 `;
@@ -1310,17 +1456,33 @@ const setView_ = (v: View) => {
   blurActiveInputOnMobile();
   view = v;
   if (v === "identity" && !yourKeyBalanceData) fetchBalance();
+  if (v === "chats" && selectedConversation) {
+    acknowledgeActiveConversation(true);
+  }
   syncUrlFromState();
   rerenderChat();
 };
 
 const selectConversation = (id: string) => {
   blurActiveInputOnMobile();
+  const prevConv = conversations?.find((c) => c.id === id);
+  const prevStatus = prevConv
+    ? computeConversationUnread({
+      conversationId: id,
+      preview: conversationPreviews[id],
+      selfPublicSignKey: credentials?.publicSignKey ?? "",
+      state: unreadState,
+      isActivelyViewing: false,
+    })
+    : null;
+  openChatUnreadBanner = prevStatus && prevStatus.count > 0
+    ? { conversationId: id, readAtBeforeOpen: prevStatus.effectiveReadAt }
+    : null;
   selectedConversation = id;
   const params = new URLSearchParams(globalThis.location.search);
   params.set("c", id);
   globalThis.history.pushState(null, "", `${chatPath}?${params.toString()}`);
-  acknowledgeActiveConversation();
+  acknowledgeActiveConversation(true);
   rerenderChat();
 };
 
@@ -1351,7 +1513,10 @@ const visibleConversations = (sq?: string) => {
 
 const syncPreviewTargets = () => {
   if (!previewsManager || !conversations) return;
-  previewsManager.setConversations(visibleConversations(searchQuery));
+  const visible = visibleConversations(searchQuery);
+  const seen = new Set(visible.map((c) => c.id));
+  const rest = conversations.filter((c) => !seen.has(c.id));
+  previewsManager.setConversations([...visible, ...rest]);
 };
 
 // --- Conversation list item ---
@@ -1374,6 +1539,8 @@ const conversationListItem = (conv: Conversation, index: number) => {
   const isCurrentlyArchived = isArchived(conv);
   const isGroupChat = conv.participants.length > 2;
   const preview = conversationPreviews[conv.id];
+  const unread = unreadStatusFor(conv);
+  const unreadLabel = formatUnreadBadgeLabel(unread.count, unread.overflow);
   const typingNames = activeTypingNamesForConversation(
     typingByConversation[conv.id],
     preview,
@@ -1475,7 +1642,7 @@ const conversationListItem = (conv: Conversation, index: number) => {
           <div class="flex-grow overflow-hidden min-w-0">
             <div class="flex items-baseline justify-between gap-2">
               <div class="${`${
-                isSelected ? "font-semibold" : "font-medium"
+                isSelected || unread.isUnread ? "font-semibold" : "font-medium"
               } text-sm ${textColorStyle} truncate min-w-0`}">
                 ${displayName === null ? shimmerText() : displayName}
               </div>
@@ -1483,7 +1650,11 @@ const conversationListItem = (conv: Conversation, index: number) => {
                 ? html`
                   <span
                     data-testid="conversation-time"
-                    class="${`text-[11px] shrink-0 tabular-nums text-[#8c867c] dark:text-[#78736a] ${
+                    class="${`text-[11px] shrink-0 tabular-nums ${
+                      unread.isUnread
+                        ? "font-semibold text-[#39587f] dark:text-[#7da2cf]"
+                        : "text-[#8c867c] dark:text-[#78736a]"
+                    } ${
                       !currentIsMobile
                         ? "group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity"
                         : ""
@@ -1492,32 +1663,66 @@ const conversationListItem = (conv: Conversation, index: number) => {
                 `
                 : nothing}
             </div>
-            <div class="mt-0.5 text-xs truncate min-h-[1rem] leading-4">
-              ${typingLabel
-                ? html`
-                  <span
-                    data-testid="conversation-typing-indicator"
-                    class="inline-flex items-center gap-1.5 font-medium text-[#39587f] dark:text-[#7da2cf] max-w-full"
-                  >
-                    <span class="typing-dots-inline" aria-hidden="true">
-                      <span></span><span></span><span></span>
+            <div class="mt-0.5 flex items-center justify-between gap-2 min-h-[1.25rem]">
+              <div class="text-xs truncate leading-4 min-w-0 flex-1">
+                ${typingLabel
+                  ? html`
+                    <span
+                      data-testid="conversation-typing-indicator"
+                      class="inline-flex items-center gap-1.5 font-medium text-[#39587f] dark:text-[#7da2cf] max-w-full"
+                    >
+                      <span class="typing-dots-inline" aria-hidden="true">
+                        <span></span><span></span><span></span>
+                      </span>
+                      <span class="truncate">${typingLabel}</span>
                     </span>
-                    <span class="truncate">${typingLabel}</span>
-                  </span>
-                `
-                : previewLine
-                ? html`
-                  <span
-                    data-testid="conversation-last-message"
-                    class="block truncate text-[#78736a] dark:text-[#8c867c]"
-                  >${previewLine}</span>
-                `
-                : preview?.empty
-                ? html`
-                  <span
-                    class="block truncate italic text-[#9c968c] dark:text-[#66625b]"
-                  >No messages yet</span>
-                `
+                  `
+                  : previewLine
+                  ? html`
+                    <span
+                      data-testid="conversation-last-message"
+                      class="${`block truncate ${
+                        unread.isUnread
+                          ? "font-medium text-[#2c2a26] dark:text-[#e7e5df]"
+                          : "text-[#78736a] dark:text-[#8c867c]"
+                      }`}"
+                    >${previewLine}</span>
+                  `
+                  : preview?.empty
+                  ? html`
+                    <span
+                      class="block truncate italic text-[#9c968c] dark:text-[#66625b]"
+                    >No messages yet</span>
+                  `
+                  : nothing}
+              </div>
+              ${unread.isUnread
+                ? unreadLabel
+                  ? html`
+                    <span
+                      data-testid="conversation-unread-badge"
+                      aria-label="${unread.count === 1
+                        ? "1 unread message"
+                        : `${unreadLabel} unread messages`}"
+                      class="${`inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110] text-[11px] font-bold leading-none tabular-nums shrink-0 ${
+                        !currentIsMobile
+                          ? "group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity"
+                          : ""
+                      }`}"
+                    >${unreadLabel}</span>
+                  `
+                  : html`
+                    <span
+                      data-testid="conversation-unread-badge"
+                      data-unread-dot
+                      aria-label="Unread"
+                      class="${`w-2.5 h-2.5 rounded-full bg-[#39587f] dark:bg-[#7da2cf] shrink-0 ${
+                        !currentIsMobile
+                          ? "group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity"
+                          : ""
+                      }`}"
+                    ></span>
+                  `
                 : nothing}
             </div>
           </div>
@@ -1531,6 +1736,29 @@ const conversationListItem = (conv: Conversation, index: number) => {
                   : "bg-[#f0ede4] dark:bg-[#1c1b18]"
               }`}"
             >
+              <button
+                type="button"
+                data-testid="toggle-unread-button"
+                class="p-1.5 rounded-lg text-[#78736a] hover:bg-black/6 dark:hover:bg-white/10 hover:text-[#181715] dark:hover:text-[#f3f1ea]"
+                title="${unread.isUnread ? "Mark as read" : "Mark as unread"}"
+                aria-label="${unread.isUnread
+                  ? "Mark as read"
+                  : "Mark as unread"}"
+                @click="${(e: Event) => {
+                  e.stopPropagation();
+                  if (unread.isUnread) {
+                    markConversationAsRead(conv.id);
+                    if (openChatUnreadBanner?.conversationId === conv.id) {
+                      openChatUnreadBanner = null;
+                    }
+                    rerenderChat();
+                  } else {
+                    markConversationAsUnread(conv.id);
+                  }
+                }}"
+              >
+                ${unread.isUnread ? markReadSvg : markUnreadSvg}
+              </button>
               <button
                 type="button"
                 class="p-1.5 rounded-lg text-[#78736a] hover:bg-black/6 dark:hover:bg-white/10 hover:text-[#181715] dark:hover:text-[#f3f1ea]"
@@ -1940,6 +2168,9 @@ const handleSignOut = async () => {
   localStorage.removeItem("alicebot_credentials");
   localStorage.removeItem(conversationsCacheKey);
   localStorage.removeItem(conversationPreviewsCacheKey);
+  localStorage.removeItem(unreadStateStorageKey);
+  syncFaviconDot(false);
+  syncNavigatorAppBadge(0);
   await Promise.all([
     clearPushKeyStore().catch(() => {}),
     closeLocalNotificationsForConversation().catch(() => {}),
@@ -3052,8 +3283,9 @@ const messengerLogin = () => {
 // --- Desktop sidebar ---
 
 const desktopSidebar = () => {
+  const { activeUnreadChats } = unreadSummary();
   const sidebarButtonClass = (v: View) =>
-    `w-11 h-11 rounded-2xl font-bold transition-all duration-150 flex items-center justify-center ${
+    `relative w-11 h-11 rounded-2xl font-bold transition-all duration-150 flex items-center justify-center ${
       view === v
         ? "bg-white text-[#181715] dark:bg-[#24231f] dark:text-[#f3f1ea] shadow-2xs"
         : "text-[#66625b] dark:text-[#9c968c] hover:bg-[#e9e5dc]/80 dark:hover:bg-[#1c1b18] hover:text-[#181715] dark:hover:text-[#f3f1ea]"
@@ -3069,6 +3301,17 @@ const desktopSidebar = () => {
         title="Messages"
       >
         ${chatIcon}
+        ${activeUnreadChats > 0
+          ? html`
+            <span
+              data-testid="nav-unread-badge"
+              aria-label="${activeUnreadChats === 1
+                ? "1 unread chat"
+                : `${activeUnreadChats} unread chats`}"
+              class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110] text-[10px] font-bold leading-none tabular-nums ring-2 ring-[#f2efe8] dark:ring-[#111110]"
+            >${formatUnreadBadgeLabel(activeUnreadChats)}</span>
+          `
+          : nothing}
       </button>
       <button
         type="button"
@@ -3112,6 +3355,7 @@ const closeConversation = () => {
   blurActiveInputOnMobile();
   view = "chats";
   selectedConversation = null;
+  openChatUnreadBanner = null;
   syncUrlFromState();
   rerenderChat();
 };
@@ -3261,6 +3505,13 @@ const chatPanelTemplate = () => {
       </div>
     `;
   }
+  const activeConvId = selectedConversation;
+  const otherUnreadCount = currentIsMobile
+    ? (conversations ?? []).filter(
+      (c) =>
+        c.id !== activeConvId && !isArchived(c) && unreadStatusFor(c).isUnread,
+    ).length
+    : 0;
   return html`
     ${pushPromptBanner()}
     <alice-connected-chat
@@ -3277,11 +3528,22 @@ const chatPanelTemplate = () => {
       .onChatWith="${handleChatWith}"
       .onNewThread="${handleNewThread}"
       .enableVoiceCall="${true}"
+      .unreadDividerAfterTimestamp="${openChatUnreadBanner?.conversationId ===
+          selectedConversation
+        ? openChatUnreadBanner.readAtBeforeOpen
+        : undefined}"
+      .otherUnreadCount="${otherUnreadCount}"
       @message-sent="${() => {
+        if (selectedConversation) {
+          markConversationAsRead(selectedConversation);
+          if (openChatUnreadBanner?.conversationId === selectedConversation) {
+            openChatUnreadBanner = null;
+          }
+        }
         if (!pushNudgeState.triggered && !isPushBannerDismissed()) {
           pushNudgeState.triggered = true;
-          rerenderChat();
         }
+        rerenderChat();
       }}"
       @conversation-renamed="${(e: Event) => {
         const detail = (e as CustomEvent).detail as
@@ -3307,8 +3569,9 @@ const renderChatPanel = (container: HTMLElement) => {
 // --- Mobile view ---
 
 const mobileBottomNav = () => {
+  const { activeUnreadChats } = unreadSummary();
   const btnClass = (v: View) =>
-    `flex-1 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+    `flex-1 px-3 py-2 rounded-full text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${
       view === v
         ? "bg-[#181715] text-[#faf9f5] dark:bg-[#f3f1ea] dark:text-[#181715]"
         : "text-[#66625b] dark:text-[#9c968c] hover:bg-[#efede6] dark:hover:bg-[#1f1e1b]"
@@ -3319,7 +3582,24 @@ const mobileBottomNav = () => {
       style="padding-bottom:calc(0.625rem + env(safe-area-inset-bottom, 0px))"
     >
       <button type="button" class="${btnClass("chats")}" @click="${() =>
-        setView_("chats")}">Chats</button>
+        setView_("chats")}">
+        <span>Chats</span>
+        ${activeUnreadChats > 0
+          ? html`
+            <span
+              data-testid="nav-unread-badge"
+              aria-label="${activeUnreadChats === 1
+                ? "1 unread chat"
+                : `${activeUnreadChats} unread chats`}"
+              class="${`inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full text-[10px] font-bold leading-none tabular-nums ${
+                view === "chats"
+                  ? "bg-[#39587f] text-white"
+                  : "bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110]"
+              }`}"
+            >${formatUnreadBadgeLabel(activeUnreadChats)}</span>
+          `
+          : nothing}
+      </button>
       <button type="button" class="${btnClass("new_chat")}" @click="${() =>
         setView_("new_chat")}">New</button>
       <button type="button" class="${btnClass("identity")}" @click="${() =>
@@ -3436,6 +3716,16 @@ const mobileChatsListView = () => {
               }}"
             >
               ${showArchived ? "← Active Chats" : "Archived"}
+              ${!showArchived && unreadSummary().archivedUnreadChats > 0
+                ? html`
+                  <span
+                    data-testid="archived-unread-badge"
+                    class="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110] text-[10px] font-bold leading-none tabular-nums"
+                  >${formatUnreadBadgeLabel(
+                    unreadSummary().archivedUnreadChats,
+                  )}</span>
+                `
+                : nothing}
             </button>
           </div>
         `
@@ -3596,6 +3886,16 @@ const desktopChatsView = () => {
           }}"
         >
           ${showArchived ? "← Active Chats" : "Archived"}
+          ${!showArchived && unreadSummary().archivedUnreadChats > 0
+            ? html`
+              <span
+                data-testid="archived-unread-badge"
+                class="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110] text-[10px] font-bold leading-none tabular-nums"
+              >${formatUnreadBadgeLabel(
+                unreadSummary().archivedUnreadChats,
+              )}</span>
+            `
+            : nothing}
         </button>
       </div>
     </div>
@@ -3708,11 +4008,14 @@ const hasRegisteredPushSubscription = async (): Promise<boolean> => {
   return Boolean(sub?.endpoint);
 };
 
-const acknowledgeActiveConversation = () => {
+const acknowledgeActiveConversation = (forceClearManual = false) => {
   if (!credentials || view !== "chats" || !selectedConversation) return;
   if (globalThis.document?.visibilityState === "hidden") return;
   const creds = credentials;
   const convId = selectedConversation;
+  if (forceClearManual || !unreadState?.markedUnread[convId]) {
+    markConversationAsRead(convId);
+  }
   closeLocalNotificationsForConversation(convId).catch(() => {});
   if (globalThis.Notification?.permission !== "granted") return;
   const convUpdatedAt = conversations?.find((c) => c.id === convId)
@@ -3739,7 +4042,8 @@ const onWindowFocusOrVisible = () => {
     blurActiveInputOnMobile();
     return;
   }
-  acknowledgeActiveConversation();
+  acknowledgeActiveConversation(true);
+  rerenderChat();
 };
 
 const onPageHide = () => {
@@ -3813,16 +4117,26 @@ const onMessengerKeydown = (e: KeyboardEvent) => {
 
 const onServiceWorkerMessage = (event: MessageEvent) => {
   const data: unknown = event.data;
+  if (typeof data !== "object" || data === null || !("type" in data)) return;
   if (
-    typeof data === "object" &&
-    data !== null &&
-    "type" in data &&
     data.type === "alice:select-conversation" &&
     "conversationId" in data &&
     typeof data.conversationId === "string"
   ) {
     view = "chats";
     selectConversation(data.conversationId);
+    return;
+  }
+  if (
+    data.type === "alice:mark-read" &&
+    "conversationId" in data &&
+    typeof data.conversationId === "string"
+  ) {
+    const readAt = "readAt" in data && typeof data.readAt === "number"
+      ? data.readAt
+      : Date.now();
+    markConversationAsRead(data.conversationId, readAt);
+    rerenderChat();
   }
 };
 
@@ -3835,6 +4149,15 @@ const initLoggedInState = () => {
   if (globalThis.localStorage?.getItem("alicebot_credentials")) {
     savePushCredentials(activeCredentials).catch(() => {});
   }
+  unreadState = readUnreadState(activeCredentials.publicSignKey);
+  if (unreadStorageUnsub) unreadStorageUnsub();
+  unreadStorageUnsub = subscribeUnreadStateStorage(
+    activeCredentials.publicSignKey,
+    (next) => {
+      unreadState = next;
+      rerenderChat();
+    },
+  );
   const initialQueryConv = currentQuery()["c"];
   hintColdBootstrap(activeCredentials.publicSignKey, {
     includeConversations: true,
@@ -3843,12 +4166,21 @@ const initLoggedInState = () => {
   ensureInstantAuth(activeCredentials).catch(() => {});
   if (conversations === null) {
     conversations = readCachedConversations(activeCredentials.publicSignKey);
+    if (conversations && !unreadState) {
+      unreadState = seedUnreadState(
+        null,
+        activeCredentials.publicSignKey,
+        conversations,
+      );
+      writeUnreadState(unreadState);
+    }
   }
   if (previewsManager) previewsManager.unsubscribe();
   previewsManager = createConversationPreviewsManager(
     activeCredentials,
     (map) => {
       conversationPreviews = map;
+      acknowledgeActiveConversation();
       rerenderChat();
     },
   );
@@ -3867,6 +4199,14 @@ const initLoggedInState = () => {
     (convs) => {
       if (convs === null && conversations !== null) return;
       conversations = convs;
+      if (convs && !unreadState) {
+        unreadState = seedUnreadState(
+          null,
+          activeCredentials.publicSignKey,
+          convs,
+        );
+        writeUnreadState(unreadState);
+      }
       writeCachedConversations(activeCredentials.publicSignKey, convs);
       convs?.forEach((conv) => {
         const other = conv.participants.find(
@@ -3890,6 +4230,7 @@ const initLoggedInState = () => {
 
 const cleanup = () => {
   setActiveConversationGetter(null);
+  syncFaviconDot(false);
   chatInitialized = false;
   chatContainer = null;
   if (viewportCleanup) {
@@ -3912,8 +4253,14 @@ const cleanup = () => {
     allTypingUnsub();
     allTypingUnsub = null;
   }
+  if (unreadStorageUnsub) {
+    unreadStorageUnsub();
+    unreadStorageUnsub = null;
+  }
   conversationPreviews = {};
   typingByConversation = {};
+  unreadState = null;
+  openChatUnreadBanner = null;
   if (yourKeyProfileUnsub) {
     yourKeyProfileUnsub();
     yourKeyProfileUnsub = null;

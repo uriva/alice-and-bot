@@ -640,4 +640,181 @@ test.describe("Messenger (landing /chat)", () => {
     await expect(lastMsg).toHaveAttribute("data-keyboard-selected", "");
     await expect(lastMsg).toContainText("Just building some E2E tests.");
   });
+
+  test("WhatsApp-style unread count badges, tab title, in-chat unread divider, and mark-as-unread dot", async ({ page }) => {
+    const { wsMock } = await setupMessengerMocks(page, data);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    const row = page.locator(`[data-conversation-id="${data.conversationId}"]`);
+    await expect(row.getByTestId("conversation-last-message")).toHaveText(
+      "You: Just building some E2E tests.",
+      { timeout: 15_000 },
+    );
+
+    // Initial load must not show false-positive unread badges
+    await expect(row.getByTestId("conversation-unread-badge")).toHaveCount(0);
+    await expect(page.getByTestId("nav-unread-badge")).toHaveCount(0);
+    await expect(page).toHaveTitle("Messenger - Alice&Bot");
+
+    const baseTs = Date.now() + 5_000;
+    const msg1 = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      "First unread ping",
+    );
+    wsMock.pushNewMessage({
+      id: crypto.randomUUID(),
+      payload: msg1,
+      timestamp: baseTs,
+      senderPublicSignKey: data.bob.publicSignKey,
+    });
+
+    await expect(row.getByTestId("conversation-unread-badge")).toHaveText("1", {
+      timeout: 10_000,
+    });
+    await expect(page.getByTestId("nav-unread-badge")).toHaveText("1");
+    await expect(page).toHaveTitle("(1) Messenger - Alice&Bot");
+
+    const msg2 = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      "Second unread ping",
+    );
+    wsMock.pushNewMessage({
+      id: crypto.randomUUID(),
+      payload: msg2,
+      timestamp: baseTs + 1_000,
+      senderPublicSignKey: data.bob.publicSignKey,
+    });
+
+    await expect(row.getByTestId("conversation-unread-badge")).toHaveText("2", {
+      timeout: 10_000,
+    });
+    await expect(page.getByTestId("nav-unread-badge")).toHaveText("1");
+    await expect(page).toHaveTitle("(1) Messenger - Alice&Bot");
+
+    // Opening the unread conversation clears badges and shows the in-chat unread divider
+    await row.locator("button").first().click();
+    await expect(row.getByTestId("conversation-unread-badge")).toHaveCount(0);
+    await expect(page.getByTestId("nav-unread-badge")).toHaveCount(0);
+    await expect(page).toHaveTitle("Messenger - Alice&Bot");
+    await expect(page.getByTestId("unread-messages-divider")).toContainText(
+      "2 unread messages",
+      { timeout: 10_000 },
+    );
+
+    // Sending a message clears the in-chat unread divider
+    const input = page.getByTestId("message-input");
+    await input.fill("Seen and replying!");
+    await input.press("Enter");
+    await expect(page.getByTestId("unread-messages-divider")).toHaveCount(0);
+
+    // Manual "Mark as unread" shows the WhatsApp-style solid dot and updates nav badge + title
+    await row.hover();
+    await row.getByTestId("toggle-unread-button").click();
+    const dot = row.getByTestId("conversation-unread-badge");
+    await expect(dot).toBeVisible();
+    await expect(dot).toHaveAttribute("data-unread-dot", "");
+    await expect(dot).toHaveText("");
+    await expect(page.getByTestId("nav-unread-badge")).toHaveText("1");
+    await expect(page).toHaveTitle("(1) Messenger - Alice&Bot");
+
+    // Manual "Mark as read" clears the dot
+    await row.hover();
+    await row.getByTestId("toggle-unread-button").click();
+    await expect(row.getByTestId("conversation-unread-badge")).toHaveCount(0);
+    await expect(page.getByTestId("nav-unread-badge")).toHaveCount(0);
+    await expect(page).toHaveTitle("Messenger - Alice&Bot");
+
+    // Message arriving while tab is hidden shows unread indicator, then clears on tab return
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    const msgHidden = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      "Ping while tab hidden",
+    );
+    wsMock.pushNewMessage({
+      id: crypto.randomUUID(),
+      payload: msgHidden,
+      timestamp: baseTs + 10_000,
+      senderPublicSignKey: data.bob.publicSignKey,
+    });
+    await expect(row.getByTestId("conversation-unread-badge")).toHaveText("1", {
+      timeout: 10_000,
+    });
+    await expect(page).toHaveTitle("(1) Messenger - Alice&Bot");
+
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "visible",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(row.getByTestId("conversation-unread-badge")).toHaveCount(0);
+    await expect(page).toHaveTitle("Messenger - Alice&Bot");
+  });
+
+  test("mobile shows unread badge on chat row, bottom nav, and back button when viewing another chat", async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+    const now = Date.now();
+    const { wsMock } = await setupMessengerMocks(page, data, [
+      { id: "conv-other", title: "Other Chat", updatedAt: now - 5_000 },
+    ]);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    const row = page.locator(`[data-conversation-id="${data.conversationId}"]`);
+    await expect(row.getByTestId("conversation-last-message")).toHaveText(
+      "You: Just building some E2E tests.",
+      { timeout: 15_000 },
+    );
+
+    const msg = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      "Mobile unread alert",
+    );
+    wsMock.pushNewMessage({
+      id: crypto.randomUUID(),
+      payload: msg,
+      timestamp: now + 5_000,
+      senderPublicSignKey: data.bob.publicSignKey,
+    });
+
+    await expect(row.getByTestId("conversation-unread-badge")).toHaveText("1", {
+      timeout: 10_000,
+    });
+    await expect(page.getByTestId("nav-unread-badge")).toHaveText("1");
+
+    // Open the OTHER chat and verify the back button shows the other unread chat badge
+    await page.getByText("Other Chat").first().click();
+    await expect(page.getByTestId("back-unread-badge")).toHaveText("1", {
+      timeout: 10_000,
+    });
+
+    // Go back and open the unread chat -> badge clears
+    await page.getByTestId("back-to-chats-button").click();
+    await row.locator("button").first().click();
+    await expect(page.getByTestId("unread-messages-divider")).toContainText(
+      "1 unread message",
+      { timeout: 10_000 },
+    );
+    await expect(page.getByTestId("back-unread-badge")).toHaveCount(0);
+
+    await context.close();
+  });
 });

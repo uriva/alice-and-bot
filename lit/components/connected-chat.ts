@@ -51,6 +51,17 @@ import {
   notifyConversationMessages,
   subscribeAllTypingStates,
 } from "../core/conversation-previews.ts";
+import {
+  computeConversationUnread,
+  formatUnreadBadgeLabel,
+  latestKnownConversationTimestamp,
+  markConversationRead,
+  readUnreadState,
+  seedUnreadState,
+  type StoredUnreadState,
+  subscribeUnreadStateStorage,
+  writeUnreadState,
+} from "../core/unread-state.ts";
 import { subscribeIsMobile } from "../core/responsive.ts";
 import {
   type EphemeralStreamEvent,
@@ -268,19 +279,42 @@ const sidebarItemBodyStyle =
 const sidebarItemTopRowStyle =
   "display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;min-height:18px";
 
-const sidebarItemTimeStyle = (isDark: boolean) =>
-  `font-size:11px;line-height:18px;flex-shrink:0;color:${
-    isDark ? "#78736a" : "#8c867c"
+const sidebarItemTimeStyle = (isDark: boolean, isUnread = false) =>
+  `font-size:11px;line-height:18px;flex-shrink:0;font-variant-numeric:tabular-nums;font-weight:${
+    isUnread ? "600" : "400"
+  };color:${
+    isUnread
+      ? (isDark ? "#7da2cf" : "#39587f")
+      : (isDark ? "#78736a" : "#8c867c")
   }`;
 
-const sidebarItemPreviewRowStyle =
-  "font-size:12px;line-height:15px;min-height:15px;height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+const sidebarItemBottomRowStyle =
+  "display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0";
 
-const sidebarItemPreviewStyle = (isDark: boolean) =>
-  `${sidebarItemPreviewRowStyle};color:${isDark ? "#9c968c" : "#66625b"}`;
+const sidebarItemPreviewRowStyle =
+  "font-size:12px;line-height:15px;min-height:15px;height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0";
+
+const sidebarItemPreviewStyle = (isDark: boolean, isUnread = false) =>
+  `${sidebarItemPreviewRowStyle};font-weight:${
+    isUnread ? "500" : "400"
+  };color:${
+    isUnread
+      ? (isDark ? "#e7e5df" : "#2c2a26")
+      : (isDark ? "#9c968c" : "#66625b")
+  }`;
 
 const sidebarItemTypingStyle = (isDark: boolean) =>
   `${sidebarItemPreviewRowStyle};font-weight:500;color:${
+    isDark ? "#7da2cf" : "#39587f"
+  }`;
+
+const sidebarUnreadBadgeStyle = (isDark: boolean) =>
+  `display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9999px;font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;flex-shrink:0;background:${
+    isDark ? "#7da2cf" : "#39587f"
+  };color:${isDark ? "#111110" : "#ffffff"}`;
+
+const sidebarUnreadDotStyle = (isDark: boolean) =>
+  `display:inline-block;width:9px;height:9px;border-radius:9999px;flex-shrink:0;background:${
     isDark ? "#7da2cf" : "#39587f"
   }`;
 
@@ -562,9 +596,10 @@ const sidebarItemTitleStyle = (
   isDark: boolean,
   isSelected: boolean,
   customColors?: CustomColors,
+  isUnread = false,
 ) =>
   `font-size:13px;line-height:18px;font-weight:${
-    isSelected ? "600" : "500"
+    isSelected || isUnread ? "600" : "500"
   };color:${
     customColors?.text ?? (isDark ? "#f4f4f4" : "#111827")
   };white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0`;
@@ -749,6 +784,8 @@ export class ConnectedChat extends LitElement {
     onChatWith: { attribute: false },
     onNewThread: { attribute: false },
     onConversationChange: { attribute: false },
+    unreadDividerAfterTimestamp: { attribute: false },
+    otherUnreadCount: { type: Number },
   };
 
   declare credentials: Credentials | null;
@@ -769,6 +806,8 @@ export class ConnectedChat extends LitElement {
   declare onChatWith: ((publicSignKey: string) => void) | undefined;
   declare onNewThread: ((conversationId: string) => void) | undefined;
   declare onConversationChange: ((conversationId: string) => void) | undefined;
+  declare unreadDividerAfterTimestamp: number | undefined;
+  declare otherUnreadCount: number;
 
   constructor() {
     super();
@@ -780,6 +819,7 @@ export class ConnectedChat extends LitElement {
     this.enableChatSwitching = false;
     this.disableAutoFocus = false;
     this.isDark = false;
+    this.otherUnreadCount = 0;
   }
 
   private _activeConversationId = "";
@@ -789,6 +829,9 @@ export class ConnectedChat extends LitElement {
   private _conversations: Conversation[] | null = null;
   private _conversationPreviews: ConversationPreviewMap = {};
   private _typingByConversation: ConversationTypingMap = {};
+  private _unreadState: StoredUnreadState | null = null;
+  private _unreadStorageUnsub: (() => void) | null = null;
+  private _internalUnreadDividerAfterTimestamp: number | undefined = undefined;
   private _searchQuery = "";
   private _nameCache = new Map<string, string | null>();
   private _nameUnsubs = new Map<string, () => void>();
@@ -858,6 +901,11 @@ export class ConnectedChat extends LitElement {
     this._activeConversationId = this.conversationId;
     this.addEventListener("click", this._handleClick);
     globalThis.addEventListener("keydown", this._handleGlobalKeydown);
+    globalThis.addEventListener("focus", this._handleVisibilityOrFocus);
+    globalThis.document?.addEventListener(
+      "visibilitychange",
+      this._handleVisibilityOrFocus,
+    );
     if (this.enableChatSwitching) {
       this._responsiveUnsub = subscribeIsMobile((m) => {
         this._isMobile = m;
@@ -871,6 +919,11 @@ export class ConnectedChat extends LitElement {
     super.disconnectedCallback();
     this.removeEventListener("click", this._handleClick);
     globalThis.removeEventListener("keydown", this._handleGlobalKeydown);
+    globalThis.removeEventListener("focus", this._handleVisibilityOrFocus);
+    globalThis.document?.removeEventListener(
+      "visibilitychange",
+      this._handleVisibilityOrFocus,
+    );
     this._teardown();
   }
 
@@ -985,6 +1038,10 @@ export class ConnectedChat extends LitElement {
     this._previewsManager = null;
     this._allTypingUnsub?.();
     this._allTypingUnsub = null;
+    this._unreadStorageUnsub?.();
+    this._unreadStorageUnsub = null;
+    this._unreadState = null;
+    this._internalUnreadDividerAfterTimestamp = undefined;
     this._conversationPreviews = {};
     this._typingByConversation = {};
     this._chatListCredentials = null;
@@ -1014,6 +1071,38 @@ export class ConnectedChat extends LitElement {
     this._setupConversationSubscriptions();
   }
 
+  private _isConversationVisiblyOpen(conversationId: string): boolean {
+    if (!this.enableChatSwitching) return false;
+    if (this._isMobile && this._mobileShowList) return false;
+    if (globalThis.document?.visibilityState === "hidden") return false;
+    const currentId = this._activeConversationId || this.conversationId;
+    return currentId === conversationId;
+  }
+
+  private _markConversationReadIfNeeded(conversationId: string) {
+    if (!this._unreadState || !conversationId) return;
+    const conv = this._conversations?.find((c) => c.id === conversationId);
+    const preview = this._conversationPreviews[conversationId];
+    const readTs = latestKnownConversationTimestamp(conv, preview);
+    const next = markConversationRead(
+      this._unreadState,
+      conversationId,
+      readTs,
+    );
+    if (next === this._unreadState) return;
+    this._unreadState = next;
+    writeUnreadState(next);
+  }
+
+  private _handleVisibilityOrFocus = () => {
+    if (globalThis.document?.visibilityState === "hidden") return;
+    const currentId = this._activeConversationId || this.conversationId;
+    if (currentId && this._isConversationVisiblyOpen(currentId)) {
+      this._markConversationReadIfNeeded(currentId);
+      this.requestUpdate();
+    }
+  };
+
   private _setupChatListSubscriptions() {
     if (!this.credentials) return;
     if (
@@ -1024,10 +1113,23 @@ export class ConnectedChat extends LitElement {
     }
     this._teardownChatListSubscriptions();
     this._chatListCredentials = this.credentials;
+    const { publicSignKey } = this.credentials;
+    this._unreadState = readUnreadState(publicSignKey);
+    this._unreadStorageUnsub = subscribeUnreadStateStorage(
+      publicSignKey,
+      (next) => {
+        this._unreadState = next;
+        this.requestUpdate();
+      },
+    );
     this._previewsManager = createConversationPreviewsManager(
       this.credentials,
       (map) => {
         this._conversationPreviews = map;
+        const currentId = this._activeConversationId || this.conversationId;
+        if (currentId && this._isConversationVisiblyOpen(currentId)) {
+          this._markConversationReadIfNeeded(currentId);
+        }
         this.requestUpdate();
       },
     );
@@ -1042,7 +1144,13 @@ export class ConnectedChat extends LitElement {
       this.credentials,
       (convs) => {
         this._conversations = convs;
-        if (convs) this._previewsManager?.setConversations(convs);
+        if (convs) {
+          if (!this._unreadState) {
+            this._unreadState = seedUnreadState(null, publicSignKey, convs);
+            writeUnreadState(this._unreadState);
+          }
+          this._previewsManager?.setConversations(convs);
+        }
         convs?.forEach((conv) => {
           const other = conv.participants.find(
             (p) => p.publicSignKey !== this.credentials!.publicSignKey,
@@ -1056,6 +1164,10 @@ export class ConnectedChat extends LitElement {
           extractInlineIdentityDetails(this._participants, convs),
         );
         this._resubscribeIdentities();
+        const currentId = this._activeConversationId || this.conversationId;
+        if (currentId && this._isConversationVisiblyOpen(currentId)) {
+          this._markConversationReadIfNeeded(currentId);
+        }
         if (
           !this._activeConversationId && convs && convs.length > 0 &&
           this.enableChatSwitching
@@ -1078,6 +1190,21 @@ export class ConnectedChat extends LitElement {
 
   private _selectConversation(id: string) {
     if (this._activeConversationId === id && !this._mobileShowList) return;
+    if (this.enableChatSwitching && this.credentials && this._unreadState) {
+      const status = computeConversationUnread({
+        conversationId: id,
+        preview: this._conversationPreviews[id],
+        selfPublicSignKey: this.credentials.publicSignKey,
+        state: this._unreadState,
+        isActivelyViewing: false,
+      });
+      this._internalUnreadDividerAfterTimestamp = status.count > 0
+        ? status.effectiveReadAt
+        : undefined;
+      this._markConversationReadIfNeeded(id);
+    } else {
+      this._internalUnreadDividerAfterTimestamp = undefined;
+    }
     this._activeConversationId = id;
     this._mobileShowList = false;
     if (
@@ -1324,6 +1451,8 @@ export class ConnectedChat extends LitElement {
   private _handleSend = (text: string, replyTo?: string) => {
     const targetId = this._activeConversationId || this.conversationId;
     if (!this.credentials || !targetId) return;
+    this._internalUnreadDividerAfterTimestamp = undefined;
+    this._markConversationReadIfNeeded(targetId);
     this.dispatchEvent(
       new CustomEvent("message-sent", { bubbles: true, composed: true }),
     );
@@ -1947,6 +2076,14 @@ export class ConnectedChat extends LitElement {
         : undefined;
 
       const preview = this._conversationPreviews[conv.id];
+      const unread = computeConversationUnread({
+        conversationId: conv.id,
+        preview,
+        selfPublicSignKey: myKey,
+        state: this._unreadState,
+        isActivelyViewing: this._isConversationVisiblyOpen(conv.id),
+      });
+      const unreadLabel = formatUnreadBadgeLabel(unread.count, unread.overflow);
       const typingNames = activeTypingNamesForConversation(
         this._typingByConversation[conv.id],
         preview,
@@ -1970,6 +2107,7 @@ export class ConnectedChat extends LitElement {
       return html`
         <div
           class="alice-sidebar-item"
+          data-conversation-id="${conv.id}"
           style="${sidebarItemStyle(isSelected, isDark, this.customColors)}"
           @click="${() => this._selectConversation(conv.id)}"
         >
@@ -2001,6 +2139,7 @@ export class ConnectedChat extends LitElement {
                     isDark,
                     isSelected,
                     this.customColors,
+                    unread.isUnread,
                   )}">
                     ${displayName}
                   </div>
@@ -2008,17 +2147,40 @@ export class ConnectedChat extends LitElement {
                 ? html`
                   <span style="${sidebarItemTimeStyle(
                     isDark,
+                    unread.isUnread,
                   )}">${timeLabel}</span>
                 `
                 : nothing}
             </div>
-            <div
-              data-testid="conversation-preview-slot"
-              style="${typingLabel
-                ? sidebarItemTypingStyle(isDark)
-                : sidebarItemPreviewStyle(isDark)}"
-            >
-              ${typingLabel || previewLine || nothing}
+            <div style="${sidebarItemBottomRowStyle}">
+              <div
+                data-testid="conversation-preview-slot"
+                style="${typingLabel
+                  ? sidebarItemTypingStyle(isDark)
+                  : sidebarItemPreviewStyle(isDark, unread.isUnread)}"
+              >
+                ${typingLabel || previewLine || nothing}
+              </div>
+              ${unread.isUnread
+                ? unreadLabel
+                  ? html`
+                    <span
+                      data-testid="conversation-unread-badge"
+                      aria-label="${unread.count === 1
+                        ? "1 unread message"
+                        : `${unreadLabel} unread messages`}"
+                      style="${sidebarUnreadBadgeStyle(isDark)}"
+                    >${unreadLabel}</span>
+                  `
+                  : html`
+                    <span
+                      data-testid="conversation-unread-badge"
+                      data-unread-dot
+                      aria-label="Unread"
+                      style="${sidebarUnreadDotStyle(isDark)}"
+                    ></span>
+                  `
+                : nothing}
             </div>
           </div>
           <button
@@ -2114,6 +2276,9 @@ export class ConnectedChat extends LitElement {
         .isDark="${isDark}"
         .emptyMessage="${this.emptyMessage}"
         .suggestedMessages="${this.suggestedMessages}"
+        .unreadDividerAfterTimestamp="${this.unreadDividerAfterTimestamp ??
+          this._internalUnreadDividerAfterTimestamp}"
+        .otherUnreadCount="${this.otherUnreadCount}"
         @new-thread="${this._handleNewThread}"
         @rename-conversation="${this._handleRenameConversation}"
         @show-participants="${this._handleShowParticipants}"

@@ -2,6 +2,7 @@ import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { empty, map, nonempty } from "@uri/gamla";
 import { maxTextLength } from "../../protocol/src/attachmentLimits.ts";
+import { findUnreadDividerInfo } from "../core/unread-state.ts";
 import {
   avatarColor,
   centerFillStyle,
@@ -635,6 +636,44 @@ const pruneOptimistic = (
   return remaining.length === optimistic.length ? optimistic : remaining;
 };
 
+const unreadDividerRowStyle =
+  "display:flex;align-items:center;gap:10px;margin:8px 0 4px;width:100%";
+
+const unreadDividerLineStyle = (isDark: boolean) =>
+  `flex:1;height:1px;background:${
+    isDark ? "rgba(255,255,255,0.12)" : "rgba(24,23,21,0.11)"
+  }`;
+
+const unreadDividerPillStyle = (isDark: boolean) =>
+  `font-size:11px;font-weight:600;letter-spacing:0.01em;padding:3px 10px;border-radius:9999px;white-space:nowrap;background:${
+    isDark ? "rgba(125,162,207,0.16)" : "rgba(57,88,127,0.10)"
+  };color:${isDark ? "#9cc0eb" : "#39587f"};border:1px solid ${
+    isDark ? "rgba(125,162,207,0.28)" : "rgba(57,88,127,0.18)"
+  }`;
+
+const backUnreadBadgeStyle = (isDark: boolean) =>
+  `display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:-4px;margin-right:4px;border-radius:9999px;border:none;cursor:pointer;font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;background:${
+    isDark ? "#7da2cf" : "#39587f"
+  };color:${isDark ? "#111110" : "#ffffff"};flex-shrink:0`;
+
+const renderUnreadMessagesDivider = (count: number, isDark: boolean) =>
+  html`
+    <div
+      data-testid="unread-messages-divider"
+      role="separator"
+      aria-label="${count === 1
+        ? "1 unread message"
+        : `${count} unread messages`}"
+      style="${unreadDividerRowStyle}"
+    >
+      <span style="${unreadDividerLineStyle(isDark)}"></span>
+      <span style="${unreadDividerPillStyle(isDark)}">${count === 1
+        ? "1 unread message"
+        : `${count} unread messages`}</span>
+      <span style="${unreadDividerLineStyle(isDark)}"></span>
+    </div>
+  `;
+
 export class ChatBox extends LitElement {
   static override properties = {
     messages: { attribute: false },
@@ -679,6 +718,8 @@ export class ChatBox extends LitElement {
     disableAutoFocus: { type: Boolean },
     isDark: { type: Boolean },
     participants: { type: Array },
+    unreadDividerAfterTimestamp: { attribute: false },
+    otherUnreadCount: { type: Number },
     _input: { state: true },
     _pendingFiles: { state: true },
     _showAttachMenu: { state: true },
@@ -764,6 +805,8 @@ export class ChatBox extends LitElement {
     name: string;
     avatar: string;
   }[];
+  declare unreadDividerAfterTimestamp: number | undefined;
+  declare otherUnreadCount: number;
 
   declare private _input: string;
   declare private _pendingFiles: File[];
@@ -806,6 +849,7 @@ export class ChatBox extends LitElement {
     this.voiceCallState = "idle";
     this.voiceCallDuration = 0;
     this.voiceCallMuted = false;
+    this.otherUnreadCount = 0;
     this.activeSpinners = [];
     this.activeProgress = [];
     this.activeStreams = [];
@@ -2100,6 +2144,11 @@ export class ChatBox extends LitElement {
       timeline,
       this._isSending,
     );
+    const unreadDivider = findUnreadDividerInfo(
+      allMsgs,
+      this.userId,
+      this.unreadDividerAfterTimestamp,
+    );
 
     const hasContent = !!this._input.trim() || this._pendingFiles.length > 0;
     const showMic = this.enableAudioRecording && !hasContent &&
@@ -2328,6 +2377,23 @@ export class ChatBox extends LitElement {
                     >
                       ${faArrowLeft}
                     </button>
+                    ${this.otherUnreadCount > 0
+                      ? html`
+                        <button
+                          type="button"
+                          data-testid="back-unread-badge"
+                          @click="${this.onBack}"
+                          aria-label="${this.otherUnreadCount === 1
+                            ? "1 unread chat"
+                            : `${this.otherUnreadCount} unread chats`}"
+                          style="${backUnreadBadgeStyle(isDark)}"
+                        >
+                          ${this.otherUnreadCount > 99
+                            ? "99+"
+                            : this.otherUnreadCount}
+                        </button>
+                      `
+                      : nothing}
                   `
                   : nothing}
                 <div style="flex:1;display:flex;justify-content:center;min-width:0;overflow:hidden">
@@ -2548,6 +2614,7 @@ export class ChatBox extends LitElement {
                       customColors,
                       isDark,
                       quickReplyEntryId,
+                      unreadDivider,
                     ),
                 )} ${this._isSending
                   ? sendingIndicator(
@@ -3025,10 +3092,16 @@ export class ChatBox extends LitElement {
   private _renderMessageEntry(
     entry: { msg: AbstracChatMessage; prevMsg?: AbstracChatMessage },
     quickReplyEntryId: string | null,
+    unreadDivider: { firstUnreadMessageId: string; count: number } | null,
   ) {
     const isDark = this._effectiveDark;
     const { customColors } = this;
+    const showUnreadDivider = unreadDivider !== null &&
+      entry.msg.id === unreadDivider.firstUnreadMessageId;
     return html`
+      ${showUnreadDivider
+        ? renderUnreadMessagesDivider(unreadDivider.count, isDark)
+        : nothing}
       <chat-message
         .msg="${entry.msg}"
         .prev="${entry.prevMsg}"
@@ -3063,9 +3136,10 @@ export class ChatBox extends LitElement {
     customColors: CustomColors | undefined,
     isDark: boolean,
     quickReplyEntryId: string | null,
+    unreadDivider: { firstUnreadMessageId: string; count: number } | null,
   ) {
     if (entry.kind === "message") {
-      return this._renderMessageEntry(entry, quickReplyEntryId);
+      return this._renderMessageEntry(entry, quickReplyEntryId, unreadDivider);
     }
     if (entry.kind === "spinner") {
       return renderSpinnerIndicator(

@@ -26,12 +26,21 @@ import {
   typingTtl,
 } from "./subscriptions.ts";
 
+export type RecentMessageMeta = {
+  id: string;
+  timestamp: number;
+  authorPublicSignKey: string;
+};
+
 export type ConversationPreview = {
   text: string;
   timestamp: number;
   authorPublicSignKey: string;
   updatedAt: number;
   empty?: boolean;
+  recentMessages?: RecentMessageMeta[];
+  oldestFetchedTimestamp?: number;
+  fetchedFullPage?: boolean;
 };
 
 export type TypingParticipant = {
@@ -46,7 +55,7 @@ export type ConversationPreviewMap = Record<string, ConversationPreview>;
 export const conversationPreviewsCacheKey =
   "alicebot_conversation_previews_cache";
 
-const previewMessagesLimit = 5;
+export const previewMessagesLimit = 25;
 const maxPriorityConversations = 40;
 const maxConcurrentFetches = 6;
 const fetchTimeoutMs = 15_000;
@@ -66,12 +75,45 @@ const isEncryptedKeyStr = (
   value: unknown,
 ): value is EncryptedConversationKey => typeof value === "string";
 
+const isValidRecentMessage = (value: unknown): value is RecentMessageMeta =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.timestamp === "number" &&
+  typeof value.authorPublicSignKey === "string";
+
 const isValidPreview = (value: unknown): value is ConversationPreview =>
   isRecord(value) &&
   typeof value.text === "string" &&
   typeof value.timestamp === "number" &&
   typeof value.authorPublicSignKey === "string" &&
   typeof value.updatedAt === "number";
+
+const sanitizeCachedPreview = (
+  preview: ConversationPreview,
+  nowMs: number,
+): ConversationPreview => {
+  const recentMessages = Array.isArray(preview.recentMessages)
+    ? preview.recentMessages.filter(
+      (item): item is RecentMessageMeta =>
+        isValidRecentMessage(item) &&
+        !isTimestampExpired(item.timestamp, nowMs),
+    )
+    : undefined;
+  return {
+    text: preview.text,
+    timestamp: preview.timestamp,
+    authorPublicSignKey: preview.authorPublicSignKey,
+    updatedAt: preview.updatedAt,
+    ...(preview.empty ? { empty: true } : {}),
+    ...(recentMessages ? { recentMessages } : {}),
+    ...(typeof preview.oldestFetchedTimestamp === "number"
+      ? { oldestFetchedTimestamp: preview.oldestFetchedTimestamp }
+      : {}),
+    ...(typeof preview.fetchedFullPage === "boolean"
+      ? { fetchedFullPage: preview.fetchedFullPage }
+      : {}),
+  };
+};
 
 export const formatPreviewText = (
   message: DecipheredMessage,
@@ -81,8 +123,69 @@ export const formatPreviewText = (
   return formatMessagePreview(message);
 };
 
+export const isCountableUnreadMessage = (
+  message: DecipheredMessage,
+): boolean => !isSilentMessage(message) && message.type !== "edit";
+
 const sortMessagesDesc = (messages: DecipheredMessage[]) =>
   [...messages].sort((a, b) => b.timestamp - a.timestamp);
+
+export const extractRecentMessages = (
+  messages: DecipheredMessage[],
+  limit = previewMessagesLimit,
+): RecentMessageMeta[] => {
+  const seen = new Set<string>();
+  return sortMessagesDesc(messages)
+    .filter((m) => {
+      if (!isCountableUnreadMessage(m) || seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    })
+    .slice(0, limit)
+    .map((m) => ({
+      id: m.id,
+      timestamp: m.timestamp,
+      authorPublicSignKey: m.publicSignKey,
+    }));
+};
+
+export const mergeRecentMessages = (
+  existing: RecentMessageMeta[] | undefined,
+  incoming: RecentMessageMeta[],
+  limit = previewMessagesLimit,
+): RecentMessageMeta[] => {
+  const byId = new Map<string, RecentMessageMeta>();
+  (existing ?? []).forEach((m) => byId.set(m.id, m));
+  incoming.forEach((m) => byId.set(m.id, m));
+  return Array.from(byId.values())
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, limit);
+};
+
+const minMessageTimestamp = (messages: { timestamp: number }[]): number =>
+  messages.reduce(
+    (min, m) => (m.timestamp < min ? m.timestamp : min),
+    messages[0]?.timestamp ?? 0,
+  );
+
+const withRecentMetadata = ({
+  preview,
+  recentMessages,
+  oldestFetchedTimestamp,
+  fetchedFullPage,
+}: {
+  preview: ConversationPreview;
+  recentMessages: RecentMessageMeta[];
+  oldestFetchedTimestamp?: number;
+  fetchedFullPage?: boolean;
+}): ConversationPreview => ({
+  ...preview,
+  ...(nonempty(recentMessages) ? { recentMessages } : {}),
+  ...(oldestFetchedTimestamp !== undefined && oldestFetchedTimestamp > 0
+    ? { oldestFetchedTimestamp }
+    : {}),
+  ...(fetchedFullPage !== undefined ? { fetchedFullPage } : {}),
+});
 
 export const extractLatestPreview = (
   messages: DecipheredMessage[],
@@ -384,12 +487,17 @@ export const readCachedConversationPreviews = (
       return {};
     }
     return Object.fromEntries(
-      Object.entries(parsed.previews).filter(
-        (entry): entry is [string, ConversationPreview] =>
-          isValidPreview(entry[1]) &&
-          (entry[1].empty === true ||
-            !isTimestampExpired(entry[1].timestamp, nowMs)),
-      ),
+      Object.entries(parsed.previews)
+        .filter(
+          (entry): entry is [string, ConversationPreview] =>
+            isValidPreview(entry[1]) &&
+            (entry[1].empty === true ||
+              !isTimestampExpired(entry[1].timestamp, nowMs)),
+        )
+        .map(([convId, preview]) => [
+          convId,
+          sanitizeCachedPreview(preview, nowMs),
+        ]),
     );
   } catch {
     return {};
@@ -505,6 +613,21 @@ const decryptMessagesList = (
   );
 };
 
+const sameRecentMessages = (
+  a: RecentMessageMeta[] | undefined,
+  b: RecentMessageMeta[] | undefined,
+): boolean => {
+  const listA = a ?? [];
+  const listB = b ?? [];
+  if (listA.length !== listB.length) return false;
+  return listA.every(
+    (item, idx) =>
+      item.id === listB[idx].id &&
+      item.timestamp === listB[idx].timestamp &&
+      item.authorPublicSignKey === listB[idx].authorPublicSignKey,
+  );
+};
+
 const samePreview = (
   a: ConversationPreview | undefined,
   b: ConversationPreview,
@@ -514,7 +637,10 @@ const samePreview = (
   a.timestamp === b.timestamp &&
   a.authorPublicSignKey === b.authorPublicSignKey &&
   a.updatedAt === b.updatedAt &&
-  Boolean(a.empty) === Boolean(b.empty);
+  Boolean(a.empty) === Boolean(b.empty) &&
+  Boolean(a.fetchedFullPage) === Boolean(b.fetchedFullPage) &&
+  a.oldestFetchedTimestamp === b.oldestFetchedTimestamp &&
+  sameRecentMessages(a.recentMessages, b.recentMessages);
 
 export const makeCreateConversationPreviewsManager = ({
   subscribeKeys,
@@ -637,7 +763,12 @@ export const makeCreateConversationPreviewsManager = ({
           if (prev && prev.updatedAt > current.updatedAt) return;
           applyPreview(
             conversationId,
-            extractLatestPreview(decrypted, current.updatedAt),
+            withRecentMetadata({
+              preview: extractLatestPreview(decrypted, current.updatedAt),
+              recentMessages: extractRecentMessages(decrypted),
+              oldestFetchedTimestamp: minMessageTimestamp(current.messages),
+              fetchedFullPage: current.messages.length >= previewMessagesLimit,
+            }),
           );
         },
       );
@@ -716,15 +847,19 @@ export const makeCreateConversationPreviewsManager = ({
       messages[0]?.timestamp ?? 0,
       previews[conversationId]?.updatedAt ?? 0,
     );
-    const nextPreview = extractLatestPreview(messages, effectiveUpdatedAt);
+    const basePreview = extractLatestPreview(messages, effectiveUpdatedAt);
     const existing = previews[conversationId];
-    if (nextPreview.empty && existing && !existing.empty) return;
+    if (basePreview.empty && existing && !existing.empty) return;
     if (
-      !nextPreview.empty && existing && !existing.empty &&
-      existing.timestamp > nextPreview.timestamp
+      !basePreview.empty && existing && !existing.empty &&
+      existing.timestamp > basePreview.timestamp
     ) {
       return;
     }
+    const nextPreview = withRecentMetadata({
+      preview: basePreview,
+      recentMessages: extractRecentMessages(messages),
+    });
     applyPreview(conversationId, nextPreview);
   };
   liveMessagesListeners.add(onLiveMessages);
@@ -741,16 +876,25 @@ export const makeCreateConversationPreviewsManager = ({
     decryptMessagesList(conversationId, conversationKey, [dbMsg]).then(
       (decrypted) => {
         if (state.cancelled || empty(decrypted)) return;
-        const nextPreview = extractLatestPreview(
+        const basePreview = extractLatestPreview(
           decrypted,
           Math.max(
             message.timestamp,
             knownUpdatedAt.get(conversationId) ?? 0,
           ),
         );
-        if (nextPreview.empty) return;
+        if (basePreview.empty) return;
         const existing = previews[conversationId];
-        if (existing && existing.timestamp > nextPreview.timestamp) return;
+        if (existing && existing.timestamp > basePreview.timestamp) return;
+        const nextPreview = withRecentMetadata({
+          preview: basePreview,
+          recentMessages: mergeRecentMessages(
+            existing?.recentMessages,
+            extractRecentMessages(decrypted),
+          ),
+          oldestFetchedTimestamp: existing?.oldestFetchedTimestamp,
+          fetchedFullPage: existing?.fetchedFullPage,
+        });
         applyPreview(conversationId, nextPreview);
       },
     );

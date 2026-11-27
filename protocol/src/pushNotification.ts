@@ -726,6 +726,22 @@ const notifyBackgroundChatWindows = (
   });
 };
 
+const notifyChatWindowsMarkRead = (
+  windowClients: readonly WindowClientLike[],
+  conversationId: string | undefined,
+  readAt: number,
+) => {
+  if (!conversationId) return;
+  windowClients.forEach((client) => {
+    if (parseUrlSafe(client.url)?.pathname !== "/chat") return;
+    client.postMessage?.({
+      type: "alice:mark-read",
+      conversationId,
+      readAt,
+    });
+  });
+};
+
 const decryptPushPayloadMessage = async ({
   data,
   credentials,
@@ -821,6 +837,11 @@ export const handleServiceWorkerPush = async ({
         .catch(() => {});
     }
     await closeMatchingNotifications(registration, tag);
+    notifyChatWindowsMarkRead(
+      windowClients,
+      data.conversationId,
+      data.timestamp ?? now(),
+    );
     await syncAppBadgeFromNotifications({
       registration,
       setAppBadge,
@@ -1052,6 +1073,14 @@ export const handleServiceWorkerNotificationClick = async ({
     clearAppBadge,
     dismissRemoteFn,
   });
+
+  if (conversationId) {
+    const windowClients = await clients.matchAll({
+      type: "window",
+      includeUncontrolled: true,
+    });
+    notifyChatWindowsMarkRead(windowClients, conversationId, Date.now());
+  }
 
   if (action === "mark-read") {
     return;

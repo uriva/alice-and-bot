@@ -452,6 +452,13 @@ Deno.test("makeCreateConversationPreviewsManager decrypts latest messages, cache
     timestamp: 1000,
     authorPublicSignKey: bob.credentials.publicSignKey,
     updatedAt: 1000,
+    recentMessages: [{
+      id: "m1",
+      timestamp: 1000,
+      authorPublicSignKey: bob.credentials.publicSignKey,
+    }],
+    oldestFetchedTimestamp: 1000,
+    fetchedFullPage: false,
   });
   assertEquals(fetchedFor.length, 1);
 
@@ -470,6 +477,20 @@ Deno.test("makeCreateConversationPreviewsManager decrypts latest messages, cache
     timestamp: 2000,
     authorPublicSignKey: bob.credentials.publicSignKey,
     updatedAt: 2000,
+    recentMessages: [
+      {
+        id: "m2",
+        timestamp: 2000,
+        authorPublicSignKey: bob.credentials.publicSignKey,
+      },
+      {
+        id: "m1",
+        timestamp: 1000,
+        authorPublicSignKey: bob.credentials.publicSignKey,
+      },
+    ],
+    oldestFetchedTimestamp: 1000,
+    fetchedFullPage: false,
   });
   assertEquals(fetchedFor.length, 2);
 
@@ -490,6 +511,11 @@ Deno.test("makeCreateConversationPreviewsManager decrypts latest messages, cache
     timestamp: 3000,
     authorPublicSignKey: alice.credentials.publicSignKey,
     updatedAt: 3000,
+    recentMessages: [{
+      id: "m3",
+      timestamp: 3000,
+      authorPublicSignKey: alice.credentials.publicSignKey,
+    }],
   });
   assertEquals(fetchedFor.length, 2);
 
@@ -500,6 +526,11 @@ Deno.test("makeCreateConversationPreviewsManager decrypts latest messages, cache
     timestamp: 3000,
     authorPublicSignKey: alice.credentials.publicSignKey,
     updatedAt: 3000,
+    recentMessages: [{
+      id: "m3",
+      timestamp: 3000,
+      authorPublicSignKey: alice.credentials.publicSignKey,
+    }],
   });
 
   manager.unsubscribe();

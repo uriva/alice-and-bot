@@ -1097,3 +1097,65 @@ Deno.test("handleServiceWorkerPush silences foreground other-chat notifications,
   assertEquals(active.get("conv-b")?.renotify, true);
   assertEquals(active.get("conv-b")?.vibrate, [250, 150, 250, 150, 250]);
 });
+
+Deno.test("cross-device dismiss and mark-read action post alice:mark-read to open chat windows", async () => {
+  const { registration } = createFakeRegistration();
+  const keyStore = createMemoryPushKeyStore();
+  const posted: unknown[] = [];
+  const clients = {
+    matchAll: () =>
+      Promise.resolve([
+        {
+          url: "https://aliceandbot.com/chat",
+          focused: false,
+          visibilityState: "hidden",
+          postMessage: (msg: unknown) => {
+            posted.push(msg);
+          },
+        },
+        {
+          url: "https://aliceandbot.com/docs",
+          focused: true,
+          visibilityState: "visible",
+          postMessage: (msg: unknown) => {
+            posted.push(msg);
+          },
+        },
+      ]),
+  };
+
+  await handleServiceWorkerPush({
+    data: { type: "dismiss", conversationId: "conv-sync", timestamp: 42_000 },
+    registration,
+    clients,
+    keyStore,
+    now: () => 50_000,
+  });
+
+  assertEquals(posted, [
+    { type: "alice:mark-read", conversationId: "conv-sync", readAt: 42_000 },
+  ]);
+
+  posted.length = 0;
+  await handleServiceWorkerNotificationClick({
+    action: "mark-read",
+    notification: {
+      tag: "conv-sync",
+      data: { conversationId: "conv-sync" },
+      close: () => {},
+    },
+    registration,
+    clients,
+    keyStore,
+    dismissRemoteFn: () => Promise.resolve({ success: true as const }),
+  });
+
+  assertEquals(posted.length, 1);
+  const first = posted[0];
+  assertEquals(
+    typeof first === "object" && first !== null &&
+      "type" in first && first.type === "alice:mark-read" &&
+      "conversationId" in first && first.conversationId === "conv-sync",
+    true,
+  );
+});
