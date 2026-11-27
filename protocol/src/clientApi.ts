@@ -91,6 +91,7 @@ import {
   maxTextLength,
   MB,
 } from "./attachmentLimits.ts";
+import { createAttachmentExpiredError } from "./retention.ts";
 export { fileSizeLimits, getFileSizeLimitByMimeType, maxTextLength, MB };
 
 type TextMessage = {
@@ -1034,6 +1035,9 @@ export const downloadAttachment = async ({
     throw new Error("Untrusted attachment URL");
   }
   const response = await fetch(url);
+  if (response.status === 404 || response.status === 410) {
+    throw createAttachmentExpiredError(response.status);
+  }
   if (!response.ok) {
     throw new Error(
       `Download failed: ${response.status} ${await response.text()}`,

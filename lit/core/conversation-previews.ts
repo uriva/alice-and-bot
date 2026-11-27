@@ -16,6 +16,7 @@ import {
   type PushKeyStore,
 } from "../../protocol/src/pushKeyStore.ts";
 import { formatMessagePreview } from "../../protocol/src/pushNotification.ts";
+import { isTimestampExpired } from "../../protocol/src/retention.ts";
 import { subscribeAuthedQuery } from "./instant-client.ts";
 import {
   cacheDecryptedConversationKey,
@@ -369,6 +370,7 @@ export const notifyConversationMessages = (
 
 export const readCachedConversationPreviews = (
   publicSignKey: string,
+  nowMs = Date.now(),
 ): ConversationPreviewMap => {
   try {
     const raw = globalThis.localStorage?.getItem(conversationPreviewsCacheKey);
@@ -382,10 +384,12 @@ export const readCachedConversationPreviews = (
       return {};
     }
     return Object.fromEntries(
-      Object.entries(parsed.previews).filter((entry): entry is [
-        string,
-        ConversationPreview,
-      ] => isValidPreview(entry[1])),
+      Object.entries(parsed.previews).filter(
+        (entry): entry is [string, ConversationPreview] =>
+          isValidPreview(entry[1]) &&
+          (entry[1].empty === true ||
+            !isTimestampExpired(entry[1].timestamp, nowMs)),
+      ),
     );
   } catch {
     return {};

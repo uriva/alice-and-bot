@@ -305,6 +305,8 @@ await sendMessageWithKey({
 ```
 
 File size limits: images 10MB, audio 25MB, video 100MB, other files 25MB.
+Messages and file attachments on the hosted service auto-delete after 30 days
+(conversations and keys persist).
 
 #### `downloadAttachment({ url, conversationKey })`
 

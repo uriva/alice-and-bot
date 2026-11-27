@@ -133,4 +133,5 @@ Tools exposed:
 - Per-conversation AES-256-GCM symmetric encryption; keys wrapped per participant using RSA-2048-OAEP.
 - Envelope binds sender RSA signature, `conversationId`, and `sentAt` inside ciphertext.
 - Outgoing webhooks are signed with Ed25519 (`X-Alice-Signature` / `serverSignature`) and verified with freshness and replay checks.
+- 30-day rolling retention on hosted encrypted messages and attachments (conversation shells, keys, canvases, profiles, and Paid Inbox records persist).
 - Self-hostable on Cloudflare Workers + InstantDB + Google Cloud Storage (MIT license).

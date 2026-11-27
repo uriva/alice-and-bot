@@ -68,6 +68,11 @@ export {
   maxTextLength,
 } from "./protocol/src/attachmentLimits.ts";
 export {
+  isAttachmentExpiredError,
+  retentionDays,
+  retentionMs,
+} from "./protocol/src/retention.ts";
+export {
   shortIdFromPublicSignKey,
   shortIdLength,
 } from "./protocol/src/shortId.ts";

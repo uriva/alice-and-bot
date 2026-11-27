@@ -20,6 +20,7 @@ import {
   activeTypingNamesForConversation,
   type ConversationPreview,
   type ConversationPreviewMap,
+  conversationPreviewsCacheKey,
   type ConversationTypingMap,
   extractLatestPreview,
   formatConversationPreviewLine,
@@ -28,7 +29,9 @@ import {
   makeCreateConversationPreviewsManager,
   makeSubscribeAllTypingStates,
   notifyConversationMessages,
+  readCachedConversationPreviews,
 } from "./conversation-previews.ts";
+import { retentionMs } from "../../protocol/src/retention.ts";
 import { typingTtl } from "./subscriptions.ts";
 
 const makeTestIdentity = async () => {
@@ -500,4 +503,44 @@ Deno.test("makeCreateConversationPreviewsManager decrypts latest messages, cache
   });
 
   manager.unsubscribe();
+});
+
+Deno.test("readCachedConversationPreviews drops previews older than 30-day retention", () => {
+  const now = 1_800_000_000_000;
+  const freshPreview: ConversationPreview = {
+    text: "still fresh",
+    timestamp: now - retentionMs + 60_000,
+    authorPublicSignKey: "bob",
+    updatedAt: now - 1_000,
+  };
+  const expiredPreview: ConversationPreview = {
+    text: "expired msg",
+    timestamp: now - retentionMs - 1_000,
+    authorPublicSignKey: "bob",
+    updatedAt: now - retentionMs - 1_000,
+  };
+  const emptyPreview: ConversationPreview = {
+    text: "",
+    timestamp: 0,
+    authorPublicSignKey: "",
+    updatedAt: now - retentionMs - 1_000,
+    empty: true,
+  };
+  globalThis.localStorage.setItem(
+    conversationPreviewsCacheKey,
+    JSON.stringify({
+      publicSignKey: "alice-key",
+      previews: {
+        fresh: freshPreview,
+        expired: expiredPreview,
+        emptyConv: emptyPreview,
+      },
+    }),
+  );
+  const loaded = readCachedConversationPreviews("alice-key", now);
+  globalThis.localStorage.removeItem(conversationPreviewsCacheKey);
+  assertEquals(loaded, {
+    fresh: freshPreview,
+    emptyConv: emptyPreview,
+  });
 });

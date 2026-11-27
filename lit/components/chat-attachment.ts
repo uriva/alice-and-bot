@@ -1,5 +1,9 @@
 import { html, LitElement, nothing } from "lit";
 import type { Attachment } from "../../protocol/src/clientApi.ts";
+import {
+  isAttachmentExpiredError,
+  retentionDays,
+} from "../../protocol/src/retention.ts";
 import { reportError } from "../core/error-reporter.ts";
 import { isLightColor } from "./design.ts";
 import "./chat-audio-player.ts";
@@ -55,6 +59,60 @@ const videoPlaceholderStyle = (isDark: boolean) =>
     isDark ? "#1a1a1a" : "#e5e7eb"
   }`;
 
+const expiredAttachmentStyle = (isDark: boolean) =>
+  `display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:1px dashed ${
+    isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.18)"
+  };background:${
+    isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)"
+  };color:${isDark ? "#d1d5db" : "#4b5563"};font-size:13px;max-width:280px`;
+
+const expiredSubtitleStyle = (isDark: boolean) =>
+  `font-size:11px;color:${isDark ? "#9ca3af" : "#6b7280"};margin-top:2px`;
+
+const expiredAttachmentLabel = (
+  type: Exclude<Attachment["type"], "location">,
+) =>
+  type === "image"
+    ? "Image expired"
+    : type === "video"
+    ? "Video expired"
+    : type === "audio"
+    ? "Voice note expired"
+    : "File expired";
+
+const expiredAttachmentHtml = (
+  attachment: Exclude<Attachment, { type: "location" }>,
+  isDark: boolean,
+) =>
+  html`
+    <div
+      data-testid="expired-attachment"
+      style="${expiredAttachmentStyle(isDark)}"
+    >
+      <span style="opacity:0.75">${faPaperclip}</span>
+      <div style="min-width:0;flex:1">
+        <div style="font-weight:500">${expiredAttachmentLabel(
+          attachment.type,
+        )}</div>
+        <div style="${expiredSubtitleStyle(isDark)}">
+          ${attachment.type === "file"
+            ? `${attachment.name} · `
+            : ""}Files auto-delete after ${retentionDays} days
+        </div>
+      </div>
+    </div>
+  `;
+
+const unavailableAttachmentHtml = (isDark: boolean) =>
+  html`
+    <div
+      data-testid="unavailable-attachment"
+      style="${expiredAttachmentStyle(isDark)}"
+    >
+      Unable to load media
+    </div>
+  `;
+
 export const isSafeAttachmentSourceUrl = (rawUrl: string): boolean => {
   if (!rawUrl || /[\p{Cc}\\]/u.test(rawUrl)) return false;
   try {
@@ -90,17 +148,38 @@ export const sanitizeDownloadFilename = (name: string): string => {
     : nonEmpty;
 };
 
+export type DecryptAttachmentOutcome =
+  | { status: "ok"; url: string }
+  | { status: "expired" }
+  | { status: "failed" };
+
+export const decryptAttachmentOutcome = (
+  decrypt: () => Promise<string>,
+  report: (eventName: string) => void,
+): Promise<DecryptAttachmentOutcome> =>
+  decrypt()
+    .then(
+      (url): DecryptAttachmentOutcome =>
+        isSafeDecryptedMediaUrl(url)
+          ? { status: "ok", url }
+          : { status: "failed" },
+    )
+    .catch((error): DecryptAttachmentOutcome => {
+      if (isAttachmentExpiredError(error)) {
+        return { status: "expired" };
+      }
+      console.error("Failed to decrypt attachment:", error);
+      report("attachment_decrypt_failed");
+      return { status: "failed" };
+    });
+
 export const decryptAttachmentSafely = (
   decrypt: () => Promise<string>,
   report: (eventName: string) => void,
 ): Promise<string | null> =>
-  decrypt()
-    .then((url) => (isSafeDecryptedMediaUrl(url) ? url : null))
-    .catch((error) => {
-      console.error("Failed to decrypt attachment:", error);
-      report("attachment_decrypt_failed");
-      return null;
-    });
+  decryptAttachmentOutcome(decrypt, report).then((outcome) =>
+    outcome.status === "ok" ? outcome.url : null
+  );
 
 export class ChatAttachment extends LitElement {
   static override properties = {
@@ -116,6 +195,8 @@ export class ChatAttachment extends LitElement {
     longPressActive: { type: Boolean },
     _decryptedUrl: { state: true },
     _loading: { state: true },
+    _expired: { state: true },
+    _failed: { state: true },
   };
 
   declare attachment: Attachment;
@@ -130,6 +211,8 @@ export class ChatAttachment extends LitElement {
   declare longPressActive: boolean;
   declare private _decryptedUrl: string | null;
   declare private _loading: boolean;
+  declare private _expired: boolean;
+  declare private _failed: boolean;
 
   constructor() {
     super();
@@ -143,6 +226,8 @@ export class ChatAttachment extends LitElement {
     this.longPressActive = false;
     this._decryptedUrl = null;
     this._loading = false;
+    this._expired = false;
+    this._failed = false;
   }
 
   override createRenderRoot() {
@@ -151,19 +236,25 @@ export class ChatAttachment extends LitElement {
 
   private _handleDecrypt = async () => {
     if (
-      !this.onDecrypt || this._decryptedUrl ||
+      !this.onDecrypt || this._decryptedUrl || this._expired || this._loading ||
       this.attachment.type === "location" ||
       !isSafeAttachmentSourceUrl(this.attachment.url)
     ) return;
     const { onDecrypt, attachment } = this;
     this._loading = true;
+    this._failed = false;
     try {
-      this._decryptedUrl = await decryptAttachmentSafely(
+      const outcome = await decryptAttachmentOutcome(
         () => onDecrypt(attachment.url),
         reportError,
       );
-    } catch (err) {
-      console.error("Failed to decrypt attachment", err);
+      if (outcome.status === "ok") {
+        this._decryptedUrl = outcome.url;
+      } else if (outcome.status === "expired") {
+        this._expired = true;
+      } else {
+        this._failed = true;
+      }
     } finally {
       this._loading = false;
     }
@@ -183,7 +274,11 @@ export class ChatAttachment extends LitElement {
   }
 
   private _maybeAutoDecrypt() {
-    if (!this.onDecrypt || this._decryptedUrl) return;
+    if (
+      !this.onDecrypt || this._decryptedUrl || this._expired || this._failed
+    ) {
+      return;
+    }
     const { type } = this.attachment;
     if (type === "image" || type === "video") {
       this._handleDecrypt();
@@ -207,6 +302,10 @@ export class ChatAttachment extends LitElement {
           .label="${attachment.label ?? ""}"
         ></chat-location-card>
       `;
+    }
+
+    if (this._expired) {
+      return expiredAttachmentHtml(attachment, isDark);
     }
 
     if (attachment.type === "audio") {
@@ -268,6 +367,8 @@ export class ChatAttachment extends LitElement {
               : ""}"
           />
         `
+        : this._failed
+        ? unavailableAttachmentHtml(isDark)
         : html`
           <div style="${imagePlaceholderStyle(isDark)}">${spinnerHtml(
             isDark,
@@ -284,6 +385,8 @@ export class ChatAttachment extends LitElement {
             .name="${attachment.name}"
           ></chat-video-player>
         `
+        : this._failed
+        ? unavailableAttachmentHtml(isDark)
         : html`
           <div style="${videoPlaceholderStyle(isDark)}">${spinnerHtml(
             isDark,

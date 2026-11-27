@@ -1,6 +1,7 @@
 // deno-lint-ignore-file
 import { DurableObject } from "cloudflare:workers";
 import { handleRequest, setRequestWaitUntil } from "./main.ts";
+import { pruneExpiredMessages } from "./retention.ts";
 
 export interface Env {
   ALICE_DO?: {
@@ -56,6 +57,20 @@ export const workerHandler = {
       return await stub.fetch(request);
     }
     return await handleRequest(request);
+  },
+  async scheduled(
+    _controller: unknown,
+    env: Env,
+    ctx?: { waitUntil?(promise: Promise<unknown>): void },
+  ): Promise<void> {
+    syncEnv(env);
+    const task = pruneExpiredMessages().then((result) => {
+      console.log("[retention] pruned expired messages", result);
+    });
+    if (ctx && typeof ctx.waitUntil === "function") {
+      ctx.waitUntil(task);
+    }
+    await task;
   },
 };
 

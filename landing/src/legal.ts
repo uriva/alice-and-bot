@@ -4,7 +4,9 @@ import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import { header } from "./header.ts";
 import { homePath, legalPath, privacyPath, termsPath } from "./paths.ts";
 
-const lastUpdated = "November 25, 2026";
+import { retentionDays } from "../../protocol/src/retention.ts";
+
+const lastUpdated = "November 27, 2026";
 const repoUrl = "https://github.com/uriva/alice-and-bot";
 const operatorUrl = "https://uriv.me";
 
@@ -402,6 +404,14 @@ export const legal = (): TemplateResult =>
             disabled.
           </li>
           <li>
+            <span class="${strongClass}">${retentionDays}-Day Rolling Retention:</span>
+            Encrypted chat messages and encrypted file attachments on the hosted
+            service are automatically deleted after ${retentionDays} days.
+            Conversation shells (metadata and wrapped keys), canvases, public
+            profiles, and Paid Inbox records are kept so existing threads and
+            balances remain usable.
+          </li>
+          <li>
             <span class="${strongClass}">Self-Custody Keys &amp; 18+ Only:</span>
             Private keys never leave your device and cannot be recovered by us.
             The hosted service is for users 18 years or older and is governed by
@@ -665,12 +675,21 @@ export const privacy = (): TemplateResult =>
         <h2 class="${h2Class}">5. Retention, Deletion &amp; Data Portability</h2>
         <ul class="${ulClass}">
           <li>
-            <span class="${strongClass}">Server retention:</span> Encrypted
-            messages, encrypted attachments, conversation metadata, public
-            identity profiles, and Paid Inbox wallet/transaction records stored
-            on our hosted servers are retained
-            <span class="${strongClass}">indefinitely</span> unless you request
-            deletion.
+            <span class="${strongClass}">Message &amp; attachment retention (${retentionDays} days):</span>
+            Encrypted messages and encrypted file attachments stored on our
+            hosted servers are automatically deleted after
+            <span class="${strongClass}">${retentionDays} days</span> on a
+            rolling basis (via scheduled server pruning for messages and a
+            ${retentionDays}-day Google Cloud Storage lifecycle rule for
+            attachments).
+          </li>
+          <li>
+            <span class="${strongClass}">Account, conversation &amp; ledger records:</span>
+            Conversation shells (titles, participant lists, and wrapped
+            conversation keys), canvases, public identity profiles, and Paid
+            Inbox wallet/transaction records are retained until you request
+            deletion so ongoing conversations, bot integrations, and Paid Inbox
+            balances continue working after older messages expire.
           </li>
           <li>
             <span class="${strongClass}">Automatic expiration of ephemeral data:</span>

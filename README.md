@@ -789,6 +789,21 @@ To run your own alice-and-bot server:
    EOF
    gsutil cors set cors.json gs://your-bucket-name
    ```
+7. (Optional) Configure a 30-day lifecycle rule to auto-delete expired
+   attachments (matching the hosted service's 30-day rolling retention):
+   ```sh
+   cat > lifecycle.json << 'EOF'
+   {
+     "rule": [
+       {
+         "action": { "type": "Delete" },
+         "condition": { "age": 30, "matchesPrefix": ["attachments/"] }
+       }
+     ]
+   }
+   EOF
+   gcloud storage buckets update gs://your-bucket-name --lifecycle-file=lifecycle.json
+   ```
 
 ### 3. Backend Deployment (Cloudflare Workers)
 
@@ -848,3 +863,7 @@ To host your own widget:
   signed by the notification server with Ed25519 (`X-Alice-Signature` /
   `serverSignature`), verified with timestamp freshness and per-message replay
   deduplication in `handleWebhookUpdate` / `verifyWebhookOrigin`.
+- **30-day rolling retention:** On the hosted service, encrypted messages and
+  encrypted file attachments are automatically deleted after 30 days.
+  Conversation shells (metadata and wrapped keys), canvases, profiles, and Paid
+  Inbox records are kept so ongoing chats and bot integrations continue working.

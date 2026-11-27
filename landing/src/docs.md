@@ -911,6 +911,10 @@ To host your own widget:
   signed by the notification server with Ed25519 (`X-Alice-Signature` /
   `serverSignature`), verified with timestamp freshness and per-message replay
   deduplication in `handleWebhookUpdate` / `verifyWebhookOrigin`.
+- **30-day rolling retention:** On the hosted service, encrypted messages and
+  encrypted file attachments are automatically deleted after 30 days.
+  Conversation shells (metadata and wrapped keys), canvases, profiles, and Paid
+  Inbox records are kept so ongoing chats and bot integrations continue working.
 
 ## Community
 

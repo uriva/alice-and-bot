@@ -82,9 +82,12 @@ Deno.test("legal pages export styled legal, privacy, and terms views with requir
   assertStringIncludes(legalTs, "header()");
   assertFalse(legalTs.includes("max-width:700px"));
   assertFalse(legalTs.includes("support@aliceandbot.com"));
+  assertFalse(legalTs.includes("indefinitely"));
 
   const requiredPhrases = [
-    "November 25, 2026",
+    "November 27, 2026",
+    "retentionDays",
+    "Google Cloud Storage lifecycle rule",
     "https://github.com/uriva/alice-and-bot",
     "https://uriv.me",
     "New Mexico",
