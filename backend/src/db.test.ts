@@ -1,5 +1,6 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import {
+  defaultRetryConfig,
   isRetryableInstantDbError,
   retryInstantDbOp,
   wrapAuthWithRetry,
@@ -106,4 +107,8 @@ Deno.test("wrapAuthWithRetry retries rate-limited auth.createToken calls", async
   const token = await wrapped.createToken("user@example.com");
   assertEquals(state.attempts, 3);
   assertEquals(token, "token-for-user@example.com");
+});
+
+Deno.test("defaultRetryConfig caps maxAttempts at 3 to avoid amplifying 429s", () => {
+  assertEquals(defaultRetryConfig.maxAttempts, 3);
 });

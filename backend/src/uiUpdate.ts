@@ -5,6 +5,7 @@ import { id } from "@instantdb/admin";
 import { init as coreInit } from "@instantdb/core";
 import { instantAppId } from "../../protocol/src/clientApi.ts";
 import { verifyAuthToken } from "./auth.ts";
+import { getCachedConversation } from "./cache.ts";
 import { query, transact, tx } from "./db.ts";
 
 class DummyStorage {
@@ -56,15 +57,10 @@ const verifyParticipant = async (
   conversationId: string,
   publicSignKey: string,
 ): Promise<boolean> => {
-  const { conversations } = await query({
-    conversations: {
-      participants: {},
-      $: { where: { id: conversationId } },
-    },
-  });
-  if (conversations.length === 0) return false;
-  return conversations[0].participants.some(
-    (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+  const conversation = await getCachedConversation(conversationId);
+  if (!conversation) return false;
+  return conversation.participants.some(
+    (p) => p.publicSignKey === publicSignKey,
   );
 };
 
@@ -194,7 +190,7 @@ export const handleUiUpdate = async (
     ]);
   } else {
     const existingConvId = uiElements[0].conversation?.id;
-    if (auth && existingConvId) {
+    if (auth && existingConvId && existingConvId !== conversationId) {
       const allowed = await verifyParticipant(
         existingConvId,
         auth.publicSignKey,
@@ -223,11 +219,11 @@ export const handleUiUpdate = async (
     const { uiElements: stale } = await query({
       uiElements: { $: { where: { updatedAt: { $lt: cutoff } } } },
     });
-    await Promise.all(
-      stale.map((el: { id: string }) =>
-        transact(tx.uiElements[el.id].delete())
-      ),
-    );
+    if (stale.length > 0) {
+      await transact(
+        stale.map((el: { id: string }) => tx.uiElements[el.id].delete()),
+      );
+    }
   }
   return { success: true };
 };

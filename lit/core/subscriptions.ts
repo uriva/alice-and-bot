@@ -434,7 +434,7 @@ export type ConversationMessagesStream = {
 };
 
 const initialDecryptBatch = 20;
-const wakeupCatchUpCooldownMs = 1500;
+const wakeupCatchUpCooldownMs = 30_000;
 const postSendReconcileDelaysMs: readonly number[] = [1500, 5000, 12000];
 
 const pruneCoveredSupplemental = (
@@ -852,10 +852,9 @@ export const makeSubscribeConversationMessagesStream = ({
   const reconcileAfterSend = () => {
     if (syncState.cancelled || !credentials || !conversationId) return;
     clearPostSendTimers();
-    // Expect two live snapshots after a user send (the sent message + reply).
-    // If the live WebSocket is stalled, fallback HTTP catch-ups display both
-    // without requiring a page reload; healthy live snapshots cancel timers.
-    syncState.awaitingPostSendLiveCount = 2;
+    // Expect one live snapshot after a user send (the sent message appearing
+    // confirms the live WebSocket is healthy and cancels fallback HTTP polls).
+    syncState.awaitingPostSendLiveCount = 1;
     reconcileDelaysMs.forEach((delayMs) => {
       const timer = setTimeout(() => {
         postSendTimers.delete(timer);

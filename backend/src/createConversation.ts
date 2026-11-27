@@ -2,6 +2,7 @@ import { id } from "@instantdb/core";
 import type { EncryptedConversationKey } from "../../protocol/src/clientApi.ts";
 import type { BackendApiImpl } from "./api.ts";
 import { verifyAuthToken } from "./auth.ts";
+import { cacheConversationKey, invalidateConversation } from "./cache.ts";
 import { query, transact, tx } from "./db.ts";
 import { withMultiWalletLock } from "./walletLock.ts";
 
@@ -9,27 +10,17 @@ const isEncryptedConversationKey = (
   v: string | undefined,
 ): v is EncryptedConversationKey => typeof v === "string";
 
-const hasExistingDirectConversation = async (
+const hasExistingDirectConversationIn = (
+  conversations: { participants: { id: string }[] }[],
   senderId: string,
   recipientId: string,
-): Promise<boolean> => {
-  const { conversations } = await query({
-    conversations: {
-      participants: {},
-      $: {
-        where: {
-          "participants.id": senderId,
-        },
-      },
-    },
-  });
-  return conversations.some(
+): boolean =>
+  conversations.some(
     (c) =>
       c.participants.length === 2 &&
       c.participants.some((p) => p.id === senderId) &&
       c.participants.some((p) => p.id === recipientId),
   );
-};
 
 export const createConversation:
   BackendApiImpl["handlers"]["createConversation"] = async ({
@@ -76,18 +67,33 @@ export const createConversation:
         (i) => i.publicSignKey !== publicSignKey,
       );
 
-      const chargeableRecipients = (
-        await Promise.all(
-          recipients.map(async (recipient) => {
-            if (!recipient.priceTag || recipient.priceTag <= 0) return null;
-            const waived = await hasExistingDirectConversation(
-              sender.id,
-              recipient.id,
-            );
-            return waived ? null : recipient;
-          }),
-        )
-      ).filter((r): r is NonNullable<typeof r> => r !== null);
+      const pricedRecipients = recipients.filter(
+        (recipient) => Boolean(recipient.priceTag && recipient.priceTag > 0),
+      );
+
+      const senderConversations = pricedRecipients.length > 0
+        ? (
+          await query({
+            conversations: {
+              participants: {},
+              $: {
+                where: {
+                  "participants.id": sender.id,
+                },
+              },
+            },
+          })
+        ).conversations
+        : [];
+
+      const chargeableRecipients = pricedRecipients.filter(
+        (recipient) =>
+          !hasExistingDirectConversationIn(
+            senderConversations,
+            sender.id,
+            recipient.id,
+          ),
+      );
 
       const totalCost = chargeableRecipients.reduce(
         (sum, r) => sum + (r.priceTag ?? 0),
@@ -163,6 +169,15 @@ export const createConversation:
         ...outreachTransactions,
         ...keyTxs,
       ]);
+
+      invalidateConversation(conversationId);
+      identities.forEach((identity) => {
+        const encKey =
+          publicSignKeyToEncryptedSymmetricKey[identity.publicSignKey];
+        if (isEncryptedConversationKey(encKey)) {
+          cacheConversationKey(identity.publicSignKey, conversationId, encKey);
+        }
+      });
 
       return { conversationId };
     });

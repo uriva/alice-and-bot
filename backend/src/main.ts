@@ -13,6 +13,21 @@ import type { EncryptedSymmetric } from "../../protocol/src/crypto.ts";
 import { type BackendApiImpl, backendApiSchema } from "./api.ts";
 import { issueNonceHelper, verifyAuthToken } from "./auth.ts";
 import {
+  getCachedConversation,
+  getCachedConversationKey,
+  getCachedIdentitiesByPublicSignKeys,
+  getCachedIdentityByAlias,
+  getCachedIdentityByPublicSignKey,
+  getCachedIdentityByShortId,
+  invalidateConversation,
+  invalidateIdentity,
+  invalidatePushSubscriptions,
+  peekCachedIdentityByAlias,
+  peekCachedIdentityByPublicSignKey,
+  peekCachedIdentityByShortId,
+  peekCachedPushSubscriptions,
+} from "./cache.ts";
+import {
   chooseOptimalParticipantKey,
   conversationHasExactParticipants,
 } from "./conversationParticipants.ts";
@@ -135,13 +150,6 @@ const TRANSFER_TTL_MS = 5 * 60 * 1000;
 const MAX_TRANSFER_PAYLOAD_CHARS = 32_768;
 const MAX_TRANSFER_ENTRIES = 1_000;
 
-const identityPublicSignKeyBy = (
-  where: { publicSignKey: string } | { alias: string } | { shortId: string },
-) =>
-  query({ identities: { $: { where } } }).then(
-    ({ identities }) => identities[0]?.publicSignKey,
-  );
-
 const firstDefined = async (
   lookups: (() => Promise<string | undefined>)[],
 ): Promise<string | undefined> =>
@@ -149,15 +157,159 @@ const firstDefined = async (
     ? undefined
     : (await lookups[0]()) ?? firstDefined(lookups.slice(1));
 
-const handleLookups = (handle: string) => {
+const resolveIdentityHandle = (handle: string): Promise<string | undefined> => {
   const alias = normalizeAlias(handle);
-  return [
-    () => identityPublicSignKeyBy({ publicSignKey: handle }),
-    ...(isValidAlias(alias) ? [() => identityPublicSignKeyBy({ alias })] : []),
-    ...(handle.length === shortIdLength
-      ? [() => identityPublicSignKeyBy({ shortId: handle })]
+  const validAlias = isValidAlias(alias);
+  const cached = peekCachedIdentityByPublicSignKey(handle) ??
+    (validAlias ? peekCachedIdentityByAlias(alias) : undefined) ??
+    (handle.length === shortIdLength
+      ? peekCachedIdentityByShortId(handle)
+      : undefined);
+  if (cached) return Promise.resolve(cached.publicSignKey);
+  return firstDefined([
+    () =>
+      getCachedIdentityByPublicSignKey(handle).then((i) => i?.publicSignKey),
+    ...(validAlias
+      ? [() => getCachedIdentityByAlias(alias).then((i) => i?.publicSignKey)]
       : []),
-  ];
+    ...(handle.length === shortIdLength
+      ? [() => getCachedIdentityByShortId(handle).then((i) => i?.publicSignKey)]
+      : []),
+  ]);
+};
+
+const isUnchangedPushSubscription = (
+  existing: {
+    subscription?: PushSubscriptionJSON;
+    owner?: { id: string };
+    conversation?: { id: string };
+  },
+  incoming: PushSubscriptionJSON,
+  ownerId: string,
+  conversationId?: string,
+): boolean =>
+  existing.owner?.id === ownerId &&
+  existing.subscription?.endpoint === incoming.endpoint &&
+  existing.subscription?.keys?.p256dh === incoming.keys.p256dh &&
+  existing.subscription?.keys?.auth === incoming.keys.auth &&
+  (existing.subscription?.expirationTime ?? null) ===
+    (incoming.expirationTime ?? null) &&
+  (conversationId === undefined ||
+    existing.conversation?.id === conversationId);
+
+const queryMintBootstrap = async ({
+  publicSignKey,
+  wantConvos,
+  targetConvId,
+  bootstrapMsgLimit,
+}: {
+  publicSignKey: string;
+  wantConvos: boolean;
+  targetConvId?: string;
+  bootstrapMsgLimit: number;
+}) => {
+  if (wantConvos && targetConvId) {
+    const res = await query({
+      identities: {
+        $: { where: { publicSignKey } },
+        conversations: {
+          participants: {
+            $: { fields: ["publicSignKey", "name", "avatar"] },
+          },
+          archivedBy: {
+            $: { where: { publicSignKey }, fields: ["publicSignKey"] },
+          },
+        },
+      },
+      conversations: {
+        participants: {
+          $: { fields: ["publicSignKey", "name", "avatar"] },
+        },
+        $: { where: { id: targetConvId } },
+      },
+      keys: {
+        $: {
+          where: {
+            conversation: targetConvId,
+            "owner.publicSignKey": publicSignKey,
+          },
+        },
+      },
+      messages: {
+        $: {
+          where: { conversation: targetConvId },
+          order: { timestamp: "desc" as const },
+          limit: bootstrapMsgLimit + 1,
+        },
+      },
+    });
+    return {
+      identities: res.identities,
+      bootstrap: {
+        conversations: res.conversations,
+        keys: res.keys,
+        messages: res.messages,
+      },
+    };
+  }
+  if (wantConvos) {
+    const res = await query({
+      identities: {
+        $: { where: { publicSignKey } },
+        conversations: {
+          participants: {
+            $: { fields: ["publicSignKey", "name", "avatar"] },
+          },
+          archivedBy: {
+            $: { where: { publicSignKey }, fields: ["publicSignKey"] },
+          },
+        },
+      },
+    });
+    return { identities: res.identities, bootstrap: null };
+  }
+  if (targetConvId) {
+    const res = await query({
+      identities: {
+        $: { where: { publicSignKey } },
+      },
+      conversations: {
+        participants: {
+          $: { fields: ["publicSignKey", "name", "avatar"] },
+        },
+        $: { where: { id: targetConvId } },
+      },
+      keys: {
+        $: {
+          where: {
+            conversation: targetConvId,
+            "owner.publicSignKey": publicSignKey,
+          },
+        },
+      },
+      messages: {
+        $: {
+          where: { conversation: targetConvId },
+          order: { timestamp: "desc" as const },
+          limit: bootstrapMsgLimit + 1,
+        },
+      },
+    });
+    return {
+      identities: res.identities,
+      bootstrap: {
+        conversations: res.conversations,
+        keys: res.keys,
+        messages: res.messages,
+      },
+    };
+  }
+  const res = await query({
+    identities: {
+      $: { where: { publicSignKey } },
+    },
+  });
+  return { identities: res.identities, bootstrap: null };
 };
 
 const transferPayloads = new Map<
@@ -193,18 +345,8 @@ export const endpoints: BackendApiImpl = {
         authToken: auth.authToken,
       });
       if (!authOk) return { error: "no-such-key" };
-      const { identities } = await query({
-        identities: {
-          $: { where: { publicSignKey } },
-          keys: {
-            $: { where: { conversation: conversationId } },
-          },
-        },
-      });
-      const keys = identities[0]?.keys ?? [];
-      return (keys.length === 0)
-        ? { error: "no-such-key" }
-        : { conversationKey: keys[0].key };
+      const key = await getCachedConversationKey(publicSignKey, conversationId);
+      return key ? { conversationKey: key } : { error: "no-such-key" };
     },
     createConversation,
     sendMessage: async (
@@ -231,18 +373,18 @@ export const endpoints: BackendApiImpl = {
       if (convResult.conversations.length === 0) {
         throw new Error("Conversation not found");
       }
-      if (senderPublicSignKey !== undefined) {
-        const isParticipant = convResult.conversations[0].participants.some(
-          (p: { publicSignKey: string }) =>
-            p.publicSignKey === senderPublicSignKey,
-        );
-        if (!isParticipant) {
-          throw new Error("Not a participant");
-        }
+      const sender = convResult.conversations[0].participants.find(
+        (p) => p.publicSignKey === senderPublicSignKey,
+      );
+      if (!sender) {
+        throw new Error("Not a participant");
       }
       const messageId = id();
       const timestamp = Date.now();
       const prefetchedConversations = Promise.resolve(convResult);
+      const cachedSenderPushSubs = peekCachedPushSubscriptions(sender.id);
+      const shouldDismissSenderPush = silent !== true &&
+        !(cachedSenderPushSubs.hit && cachedSenderPushSubs.value.length === 0);
       // Persist the message first; do not block on side effects (webhooks/push)
       await transact([
         tx.messages[messageId]
@@ -278,11 +420,12 @@ export const endpoints: BackendApiImpl = {
                 }).catch((e) => console.error("push dispatch failed", e)),
               ]
               : []),
-            ...(senderPublicSignKey
+            ...(shouldDismissSenderPush
               ? [
                 dismissPushForParticipant({
                   conversationId: conversation,
                   publicSignKey: senderPublicSignKey,
+                  identityId: sender.id,
                 }).catch((e) => console.error("push dismiss failed", e)),
               ]
               : []),
@@ -302,31 +445,22 @@ export const endpoints: BackendApiImpl = {
         authToken: auth.authToken,
       });
       if (!authOk) return { success: true };
-      // Validate conversation & participant membership and fetch existing typingState in one query
-      const { conversations, identities, typingStates } = await query({
-        conversations: {
-          participants: {},
-          $: { where: { id: conversation } },
-        },
-        identities: { $: { where: { publicSignKey } } },
+      const conv = await getCachedConversation(conversation);
+      const participant = conv?.participants.find(
+        (p) => p.publicSignKey === publicSignKey,
+      );
+      if (!participant) {
+        return { success: true };
+      }
+      const { typingStates } = await query({
         typingStates: {
           $: { where: { "owner.publicSignKey": publicSignKey, conversation } },
         },
       });
-      if (conversations.length === 0 || identities.length === 0) {
-        return { success: true };
-      }
-      const isParticipant = conversations[0].participants.some(
-        (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
-      );
-      if (!isParticipant) {
-        return { success: true };
-      }
-      const identityId = identities[0].id;
       await transact(
         tx.typingStates[typingStates.length > 0 ? typingStates[0].id : id()]
           .update({ updatedAt: isTyping ? Date.now() : 0 })
-          .link({ owner: identityId, conversation }),
+          .link({ owner: participant.id, conversation }),
       );
       // Opportunistic cleanup: occasionally prune stale typingStates for this conversation
       if (Math.random() < 0.15) {
@@ -340,11 +474,13 @@ export const endpoints: BackendApiImpl = {
               (t: { id: string; updatedAt: number }) =>
                 t.updatedAt === 0 || now - t.updatedAt > 20_000,
             );
-            await Promise.all(
-              stale.map((t: { id: string }) =>
-                transact(tx.typingStates[t.id].delete())
-              ),
-            );
+            if (stale.length > 0) {
+              await transact(
+                stale.map((t: { id: string }) =>
+                  tx.typingStates[t.id].delete()
+                ),
+              );
+            }
           })(),
         );
       }
@@ -361,11 +497,12 @@ export const endpoints: BackendApiImpl = {
     ) => {
       const finalAlias = await resolveAvailableAlias(alias);
       const identityId = id();
+      const shortId = await shortIdFromPublicSignKey(publicSignKey);
       const baseFields = {
         name,
         publicSignKey,
         publicEncryptKey,
-        shortId: await shortIdFromPublicSignKey(publicSignKey),
+        shortId,
         ...(finalAlias ? { alias: finalAlias } : {}),
       };
       const instantEmail = await instantEmailFromPublicSignKey(publicSignKey);
@@ -375,6 +512,7 @@ export const endpoints: BackendApiImpl = {
         if (!isMissingSchemaAttrError(err)) throw err;
         return transact(tx.identities[identityId].update(baseFields));
       });
+      invalidateIdentity(publicSignKey, { aliases: [finalAlias], shortId });
       return {};
     },
     createIdentity: async ({ email }, { publicSignKey, publicEncryptKey }) => {
@@ -389,6 +527,7 @@ export const endpoints: BackendApiImpl = {
         publicEncryptKey,
         account: accounts[0].id,
       });
+      invalidateIdentity(publicSignKey);
       return { success: true };
     },
     setWebhook: async ({ url, publicSignKey, auth }) => {
@@ -408,24 +547,21 @@ export const endpoints: BackendApiImpl = {
       if (!isSafeWebhookUrl(url, { allowEmpty: true })) {
         return { success: false, error: "invalid-url" as const };
       }
-      const { identities } = await query({
-        identities: { $: { where: { publicSignKey } } },
-      });
-      if (identities.length === 0) {
+      const identity = await getCachedIdentityByPublicSignKey(publicSignKey);
+      if (!identity) {
         return {
           success: false,
           error: "identity-does-not-exist" as const,
         };
       }
-      await transact(tx.identities[identities[0].id].update({ webhook: url }));
+      await transact(tx.identities[identity.id].update({ webhook: url }));
+      invalidateIdentity(publicSignKey);
       return { success: true };
     },
     getProfile: async ({ publicSignKey }) => {
-      const { identities } = await query({
-        identities: { $: { where: { publicSignKey } } },
-      });
-      if (identities.length === 0) return { profile: null };
-      const { name, avatar, alias, priceTag } = identities[0];
+      const identity = await getCachedIdentityByPublicSignKey(publicSignKey);
+      if (!identity) return { profile: null };
+      const { name, avatar, alias, priceTag } = identity;
       return { profile: { name, avatar, alias, priceTag } };
     },
     getConversations: async ({ publicSignKeys, auth }) => {
@@ -441,11 +577,9 @@ export const endpoints: BackendApiImpl = {
         return { conversations: [] };
       }
       if (publicSignKeys.length === 0) return { conversations: [] };
-      const { identities } = await query({
-        identities: {
-          $: { where: { publicSignKey: { $in: publicSignKeys } } },
-        },
-      });
+      const identities = await getCachedIdentitiesByPublicSignKeys(
+        publicSignKeys,
+      );
       const chosenKey = chooseOptimalParticipantKey(
         publicSignKeys,
         identities,
@@ -475,59 +609,28 @@ export const endpoints: BackendApiImpl = {
         authToken: auth.authToken,
       });
       if (!authOk) return { error: "not-found" };
-      const { conversations } = await query({
-        conversations: {
-          participants: {},
-          canvas: {},
-          $: { where: { id: conversationId } },
-        },
-      });
-      if (!conversations.length) return { error: "not-found" };
+      const conversation = await getCachedConversation(conversationId);
+      if (!conversation) return { error: "not-found" };
       if (
-        !conversations[0].participants.some(
-          (p: { publicSignKey: string }) =>
-            p.publicSignKey === auth.publicSignKey,
+        !conversation.participants.some(
+          (p) => p.publicSignKey === auth.publicSignKey,
         )
       ) {
         return { error: "not-found" };
       }
-      const limited = conversations[0].participants.slice(0, 10);
-      const { identities } = await query({
-        identities: {
-          $: {
-            where: {
-              publicSignKey: {
-                $in: limited.map(({ publicSignKey }) => publicSignKey),
-              },
-            },
-          },
-        },
-      });
-      const pkToIdentity = Object.fromEntries(
-        identities.map((
-          i: {
-            publicSignKey: string;
-            name?: string;
-            avatar?: string;
-            alias?: string;
-          },
-        ) => [i.publicSignKey, i]),
-      );
+      const limited = conversation.participants.slice(0, 10);
       return {
         conversationInfo: {
-          participants: limited.map(
-            ({ publicSignKey }: { publicSignKey: string }) => {
-              const { name, avatar, alias } = pkToIdentity[publicSignKey];
-              return { publicSignKey, name, avatar, alias };
-            },
-          ),
-          isPartial: conversations[0].participants.length > limited.length,
-          hasCanvas: Boolean(
-            conversations[0].canvas &&
-              (Array.isArray(conversations[0].canvas)
-                ? conversations[0].canvas.length > 0
-                : true),
-          ),
+          participants: limited.map((
+            { publicSignKey, name, avatar, alias },
+          ) => ({
+            publicSignKey,
+            name,
+            avatar,
+            alias,
+          })),
+          isPartial: conversation.participants.length > limited.length,
+          hasCanvas: conversation.hasCanvas,
         },
       };
     },
@@ -535,25 +638,21 @@ export const endpoints: BackendApiImpl = {
       nonce: await issueNonceHelper(publicSignKey),
     }),
     aliasToPublicSignKey: async ({ alias }) => {
-      const { identities } = await query({
-        identities: { $: { where: { alias: normalizeAlias(alias) } } },
-      });
-      if (identities.length === 0) return { error: "no-such-alias" };
-      return { publicSignKey: identities[0].publicSignKey };
+      const identity = await getCachedIdentityByAlias(alias);
+      if (!identity) return { error: "no-such-alias" };
+      return { publicSignKey: identity.publicSignKey };
     },
     resolveHandle: async ({ handle }) => {
       const stripped = handle.trim().replace(/^@/, "");
-      const publicSignKey = await firstDefined(handleLookups(stripped));
+      const publicSignKey = await resolveIdentityHandle(stripped);
       return publicSignKey
         ? { publicSignKey }
         : { error: "no-such-handle" as const };
     },
     publicSignKeyToAlias: async ({ publicSignKey }) => {
-      const { identities } = await query({
-        identities: { $: { where: { publicSignKey } } },
-      });
-      if (identities.length === 0) return { error: "no-such-identity" };
-      const alias = identities[0].alias;
+      const identity = await getCachedIdentityByPublicSignKey(publicSignKey);
+      if (!identity) return { error: "no-such-identity" };
+      const alias = identity.alias;
       if (!alias) return { error: "no-alias" };
       return { alias };
     },
@@ -585,6 +684,9 @@ export const endpoints: BackendApiImpl = {
       await transact(
         tx.identities[identityMatches[0].id].update({ alias }),
       );
+      invalidateIdentity(publicSignKey, {
+        aliases: [identityMatches[0].alias, alias],
+      });
       return { success: true };
     },
     setName: async ({ payload, publicSignKey, nonce, authToken }) => {
@@ -623,6 +725,7 @@ export const endpoints: BackendApiImpl = {
         tx.identities[identityMatches[0].id].update({ name: trimmed }),
         ...convUpdates,
       ]);
+      invalidateIdentity(publicSignKey);
       return { success: true };
     },
     setAvatar: async ({ payload, publicSignKey, nonce, authToken }) => {
@@ -638,15 +741,14 @@ export const endpoints: BackendApiImpl = {
       if (avatar && (avatar.length > 2048 || !isSafeWebhookUrl(avatar))) {
         return { success: false, error: "invalid-avatar" };
       }
-      const { identities: identityMatches } = await query({
-        identities: { wallet: {}, $: { where: { publicSignKey } } },
-      });
-      if (identityMatches.length === 0) {
+      const identity = await getCachedIdentityByPublicSignKey(publicSignKey);
+      if (!identity) {
         return { success: false, error: "not-found" };
       }
       await transact(
-        tx.identities[identityMatches[0].id].update({ avatar }),
+        tx.identities[identity.id].update({ avatar }),
       );
+      invalidateIdentity(publicSignKey);
       return { success: true };
     },
     setPriceTag: async ({ payload, publicSignKey, nonce, authToken }) => {
@@ -665,15 +767,14 @@ export const endpoints: BackendApiImpl = {
         authToken,
       });
       if (!authOk) return { success: false, error: "invalid-auth" };
-      const { identities: identityMatches } = await query({
-        identities: { wallet: {}, $: { where: { publicSignKey } } },
-      });
-      if (identityMatches.length === 0) {
+      const identity = await getCachedIdentityByPublicSignKey(publicSignKey);
+      if (!identity) {
         return { success: false, error: "not-found" };
       }
       await transact(
-        tx.identities[identityMatches[0].id].update({ priceTag }),
+        tx.identities[identity.id].update({ priceTag }),
       );
+      invalidateIdentity(publicSignKey);
       return { success: true };
     },
     getBalanceAndTransactions: async (
@@ -771,21 +872,20 @@ export const endpoints: BackendApiImpl = {
       const xpub = Deno.env.get("BITCOIN_XPUB");
       if (!xpub) return { error: "missing-secret" };
 
-      const { identities: identityMatches } = await query({
-        identities: { $: { where: { publicSignKey } } },
-      });
-      if (identityMatches.length === 0) return { error: "not-found" };
+      const identity = await getCachedIdentityByPublicSignKey(publicSignKey);
+      if (!identity) return { error: "not-found" };
 
-      const identityId = identityMatches[0].id;
+      const identityId = identity.id;
 
       return withWalletLock("__crypto_payment_index__", async () => {
-        const { cryptoPayments: existingPayments } = await query({
-          cryptoPayments: {},
+        const { cryptoPayments: latestPayments } = await query({
+          cryptoPayments: {
+            $: { order: { index: "desc" as const }, limit: 1 },
+          },
         });
-        const index = existingPayments.reduce(
-          (max, p) => Math.max(max, (p.index ?? -1) + 1),
-          0,
-        );
+        const index = latestPayments.length > 0
+          ? (latestPayments[0].index ?? -1) + 1
+          : 0;
 
         const address = deriveBtcAddress(xpub, index);
         const btcPrice = await getBtcPriceUsd();
@@ -929,6 +1029,7 @@ export const endpoints: BackendApiImpl = {
       await transact(
         tx.conversations[conversationId].update({ title: trimmed }),
       );
+      invalidateConversation(conversationId);
       return { success: true };
     },
     getMessages: async ({ payload, publicSignKey, nonce, authToken }) => {
@@ -945,21 +1046,15 @@ export const endpoints: BackendApiImpl = {
       });
       if (!authOk) return { error: "invalid-auth" };
       const { conversationId, limit = 50, before } = payload;
-      const { conversations } = await query({
-        conversations: {
-          participants: {},
-          $: { where: { id: conversationId } },
-        },
-      });
-      if (!conversations.length) return { error: "not-participant" };
-      const isParticipant = conversations[0].participants.some(
-        (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+      const conversation = await getCachedConversation(conversationId);
+      if (!conversation) return { error: "not-participant" };
+      const isParticipant = conversation.participants.some(
+        (p) => p.publicSignKey === publicSignKey,
       );
       if (!isParticipant) return { error: "not-participant" };
       const fetchLimit = limit + 1;
       const { messages } = await query({
         messages: {
-          conversation: {},
           $: {
             where: before !== undefined
               ? { conversation: conversationId, timestamp: { $lt: before } }
@@ -1020,35 +1115,54 @@ export const endpoints: BackendApiImpl = {
       });
       if (!authed) return { success: true };
       const { subscription, conversationId } = payload;
-      const { identities } = await query({
-        identities: { $: { where: { publicSignKey } } },
-      });
-      if (identities.length === 0) return { success: true };
-      const identity = identities[0];
+      const identity = await getCachedIdentityByPublicSignKey(publicSignKey);
+      if (!identity) return { success: true };
       // If scoping to a conversation, ensure this identity is a participant
       if (conversationId) {
-        const { conversations } = await query({
-          conversations: {
-            participants: {},
-            $: { where: { id: conversationId } },
-          },
-        });
-        const isParticipant = conversations.length > 0 &&
-          conversations[0].participants.some((p: { publicSignKey: string }) =>
-            p.publicSignKey === publicSignKey
-          );
+        const conversation = await getCachedConversation(conversationId);
+        const isParticipant = Boolean(
+          conversation?.participants.some(
+            (p) => p.publicSignKey === publicSignKey,
+          ),
+        );
         if (!isParticipant) return { success: true };
+      }
+      const cachedSubs = peekCachedPushSubscriptions(identity.id);
+      if (
+        cachedSubs.hit &&
+        cachedSubs.value.some((row) =>
+          isUnchangedPushSubscription(
+            row,
+            subscription,
+            identity.id,
+            conversationId,
+          )
+        )
+      ) {
+        return { success: true };
       }
       const { pushSubscriptions } = await query({
         pushSubscriptions: {
+          owner: {},
+          conversation: {},
           $: { where: { endpoint: subscription.endpoint } },
         },
       });
       if (pushSubscriptions.length) {
-        const existingNotified = pushSubscriptions[0].subscription
-          ?.notifiedConversations;
+        const existing = pushSubscriptions[0];
+        if (
+          isUnchangedPushSubscription(
+            existing,
+            subscription,
+            identity.id,
+            conversationId,
+          )
+        ) {
+          return { success: true };
+        }
+        const existingNotified = existing.subscription?.notifiedConversations;
         await transact(
-          tx.pushSubscriptions[pushSubscriptions[0].id]
+          tx.pushSubscriptions[existing.id]
             .update({
               subscription: existingNotified
                 ? { ...subscription, notifiedConversations: existingNotified }
@@ -1059,6 +1173,10 @@ export const endpoints: BackendApiImpl = {
               ...(conversationId ? { conversation: conversationId } : {}),
             }),
         );
+        invalidatePushSubscriptions(identity.id);
+        if (existing.owner?.id && existing.owner.id !== identity.id) {
+          invalidatePushSubscriptions(existing.owner.id);
+        }
       } else {
         await transact(
           tx.pushSubscriptions[id()]
@@ -1072,6 +1190,7 @@ export const endpoints: BackendApiImpl = {
               ...(conversationId ? { conversation: conversationId } : {}),
             }),
         );
+        invalidatePushSubscriptions(identity.id);
       }
       return { success: true };
     },
@@ -1088,23 +1207,16 @@ export const endpoints: BackendApiImpl = {
       if (!authed) return { success: true };
       const { endpoint } = payload;
       const { pushSubscriptions } = await query({
-        pushSubscriptions: { $: { where: { endpoint } } },
+        pushSubscriptions: {
+          owner: {},
+          $: { where: { endpoint } },
+        },
       });
-      if (pushSubscriptions.length) {
-        // Only allow owner to delete
-        const { pushSubscriptions: withOwner } = await query({
-          pushSubscriptions: {
-            owner: {},
-            $: { where: { id: pushSubscriptions[0].id } },
-          },
-        });
-        if (
-          withOwner.length &&
-          withOwner[0].owner?.publicSignKey === publicSignKey
-        ) {
-          await transact(
-            tx.pushSubscriptions[pushSubscriptions[0].id].delete(),
-          );
+      const existing = pushSubscriptions[0];
+      if (existing && existing.owner?.publicSignKey === publicSignKey) {
+        await transact(tx.pushSubscriptions[existing.id].delete());
+        if (existing.owner?.id) {
+          invalidatePushSubscriptions(existing.owner.id);
         }
       }
       return { success: true };
@@ -1133,21 +1245,13 @@ export const endpoints: BackendApiImpl = {
       return { success: true };
     },
     heartbeat: async ({ payload, publicSignKey, nonce, authToken }) => {
-      const authed = await verifyAuthToken<Record<string, never>>({
+      await verifyAuthToken<Record<string, never>>({
         action: "heartbeat",
         payload,
         publicSignKey,
         nonce,
         authToken,
       });
-      if (!authed) return { success: true };
-      const { identities } = await query({
-        identities: { $: { where: { publicSignKey } } },
-      });
-      if (identities.length === 0) return { success: true };
-      await transact(
-        tx.identities[identities[0].id].update({ lastActiveAt: Date.now() }),
-      );
       return { success: true };
     },
     storeTransferPayload: ({ encryptedPayload }) => {
@@ -1196,15 +1300,10 @@ export const endpoints: BackendApiImpl = {
       });
       if (!authed) return { error: "not-participant" };
       const { conversationId, contentHash, fileName, contentType } = payload;
-      const { conversations } = await query({
-        conversations: {
-          participants: {},
-          $: { where: { id: conversationId } },
-        },
-      });
-      if (!conversations.length) return { error: "invalid-conversation" };
-      const isParticipant = conversations[0].participants.some(
-        (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
+      const conversation = await getCachedConversation(conversationId);
+      if (!conversation) return { error: "invalid-conversation" };
+      const isParticipant = conversation.participants.some(
+        (p) => p.publicSignKey === publicSignKey,
       );
       if (!isParticipant) return { error: "not-participant" };
       return generateUploadUrl({
@@ -1226,25 +1325,22 @@ export const endpoints: BackendApiImpl = {
         return { ok: false as const, error: "invalid-auth" as const };
       }
       const { conversationId, encrypted, expectedVersion } = payload;
+      const conversation = await getCachedConversation(conversationId);
+      if (
+        !conversation ||
+        !conversation.participants.some((p) =>
+          p.publicSignKey === publicSignKey
+        )
+      ) {
+        return { ok: false as const, error: "not-participant" as const };
+      }
       return withWalletLock(`canvas:${conversationId}`, async () => {
-        const { conversations } = await query({
-          conversations: {
-            participants: {},
-            canvas: {},
-            $: { where: { id: conversationId } },
+        const { canvases } = await query({
+          canvases: {
+            $: { where: { conversation: conversationId } },
           },
         });
-        if (conversations.length === 0) {
-          return { ok: false as const, error: "not-participant" as const };
-        }
-        const isParticipant = conversations[0].participants.some(
-          (p: { publicSignKey: string }) => p.publicSignKey === publicSignKey,
-        );
-        if (!isParticipant) {
-          return { ok: false as const, error: "not-participant" as const };
-        }
-        const rawCanvas = conversations[0].canvas;
-        const existing = Array.isArray(rawCanvas) ? rawCanvas[0] : rawCanvas;
+        const existing = canvases[0];
         const currentVersion = existing?.version ?? 0;
         if (currentVersion !== expectedVersion) {
           return {
@@ -1271,6 +1367,7 @@ export const endpoints: BackendApiImpl = {
             }),
           ],
         );
+        if (!existing) invalidateConversation(conversationId);
         return { ok: true as const, version: nextVersion };
       });
     },
@@ -1287,54 +1384,14 @@ export const endpoints: BackendApiImpl = {
       const targetConvId = payload.conversationId;
       const bootstrapMsgLimit = 30;
 
-      const [identityQueryRes, convoBootstrapRes] = await Promise.all([
-        wantConvos
-          ? query({
-            identities: {
-              $: { where: { publicSignKey } },
-              conversations: {
-                participants: {
-                  $: { fields: ["publicSignKey", "name", "avatar"] },
-                },
-                archivedBy: {
-                  $: { where: { publicSignKey }, fields: ["publicSignKey"] },
-                },
-              },
-            },
-          })
-          : query({
-            identities: {
-              $: { where: { publicSignKey } },
-            },
-          }),
-        targetConvId
-          ? query({
-            conversations: {
-              participants: {
-                $: { fields: ["publicSignKey", "name", "avatar"] },
-              },
-              $: { where: { id: targetConvId } },
-            },
-            keys: {
-              $: {
-                where: {
-                  conversation: targetConvId,
-                  "owner.publicSignKey": publicSignKey,
-                },
-              },
-            },
-            messages: {
-              $: {
-                where: { conversation: targetConvId },
-                order: { timestamp: "desc" as const },
-                limit: bootstrapMsgLimit + 1,
-              },
-            },
-          })
-          : Promise.resolve(null),
-      ]);
+      const { identities, bootstrap: convoBootstrapRes } =
+        await queryMintBootstrap({
+          publicSignKey,
+          wantConvos,
+          targetConvId,
+          bootstrapMsgLimit,
+        });
 
-      const { identities } = identityQueryRes;
       if (identities.length === 0) return { error: "not-found" };
       const identity = identities[0];
       const instantEmail = await instantEmailFromPublicSignKey(publicSignKey);
@@ -1343,6 +1400,7 @@ export const endpoints: BackendApiImpl = {
           .catch((err) => {
             if (!isMissingSchemaAttrError(err)) throw err;
           });
+        invalidateIdentity(publicSignKey);
       }
       const token = await auth.createToken(instantEmail);
 
@@ -1369,7 +1427,9 @@ export const endpoints: BackendApiImpl = {
         : undefined;
 
       const buildConversationBootstrap = () => {
-        if (!targetConvId || !convoBootstrapRes) return undefined;
+        if (!targetConvId || !convoBootstrapRes) {
+          return undefined;
+        }
         const conv = convoBootstrapRes.conversations[0];
         const isParticipant = Boolean(
           conv?.participants?.some(
@@ -1430,24 +1490,22 @@ export const endpoints: BackendApiImpl = {
         authToken: auth.authToken,
       });
       if (!authOk) return { row: null };
-      const { conversations } = await query({
-        conversations: {
-          participants: {},
-          canvas: {},
-          $: { where: { id: conversationId } },
-        },
-      });
-      if (conversations.length === 0) return { row: null };
+      const conversation = await getCachedConversation(conversationId);
       if (
-        !conversations[0].participants.some(
-          (p: { publicSignKey: string }) =>
-            p.publicSignKey === auth.publicSignKey,
+        !conversation ||
+        !conversation.participants.some(
+          (p) => p.publicSignKey === auth.publicSignKey,
         )
       ) {
         return { row: null };
       }
-      const rawCanvas = conversations[0].canvas;
-      const canvas = Array.isArray(rawCanvas) ? rawCanvas[0] : rawCanvas;
+      if (!conversation.hasCanvas) return { row: null };
+      const { canvases } = await query({
+        canvases: {
+          $: { where: { conversation: conversationId } },
+        },
+      });
+      const canvas = canvases[0];
       if (!canvas || typeof canvas.encrypted !== "string") return { row: null };
       return {
         row: {

@@ -225,3 +225,67 @@ Deno.test("subscribeAuthedQuery stops retrying cleanly when unsubscribed during 
   assertEquals(state.authAttempts, 1);
   assertEquals(state.queryAttachCount, 0);
 });
+
+Deno.test("subscribeAuthedQuery stops immediately on permanent-failure (e.g. not-found) without retrying", async () => {
+  const expectedEmail = "user-missing@identity.aliceandbot.internal";
+  const authHub = makeAuthHub({ isLoading: false, user: null });
+  const state = { authAttempts: 0, queryAttachCount: 0 };
+
+  const subscribe = makeSubscribeAuthedQuery<
+    { q: string },
+    { conversations: string[] }
+  >({
+    isBrowserAuthCapable: () => true,
+    canSign: () => Promise.resolve(true),
+    expectedEmailFor: () => Promise.resolve(expectedEmail),
+    subscribeAuth: authHub.subscribeAuth,
+    ensureAuth: () => {
+      state.authAttempts += 1;
+      return Promise.resolve("permanent-failure");
+    },
+    subscribeQuery: () => {
+      state.queryAttachCount += 1;
+      return () => {};
+    },
+    retryDelayMs: () => 5,
+    maxAuthRetries: 5,
+  });
+
+  const unsub = subscribe(sampleCreds, { q: "conversations" }, () => {});
+  await new Promise((r) => setTimeout(r, 40));
+  assertEquals(state.authAttempts, 1);
+  assertEquals(state.queryAttachCount, 0);
+  unsub();
+});
+
+Deno.test("subscribeAuthedQuery caps consecutive auth retries at maxAuthRetries", async () => {
+  const expectedEmail = "user-flaky@identity.aliceandbot.internal";
+  const authHub = makeAuthHub({ isLoading: false, user: null });
+  const state = { authAttempts: 0, queryAttachCount: 0 };
+
+  const subscribe = makeSubscribeAuthedQuery<
+    { q: string },
+    { conversations: string[] }
+  >({
+    isBrowserAuthCapable: () => true,
+    canSign: () => Promise.resolve(true),
+    expectedEmailFor: () => Promise.resolve(expectedEmail),
+    subscribeAuth: authHub.subscribeAuth,
+    ensureAuth: () => {
+      state.authAttempts += 1;
+      return Promise.resolve("retry");
+    },
+    subscribeQuery: () => {
+      state.queryAttachCount += 1;
+      return () => {};
+    },
+    retryDelayMs: () => 5,
+    maxAuthRetries: 3,
+  });
+
+  const unsub = subscribe(sampleCreds, { q: "conversations" }, () => {});
+  await new Promise((r) => setTimeout(r, 80));
+  assertEquals(state.authAttempts, 3);
+  assertEquals(state.queryAttachCount, 0);
+  unsub();
+});

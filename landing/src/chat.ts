@@ -49,6 +49,7 @@ import {
 } from "../../protocol/src/pushClient.ts";
 import {
   clearPushKeyStore,
+  defaultPushKeyStore,
   savePushCredentials,
 } from "../../protocol/src/pushKeyStore.ts";
 import {
@@ -74,7 +75,6 @@ import { currentQuery, navigate, onRouteLeave } from "./router.ts";
 import { setActiveConversationGetter } from "./activeConversationBridge.ts";
 import { subscribeDarkMode } from "../../lit/core/dark-mode.ts";
 import { getCredentialsToCopy } from "../../lit/core/credentials.ts";
-import { startActiveReporting } from "../../lit/core/activeReporting.ts";
 import { setDarkModeOverride } from "../../lit/core/dark-mode.ts";
 import { registerCredentials } from "../../protocol/src/instantAuth.ts";
 import {
@@ -162,8 +162,6 @@ let overflowCleanup: (() => void) | null = null;
 let conversationsUnsub: (() => void) | null = null;
 let previewsManager: ConversationPreviewsManager | null = null;
 let allTypingUnsub: (() => void) | null = null;
-let activeReportCleanup: (() => void) | null = null;
-let activeReportTimer: ReturnType<typeof setTimeout> | null = null;
 
 const conversationsCacheKey = "alicebot_conversations_cache";
 
@@ -855,12 +853,20 @@ const fetchBalance = () => {
     .catch(() => {});
 };
 
+const maxDepositPollDurationMs = 15 * 60 * 1000;
+
 const startDepositPolling = () => {
   stopDepositPolling();
   if (!yourKeyDepositData || !credentials) return;
   const creds = credentials;
   const address = yourKeyDepositData.address;
+  const startedAt = Date.now();
   yourKeyDepositInterval = setInterval(() => {
+    if (Date.now() - startedAt >= maxDepositPollDurationMs) {
+      stopDepositPolling();
+      return;
+    }
+    if (globalThis.document?.hidden) return;
     checkCryptoPaymentSigned({
       paymentAddress: address,
       credentials: creds,
@@ -3545,18 +3551,41 @@ const chatTemplate = (): TemplateResult =>
 
 const notificationAckState = { lastRemoteAckKey: "" };
 
+const hasRegisteredPushSubscription = async (): Promise<boolean> => {
+  if (globalThis.Notification?.permission !== "granted") return false;
+  if (await defaultPushKeyStore.getPushEndpoint().catch(() => null)) {
+    return true;
+  }
+  if (!("serviceWorker" in navigator)) return false;
+  const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+  const sub = await reg?.pushManager?.getSubscription().catch(() => null);
+  return Boolean(sub?.endpoint);
+};
+
 const acknowledgeActiveConversation = () => {
   if (!credentials || view !== "chats" || !selectedConversation) return;
   if (globalThis.document?.visibilityState === "hidden") return;
-  closeLocalNotificationsForConversation(selectedConversation).catch(() => {});
-  const convUpdatedAt =
-    conversations?.find((c) => c.id === selectedConversation)?.updatedAt ?? 0;
-  const ackKey = `${selectedConversation}:${convUpdatedAt}`;
+  const creds = credentials;
+  const convId = selectedConversation;
+  closeLocalNotificationsForConversation(convId).catch(() => {});
+  if (globalThis.Notification?.permission !== "granted") return;
+  const convUpdatedAt = conversations?.find((c) => c.id === convId)
+    ?.updatedAt ?? 0;
+  const ackKey = `${convId}:${convUpdatedAt}`;
   if (notificationAckState.lastRemoteAckKey === ackKey) return;
-  notificationAckState.lastRemoteAckKey = ackKey;
-  dismissConversationNotifications(credentials, selectedConversation).catch(
-    () => {},
-  );
+  hasRegisteredPushSubscription()
+    .then((hasPush) => {
+      if (!hasPush) return;
+      if (
+        selectedConversation !== convId ||
+        notificationAckState.lastRemoteAckKey === ackKey
+      ) {
+        return;
+      }
+      notificationAckState.lastRemoteAckKey = ackKey;
+      return dismissConversationNotifications(creds, convId);
+    })
+    .catch(() => {});
 };
 
 const onWindowFocusOrVisible = () => {
@@ -3564,7 +3593,6 @@ const onWindowFocusOrVisible = () => {
     blurActiveInputOnMobile();
     return;
   }
-  notificationAckState.lastRemoteAckKey = "";
   acknowledgeActiveConversation();
 };
 
@@ -3709,17 +3737,6 @@ const initLoggedInState = () => {
     },
   );
   subscribeYourKeyProfile(activeCredentials.publicSignKey);
-  if (activeReportTimer) clearTimeout(activeReportTimer);
-  if (activeReportCleanup) {
-    activeReportCleanup();
-    activeReportCleanup = null;
-  }
-  activeReportTimer = setTimeout(() => {
-    activeReportTimer = null;
-    if (credentials?.publicSignKey === activeCredentials.publicSignKey) {
-      activeReportCleanup = startActiveReporting(activeCredentials);
-    }
-  }, 2000);
   if (globalThis.Notification?.permission === "granted") {
     registerPush(activeCredentials).catch(() => {});
   }
@@ -3751,14 +3768,6 @@ const cleanup = () => {
   }
   conversationPreviews = {};
   typingByConversation = {};
-  if (activeReportTimer) {
-    clearTimeout(activeReportTimer);
-    activeReportTimer = null;
-  }
-  if (activeReportCleanup) {
-    activeReportCleanup();
-    activeReportCleanup = null;
-  }
   if (yourKeyProfileUnsub) {
     yourKeyProfileUnsub();
     yourKeyProfileUnsub = null;

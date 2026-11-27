@@ -47,7 +47,9 @@ export const accessAdminDb = (): AdminDb => {
 export const isBrowserAuthCapable = (): boolean =>
   typeof globalThis.window !== "undefined" && typeof indexedDB !== "undefined";
 
-const inFlightAuth = new Map<string, Promise<boolean>>();
+export type AuthAttemptOutcome = "ok" | "retry" | "permanent-failure";
+
+const inFlightAuth = new Map<string, Promise<AuthAttemptOutcome>>();
 
 type ColdBootstrapHint = {
   includeConversations?: boolean;
@@ -107,16 +109,16 @@ export const isConversationBootstrapping = (
 
 const authenticateIdentity = async (
   credentials: Credentials,
-): Promise<boolean> => {
+): Promise<AuthAttemptOutcome> => {
   await Promise.resolve();
-  if (!(await canSignWithPrivateKey(credentials.privateSignKey))) return true;
+  if (!(await canSignWithPrivateKey(credentials.privateSignKey))) return "ok";
   const expectedEmail = await instantEmailFromPublicSignKey(
     credentials.publicSignKey,
   );
   const current = await accessDb().getAuth().catch(() => null);
   if (current?.email === expectedEmail) {
     coldBootstrapHints.delete(credentials.publicSignKey);
-    return true;
+    return "ok";
   }
   const hints = coldBootstrapHints.get(credentials.publicSignKey);
   coldBootstrapHints.delete(credentials.publicSignKey);
@@ -143,23 +145,26 @@ const authenticateIdentity = async (
         ?.forEach((fn) => fn(bootstrap));
     }
     await accessDb().auth.signInWithToken(res.token);
-    return true;
+    return "ok";
   }
-  return false;
+  if ("error" in res && res.error === "not-found") {
+    return "permanent-failure";
+  }
+  return "retry";
 };
 
 const ensureInstantAuthOutcome = (
   credentials: Credentials | undefined,
-): Promise<boolean> => {
-  if (!credentials) return Promise.resolve(true);
+): Promise<AuthAttemptOutcome> => {
+  if (!credentials) return Promise.resolve("ok");
   registerCredentials(credentials);
-  if (!isBrowserAuthCapable()) return Promise.resolve(true);
+  if (!isBrowserAuthCapable()) return Promise.resolve("ok");
   const existing = inFlightAuth.get(credentials.publicSignKey);
   if (existing) return existing;
-  const promise = authenticateIdentity(credentials)
-    .catch((err) => {
+  const promise: Promise<AuthAttemptOutcome> = authenticateIdentity(credentials)
+    .catch((err): AuthAttemptOutcome => {
       console.warn("Failed to sign in to InstantDB", err);
-      return false;
+      return "retry";
     })
     .finally(() => {
       inFlightAuth.delete(credentials.publicSignKey);
@@ -186,17 +191,25 @@ export type AuthStateSnapshot = {
   user?: { email?: string | null } | null;
 };
 
+const defaultMaxAuthRetries = 5;
+
 const defaultAuthRetryDelayMs = (attempt: number) =>
   Math.min(15_000, 500 * 2 ** Math.max(0, attempt - 1));
+
+const normalizeAuthOutcome = (
+  outcome: boolean | AuthAttemptOutcome,
+): AuthAttemptOutcome =>
+  outcome === true ? "ok" : outcome === false ? "retry" : outcome;
 
 export const makeSubscribeAuthedQuery = <Q, Resp>(deps: {
   isBrowserAuthCapable: () => boolean;
   canSign: (privateSignKey: string) => Promise<boolean>;
   expectedEmailFor: (publicSignKey: string) => Promise<string>;
   subscribeAuth: (cb: (auth: AuthStateSnapshot) => void) => () => void;
-  ensureAuth: (creds: Credentials) => Promise<boolean>;
+  ensureAuth: (creds: Credentials) => Promise<boolean | AuthAttemptOutcome>;
   subscribeQuery: (query: Q, cb: (resp: Resp) => void) => () => void;
   retryDelayMs?: (attempt: number) => number;
+  maxAuthRetries?: number;
 }) =>
 (
   credentialsOrKey: Credentials | string | undefined,
@@ -208,12 +221,14 @@ export const makeSubscribeAuthedQuery = <Q, Resp>(deps: {
     return deps.subscribeQuery(query, cb);
   }
   const delayFor = deps.retryDelayMs ?? defaultAuthRetryDelayMs;
+  const maxRetries = deps.maxAuthRetries ?? defaultMaxAuthRetries;
   const state: {
     cancelled: boolean;
     expectedEmail: string | null;
     currentEmail: string | null;
     authKnown: boolean;
     authInFlight: boolean;
+    permanentFailure: boolean;
     retryAttempt: number;
     innerUnsub: (() => void) | undefined;
     authUnsub: (() => void) | undefined;
@@ -224,6 +239,7 @@ export const makeSubscribeAuthedQuery = <Q, Resp>(deps: {
     currentEmail: null,
     authKnown: false,
     authInFlight: false,
+    permanentFailure: false,
     retryAttempt: 0,
     innerUnsub: undefined,
     authUnsub: undefined,
@@ -253,19 +269,32 @@ export const makeSubscribeAuthedQuery = <Q, Resp>(deps: {
   };
 
   const triggerAuth = () => {
-    if (state.cancelled || state.authInFlight || isAuthedForExpected()) return;
+    if (
+      state.cancelled ||
+      state.authInFlight ||
+      state.permanentFailure ||
+      isAuthedForExpected()
+    ) {
+      return;
+    }
     clearRetry();
     state.authInFlight = true;
-    deps.ensureAuth(creds).then((ok) => {
+    deps.ensureAuth(creds).then((rawOutcome) => {
       state.authInFlight = false;
       if (state.cancelled) return;
-      if (ok && isAuthedForExpected()) {
+      const outcome = normalizeAuthOutcome(rawOutcome);
+      if (outcome === "permanent-failure") {
+        state.permanentFailure = true;
+        return;
+      }
+      if (outcome === "ok" && isAuthedForExpected()) {
         state.retryAttempt = 0;
         attachQueryIfReady();
         return;
       }
-      if (ok && !state.authKnown) return;
+      if (outcome === "ok" && !state.authKnown) return;
       state.retryAttempt += 1;
+      if (state.retryAttempt >= maxRetries) return;
       state.retryTimer = setTimeout(() => {
         state.retryTimer = undefined;
         triggerAuth();
@@ -279,6 +308,7 @@ export const makeSubscribeAuthedQuery = <Q, Resp>(deps: {
     state.currentEmail = auth.user?.email ?? null;
     if (isAuthedForExpected()) {
       state.retryAttempt = 0;
+      state.permanentFailure = false;
       clearRetry();
       attachQueryIfReady();
       return;

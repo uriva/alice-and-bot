@@ -1050,11 +1050,10 @@ Deno.test("reconcileAfterSend fetches sent message and instant bot reply when li
   assertEquals(fetchTracker.count > fetchesBeforeSend, true);
   assertEquals(emitted.at(-1), ["Sigo aquí.", ".", "earlier message"]);
 
-  // When live WebSocket IS healthy and delivers both snapshots, fallback timers cancel with 0 HTTP fetches
+  // When live WebSocket IS healthy and delivers the sent message snapshot, fallback timers cancel with 0 HTTP fetches
   const fetchesBeforeHealthySend = fetchTracker.count;
   stream.reconcileAfterSend?.();
   liveHolder.push([sentMsg, initialMsg]);
-  liveHolder.push([botReply, sentMsg, initialMsg]);
   await new Promise((r) => setTimeout(r, 80));
   assertEquals(fetchTracker.count, fetchesBeforeHealthySend);
 

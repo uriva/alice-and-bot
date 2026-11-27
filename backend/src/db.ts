@@ -11,10 +11,10 @@ type RetryConfig = {
   maxAttempts: number;
 };
 
-const defaultRetryConfig: RetryConfig = {
+export const defaultRetryConfig: RetryConfig = {
   initialDelayMs: 500,
   maxDelayMs: 5_000,
-  maxAttempts: 5,
+  maxAttempts: 3,
 };
 
 const retryableStatuses = new Set([429, 500, 502, 503, 504]);
@@ -97,7 +97,7 @@ const resolveAdminToken = (): string =>
   readDotEnvToken() ||
   "dummy-admin-token";
 
-const getDb = (): Db => {
+export const getDb = (): Db => {
   const token = coerce(resolveAdminToken());
   if (!dbCache.instance || token !== dbCache.token) {
     dbCache.token = token;
