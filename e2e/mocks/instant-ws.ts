@@ -549,7 +549,11 @@ export const setupInstantWsMock = async (
           const identityChanged = steps.map(applyStep).some(Boolean);
           const tid = ++state.txCounter;
           ws.send(
-            JSON.stringify({ op: "transact-ok", "tx-id": tid }),
+            JSON.stringify({
+              op: "transact-ok",
+              "client-event-id": msg["client-event-id"],
+              "tx-id": tid,
+            }),
           );
           if (identityChanged && identityQueries.length > 0) {
             const idTriples = buildIdentityTriples(Date.now());

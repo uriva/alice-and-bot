@@ -1707,7 +1707,7 @@ const conversationRowButtonClass = (
     isSelected
       ? "bg-[#ebe7dc] dark:bg-[#24231f]"
       : isUnread
-      ? "bg-[#edf3fc] hover:bg-[#e2ebfa] dark:bg-[#192334] dark:hover:bg-[#202d43]"
+      ? "bg-[#e8f0fe] hover:bg-[#dce8fd] dark:bg-[#1a273d] dark:hover:bg-[#22324f]"
       : "hover:bg-[#f0ede4] dark:hover:bg-[#1c1b18]"
   }${
     isSearchHighlighted
@@ -1749,7 +1749,7 @@ const conversationRowActionsBgClass = (
   isSelected
     ? "bg-[#ebe7dc] dark:bg-[#24231f]"
     : isUnread
-    ? "bg-[#e2ebfa] dark:bg-[#202d43]"
+    ? "bg-[#dce8fd] dark:bg-[#22324f]"
     : "bg-[#f0ede4] dark:bg-[#1c1b18]";
 
 const conversationActionBtnClass =
