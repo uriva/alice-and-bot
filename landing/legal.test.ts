@@ -87,6 +87,8 @@ Deno.test("legal pages export styled legal, privacy, and terms views with requir
   const requiredPhrases = [
     "November 27, 2026",
     "retentionDays",
+    'id="retention"',
+    "retentionSchedule",
     "Google Cloud Storage lifecycle rule",
     "https://github.com/uriva/alice-and-bot",
     "https://uriv.me",

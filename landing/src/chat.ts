@@ -6,7 +6,7 @@ import {
   nextThreadId,
   shortcutHelpGroups,
 } from "../../lit/components/shortcuts.ts";
-import { retentionDays } from "../../protocol/src/retention.ts";
+import { retentionSummary } from "../../protocol/src/retention.ts";
 import { buttonClass } from "./components.ts";
 import {
   avatarColor,
@@ -76,6 +76,7 @@ import {
   homePath,
   mcpGuidePath,
   privacyPath,
+  retentionPolicyPath,
   termsPath,
 } from "./paths.ts";
 import { currentQuery, navigate, onRouteLeave } from "./router.ts";
@@ -2081,6 +2082,21 @@ const qrCodeTransferRow = () => {
 
 // --- YourKey (account settings) ---
 
+const retentionNotice = (extraClass = "") =>
+  html`
+    <p
+      class="text-center text-[#78736a] dark:text-[#8c867c] leading-relaxed ${extraClass}"
+    >
+      ${retentionSummary}
+      <a
+        href="${retentionPolicyPath}"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="${legalLinkClass}"
+      >Details</a>
+    </p>
+  `;
+
 const yourKey = () => {
   if (!credentials) {
     return html`
@@ -2575,11 +2591,7 @@ const yourKey = () => {
 
       ${dangerZone()}
 
-      <p
-        class="text-xs text-center text-[#78736a] dark:text-[#8c867c] leading-relaxed pt-1"
-      >
-        Messages and file attachments auto-delete after ${retentionDays} days.
-      </p>
+      ${retentionNotice("text-xs pt-1")}
 
       <div
         class="flex items-center justify-center gap-3 pt-1 text-xs text-[#78736a] dark:text-[#8c867c]"
@@ -2992,6 +3004,7 @@ const messengerLogin = () => {
                 class="${legalLinkClass}"
               >Privacy Policy</a>.
             </p>
+            ${retentionNotice("text-[11px] mt-1.5 max-w-xs")}
           </div>
         `
         : html`

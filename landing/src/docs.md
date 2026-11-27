@@ -309,7 +309,8 @@ if (!("error" in attachment)) {
 
 Files are encrypted with the conversation key before upload. The server never
 sees plaintext. Size limits: images 10MB, audio 25MB, video 100MB, other files
-25MB.
+25MB. Hosted messages and attachments auto-delete after 30 days
+([retention schedule](https://aliceandbot.com/privacy#retention)).
 
 Location attachments don't require an upload, just include them directly:
 
@@ -911,10 +912,11 @@ To host your own widget:
   signed by the notification server with Ed25519 (`X-Alice-Signature` /
   `serverSignature`), verified with timestamp freshness and per-message replay
   deduplication in `handleWebhookUpdate` / `verifyWebhookOrigin`.
-- **30-day rolling retention:** On the hosted service, encrypted messages and
-  encrypted file attachments are automatically deleted after 30 days.
-  Conversation shells (metadata and wrapped keys), canvases, profiles, and Paid
-  Inbox records are kept so ongoing chats and bot integrations continue working.
+- **30-day rolling retention:** Hosted messages and attachments auto-delete
+  after 30 days (conversations, keys, canvases, profiles, and Paid Inbox records
+  persist). See the
+  [retention schedule](https://aliceandbot.com/privacy#retention) for the full
+  breakdown.
 
 ## Community
 

@@ -7,4 +7,5 @@ export const legalPath = "/legal";
 export const manifestoPath = "/manifesto";
 export const mcpGuidePath = "/mcp";
 export const privacyPath = "/privacy";
+export const retentionPolicyPath = `${privacyPath}#retention`;
 export const termsPath = "/terms";

@@ -2,9 +2,17 @@ import { map } from "@uri/gamla";
 import { html, type TemplateResult } from "lit";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import { header } from "./header.ts";
-import { homePath, legalPath, privacyPath, termsPath } from "./paths.ts";
-
-import { retentionDays } from "../../protocol/src/retention.ts";
+import {
+  homePath,
+  legalPath,
+  privacyPath,
+  retentionPolicyPath,
+  termsPath,
+} from "./paths.ts";
+import {
+  retentionDays,
+  retentionSummary,
+} from "../../protocol/src/retention.ts";
 
 const lastUpdated = "November 27, 2026";
 const repoUrl = "https://github.com/uriva/alice-and-bot";
@@ -320,6 +328,108 @@ const renderSubprocessorRow = ({
     </tr>
   `;
 
+type RetentionRow = {
+  category: string;
+  storage: string;
+  duration: string;
+  details: string;
+};
+
+const retentionSchedule: RetentionRow[] = [
+  {
+    category: "Encrypted messages, edits & reactions",
+    storage: "InstantDB",
+    duration: `${retentionDays} days`,
+    details:
+      "Rolling retention; pruned automatically every 6 hours by our scheduled worker.",
+  },
+  {
+    category: "Encrypted file attachments",
+    storage: "Google Cloud Storage",
+    duration: `${retentionDays} days`,
+    details:
+      "Deleted automatically via Google Cloud Storage lifecycle rule (signed upload URLs expire after 15 minutes).",
+  },
+  {
+    category: "Device-transfer QR payloads",
+    storage: "Cloudflare Worker memory",
+    duration: "5 minutes (or 1 read)",
+    details:
+      "Deleted immediately on first retrieval or after 5 minutes, whichever comes first.",
+  },
+  {
+    category: "Authentication nonces",
+    storage: "Cloudflare Worker memory",
+    duration: "2 minutes (or 1 use)",
+    details:
+      "Single-use signed challenge tokens evicted upon verification or expiry.",
+  },
+  {
+    category: "Transient UI elements (streams, spinners, progress)",
+    storage: "InstantDB",
+    duration: "~1 hour",
+    details:
+      "Live streams delete on completion; stale rows are pruned after 1 hour.",
+  },
+  {
+    category: "Typing indicators",
+    storage: "InstantDB",
+    duration: "20 seconds (active window)",
+    details:
+      "Ignored after 20 seconds and overwritten on the next typing event.",
+  },
+  {
+    category: "Web Push subscriptions",
+    storage: "InstantDB & push providers",
+    duration: "Until Sign Out or invalid",
+    details:
+      "Removed on Sign Out or when the push provider rejects the endpoint; queued push deliveries carry a 24-hour TTL.",
+  },
+  {
+    category: "Conversation shells, wrapped keys & canvases",
+    storage: "InstantDB",
+    duration: "Until deletion requested",
+    details:
+      "Kept so ongoing chats, bots, widgets, and Paid Inbox history keep working after old messages expire.",
+  },
+  {
+    category: "Public identity profiles",
+    storage: "InstantDB",
+    duration: "Until deletion requested",
+    details:
+      "Display name, avatar, @alias, public keys, Paid Inbox priceTag, and lastActiveAt.",
+  },
+  {
+    category: "Paid Inbox wallets & transactions",
+    storage: "InstantDB",
+    duration: "Until deletion requested",
+    details:
+      "Custodial USD ledger balances and Bitcoin deposit records (minimal anti-fraud/legal records may be retained where required).",
+  },
+  {
+    category: "Local browser storage",
+    storage: "Your device (localStorage / IndexedDB)",
+    duration: "Until Sign Out or cleared",
+    details:
+      `Private keys, push key store, InstantDB offline cache, and cached message previews (cached previews older than ${retentionDays} days are dropped automatically).`,
+  },
+];
+
+const renderRetentionRow = ({
+  category,
+  storage,
+  duration,
+  details,
+}: RetentionRow) =>
+  html`
+    <tr>
+      <td class="${tdClass} ${strongClass}">${category}</td>
+      <td class="${tdClass}">${storage}</td>
+      <td class="${tdClass} font-mono text-xs whitespace-nowrap">${duration}</td>
+      <td class="${tdClass}">${details}</td>
+    </tr>
+  `;
+
 export const legal = (): TemplateResult =>
   legalShell(
     "legal",
@@ -405,11 +515,9 @@ export const legal = (): TemplateResult =>
           </li>
           <li>
             <span class="${strongClass}">${retentionDays}-Day Rolling Retention:</span>
-            Encrypted chat messages and encrypted file attachments on the hosted
-            service are automatically deleted after ${retentionDays} days.
-            Conversation shells (metadata and wrapped keys), canvases, public
-            profiles, and Paid Inbox records are kept so existing threads and
-            balances remain usable.
+            ${retentionSummary} Conversation shells, wrapped keys, canvases,
+            public profiles, and Paid Inbox records persist until deleted — see
+            the <a href="${retentionPolicyPath}" class="${linkClass}">full retention schedule</a>.
           </li>
           <li>
             <span class="${strongClass}">Self-Custody Keys &amp; 18+ Only:</span>
@@ -671,34 +779,28 @@ export const privacy = (): TemplateResult =>
         </ul>
       </section>
 
-      <section>
+      <section id="retention">
         <h2 class="${h2Class}">5. Retention, Deletion &amp; Data Portability</h2>
+        <p class="${pClass}">
+          Exact breakdown of what the hosted Alice&amp;Bot service stores, where
+          it lives, and how long it is kept:
+        </p>
+        <div class="${tableWrapClass}">
+          <table class="${tableClass}">
+            <thead>
+              <tr>
+                <th class="${thClass}">Data Category</th>
+                <th class="${thClass}">Where Stored</th>
+                <th class="${thClass}">How Long</th>
+                <th class="${thClass}">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${map(renderRetentionRow)(retentionSchedule)}
+            </tbody>
+          </table>
+        </div>
         <ul class="${ulClass}">
-          <li>
-            <span class="${strongClass}">Message &amp; attachment retention (${retentionDays} days):</span>
-            Encrypted messages and encrypted file attachments stored on our
-            hosted servers are automatically deleted after
-            <span class="${strongClass}">${retentionDays} days</span> on a
-            rolling basis (via scheduled server pruning for messages and a
-            ${retentionDays}-day Google Cloud Storage lifecycle rule for
-            attachments).
-          </li>
-          <li>
-            <span class="${strongClass}">Account, conversation &amp; ledger records:</span>
-            Conversation shells (titles, participant lists, and wrapped
-            conversation keys), canvases, public identity profiles, and Paid
-            Inbox wallet/transaction records are retained until you request
-            deletion so ongoing conversations, bot integrations, and Paid Inbox
-            balances continue working after older messages expire.
-          </li>
-          <li>
-            <span class="${strongClass}">Automatic expiration of ephemeral data:</span>
-            Ephemeral delivery queues, authentication nonces, device-transfer QR
-            payloads (5-minute TTL), typing indicators, and transient UI
-            elements (<span class="${codeClass}">spinner</span>,
-            <span class="${codeClass}">progress</span>, and stream buffers)
-            expire automatically after short operational windows.
-          </li>
           <li>
             <span class="${strongClass}">How to request deletion:</span> Contact
             the operator via ${contactLinks()} with your public signing key (or

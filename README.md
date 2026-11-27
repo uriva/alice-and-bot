@@ -294,7 +294,9 @@ await sendMessage({
 });
 ```
 
-Upload a file as an encrypted attachment:
+Upload a file as an encrypted attachment (hosted attachments and messages
+auto-delete after 30 days — see the
+[retention schedule](https://aliceandbot.com/privacy#retention)):
 
 ```ts
 uploadAttachment({
@@ -863,7 +865,7 @@ To host your own widget:
   signed by the notification server with Ed25519 (`X-Alice-Signature` /
   `serverSignature`), verified with timestamp freshness and per-message replay
   deduplication in `handleWebhookUpdate` / `verifyWebhookOrigin`.
-- **30-day rolling retention:** On the hosted service, encrypted messages and
-  encrypted file attachments are automatically deleted after 30 days.
-  Conversation shells (metadata and wrapped keys), canvases, profiles, and Paid
-  Inbox records are kept so ongoing chats and bot integrations continue working.
+- **30-day rolling retention:** Hosted messages and attachments auto-delete
+  after 30 days; see the
+  [retention schedule](https://aliceandbot.com/privacy#retention) for the full
+  breakdown of what is stored and for how long.

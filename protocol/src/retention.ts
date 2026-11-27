@@ -1,5 +1,7 @@
 export const retentionDays: number = 30;
 export const retentionMs: number = retentionDays * 24 * 60 * 60 * 1000;
+export const retentionSummary: string =
+  `Messages and file attachments auto-delete after ${retentionDays} days.`;
 
 export const attachmentExpiredErrorPrefix: string = "Attachment expired";
 

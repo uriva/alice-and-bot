@@ -13,6 +13,7 @@ import {
   termsPath,
 } from "./paths.ts";
 import { starterAgentHref, starterAgents } from "./starter-agents.ts";
+import { retentionDays } from "../../protocol/src/retention.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import { triggerPwaInstall } from "./pwaInstall.ts";
 
@@ -63,7 +64,7 @@ const corePillars: FeatureItem[] = [
     art: "e2e",
     title: "Nobody Sees Your Data",
     description:
-      "Keys stay on your devices and servers. Every message, file, and canvas is end-to-end encrypted.",
+      `Keys stay on your devices and servers. Every message, file, and canvas is end-to-end encrypted, and hosted messages & files auto-delete after ${retentionDays} days.`,
   },
   {
     art: "free-identities",
@@ -100,7 +101,7 @@ const comparisonRows: ComparisonRow[] = [
   },
   {
     feature: "Data privacy",
-    alice: "Always E2E encrypted",
+    alice: `Always E2E encrypted · ${retentionDays}d auto-delete`,
     whatsapp: "Terminated at business API",
     saas: "Plaintext on vendor servers",
   },
