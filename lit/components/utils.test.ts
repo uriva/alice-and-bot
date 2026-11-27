@@ -3,6 +3,7 @@ import {
   buildTimeline,
   collectIdentityKeys,
   computeTextareaResize,
+  createPendingOptimisticMessage,
   downloadMedia,
   extractInlineIdentityDetails,
   filterParticipants,
@@ -16,9 +17,12 @@ import {
   maxTextareaHeight,
   mediaFileName,
   mergeIdentityDetails,
+  mergeOptimisticMessages,
   minTextareaHeight,
+  nextOptimisticTimestamp,
   nextVisibleText,
   preprocessText,
+  pruneOptimisticMessages,
   resolveConversationDisplayName,
   sendingStatusText,
   shareMedia,
@@ -772,4 +776,120 @@ Deno.test("extractInlineIdentityDetails extracts known participant details and c
     knownDetails: details,
   });
   assertEquals(missing, ["pk-2"]);
+});
+
+Deno.test("optimistic message helpers preserve repeated texts, handle future-skewed bot timestamps, and ignore older paginated messages", () => {
+  const existing = [
+    {
+      id: "u1",
+      authorId: "me",
+      authorName: "Me",
+      text: "Continue",
+      timestamp: 1000,
+    },
+    {
+      id: "b1",
+      authorId: "bot",
+      authorName: "Bot",
+      text: "Next?",
+      timestamp: 5000,
+    },
+  ];
+  const pending = createPendingOptimisticMessage({
+    id: "opt-1",
+    userId: "me",
+    text: "Continue",
+    messages: existing,
+    streams: [],
+    optimistic: [],
+    now: 2000,
+  });
+
+  assertEquals(pending.msg.timestamp, 5001);
+  assertEquals(
+    nextOptimisticTimestamp(existing, [], [pending], 2000),
+    5002,
+  );
+  assertEquals(
+    mergeOptimisticMessages(existing, [pending], "me").map((m) => m.id),
+    ["u1", "b1", "opt-1"],
+  );
+
+  const withOlderPaginated = [
+    {
+      id: "u0",
+      authorId: "me",
+      authorName: "Me",
+      text: "Continue",
+      timestamp: 500,
+    },
+    ...existing,
+  ];
+  assertEquals(
+    pruneOptimisticMessages(withOlderPaginated, [pending], "me"),
+    [pending],
+  );
+
+  const withDelivered = [
+    ...existing,
+    {
+      id: "u2",
+      authorId: "me",
+      authorName: "Me",
+      text: "Continue",
+      timestamp: 6000,
+    },
+  ];
+  assertEquals(pruneOptimisticMessages(withDelivered, [pending], "me"), []);
+  assertEquals(
+    mergeOptimisticMessages(withDelivered, [pending], "me").map((m) => m.id),
+    ["u1", "b1", "u2"],
+  );
+});
+
+Deno.test("pruneOptimisticMessages consumes each delivered message at most once across identical pending sends", () => {
+  const opt1 = createPendingOptimisticMessage({
+    id: "opt-1",
+    userId: "me",
+    text: "ok",
+    messages: [],
+    streams: [],
+    optimistic: [],
+    now: 1000,
+  });
+  const opt2 = createPendingOptimisticMessage({
+    id: "opt-2",
+    userId: "me",
+    text: "ok",
+    messages: [],
+    streams: [],
+    optimistic: [opt1],
+    now: 1000,
+  });
+  const afterFirst = [
+    {
+      id: "real-1",
+      authorId: "me",
+      authorName: "Me",
+      text: "ok",
+      timestamp: 1005,
+    },
+  ];
+  assertEquals(
+    pruneOptimisticMessages(afterFirst, [opt1, opt2], "me").map((o) =>
+      o.msg.id
+    ),
+    ["opt-2"],
+  );
+  const afterSecond = [
+    ...afterFirst,
+    {
+      id: "real-2",
+      authorId: "me",
+      authorName: "Me",
+      text: "ok",
+      timestamp: 1006,
+    },
+  ];
+  assertEquals(pruneOptimisticMessages(afterSecond, [opt1, opt2], "me"), []);
 });

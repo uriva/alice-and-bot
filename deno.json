@@ -82,7 +82,7 @@
   },
   "license": "MIT",
   "name": "@alice-and-bot/core",
-  "version": "1.0.82",
+  "version": "1.0.83",
   "publish": {
     "include": [
       "README.md",

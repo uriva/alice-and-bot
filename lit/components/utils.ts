@@ -839,3 +839,95 @@ export const findNewIncomingMessages = ({
     : sortKey((m: AbstracChatMessage) => m.timestamp)(messages)
       .slice(prevCount)
       .filter((m) => m.authorId !== userId && m.timestamp > sessionStart);
+
+export type PendingOptimisticMessage = {
+  msg: AbstracChatMessage;
+  knownRealIds: ReadonlySet<string>;
+  minTimestamp: number;
+};
+
+export const nextOptimisticTimestamp = (
+  messages: AbstracChatMessage[],
+  streams: ActiveStream[],
+  optimistic: PendingOptimisticMessage[],
+  now = Date.now(),
+) =>
+  [
+    ...messages.map((m) => m.timestamp + 1),
+    ...streams.map((s) => s.timestamp + 1),
+    ...optimistic.map((o) => o.msg.timestamp + 1),
+  ].reduce((max, ts) => Math.max(max, ts), now);
+
+export const createPendingOptimisticMessage = ({
+  id,
+  userId,
+  text,
+  messages,
+  streams,
+  optimistic,
+  now = Date.now(),
+}: {
+  id: string;
+  userId: string;
+  text: string;
+  messages: AbstracChatMessage[];
+  streams: ActiveStream[];
+  optimistic: PendingOptimisticMessage[];
+  now?: number;
+}): PendingOptimisticMessage => ({
+  msg: {
+    id,
+    authorId: userId,
+    authorName: "",
+    text,
+    timestamp: nextOptimisticTimestamp(messages, streams, optimistic, now),
+  },
+  knownRealIds: new Set(
+    messages
+      .filter((m) => m.authorId === userId && m.text === text)
+      .map((m) => m.id),
+  ),
+  minTimestamp: empty(messages)
+    ? -Infinity
+    : messages.reduce((min, m) => Math.min(min, m.timestamp), Infinity),
+});
+
+export const pruneOptimisticMessages = (
+  messages: AbstracChatMessage[],
+  optimistic: PendingOptimisticMessage[],
+  userId: string,
+): PendingOptimisticMessage[] => {
+  if (empty(optimistic)) return optimistic;
+  const ownReal = messages.filter((m) => m.authorId === userId);
+  const { remaining } = optimistic.reduce<{
+    consumedIds: ReadonlySet<string>;
+    remaining: PendingOptimisticMessage[];
+  }>(
+    ({ consumedIds, remaining }, entry) => {
+      const matched = ownReal.find(
+        (m) =>
+          m.text === entry.msg.text &&
+          !entry.knownRealIds.has(m.id) &&
+          !consumedIds.has(m.id) &&
+          m.timestamp >= entry.minTimestamp,
+      );
+      return matched
+        ? { consumedIds: new Set([...consumedIds, matched.id]), remaining }
+        : { consumedIds, remaining: [...remaining, entry] };
+    },
+    { consumedIds: new Set(), remaining: [] },
+  );
+  return remaining.length === optimistic.length ? optimistic : remaining;
+};
+
+export const mergeOptimisticMessages = (
+  messages: AbstracChatMessage[],
+  optimistic: PendingOptimisticMessage[],
+  userId: string,
+): AbstracChatMessage[] => {
+  if (empty(optimistic)) return messages;
+  const remaining = pruneOptimisticMessages(messages, optimistic, userId);
+  return empty(remaining)
+    ? messages
+    : [...messages, ...remaining.map((entry) => entry.msg)];
+};

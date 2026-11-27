@@ -79,6 +79,7 @@ import {
   charCountThreshold,
   computeTextareaResize,
   copyToClipboard,
+  createPendingOptimisticMessage,
   estimateSerializedLength,
   eventOutside,
   filterParticipants,
@@ -90,8 +91,11 @@ import {
   insertMention,
   isStale,
   maxTextareaHeight,
+  mergeOptimisticMessages,
   minTextareaHeight,
+  type PendingOptimisticMessage,
   playNotificationSound,
+  pruneOptimisticMessages,
   recordingExtension,
   recordingMimeType,
   resolveSuggestedMessage,
@@ -610,32 +614,6 @@ const voiceCallLabel = (state: string, duration: number) => {
   return "";
 };
 
-const allMessagesFrom = (
-  messages: AbstracChatMessage[],
-  optimistic: AbstracChatMessage[],
-  userId: string,
-) => {
-  if (empty(optimistic)) return messages;
-  const realTexts = new Set(
-    messages.filter((m) => m.authorId === userId).map((m) => m.text),
-  );
-  const remaining = optimistic.filter((o) => !realTexts.has(o.text));
-  return empty(remaining) ? messages : [...messages, ...remaining];
-};
-
-const pruneOptimistic = (
-  messages: AbstracChatMessage[],
-  optimistic: AbstracChatMessage[],
-  userId: string,
-) => {
-  if (empty(optimistic)) return optimistic;
-  const realTexts = new Set(
-    messages.filter((m) => m.authorId === userId).map((m) => m.text),
-  );
-  const remaining = optimistic.filter((o) => !realTexts.has(o.text));
-  return remaining.length === optimistic.length ? optimistic : remaining;
-};
-
 const unreadDividerRowStyle =
   "display:flex;align-items:center;gap:10px;margin:8px 0 4px;width:100%";
 
@@ -815,7 +793,7 @@ export class ChatBox extends LitElement {
   declare private _recordingDuration: number;
   declare private _isRecordingLocked: boolean;
   declare private _swipeOffset: { x: number; y: number };
-  declare private _optimisticMessages: AbstracChatMessage[];
+  declare private _optimisticMessages: PendingOptimisticMessage[];
   declare private _isSending: boolean;
   declare private _sendingType: "audio" | "image" | "file" | null;
   declare private _fetchingMore: boolean;
@@ -880,6 +858,8 @@ export class ChatBox extends LitElement {
   }
 
   private _messagesContainerEl: HTMLDivElement | null = null;
+  private _optimisticSeq = 0;
+  private _consumedQuickReplyEntryIds = new Set<string>();
   private _contentEl: HTMLDivElement | null = null;
   private _inputEl: HTMLTextAreaElement | null = null;
   private _fileInputEl: HTMLInputElement | null = null;
@@ -1488,30 +1468,44 @@ export class ChatBox extends LitElement {
     this._textareaOverflow = overflow;
   }
 
-  private _handleQuickReply = (text: string) => {
-    if (text) {
-      this.onSend(text);
-    }
-  };
-
-  private _sendSuggestedMessage = async (rawText: string) => {
-    const text = rawText.trim();
-    if (!text || estimateSerializedLength(text) > maxTextLength) return;
+  private _enqueueOptimisticMessage = (text: string) => {
+    this._optimisticSeq += 1;
     this._optimisticMessages = [
       ...this._optimisticMessages,
-      {
-        id: `optimistic-${Date.now()}`,
-        authorId: this.userId,
-        authorName: "",
+      createPendingOptimisticMessage({
+        id: `optimistic-${Date.now()}-${this._optimisticSeq}`,
+        userId: this.userId,
         text,
-        timestamp: Date.now(),
-      },
+        messages: this.messages,
+        streams: this.activeStreams,
+        optimistic: this._optimisticMessages,
+      }),
     ];
+  };
+
+  private _sendOptimisticMessage = async (text: string) => {
+    this._enqueueOptimisticMessage(text);
+    this._scrollToBottom();
     await this.updateComplete;
     await nextFrame();
     this.onSend(text);
     this._scrollToBottom();
     requestAnimationFrame(() => this._scrollToBottom());
+  };
+
+  private _handleQuickReply = async (rawText: string, entryId?: string) => {
+    if (entryId && this._consumedQuickReplyEntryIds.has(entryId)) return;
+    const text = rawText.trim();
+    if (!text || estimateSerializedLength(text) > maxTextLength) return;
+    if (entryId) this._consumedQuickReplyEntryIds.add(entryId);
+    await this._sendOptimisticMessage(text);
+  };
+
+  private _sendSuggestedMessage = async (rawText: string) => {
+    if (!empty(this._optimisticMessages) || !empty(this.messages)) return;
+    const text = rawText.trim();
+    if (!text || estimateSerializedLength(text) > maxTextLength) return;
+    await this._sendOptimisticMessage(text);
   };
 
   private _reactionTargetMessage(): AbstracChatMessage | null {
@@ -1579,16 +1573,7 @@ export class ChatBox extends LitElement {
         this._sendingType = null;
       }
     } else if (text) {
-      this._optimisticMessages = [
-        ...this._optimisticMessages,
-        {
-          id: `optimistic-${Date.now()}`,
-          authorId: this.userId,
-          authorName: "",
-          text,
-          timestamp: Date.now(),
-        },
-      ];
+      this._enqueueOptimisticMessage(text);
       await this.updateComplete;
       await nextFrame();
       this.onSend(text, replyTo);
@@ -1841,7 +1826,7 @@ export class ChatBox extends LitElement {
       e.key === "ArrowUp" && !e.ctrlKey && !e.metaKey && !e.altKey &&
       !e.shiftKey && this._input === ""
     ) {
-      const pendingOwn = pruneOptimistic(
+      const pendingOwn = pruneOptimisticMessages(
         this.messages,
         this._optimisticMessages,
         this.userId,
@@ -2036,10 +2021,12 @@ export class ChatBox extends LitElement {
     if (
       changed.has("title") &&
       prevTitle !== undefined &&
-      prevTitle !== "Chat" &&
-      !empty(this._optimisticMessages)
+      prevTitle !== "Chat"
     ) {
-      this._optimisticMessages = [];
+      if (!empty(this._optimisticMessages)) {
+        this._optimisticMessages = [];
+      }
+      this._consumedQuickReplyEntryIds.clear();
     }
 
     if (this._remoteAudioEl && this.remoteStream) {
@@ -2047,7 +2034,7 @@ export class ChatBox extends LitElement {
       this._remoteAudioEl.play().catch(console.error);
     }
 
-    const pruned = pruneOptimistic(
+    const pruned = pruneOptimisticMessages(
       this.messages,
       this._optimisticMessages,
       this.userId,
@@ -2128,7 +2115,7 @@ export class ChatBox extends LitElement {
   override render(): TemplateResult {
     const isDark = this._effectiveDark;
     const { customColors } = this;
-    const allMsgs = allMessagesFrom(
+    const allMsgs = mergeOptimisticMessages(
       this.messages,
       this._optimisticMessages,
       this.userId,
@@ -3125,7 +3112,7 @@ export class ChatBox extends LitElement {
         .isGroupChat="${this.isGroupChat}"
         .isKeyboardSelected="${this._selectedMessageId === entry.msg.id}"
         @quick-reply="${(e: CustomEvent<{ text: string }>) =>
-          this._handleQuickReply(e.detail.text)}"
+          this._handleQuickReply(e.detail.text, entry.msg.id)}"
         @edit-finished="${this._handleEditFinished}"
       ></chat-message>
     `;
@@ -3183,7 +3170,7 @@ export class ChatBox extends LitElement {
         .customColors="${customColors}"
         .isDark="${isDark}"
         @quick-reply="${(e: CustomEvent<{ text: string }>) =>
-          this._handleQuickReply(e.detail.text)}"
+          this._handleQuickReply(e.detail.text, entry.stream.elementId)}"
       ></chat-message>
     `;
   }

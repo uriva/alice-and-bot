@@ -1199,6 +1199,142 @@ test("quick-reply suggestion buttons hide on older messages when a new message o
   await expect(page.locator(".chat-quick-reply-btn")).toHaveCount(0);
 });
 
+test("clicking a quick-reply suggestion renders optimistically immediately, hides buttons, and prevents duplicate sends", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    const sent: string[] = [];
+    (globalThis as unknown as { __sentQuickReplies: string[] })
+      .__sentQuickReplies = sent;
+    Object.assign(chatBox, {
+      userId: "user-1",
+      activeSpinners: [],
+      activeProgress: [],
+      activeStreams: [],
+      onSend: (text: string) => {
+        sent.push(text);
+      },
+      messages: [
+        {
+          id: "user-0",
+          authorId: "user-1",
+          authorName: "Alice",
+          text: "Continue",
+          timestamp: 500,
+        },
+        {
+          id: "bot-1",
+          authorId: "bot",
+          authorName: "Bot",
+          text:
+            "What next?\n<buttons><button>Continue</button><button>Stop</button></buttons>",
+          timestamp: Date.now() + 5_000,
+        },
+      ],
+    });
+  });
+
+  const continueBtn = page.locator(".chat-quick-reply-btn", {
+    hasText: "Continue",
+  });
+  await expect(continueBtn).toBeVisible();
+
+  await page.evaluate(() => {
+    const btn = document.querySelector<HTMLButtonElement>(
+      ".chat-quick-reply-btn",
+    );
+    btn?.click();
+    btn?.click();
+  });
+
+  await expect(page.locator(".chat-quick-reply-btn")).toHaveCount(0);
+  await expect(
+    page.locator(tid("message-text"), { hasText: /^Continue$/ }),
+  ).toHaveCount(2);
+
+  await expect.poll(
+    () =>
+      page.evaluate(() =>
+        (globalThis as unknown as { __sentQuickReplies: string[] })
+          .__sentQuickReplies
+      ),
+  ).toEqual(["Continue"]);
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box") as
+      | (Element & { messages: unknown[] })
+      | null;
+    if (!chatBox) return;
+    chatBox.messages = [
+      ...chatBox.messages,
+      {
+        id: "user-2",
+        authorId: "user-1",
+        authorName: "Alice",
+        text: "Continue",
+        timestamp: Date.now() + 6_000,
+      },
+    ];
+  });
+
+  await expect(
+    page.locator(tid("message-text"), { hasText: /^Continue$/ }),
+  ).toHaveCount(2);
+});
+
+test("double-clicking an empty-state suggested message sends only once and renders immediately", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
+
+  await page.evaluate(() => {
+    const chatBox = document.querySelector("chat-box");
+    if (!chatBox) return;
+    const sent: string[] = [];
+    (globalThis as unknown as { __sentSuggested: string[] })
+      .__sentSuggested = sent;
+    Object.assign(chatBox, {
+      userId: "user-1",
+      messages: [],
+      activeSpinners: [],
+      activeProgress: [],
+      activeStreams: [],
+      suggestedMessages: ["Check disconnected lines", "Set up a chatbot"],
+      onSend: (text: string) => {
+        sent.push(text);
+      },
+    });
+  });
+
+  const suggestedBtn = page.locator(tid("suggested-message")).first();
+  await expect(suggestedBtn).toBeVisible();
+
+  await page.evaluate(() => {
+    const btn = document.querySelector<HTMLButtonElement>(
+      '[data-testid="suggested-message"]',
+    );
+    btn?.click();
+    btn?.click();
+  });
+
+  await expect(page.locator(tid("suggested-message"))).toHaveCount(0);
+  await expect(
+    page.locator(tid("message-text"), {
+      hasText: /^Check disconnected lines$/,
+    }),
+  ).toHaveCount(1);
+
+  await expect.poll(
+    () =>
+      page.evaluate(() =>
+        (globalThis as unknown as { __sentSuggested: string[] })
+          .__sentSuggested
+      ),
+  ).toEqual(["Check disconnected lines"]);
+});
+
 test("emoji autocomplete inserts thumbs up on :+1 and inline :+1: converts immediately", async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector(tid("chat-container"), { timeout: 10_000 });
