@@ -12,6 +12,7 @@ import {
   privacyPath,
   termsPath,
 } from "./paths.ts";
+import { starterAgentHref, starterAgents } from "./starter-agents.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import { triggerPwaInstall } from "./pwaInstall.ts";
 
@@ -417,6 +418,31 @@ const heroSection = () =>
 
         <div class="lg:col-span-7 w-full min-w-0">
           ${heroMessengerPreview()}
+          <div
+            class="mt-3.5 flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs"
+          >
+            <span class="text-[#78736a] dark:text-[#8c867c] font-medium"
+            >Try live now:</span>
+            ${starterAgents.map(
+              (agent) =>
+                html`
+                  <a
+                    href="${starterAgentHref(agent.alias)}"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] hover:border-[#c8c2b4] dark:hover:border-[#403e38] text-[#181715] dark:text-[#f3f1ea] font-medium transition-colors"
+                  >
+                    <span
+                      class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${agent
+                        .avatarBg}"
+                    >${agent.initials}</span>
+                    <span>@${agent.alias}</span>
+                  </a>
+                `,
+            )}
+            <a
+              href="${chatPath}"
+              class="inline-flex items-center px-2.5 py-1 rounded-full text-[#57534e] dark:text-[#a8a298] hover:text-[#181715] dark:hover:text-[#f3f1ea] underline underline-offset-4 decoration-[#d2cec3] dark:decoration-[#3a3832] font-medium transition-colors"
+            >or invite a friend &rarr;</a>
+          </div>
         </div>
       </div>
     </section>

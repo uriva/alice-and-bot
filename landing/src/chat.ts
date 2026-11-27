@@ -65,6 +65,12 @@ import {
 } from "./pwaInstall.ts";
 import { copyToClipboard } from "../../lit/components/utils.ts";
 import {
+  inviteContextLabel,
+  shareOrCopyInviteLink,
+  type StarterAgent,
+  starterAgents,
+} from "./starter-agents.ts";
+import {
   chatPath,
   homePath,
   mcpGuidePath,
@@ -1564,18 +1570,108 @@ const conversationListItem = (conv: Conversation, index: number) => {
 const emptyStateLinkClass =
   "text-xs font-medium text-[#57534e] dark:text-[#a8a298] hover:text-[#181715] dark:hover:text-[#f3f1ea] underline underline-offset-4 decoration-[#d2cec3] dark:decoration-[#3a3832] transition-colors cursor-pointer";
 
-const copyCurrentInviteLink = () => {
+const starterAgentRowClass =
+  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/90 dark:bg-[#151513] border border-[#e7e4dc] dark:border-[#262521] hover:border-[#cfc9bc] dark:hover:border-[#3c3a34] hover:bg-[#faf8f3] dark:hover:bg-[#1c1b18] transition-colors text-left cursor-pointer disabled:opacity-60";
+
+let startingAgentAlias: string | null = null;
+
+const shareFriendInviteLink = () => {
   if (!credentials) return;
+  const shareFn = typeof navigator !== "undefined" &&
+      typeof navigator.share === "function"
+    ? (data: { title: string; text: string; url: string }) =>
+      navigator.share(data)
+    : undefined;
   chatWithMeLink(credentials.publicSignKey)
-    .then((link) => copyToClipboard(link))
-    .then((ok) =>
-      showToast(
-        ok ? "Invite link copied!" : "Failed to copy invite link",
-        ok ? "success" : "error",
-      )
+    .then((link) =>
+      shareOrCopyInviteLink(link, { shareFn, copyFn: copyToClipboard })
     )
-    .catch(() => showToast("Failed to copy invite link", "error"));
+    .then((result) => {
+      if (result === "copied") {
+        showToast("Invite link copied — send it to a friend!", "success");
+      } else if (result === "failed") {
+        showToast("Failed to copy invite link", "error");
+      }
+    })
+    .catch(() => showToast("Failed to create invite link", "error"));
 };
+
+const openStarterAgentChat = (alias: string, onDone?: () => void) => {
+  if (!credentials || startingAgentAlias) return;
+  const creds = credentials;
+  startingAgentAlias = alias;
+  rerenderChat();
+  resolveHandle(alias)
+    .then((res) => {
+      const resolvedKey = "publicSignKey" in res ? res.publicSignKey : alias;
+      const existing = (conversations ?? []).find(
+        isMatch(creds.publicSignKey, resolvedKey),
+      );
+      if (existing) {
+        selectConversation(existing.id);
+        onDone?.();
+        return;
+      }
+      return startConversation(creds, alias).then((id) => {
+        if (id) onDone?.();
+      });
+    })
+    .catch((error) => {
+      console.error("Failed to open starter agent chat:", error);
+      showToast("Failed to start conversation", "error");
+    })
+    .finally(() => {
+      startingAgentAlias = null;
+      rerenderChat();
+    });
+};
+
+const starterAgentRow = (onDone?: () => void) => (agent: StarterAgent) =>
+  html`
+    <button
+      type="button"
+      class="${starterAgentRowClass}"
+      ?disabled="${startingAgentAlias !== null}"
+      @click="${() => openStarterAgentChat(agent.alias, onDone)}"
+    >
+      <span
+        class="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${agent
+          .avatarBg}"
+      >${agent.initials}</span>
+      <span class="min-w-0 flex-1">
+        <span class="flex items-center gap-1.5">
+          <span
+            class="text-xs font-semibold text-[#181715] dark:text-[#f3f1ea] truncate"
+          >${agent.name}</span>
+          <span class="text-[11px] font-mono text-[#78736a] dark:text-[#8c867c]"
+          >@${agent.alias}</span>
+        </span>
+        <span
+          class="block text-[11px] text-[#66625b] dark:text-[#9c968c] truncate"
+        >${startingAgentAlias === agent.alias
+          ? "Starting encrypted chat..."
+          : agent.tagline}</span>
+      </span>
+      <span
+        class="text-xs text-[#78736a] dark:text-[#8c867c] shrink-0"
+        aria-hidden="true"
+      >&rarr;</span>
+    </button>
+  `;
+
+const starterAgentsSection = (onDone?: () => void) =>
+  html`
+    <div class="w-full max-w-sm mt-5">
+      <div
+        class="text-[11px] font-medium uppercase tracking-wider text-[#78736a] dark:text-[#8c867c] mb-2 text-left px-1"
+      >
+        Try a live agent
+      </div>
+      <div class="flex flex-col gap-2">
+        ${starterAgents.map(starterAgentRow(onDone))}
+      </div>
+    </div>
+  `;
 
 const emptyChatsView = (sq?: string, onNewChat?: () => void) => {
   const isEmpty = !sq?.trim();
@@ -1596,31 +1692,34 @@ const emptyChatsView = (sq?: string, onNewChat?: () => void) => {
             alt="Alice&Bot"
             class="hidden dark:block w-14 h-14 mb-3 anim-float opacity-95 object-contain"
           />
-          <p class="text-sm text-[#78736a] dark:text-[#8c867c] mb-5">
-            Start a conversation with a person or an AI agent
+          <p class="text-sm text-[#78736a] dark:text-[#8c867c] mb-4 text-center">
+            Try talking to a live agent or invite a friend
           </p>
-          <button
-            type="button"
-            class="${buttonClass("default", "default", "px-6")}"
-            @click="${onNewChat}"
-          >
-            + New Chat
-          </button>
-          <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-            <a href="${mcpGuidePath}" class="${emptyStateLinkClass}">
-              Connect an agent (MCP)
-            </a>
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              class="${buttonClass("default", "default", "px-5")}"
+              @click="${onNewChat}"
+            >
+              + New Chat
+            </button>
             ${credentials
               ? html`
                 <button
                   type="button"
-                  class="${emptyStateLinkClass}"
-                  @click="${copyCurrentInviteLink}"
+                  class="${buttonClass("secondary", "default", "px-4")}"
+                  @click="${shareFriendInviteLink}"
                 >
-                  Copy invite link
+                  Invite a friend
                 </button>
               `
               : nothing}
+          </div>
+          ${credentials ? starterAgentsSection() : nothing}
+          <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <a href="${mcpGuidePath}" class="${emptyStateLinkClass}">
+              Connect your own agent (MCP)
+            </a>
           </div>
         `
         : html`
@@ -1709,6 +1808,27 @@ const newChatScreen = (onChatCreated?: () => void) => {
           >
             Start Chat
           </button>
+          <div
+            class="pt-3 mt-1 border-t border-[#ece8df] dark:border-[#24231f] flex flex-col gap-3"
+          >
+            <button
+              type="button"
+              class="${buttonClass("secondary", "default", "w-full")}"
+              @click="${shareFriendInviteLink}"
+            >
+              Share invite link with a friend
+            </button>
+            <div>
+              <div
+                class="text-[11px] font-medium uppercase tracking-wider text-[#78736a] dark:text-[#8c867c] mb-2"
+              >
+                Or try a live agent
+              </div>
+              <div class="flex flex-col gap-2">
+                ${starterAgents.map(starterAgentRow(onChatCreated))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2788,14 +2908,20 @@ const messengerLogin = () => {
               <img
                 src="/icon.png"
                 alt="Alice&Bot"
-                class="w-12 h-12 anim-float"
+                class="block dark:hidden w-12 h-12 anim-float object-contain"
+              />
+              <img
+                src="/icon-dark.png"
+                alt="Alice&Bot"
+                class="hidden dark:block w-12 h-12 anim-float object-contain"
               />
               <div>
                 <h1 class="text-xl font-bold tracking-tight">
                   What's your name?
                 </h1>
                 <p class="text-xs text-[#78736a] dark:text-[#8c867c] mt-1">
-                  Local keypair · No email or phone
+                  ${inviteContextLabel(q["chatWith"]) ??
+                    "Local keypair · No email or phone"}
                 </p>
               </div>
               <div class="w-full flex flex-col gap-3 mt-1">
