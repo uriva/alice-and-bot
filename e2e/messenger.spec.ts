@@ -1140,4 +1140,51 @@ test.describe("Messenger (landing /chat)", () => {
       }),
     );
   });
+
+  test("unnamed conversations display other participants' names (excluding owner) in sidebar, header, and search", async ({ page }) => {
+    const now = Date.now();
+    const unnamedGroupId = crypto.randomUUID();
+    const unnamedDmId = crypto.randomUUID();
+    await setupMessengerMocks(page, data, [
+      {
+        id: unnamedGroupId,
+        title: "",
+        updatedAt: now + 20_000,
+        extraParticipants: [
+          {
+            id: crypto.randomUUID(),
+            publicSignKey: "pk-charlie-e2e",
+            name: "Charlie",
+          },
+        ],
+      },
+      {
+        id: unnamedDmId,
+        title: "",
+        updatedAt: now + 10_000,
+      },
+    ]);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    const groupRow = page.locator(
+      `li[data-conversation-id="${unnamedGroupId}"]`,
+    );
+    const dmRow = page.locator(`li[data-conversation-id="${unnamedDmId}"]`);
+    await expect(groupRow.getByTestId("conversation-title")).toHaveText(
+      "Bob, Charlie",
+      { timeout: 15_000 },
+    );
+    await expect(dmRow.getByTestId("conversation-title")).toHaveText("Bob");
+
+    await groupRow.click();
+    await expect(page.getByTestId("title-text")).toHaveText("Bob, Charlie", {
+      timeout: 10_000,
+    });
+
+    const search = page.getByTestId("chat-search-input");
+    await search.fill("Charlie");
+    await expect(groupRow).toBeVisible();
+    await expect(dmRow).toHaveCount(0);
+  });
 });

@@ -1254,7 +1254,7 @@ export const getOrCreateConversation = (
   credentials: Credentials,
   participants: string[],
   onConversation: (id: string) => void,
-  title = "Chat",
+  title = "",
 ): () => void => {
   const fixedParticipants = sort(
     unique([credentials.publicSignKey, ...participants]),

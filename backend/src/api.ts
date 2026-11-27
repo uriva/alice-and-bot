@@ -198,7 +198,7 @@ export const backendApiSchema = {
   createConversation: authenticatedEndpoint(
     z.object({
       publicSignKeyToEncryptedSymmetricKey: z.record(z.string(), z.string()),
-      title: z.string(),
+      title: z.string().optional(),
       maxTotalCost: z.number().nonnegative().finite().optional(),
     }),
     z.union([

@@ -303,6 +303,36 @@ const commitPushDeliveryOutcomes = async (
   }
 };
 
+const isUnnamedTitle = (title?: string) => {
+  const trimmed = title?.trim() ?? "";
+  return trimmed === "" || trimmed === "Chat";
+};
+
+const otherParticipantNames = (
+  participants: { id: string; name?: string }[],
+  recipientId: string | undefined,
+) =>
+  participants
+    .filter((p) => p.id !== recipientId)
+    .map((p) => p.name?.split("@")[0])
+    .filter((n): n is string => Boolean(n))
+    .sort((a, b) => a.localeCompare(b))
+    .join(", ");
+
+export const resolvePushConversationTitle = (
+  conversation: {
+    title: string;
+    participants: { id: string; name?: string }[];
+  },
+  recipientId: string | undefined,
+  isGroupChat: boolean,
+) =>
+  !isUnnamedTitle(conversation.title)
+    ? conversation.title
+    : isGroupChat
+    ? otherParticipantNames(conversation.participants, recipientId)
+    : "";
+
 export const sendPushToParticipants = async (
   {
     messageId,
@@ -351,7 +381,11 @@ export const sendPushToParticipants = async (
       const payloadJson = buildMessagePushPayloadJson({
         messageId,
         conversationId: conversation.id,
-        conversationTitle: conversation.title,
+        conversationTitle: resolvePushConversationTitle(
+          conversation,
+          recipient?.id,
+          isGroupChat,
+        ),
         senderName: sender?.name,
         senderAvatar: sender?.avatar,
         senderPublicSignKey,

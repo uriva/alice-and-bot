@@ -32,7 +32,7 @@ export const createConversation:
     const authOk = await verifyAuthToken({
       action: "createConversation",
       payload: {
-        title,
+        ...(title !== undefined ? { title } : {}),
         publicSignKeyToEncryptedSymmetricKey,
         ...(maxTotalCost !== undefined ? { maxTotalCost } : {}),
       },
@@ -157,7 +157,7 @@ export const createConversation:
       await transact([
         tx.conversations[conversationId]
           .update({
-            title,
+            title: title ?? "",
             updatedAt: Date.now(),
           })
           .link({

@@ -13,7 +13,7 @@ import {
 import { canonicalStringForAuthSignV2 } from "./api.ts";
 import { issueNonceHelper } from "./auth.ts";
 import { clearBackendCaches, createTtlCache } from "./cache.ts";
-import { transact, tx } from "./db.ts";
+import { query, transact, tx } from "./db.ts";
 import { endpoints, handleRequest, setRequestWaitUntil } from "./main.ts";
 
 type AdminCounts = {
@@ -620,5 +620,54 @@ Deno.test("createConversation hoists sender conversations query out of priced re
     tx.identities[vip1.identityId].delete(),
     tx.identities[vip2.identityId].delete(),
     tx.identities[vip3.identityId].delete(),
+  ]);
+});
+
+Deno.test("createConversation supports empty and omitted title (unnamed by default)", async () => {
+  clearBackendCaches();
+  const alice = await makeTestIdentity("UnnamedAlice");
+  const bob = await makeTestIdentity("UnnamedBob");
+  const symKey = await generateSymmetricKey();
+  const keyMap = {
+    [alice.creds.publicSignKey]: await encryptAsymmetric(
+      alice.publicEncryptKey,
+      symKey,
+    ),
+    [bob.creds.publicSignKey]: await encryptAsymmetric(
+      bob.publicEncryptKey,
+      symKey,
+    ),
+  };
+
+  const signedEmpty = await signV2(alice.creds, "createConversation", {
+    title: "",
+    publicSignKeyToEncryptedSymmetricKey: keyMap,
+  });
+  const resEmpty = await endpoints.handlers.createConversation(signedEmpty);
+  assert("conversationId" in resEmpty);
+
+  const signedOmitted = await signV2(alice.creds, "createConversation", {
+    publicSignKeyToEncryptedSymmetricKey: keyMap,
+  });
+  const resOmitted = await endpoints.handlers.createConversation(signedOmitted);
+  assert("conversationId" in resOmitted);
+
+  const { conversations } = await query({
+    conversations: {
+      $: {
+        where: {
+          id: { $in: [resEmpty.conversationId, resOmitted.conversationId] },
+        },
+      },
+    },
+  });
+  assertEquals(conversations.length, 2);
+  conversations.forEach((c) => assertEquals(c.title, ""));
+
+  await transact([
+    tx.conversations[resEmpty.conversationId].delete(),
+    tx.conversations[resOmitted.conversationId].delete(),
+    tx.identities[alice.identityId].delete(),
+    tx.identities[bob.identityId].delete(),
   ]);
 });

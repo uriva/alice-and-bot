@@ -479,3 +479,25 @@ Deno.test("connected-chat desktop sidebar hides rename button until row hover wi
   assertEquals(Boolean(renameStyleMatch), true);
   assertEquals(renameStyleMatch?.[0].includes("opacity:"), false);
 });
+
+Deno.test("conversations default to unnamed and resolve other participants' names in connected-chat and landing chat", async () => {
+  const landingCode = await Deno.readTextFile("./landing/src/chat.ts");
+  assertEquals(landingCode.includes('const title = topic || "";'), true);
+  assertEquals(landingCode.includes("names.join("), false);
+  assertEquals(landingCode.includes("resolveConversationDisplayName("), true);
+
+  const connectedCode = await Deno.readTextFile(
+    "./lit/components/connected-chat.ts",
+  );
+  assertEquals(
+    connectedCode.includes('private _conversationTitle = "";'),
+    true,
+  );
+  assertEquals(connectedCode.includes('const title = topic || "";'), true);
+  assertEquals(
+    connectedCode.includes(
+      "this._isGroupChat\n      ? this._conversationTitle",
+    ),
+    false,
+  );
+});

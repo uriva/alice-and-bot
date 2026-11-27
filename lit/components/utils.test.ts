@@ -893,3 +893,51 @@ Deno.test("pruneOptimisticMessages consumes each delivered message at most once 
   ];
   assertEquals(pruneOptimisticMessages(afterSecond, [opt1, opt2], "me"), []);
 });
+
+Deno.test("resolveConversationDisplayName shows all other participants' names (excluding owner) for unnamed group chats", () => {
+  const unnamedGroup = {
+    id: "g1",
+    title: "",
+    participants: [
+      { publicSignKey: "pk-owner", name: "Uri" },
+      { publicSignKey: "pk-alice", name: "Alice@example.com" },
+      { publicSignKey: "pk-bob" },
+      { publicSignKey: "pk-charlie-very-long-public-key" },
+    ],
+  };
+  const nameCache = new Map<string, string | null>([["pk-bob", "Bob"]]);
+  assertEquals(
+    resolveConversationDisplayName(unnamedGroup, "pk-owner", nameCache),
+    "Alice, Bob, pk-cha…-key",
+  );
+  assertEquals(
+    resolveConversationDisplayName(
+      { ...unnamedGroup, title: "   " },
+      "pk-owner",
+      nameCache,
+      { "pk-charlie-very-long-public-key": { name: "Charlie@corp.io" } },
+    ),
+    "Alice, Bob, Charlie",
+  );
+  assertEquals(
+    resolveConversationDisplayName(
+      { ...unnamedGroup, title: "Chat" },
+      "pk-alice",
+      nameCache,
+      { "pk-charlie-very-long-public-key": { name: "Charlie" } },
+    ),
+    "Bob, Charlie, Uri",
+  );
+  assertEquals(
+    resolveConversationDisplayName(
+      {
+        id: "solo",
+        title: "",
+        participants: [{ publicSignKey: "pk-owner", name: "Uri" }],
+      },
+      "pk-owner",
+      new Map(),
+    ),
+    "Chat",
+  );
+});

@@ -638,7 +638,7 @@ export const createConversation = (
 ) =>
 async (
   publicSignKeys: string[],
-  conversationTitle: string,
+  conversationTitle: string | undefined,
   credentials: Credentials,
   maxTotalCost?: number,
 ) => {
@@ -674,7 +674,7 @@ async (
         endpoint: "createConversation",
         payload: await buildSignedRequest(credentials, "createConversation", {
           publicSignKeyToEncryptedSymmetricKey,
-          title: conversationTitle,
+          title: conversationTitle ?? "",
           ...(maxTotalCost !== undefined ? { maxTotalCost } : {}),
         }),
       }),

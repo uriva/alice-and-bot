@@ -89,6 +89,7 @@ import {
   copyToClipboard,
   extractInlineIdentityDetails,
   type IdentityDetails,
+  isUnnamedConversation,
   mergeIdentityDetails,
   type Participant,
   resolveConversationDisplayName,
@@ -887,7 +888,7 @@ export class ConnectedChat extends LitElement {
   private _uiElements: UiElement[] = [];
   private _hasAccess = true;
   private _convNotFound = false;
-  private _conversationTitle = "Chat";
+  private _conversationTitle = "";
   private _isGroupChat = false;
   private _progressMax = new Map<string, number>();
   private _profileAuthorId: string | null = null;
@@ -898,6 +899,7 @@ export class ConnectedChat extends LitElement {
   private _showImportIdentityPopup = false;
   private _editingSidebarConvId: string | null = null;
   private _sidebarRenameInput = "";
+  private _sidebarRenameOriginal = "";
   private _renaming = false;
   private _qrCodeDataUrl = "";
   private _transferUrl = "";
@@ -1060,6 +1062,7 @@ export class ConnectedChat extends LitElement {
     this._typingNames = [];
     this._hasAccess = true;
     this._convNotFound = false;
+    this._conversationTitle = "";
     this._subscribedConversationId = "";
   }
 
@@ -1184,12 +1187,14 @@ export class ConnectedChat extends LitElement {
           this._previewsManager?.setConversations(convs);
         }
         convs?.forEach((conv) => {
-          const other = conv.participants.find(
-            (p) => p.publicSignKey !== this.credentials!.publicSignKey,
-          );
-          if (other && !conv.title && !other.name) {
-            this._subscribeName(other.publicSignKey);
-          }
+          if (!isUnnamedConversation(conv.title)) return;
+          conv.participants.forEach((p) => {
+            if (
+              p.publicSignKey !== this.credentials!.publicSignKey && !p.name
+            ) {
+              this._subscribeName(p.publicSignKey);
+            }
+          });
         });
         this._identityDetails = mergeIdentityDetails(
           this._identityDetails,
@@ -1263,7 +1268,7 @@ export class ConnectedChat extends LitElement {
   private _applyInitialConversation(targetId: string) {
     const seed = this.initialConversation;
     if (!seed || seed.id !== targetId || this._participants.length > 0) return;
-    this._conversationTitle = seed.title || "Chat";
+    this._conversationTitle = seed.title || "";
     this._isGroupChat = seed.participants.length > 2;
     this._participants = seed.participants;
     this._identityDetails = mergeIdentityDetails(
@@ -1307,7 +1312,7 @@ export class ConnectedChat extends LitElement {
         ) {
           return;
         }
-        this._conversationTitle = conversationBootstrap.title || "Chat";
+        this._conversationTitle = conversationBootstrap.title || "";
         this._isGroupChat = conversationBootstrap.participants.length > 2;
         this._participants = conversationBootstrap.participants;
         this._identityDetails = mergeIdentityDetails(
@@ -1334,7 +1339,7 @@ export class ConnectedChat extends LitElement {
           if (!data) return;
           const conv = data.conversations[0];
           this._convNotFound = !conv;
-          this._conversationTitle = conv?.title || "Chat";
+          this._conversationTitle = conv?.title || "";
           this._isGroupChat = (conv?.participants.length ?? 0) > 2;
           this._participants = conv?.participants ?? [];
           this._identityDetails = mergeIdentityDetails(
@@ -1638,7 +1643,7 @@ export class ConnectedChat extends LitElement {
     try {
       const res = await createConversation(accessAdminDb)(
         participantKeys,
-        this._conversationTitle || "Chat",
+        "",
         this.credentials,
       );
       if ("error" in res) {
@@ -1666,24 +1671,23 @@ export class ConnectedChat extends LitElement {
 
   private _currentDisplayTitle() {
     const targetId = this._activeConversationId || this.conversationId;
-    return this._isGroupChat
-      ? this._conversationTitle
-      : resolveConversationDisplayName(
-        {
-          id: targetId,
-          title: this._conversationTitle,
-          participants: this._participants,
-        },
-        this.credentials?.publicSignKey ?? "",
-        this._nameCache,
-        this._identityDetails,
-      );
+    return resolveConversationDisplayName(
+      {
+        id: targetId,
+        title: this._conversationTitle,
+        participants: this._participants,
+      },
+      this.credentials?.publicSignKey ?? "",
+      this._nameCache,
+      this._identityDetails,
+    );
   }
 
   private _startSidebarRename = (convId: string, currentTitle: string) => {
     if (!this.credentials || !convId) return;
     this._editingSidebarConvId = convId;
     this._sidebarRenameInput = currentTitle;
+    this._sidebarRenameOriginal = currentTitle;
     this.requestUpdate();
     this.updateComplete.then(() => {
       const input = this.querySelector<HTMLInputElement>(
@@ -1703,6 +1707,7 @@ export class ConnectedChat extends LitElement {
   private _cancelSidebarRename = () => {
     this._editingSidebarConvId = null;
     this._sidebarRenameInput = "";
+    this._sidebarRenameOriginal = "";
     this.requestUpdate();
   };
 
@@ -1710,10 +1715,12 @@ export class ConnectedChat extends LitElement {
     const convId = this._editingSidebarConvId;
     if (!convId) return;
     const trimmed = this._sidebarRenameInput.trim();
+    const original = this._sidebarRenameOriginal;
     this._editingSidebarConvId = null;
     this._sidebarRenameInput = "";
+    this._sidebarRenameOriginal = "";
     this.requestUpdate();
-    if (trimmed) this._submitRename(convId, trimmed);
+    if (trimmed && trimmed !== original) this._submitRename(convId, trimmed);
   };
 
   private _onSidebarRenameKeydown = (e: KeyboardEvent) => {
@@ -1857,7 +1864,7 @@ export class ConnectedChat extends LitElement {
       if (!(await confirmPaidOutreach(resolvedKey, myKey))) {
         return;
       }
-      const title = topic || "Chat";
+      const title = topic || "";
       const res = await createConversation(accessAdminDb)(
         participantKeys,
         title,

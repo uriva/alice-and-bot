@@ -91,19 +91,34 @@ export const mergeIdentityDetails = (
   ...incoming,
 });
 
+export const isUnnamedConversation = (title?: string): boolean => {
+  const trimmed = title?.trim() ?? "";
+  return trimmed === "" || trimmed === "Chat";
+};
+
+const resolveParticipantName = (
+  participant: Participant,
+  nameCache: Map<string, string | null>,
+  identityDetails?: IdentityDetails,
+) =>
+  participant.name?.split("@")[0] ||
+  nameCache.get(participant.publicSignKey) ||
+  identityDetails?.[participant.publicSignKey]?.name?.split("@")[0] ||
+  compactPublicKey(participant.publicSignKey);
+
 export const resolveConversationDisplayName = (
   conv: Conversation,
   myKey: string,
   nameCache: Map<string, string | null>,
   identityDetails?: IdentityDetails,
 ) => {
-  if (conv.title && conv.title !== "Chat") return conv.title;
-  const other = conv.participants.find((p) => p.publicSignKey !== myKey);
-  if (!other) return conv.title || "Chat";
-  const cachedName = other.name?.split("@")[0] ||
-    nameCache.get(other.publicSignKey) ||
-    identityDetails?.[other.publicSignKey]?.name;
-  return cachedName || conv.title || compactPublicKey(other.publicSignKey);
+  if (!isUnnamedConversation(conv.title)) return conv.title;
+  const others = conv.participants.filter((p) => p.publicSignKey !== myKey);
+  if (empty(others)) return conv.title.trim() || "Chat";
+  return others
+    .map((other) => resolveParticipantName(other, nameCache, identityDetails))
+    .sort((a, b) => a.localeCompare(b))
+    .join(", ");
 };
 
 export const recordingMimeType = typeof MediaRecorder !== "undefined" &&

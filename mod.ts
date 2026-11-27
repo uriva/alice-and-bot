@@ -131,7 +131,7 @@ export const getProfile = async (publicSignKey: string): Promise<
 
 export const createConversation: (
   publicSignKeys: string[],
-  conversationTitle: string,
+  conversationTitle: string | undefined,
   credentials: Credentials,
 ) => Promise<{ conversationId: string } | { error: string }> =
   createConversationNoDb(accessAdminDb);

@@ -610,9 +610,9 @@ Deno.test("pickBestConversation returns the sole candidate unchanged", () => {
   assertEquals(pickBestConversation([], () => undefined), undefined);
 });
 
-Deno.test("getOrCreateConversation accepts title parameter", async () => {
+Deno.test("getOrCreateConversation accepts title parameter and defaults to unnamed", async () => {
   const code = await Deno.readTextFile("./lit/core/subscriptions.ts");
-  assertEquals(code.includes('title = "Chat"'), true);
+  assertEquals(code.includes('title = ""'), true);
   assertEquals(code.includes("renameConversation"), true);
 });
 

@@ -199,6 +199,7 @@ export type ExtraConversation = {
   title: string;
   updatedAt: number;
   pinned?: boolean;
+  extraParticipants?: { id: string; publicSignKey: string; name: string }[];
 };
 
 export const setupInstantWsMock = async (
@@ -288,6 +289,13 @@ export const setupInstantWsMock = async (
           tx,
         ),
         link("conversations", "participants", conv.id, data.bobIdentityId, tx),
+        ...(conv.extraParticipants ?? []).flatMap((p) => [
+          ...fieldTriples(p.id, "identities", {
+            publicSignKey: p.publicSignKey,
+            name: p.name,
+          }, tx),
+          link("conversations", "participants", conv.id, p.id, tx),
+        ]),
         ...fieldTriples(convKeyId, "keys", { key: data.aliceEncryptedKey }, tx),
         link("conversations", "keys", conv.id, convKeyId, tx),
         link("identities", "keys", data.aliceIdentityId, convKeyId, tx),
@@ -505,6 +513,13 @@ export const setupInstantWsMock = async (
                 publicSignKey: data.bob.publicSignKey,
                 name: "Bob",
               }, tx),
+              ...(matchedExtra?.extraParticipants ?? []).flatMap((p) => [
+                link("conversations", "participants", convId, p.id, tx),
+                ...fieldTriples(p.id, "identities", {
+                  publicSignKey: p.publicSignKey,
+                  name: p.name,
+                }, tx),
+              ]),
             ];
             ws.send(queryResponse(msg.q, tid, wrapResult(ns, triples)));
             return;

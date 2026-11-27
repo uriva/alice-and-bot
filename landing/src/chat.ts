@@ -8,13 +8,7 @@ import {
 } from "../../lit/components/shortcuts.ts";
 import { retentionSummary } from "../../protocol/src/retention.ts";
 import { buttonClass } from "./components.ts";
-import {
-  avatarColor,
-  chatAvatar,
-  shimmerCircle,
-  shimmerText,
-  spinner,
-} from "./design-components.ts";
+import { avatarColor, chatAvatar, spinner } from "./design-components.ts";
 import {
   chatWithMeLink,
   checkCryptoPaymentSigned,
@@ -64,7 +58,11 @@ import {
   subscribePwaInstall,
   triggerPwaInstall,
 } from "./pwaInstall.ts";
-import { copyToClipboard } from "../../lit/components/utils.ts";
+import {
+  copyToClipboard,
+  isUnnamedConversation,
+  resolveConversationDisplayName,
+} from "../../lit/components/utils.ts";
 import {
   fetchStarterAgentAvatars,
   inviteContextLabel,
@@ -588,19 +586,6 @@ const toastPromise = <T>(
   );
 };
 
-// --- DB ---
-
-const nameFromPublicSignKey = async (publicSignKey: string) => {
-  const { data } = await accessDb().queryOnce({
-    identities: { $: { where: { publicSignKey } } },
-  });
-  if (data.identities.length === 0) {
-    console.error(`No identity found for public sign key: ${publicSignKey}`);
-    return publicSignKey;
-  }
-  return data.identities[0].name ?? publicSignKey;
-};
-
 // --- Viewport height ---
 
 const setViewportHeightVar = () => {
@@ -722,10 +707,7 @@ const startConversation = async (
     showToast("Need at least one other participant", "error");
     return null;
   }
-  const names = await Promise.all(
-    participantKeys.map((k) => nameFromPublicSignKey(k)),
-  );
-  const title = topic || names.join(", ");
+  const title = topic || "";
 
   let totalCost = 0;
   for (const key of participantKeys) {
@@ -1678,8 +1660,13 @@ const scrollbarStyle = () =>
 const visibleConversations = (sq?: string) => {
   if (!conversations) return [];
   const query = sq?.trim().toLowerCase();
+  const myKey = credentials?.publicSignKey ?? "";
   const filtered = query
-    ? conversations.filter((conv) => conv.title.toLowerCase().includes(query))
+    ? conversations.filter((conv) =>
+      resolveConversationDisplayName(conv, myKey, nameCache)
+        .toLowerCase()
+        .includes(query)
+    )
     : conversations;
   const scoped = filtered.filter((conv) =>
     showArchived ? isArchived(conv) : !isArchived(conv)
@@ -1769,9 +1756,11 @@ const conversationListItem = (conv: Conversation, index: number) => {
     (p) => p.publicSignKey !== credentials!.publicSignKey,
   );
   const otherKey = otherParticipant?.publicSignKey ?? "";
-  const participantName = otherParticipant?.name?.split("@")[0] ??
-    nameCache.get(otherKey) ?? null;
-  const displayName = conv.title || participantName;
+  const displayName = resolveConversationDisplayName(
+    conv,
+    credentials.publicSignKey,
+    nameCache,
+  );
   const isSelected = selectedConversation === conv.id;
   const isSearchHighlighted = !currentIsMobile && searchInputFocused &&
     index === searchHighlightIndex;
@@ -1909,7 +1898,7 @@ const conversationListItem = (conv: Conversation, index: number) => {
               ></span>
             `
             : nothing}
-          ${displayName === null ? shimmerCircle(40) : chatAvatar({
+          ${chatAvatar({
             image: otherParticipant?.avatar,
             name: displayName,
             baseColor: avatarColor(otherKey, currentDark),
@@ -1924,7 +1913,7 @@ const conversationListItem = (conv: Conversation, index: number) => {
                   unread.isUnread,
                 )}"
               >
-                ${displayName === null ? shimmerText() : displayName}
+                ${displayName}
               </div>
               ${timeLabel
                 ? html`
@@ -2008,7 +1997,7 @@ const conversationListItem = (conv: Conversation, index: number) => {
             </div>
           </div>
         </button>
-        ${displayName !== null && !currentIsMobile
+        ${!currentIsMobile
           ? html`
             <div
               class="${`absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center gap-0.5 pl-2 py-1 rounded-lg ${
@@ -4580,12 +4569,12 @@ const initLoggedInState = () => {
       }
       writeCachedConversations(activeCredentials.publicSignKey, convs);
       convs?.forEach((conv) => {
-        const other = conv.participants.find(
-          (p) => p.publicSignKey !== activeCredentials.publicSignKey,
-        );
-        if (other && !conv.title && !other.name) {
-          subscribeName(other.publicSignKey);
-        }
+        if (!isUnnamedConversation(conv.title)) return;
+        conv.participants.forEach((p) => {
+          if (p.publicSignKey !== activeCredentials.publicSignKey && !p.name) {
+            subscribeName(p.publicSignKey);
+          }
+        });
       });
       syncPreviewTargets();
       acknowledgeActiveConversation();

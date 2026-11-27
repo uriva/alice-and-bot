@@ -20,6 +20,7 @@ import { canonicalStringForAuthSignV2 } from "./api.ts";
 import { issueNonceHelper } from "./auth.ts";
 import { query, transact, tx } from "./db.ts";
 import { endpoints, setRequestWaitUntil } from "./main.ts";
+import { resolvePushConversationTitle } from "./notificationService.ts";
 
 const toBase64Url = (buf: ArrayBuffer) =>
   base64ToBase64Url(btoa(String.fromCharCode(...new Uint8Array(buf))));
@@ -825,3 +826,43 @@ Deno.test(
     assertEquals(phonePayloads[1].conversationId, convoId);
   },
 );
+
+Deno.test("resolvePushConversationTitle uses other participants' names for unnamed group chats and omits recipient", () => {
+  const participants = [
+    { id: "id-uri", name: "Uri" },
+    { id: "id-alice", name: "Alice@example.com" },
+    { id: "id-bob", name: "Bob" },
+  ];
+  assertEquals(
+    resolvePushConversationTitle(
+      { title: "", participants },
+      "id-uri",
+      true,
+    ),
+    "Alice, Bob",
+  );
+  assertEquals(
+    resolvePushConversationTitle(
+      { title: "Chat", participants },
+      "id-alice",
+      true,
+    ),
+    "Bob, Uri",
+  );
+  assertEquals(
+    resolvePushConversationTitle(
+      { title: "Ops Room", participants },
+      "id-uri",
+      true,
+    ),
+    "Ops Room",
+  );
+  assertEquals(
+    resolvePushConversationTitle(
+      { title: "", participants: participants.slice(0, 2) },
+      "id-uri",
+      false,
+    ),
+    "",
+  );
+});
