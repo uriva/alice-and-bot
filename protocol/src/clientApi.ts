@@ -37,6 +37,9 @@ import {
 import { claimWebhookMessageOnce, verifyWebhookOrigin } from "./webhookAuth.ts";
 
 export const instantAppId = "8f3bebac-da7b-44ab-9cf5-46a6cc11557e";
+export const instantApiUri = "https://api.instantdb.uriv.me";
+export const instantWebsocketUri =
+  "wss://api.instantdb.uriv.me/runtime/session";
 
 type AttachmentBase = {
   url: string;

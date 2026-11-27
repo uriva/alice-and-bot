@@ -1,7 +1,7 @@
 import { init, type InstantAdminDatabase } from "@instantdb/admin";
 import { coerce, sleep } from "@uri/gamla";
 import schema from "../../instant.schema.ts";
-import { instantAppId } from "../../protocol/src/clientApi.ts";
+import { instantApiUri, instantAppId } from "../../protocol/src/clientApi.ts";
 
 type Db = InstantAdminDatabase<typeof schema>;
 
@@ -104,6 +104,7 @@ export const getDb = (): Db => {
     dbCache.instance = init({
       appId: instantAppId,
       adminToken: token,
+      apiURI: instantApiUri,
       schema,
     });
   }
@@ -113,6 +114,7 @@ export const getDb = (): Db => {
 const dummyDb: Db = init({
   appId: instantAppId,
   adminToken: "dummy-admin-token",
+  apiURI: instantApiUri,
   schema,
 });
 

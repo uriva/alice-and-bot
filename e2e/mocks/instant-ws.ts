@@ -334,7 +334,7 @@ export const setupInstantWsMock = async (
   };
 
   await page.routeWebSocket(
-    /wss:\/\/api\.instantdb\.com\/runtime\/session/,
+    /wss:\/\/api\.instantdb\.uriv\.me\/runtime\/session/,
     (ws: WebSocketRoute) => {
       state.serverWs = ws;
       const tx = Date.now();

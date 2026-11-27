@@ -3,7 +3,11 @@ import "./instantCorePolyfill.ts";
 
 import { id } from "@instantdb/admin";
 import { init as coreInit } from "@instantdb/core";
-import { instantAppId } from "../../protocol/src/clientApi.ts";
+import {
+  instantApiUri,
+  instantAppId,
+  instantWebsocketUri,
+} from "../../protocol/src/clientApi.ts";
 import { verifyAuthToken } from "./auth.ts";
 import { getCachedConversation } from "./cache.ts";
 import { query, transact, tx } from "./db.ts";
@@ -27,7 +31,14 @@ class DummyStorage {
   }
 }
 
-const coreDb = coreInit({ appId: instantAppId }, DummyStorage);
+const coreDb = coreInit(
+  {
+    appId: instantAppId,
+    apiURI: instantApiUri,
+    websocketURI: instantWebsocketUri,
+  },
+  DummyStorage,
+);
 
 export const maxUiUpdateTextLength = 32_768;
 const maxElementIdLength = 256;

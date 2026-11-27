@@ -12,7 +12,11 @@ import {
 } from "../../backend/src/api.ts";
 import schema from "../../instant.schema.ts";
 import type { Credentials } from "../../protocol/src/clientApi.ts";
-import { instantAppId } from "../../protocol/src/clientApi.ts";
+import {
+  instantApiUri,
+  instantAppId,
+  instantWebsocketUri,
+} from "../../protocol/src/clientApi.ts";
 import { canSignWithPrivateKey } from "../../protocol/src/crypto.ts";
 import {
   instantEmailFromPublicSignKey,
@@ -30,14 +34,24 @@ const dbRefs: { core: CoreDb | null; admin: AdminDb | null } = {
 
 export const accessDb = (): CoreDb => {
   if (!dbRefs.core) {
-    dbRefs.core = init({ appId: instantAppId, schema, devtool: false });
+    dbRefs.core = init({
+      appId: instantAppId,
+      apiURI: instantApiUri,
+      websocketURI: instantWebsocketUri,
+      schema,
+      devtool: false,
+    });
   }
   return dbRefs.core;
 };
 
 export const accessAdminDb = (): AdminDb => {
   if (!dbRefs.admin) {
-    dbRefs.admin = adminInit({ appId: instantAppId, schema }).asUser({
+    dbRefs.admin = adminInit({
+      appId: instantAppId,
+      apiURI: instantApiUri,
+      schema,
+    }).asUser({
       guest: true,
     });
   }

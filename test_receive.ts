@@ -1,5 +1,9 @@
 // deno-lint-ignore-file no-explicit-any
-import { instantAppId } from "./protocol/src/clientApi.ts";
+import {
+  instantApiUri,
+  instantAppId,
+  instantWebsocketUri,
+} from "./protocol/src/clientApi.ts";
 
 if (typeof globalThis.window === "undefined") {
   (globalThis as any).window = {
@@ -53,7 +57,11 @@ if (typeof navigator === "undefined" || !navigator.onLine) {
 import { init } from "@instantdb/core";
 import { query as adminQuery } from "./backend/src/db.ts";
 
-const db = init({ appId: instantAppId });
+const db = init({
+  appId: instantAppId,
+  apiURI: instantApiUri,
+  websocketURI: instantWebsocketUri,
+});
 
 async function main() {
   const { conversations } = await adminQuery({

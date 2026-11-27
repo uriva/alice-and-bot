@@ -12,6 +12,7 @@ import schema from "../../instant.schema.ts";
 import {
   type Credentials,
   handleWebhookUpdate,
+  instantApiUri,
   instantAppId,
   type InternalMessage,
   msgToStr,
@@ -1080,7 +1081,11 @@ Deno.test("mintInstantToken verifies auth, backfills instantEmail on legacy iden
   const verifiedUser = await auth.verifyToken(minted.token);
   assertEquals(verifiedUser.email, expectedLegacyEmail);
 
-  const userScopedDb = adminInit({ appId: instantAppId, schema }).asUser({
+  const userScopedDb = adminInit({
+    appId: instantAppId,
+    apiURI: instantApiUri,
+    schema,
+  }).asUser({
     token: minted.token,
   });
   const scopedResult = await userScopedDb.query({
