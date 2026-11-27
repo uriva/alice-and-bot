@@ -27,13 +27,17 @@ deno add jsr:@alice-and-bot/core
 import { createIdentity, sendMessage } from "@alice-and-bot/core";
 ```
 
+_(The examples below import from `"alice-and-bot"` for npm. Deno users can swap
+in `"@alice-and-bot/core"` and `"@alice-and-bot/core/components"` for the exact
+same exports.)_
+
 ## Creating an identity
 
 An identity is just a keypair — works for humans or bots. One function call, and
 you're live.
 
 ```ts
-import { createIdentity, type Credentials } from "@alice-and-bot/core";
+import { createIdentity, type Credentials } from "alice-and-bot";
 
 const credentials: Credentials = await createIdentity("my-name", "my_alias");
 ```
@@ -57,7 +61,7 @@ To start a conversation, you need the public sign keys of all participants. You
 can look up a key by alias:
 
 ```ts
-import { aliasToPublicSignKey, createConversation } from "@alice-and-bot/core";
+import { aliasToPublicSignKey, createConversation } from "alice-and-bot";
 
 const other = await aliasToPublicSignKey("other_alias");
 if ("error" in other) throw new Error("not found");
@@ -97,7 +101,7 @@ Use `sendMessage` to send a message. It fetches the conversation key
 automatically:
 
 ```ts
-import { sendMessage } from "@alice-and-bot/core";
+import { sendMessage } from "alice-and-bot";
 
 await sendMessage({
   credentials,
@@ -110,7 +114,7 @@ If you already have the conversation key (e.g. from a webhook handler), use
 `sendMessageWithKey` to skip the extra round trip:
 
 ```ts
-import { sendMessageWithKey } from "@alice-and-bot/core";
+import { sendMessageWithKey } from "alice-and-bot";
 
 await sendMessageWithKey({
   conversationKey,
@@ -122,14 +126,16 @@ await sendMessageWithKey({
 
 ## Receiving messages via webhook
 
-Set a webhook URL and Alice&Bot will POST encrypted messages to it:
+Set a webhook URL and Alice&Bot will POST Ed25519-signed, end-to-end encrypted
+messages to it:
 
 ```ts
 import {
   handleWebhookUpdate,
   setWebhook,
+  verifyWebhookOrigin,
   type WebhookUpdate,
-} from "@alice-and-bot/core";
+} from "alice-and-bot";
 
 await setWebhook({
   url: "https://my-server.com/webhook",
@@ -137,10 +143,15 @@ await setWebhook({
 });
 ```
 
-When a message arrives, decrypt it with `handleWebhookUpdate`:
+When a message arrives, verify the Ed25519 origin signature with
+`verifyWebhookOrigin` and decrypt it with `handleWebhookUpdate`:
 
 ```ts
 const handleIncoming = async (webhookPayload: WebhookUpdate) => {
+  if (!(await verifyWebhookOrigin(webhookPayload))) {
+    throw new Error("Invalid webhook signature");
+  }
+
   const { message, conversationKey, conversationId } =
     await handleWebhookUpdate(webhookPayload, credentials);
 
@@ -151,6 +162,9 @@ const handleIncoming = async (webhookPayload: WebhookUpdate) => {
   return { conversationKey, conversationId };
 };
 ```
+
+See a complete runnable server in
+[`example/webhook-bot.mjs`](https://github.com/uriva/alice-and-bot/blob/main/example/webhook-bot.mjs).
 
 The `conversationKey` returned here is the decrypted symmetric key for this
 conversation. Hold onto it so you don't re-fetch it on every reply.
@@ -270,7 +284,7 @@ Messages can include file attachments. To send one, use `uploadAttachment`
 first, then include it in a text message:
 
 ```ts
-import { uploadAttachment } from "@alice-and-bot/core";
+import { uploadAttachment } from "alice-and-bot";
 
 const attachment = await uploadAttachment({
   credentials,
@@ -310,7 +324,7 @@ message: {
 To download and decrypt an attachment:
 
 ```ts
-import { downloadAttachment } from "@alice-and-bot/core";
+import { downloadAttachment } from "alice-and-bot";
 
 const data: ArrayBuffer = await downloadAttachment({
   url: attachment.url,
@@ -403,12 +417,12 @@ conversation.
 ```tsx
 import {
   aliasToPublicSignKey,
-  Chat,
   createConversation,
   createIdentity,
   type Credentials,
   getConversations,
-} from "@alice-and-bot/core";
+} from "alice-and-bot";
+import { Chat } from "alice-and-bot/components";
 import { useEffect, useState } from "react";
 ```
 
@@ -567,7 +581,7 @@ callback, no alice-and-bot backend required. You supply the messages, it renders
 them.
 
 ```tsx
-import { AbstractChatBox } from "@alice-and-bot/core";
+import { AbstractChatBox } from "alice-and-bot/components";
 
 <AbstractChatBox
   userId="user-1"
@@ -603,7 +617,7 @@ Embed a chat widget on any HTML page with a single script tag:
 ### Generating the embed script programmatically
 
 ```ts
-import { embedScript } from "@alice-and-bot/core";
+import { embedScript } from "alice-and-bot";
 
 const scriptTag = embedScript({
   publicSignKey: "<public sign key here>",
@@ -680,7 +694,8 @@ getBalanceAndTransactionsSigned({
 ```ts
 createConversation(
   publicSignKeys: string[],
-  conversationTitle: string
+  conversationTitle: string,
+  credentials: Credentials
 ): Promise<{ conversationId: string } | { error: string }>
 ```
 
@@ -755,10 +770,17 @@ For raw encrypted payloads, use `getMessages` (same signature).
 ### Webhook functions
 
 ```ts
-setWebhook(
+setWebhook({
   url: string,
-  publicSignKey: string
-): Promise<{ success: boolean } | { error: string }>
+  credentials: Credentials
+}): Promise<{ success: boolean } | { error: string }>
+```
+
+```ts
+verifyWebhookOrigin(
+  update: WebhookUpdate,
+  options?: { publicKey?: string; now?: number; maxSkewMs?: number }
+): Promise<boolean>
 ```
 
 ```ts

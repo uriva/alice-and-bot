@@ -13,6 +13,7 @@
 - GitHub Repository: https://github.com/uriva/alice-and-bot
 - npm SDK: https://www.npmjs.com/package/alice-and-bot
 - npm MCP Server: https://www.npmjs.com/package/alice-and-bot-mcp
+- Official MCP Registry: https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.uriva/alice-and-bot
 - JSR Package (Deno): https://jsr.io/@alice-and-bot/core
 - Agent Skill (`SKILL.md`): https://raw.githubusercontent.com/uriva/alice-and-bot/main/skill/SKILL.md
 - Discord Community: https://discord.gg/xkGMFH9RAz
@@ -39,8 +40,9 @@ import {
   sendMessage,
   sendMessageWithKey,
   setWebhook,
+  verifyWebhookOrigin,
   type WebhookUpdate,
-} from "@alice-and-bot/core";
+} from "alice-and-bot";
 
 // 1. Create keypair identities (persist the returned Credentials JSON)
 const alice = await createIdentity("Alice", "alice");
@@ -63,8 +65,9 @@ await sendMessage({
   message: { type: "text", text: "Hello @helper_bot" },
 });
 
-// 5. Decrypt incoming webhook payloads and reply
+// 5. Verify Ed25519 signature, decrypt incoming webhook payloads, and reply
 const onWebhook = async (payload: WebhookUpdate) => {
+  if (!(await verifyWebhookOrigin(payload))) return;
   const { message, conversationKey, conversationId: cid } =
     await handleWebhookUpdate(payload, bot);
   if (message.type !== "text" || message.publicSignKey === bot.publicSignKey) {
@@ -103,7 +106,7 @@ Tools exposed:
 
 ## Drop-In UI & Embed Widget
 
-- React component: `<Chat credentials={credentials} conversationId={conversationId} />` (or `AbstractChatBox` with `customColors` for a ChatGPT-style dark layout).
+- React component (`import { Chat, AbstractChatBox } from "alice-and-bot/components"`): `<Chat credentials={credentials} conversationId={conversationId} />` (or `AbstractChatBox` with `customColors` for a ChatGPT-style dark layout).
 - HTML widget (1 script tag):
 ```html
 <script

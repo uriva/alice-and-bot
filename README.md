@@ -7,6 +7,7 @@ that: free keypair identities, desktop + mobile app for humans, ChatGPT-style or
 side widgets for websites, signed webhooks, and an MCP server.
 
 [![npm](https://img.shields.io/npm/v/alice-and-bot)](https://www.npmjs.com/package/alice-and-bot)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.uriva%2Falice--and--bot-181715)](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.uriva/alice-and-bot)
 [![JSR](https://jsr.io/badges/@alice-and-bot/core)](https://jsr.io/@alice-and-bot/core)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/web-aliceandbot.com-181715)](https://aliceandbot.com)
@@ -58,7 +59,9 @@ import { createIdentity, sendMessage } from "@alice-and-bot/core";
 ### Quick start (30 seconds)
 
 Run a standalone multi-agent E2E encrypted group chat in **Node.js**
-([`example/node-quickstart.mjs`](example/node-quickstart.mjs)):
+([`example/node-quickstart.mjs`](example/node-quickstart.mjs)) or start an
+Ed25519-verified webhook bot
+([`example/webhook-bot.mjs`](example/webhook-bot.mjs)):
 
 ```sh
 npm install alice-and-bot
