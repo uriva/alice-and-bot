@@ -817,4 +817,275 @@ test.describe("Messenger (landing /chat)", () => {
 
     await context.close();
   });
+
+  test("unread chats have clear visual distinction from read chats in light and dark mode", async ({ page }) => {
+    const now = Date.now();
+    const { wsMock } = await setupMessengerMocks(page, data, [
+      { id: "conv-read", title: "Read Chat", updatedAt: now - 5_000 },
+    ]);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    const unreadRow = page.locator(
+      `[data-conversation-id="${data.conversationId}"]`,
+    );
+    const readRow = page.locator('[data-conversation-id="conv-read"]');
+    await expect(unreadRow.getByTestId("conversation-last-message")).toHaveText(
+      "You: Just building some E2E tests.",
+      { timeout: 15_000 },
+    );
+    await expect(readRow).toBeVisible();
+
+    const msg = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      "Important unread update",
+    );
+    wsMock.pushNewMessage({
+      id: crypto.randomUUID(),
+      payload: msg,
+      timestamp: now + 5_000,
+      senderPublicSignKey: data.bob.publicSignKey,
+    });
+
+    await expect(unreadRow).toHaveAttribute("data-unread", "true", {
+      timeout: 10_000,
+    });
+    await expect(readRow).toHaveAttribute("data-unread", "false");
+    await expect(unreadRow.getByTestId("conversation-unread-bar"))
+      .toBeVisible();
+    await expect(readRow.getByTestId("conversation-unread-bar")).toHaveCount(0);
+
+    const assertDistinctStyles = async () => {
+      const styles = await page.evaluate(
+        ([uId, rId]) => {
+          const uRow = document.querySelector(
+            `[data-conversation-id="${uId}"]`,
+          )!;
+          const rRow = document.querySelector(
+            `[data-conversation-id="${rId}"]`,
+          )!;
+          const uBtn = uRow.querySelector("button")!;
+          const rBtn = rRow.querySelector("button")!;
+          const uTitle = uRow.querySelector(
+            '[data-testid="conversation-title"]',
+          )!;
+          const rTitle = rRow.querySelector(
+            '[data-testid="conversation-title"]',
+          )!;
+          return {
+            unreadBg: getComputedStyle(uBtn).backgroundColor,
+            readBg: getComputedStyle(rBtn).backgroundColor,
+            unreadTitleWeight: Number(getComputedStyle(uTitle).fontWeight),
+            readTitleWeight: Number(getComputedStyle(rTitle).fontWeight),
+            unreadTitleColor: getComputedStyle(uTitle).color,
+            readTitleColor: getComputedStyle(rTitle).color,
+          };
+        },
+        [data.conversationId, "conv-read"],
+      );
+      expect(styles.unreadBg).not.toBe(styles.readBg);
+      expect(styles.unreadTitleWeight).toBeGreaterThanOrEqual(700);
+      expect(styles.readTitleWeight).toBeLessThanOrEqual(400);
+      expect(styles.unreadTitleColor).not.toBe(styles.readTitleColor);
+    };
+
+    await assertDistinctStyles();
+
+    // Toggle dark mode and verify read vs unread remains distinctly styled
+    await page.getByTitle("Switch to dark mode").click();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+    await assertDistinctStyles();
+  });
+
+  test("pinning chats keeps them at the top across incoming messages and reloads, and archiving unpins", async ({ page }) => {
+    const now = Date.now();
+    const { wsMock } = await setupMessengerMocks(page, data, [
+      { id: "conv-older", title: "Older Chat", updatedAt: now - 60_000 },
+      { id: "conv-oldest", title: "Oldest Chat", updatedAt: now - 120_000 },
+    ]);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    const rowIds = () =>
+      page
+        .locator("li[data-conversation-id]")
+        .evaluateAll((els) =>
+          els.map((el) => el.getAttribute("data-conversation-id"))
+        );
+
+    await expect(
+      page.locator(`[data-conversation-id="${data.conversationId}"]`)
+        .getByTestId("conversation-last-message"),
+    ).toHaveText("You: Just building some E2E tests.", { timeout: 15_000 });
+
+    await expect.poll(rowIds).toEqual([
+      data.conversationId,
+      "conv-older",
+      "conv-oldest",
+    ]);
+    await expect(page.getByTestId("pinned-chats-divider")).toHaveCount(0);
+
+    // Pin the oldest chat -> moves to top, shows pin indicator & divider
+    const oldestRow = page.locator('[data-conversation-id="conv-oldest"]');
+    await oldestRow.hover();
+    await oldestRow.getByTestId("toggle-pin-button").click();
+
+    await expect(oldestRow).toHaveAttribute("data-pinned", "true");
+    await expect(oldestRow.getByTestId("conversation-pin-indicator"))
+      .toBeVisible();
+    await expect(page.getByTestId("pinned-chats-divider")).toBeVisible();
+    await expect.poll(rowIds).toEqual([
+      "conv-oldest",
+      data.conversationId,
+      "conv-older",
+    ]);
+
+    // Incoming message in an unpinned chat must NOT push pinned chat down
+    const msg = await makeEncryptedMessage(
+      data.conversationKey,
+      data.bob,
+      "New unpinned message",
+    );
+    wsMock.pushNewMessage({
+      id: crypto.randomUUID(),
+      payload: msg,
+      timestamp: now + 10_000,
+      senderPublicSignKey: data.bob.publicSignKey,
+    });
+    await expect(
+      page.locator(`[data-conversation-id="${data.conversationId}"]`)
+        .getByTestId("conversation-unread-badge"),
+    ).toHaveText("1", { timeout: 10_000 });
+    await expect.poll(rowIds).toEqual([
+      "conv-oldest",
+      data.conversationId,
+      "conv-older",
+    ]);
+
+    // Reload preserves pinned order via InstantDB persistence
+    await page.reload();
+    await expect(page.locator('[data-conversation-id="conv-oldest"]'))
+      .toHaveAttribute("data-pinned", "true", { timeout: 15_000 });
+    await expect.poll(rowIds).toEqual([
+      "conv-oldest",
+      data.conversationId,
+      "conv-older",
+    ]);
+
+    // Unpin restores chronological order and removes divider
+    const oldestAfterReload = page.locator(
+      '[data-conversation-id="conv-oldest"]',
+    );
+    await oldestAfterReload.hover();
+    await oldestAfterReload.getByTestId("toggle-pin-button").click();
+    await expect(oldestAfterReload).toHaveAttribute("data-pinned", "false");
+    await expect(page.getByTestId("pinned-chats-divider")).toHaveCount(0);
+    await expect.poll(rowIds).toEqual([
+      data.conversationId,
+      "conv-older",
+      "conv-oldest",
+    ]);
+
+    // Archiving a pinned chat unpins it
+    const olderRow = page.locator('[data-conversation-id="conv-older"]');
+    await olderRow.hover();
+    await olderRow.getByTestId("toggle-pin-button").click();
+    await expect(olderRow).toHaveAttribute("data-pinned", "true");
+    await olderRow.hover();
+    await olderRow.getByTestId("toggle-archive-button").click();
+    await expect(olderRow).toHaveCount(0);
+
+    // Unarchiving brings it back unpinned in chronological position
+    await page.getByRole("button", { name: "Archived" }).click();
+    const archivedOlder = page.locator('[data-conversation-id="conv-older"]');
+    await expect(archivedOlder).toBeVisible();
+    await archivedOlder.hover();
+    await archivedOlder.getByTestId("toggle-archive-button").click();
+    await page.getByRole("button", { name: "← Active Chats" }).click();
+    await expect(page.locator('[data-conversation-id="conv-older"]'))
+      .toHaveAttribute("data-pinned", "false");
+    await expect.poll(rowIds).toEqual([
+      data.conversationId,
+      "conv-older",
+      "conv-oldest",
+    ]);
+  });
+
+  test("mobile swipe right pins and unpins an active chat", async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+    const now = Date.now();
+    await setupMessengerMocks(page, data, [
+      { id: "conv-older", title: "Older Mobile Chat", updatedAt: now - 30_000 },
+    ]);
+    await injectMessengerCredentials(page, data, credKey);
+    await page.goto("/chat");
+
+    const olderRow = page.locator('[data-conversation-id="conv-older"]');
+    await expect(olderRow).toBeVisible({ timeout: 15_000 });
+
+    const swipeRight = async (convId: string) => {
+      await page.evaluate((id) => {
+        const target = document.querySelector(
+          `[data-conversation-id="${id}"] > div`,
+        )!;
+        const rect = target.getBoundingClientRect();
+        const startX = rect.left + 20;
+        const endX = rect.left + 160;
+        const y = rect.top + rect.height / 2;
+        const mkTouch = (x: number) =>
+          new Touch({
+            identifier: 1,
+            target,
+            clientX: x,
+            clientY: y,
+            pageX: x,
+            pageY: y,
+          });
+        target.dispatchEvent(
+          new TouchEvent("touchstart", {
+            bubbles: true,
+            cancelable: true,
+            touches: [mkTouch(startX)],
+          }),
+        );
+        target.dispatchEvent(
+          new TouchEvent("touchmove", {
+            bubbles: true,
+            cancelable: true,
+            touches: [mkTouch(endX)],
+          }),
+        );
+        target.dispatchEvent(
+          new TouchEvent("touchend", {
+            bubbles: true,
+            cancelable: true,
+            touches: [],
+          }),
+        );
+      }, convId);
+    };
+
+    await swipeRight("conv-older");
+    await expect(olderRow).toHaveAttribute("data-pinned", "true");
+    await expect(olderRow.getByTestId("conversation-pin-indicator"))
+      .toBeVisible();
+
+    const firstId = await page
+      .locator("li[data-conversation-id]")
+      .first()
+      .getAttribute("data-conversation-id");
+    expect(firstId).toBe("conv-older");
+
+    await swipeRight("conv-older");
+    await expect(olderRow).toHaveAttribute("data-pinned", "false");
+
+    await context.close();
+  });
 });

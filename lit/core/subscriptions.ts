@@ -48,6 +48,7 @@ export type Conversation = {
   participants: { publicSignKey: string; name?: string; avatar?: string }[];
   updatedAt?: number;
   archivedBy?: { publicSignKey: string }[];
+  pinnedBy?: { publicSignKey: string }[];
 };
 
 const identityIdFields: ("id")[] = ["id"];
@@ -56,7 +57,27 @@ const participantDisplayFields: ("publicSignKey" | "name" | "avatar")[] = [
   "name",
   "avatar",
 ];
-const archivedByFields: ("publicSignKey")[] = ["publicSignKey"];
+const ownerKeyFields: ("publicSignKey")[] = ["publicSignKey"];
+
+export const isConversationArchived = (
+  conv: Pick<Conversation, "archivedBy">,
+): boolean => conv.archivedBy !== undefined && conv.archivedBy.length > 0;
+
+export const isConversationPinned = (
+  conv: Pick<Conversation, "pinnedBy">,
+): boolean => conv.pinnedBy !== undefined && conv.pinnedBy.length > 0;
+
+export const sortConversations = <
+  T extends Pick<Conversation, "updatedAt" | "pinnedBy">,
+>(
+  convs: readonly T[],
+): T[] =>
+  [...convs].sort((a, b) => {
+    const pinDiff = Number(isConversationPinned(b)) -
+      Number(isConversationPinned(a));
+    if (pinDiff !== 0) return pinDiff;
+    return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
+  });
 
 export const conversationsQuery = (publicSignKey: string) => ({
   identities: {
@@ -66,14 +87,14 @@ export const conversationsQuery = (publicSignKey: string) => ({
         $: { fields: participantDisplayFields },
       },
       archivedBy: {
-        $: { where: { publicSignKey }, fields: archivedByFields },
+        $: { where: { publicSignKey }, fields: ownerKeyFields },
+      },
+      pinnedBy: {
+        $: { where: { publicSignKey }, fields: ownerKeyFields },
       },
     },
   },
 });
-
-const sortConversationsDesc = (convs: Conversation[]): Conversation[] =>
-  [...convs].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
 export const subscribeConversations = (
   credentialsOrKey: Credentials | string,
@@ -88,7 +109,7 @@ export const subscribeConversations = (
     publicSignKey,
     ({ conversations }) => {
       if (state.liveEmitted || !conversations) return;
-      onChange(sortConversationsDesc(conversations));
+      onChange(sortConversations(conversations));
     },
   );
   const unsubLive = subscribeAuthedQuery(
@@ -98,7 +119,7 @@ export const subscribeConversations = (
       if (error) console.error("Error fetching conversations:", error);
       if (!data?.identities) return onChange(null);
       state.liveEmitted = true;
-      onChange(sortConversationsDesc(data.identities[0]?.conversations ?? []));
+      onChange(sortConversations(data.identities[0]?.conversations ?? []));
     },
   );
   return () => {

@@ -9,6 +9,7 @@ import {
   createConversationSafely,
   type DecryptedMessagesResult,
   decryptKeySafely,
+  isConversationPinned,
   makeCreateTypingNotifier,
   makeSubscribeConversationKey,
   makeSubscribeConversationMessagesStream,
@@ -16,6 +17,7 @@ import {
   makeSubscribeTypingStates,
   messagesInfiniteQuery,
   pickBestConversation,
+  sortConversations,
   typingTtl,
 } from "./subscriptions.ts";
 import { subscribePaginatedQuery } from "./instant-client.ts";
@@ -630,6 +632,24 @@ Deno.test("conversationsQuery traverses from indexed identity with participant d
   assertEquals(q.identities.conversations.archivedBy.$.where, {
     publicSignKey: "pk-self",
   });
+  assertEquals(q.identities.conversations.pinnedBy.$.where, {
+    publicSignKey: "pk-self",
+  });
+});
+
+Deno.test("sortConversations places pinned conversations first and sorts each group by updatedAt descending", () => {
+  const convs = [
+    { id: "newest-unpinned", updatedAt: 500, pinnedBy: [] },
+    { id: "older-pinned", updatedAt: 100, pinnedBy: [{ publicSignKey: "me" }] },
+    { id: "middle-unpinned", updatedAt: 300 },
+    { id: "newer-pinned", updatedAt: 200, pinnedBy: [{ publicSignKey: "me" }] },
+  ];
+  assertEquals(isConversationPinned(convs[0]), false);
+  assertEquals(isConversationPinned(convs[1]), true);
+  assertEquals(
+    sortConversations(convs).map((c) => c.id),
+    ["newer-pinned", "older-pinned", "newest-unpinned", "middle-unpinned"],
+  );
 });
 
 Deno.test("conversationKeyQuery queries keys directly by conversation and owner", () => {

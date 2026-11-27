@@ -99,6 +99,9 @@ import {
 import { tx } from "@instantdb/core";
 import {
   type Conversation,
+  isConversationArchived,
+  isConversationPinned,
+  sortConversations,
   subscribeConversations,
   subscribeIdentityProfile,
   subscribeUserName,
@@ -298,7 +301,9 @@ const handleTouchMove = (e: TouchEvent, convId: string) => {
       e.preventDefault();
     }
     wasSwiping = true;
-    activeSwipeOffset = dx < 0 ? dx : dx * 0.1;
+    const conv = conversations?.find((c) => c.id === convId);
+    const canSwipePin = conv ? !isArchived(conv) : false;
+    activeSwipeOffset = dx < 0 ? dx : canSwipePin ? dx : dx * 0.1;
     rerenderChat();
   }
 };
@@ -306,8 +311,8 @@ const handleTouchMove = (e: TouchEvent, convId: string) => {
 const handleTouchEnd = (_e: TouchEvent, convId: string) => {
   if (activeSwipeConvId !== convId) return;
 
-  const threshold = -80;
-  if (swipeDirectionLocked === "x" && activeSwipeOffset < threshold) {
+  const threshold = 80;
+  if (swipeDirectionLocked === "x" && activeSwipeOffset < -threshold) {
     const conv = conversations?.find((c) => c.id === convId);
     const isCurrentlyArchived = conv ? isArchived(conv) : false;
     if (isCurrentlyArchived) {
@@ -316,6 +321,17 @@ const handleTouchEnd = (_e: TouchEvent, convId: string) => {
     } else {
       archiveConversation(convId);
       showToast("Chat archived", "success");
+    }
+  } else if (swipeDirectionLocked === "x" && activeSwipeOffset > threshold) {
+    const conv = conversations?.find((c) => c.id === convId);
+    if (conv && !isArchived(conv)) {
+      if (isPinned(conv)) {
+        unpinConversation(convId);
+        showToast("Chat unpinned", "success");
+      } else {
+        pinConversation(convId);
+        showToast("Chat pinned", "success");
+      }
     }
   }
 
@@ -333,24 +349,47 @@ const handleTouchEnd = (_e: TouchEvent, convId: string) => {
   rerenderChat();
 };
 
-const isArchived = (conv: Conversation) => {
-  return conv.archivedBy !== undefined && conv.archivedBy.length > 0;
-};
+const isArchived = isConversationArchived;
+const isPinned = isConversationPinned;
 
 const archiveConversation = (conversationId: string) => {
   const profileId = yourKeyProfile?.id;
   if (!profileId) return;
   const creds = credentials ?? undefined;
+  const conv = conversations?.find((c) => c.id === conversationId);
+  const wasPinned = conv ? isPinned(conv) : false;
+  if (conversations && creds) {
+    conversations = conversations.map((c) =>
+      c.id === conversationId
+        ? {
+          ...c,
+          archivedBy: [{ publicSignKey: creds.publicSignKey }],
+          pinnedBy: [],
+        }
+        : c
+    );
+    writeCachedConversations(creds.publicSignKey, conversations);
+  }
   ensureInstantAuth(creds).then(() =>
-    accessDb().transact(
+    accessDb().transact([
       tx.identities[profileId].link({
         archivedConversations: conversationId,
       }),
-    )
-  );
+      ...(wasPinned
+        ? [
+          tx.identities[profileId].unlink({
+            pinnedConversations: conversationId,
+          }),
+        ]
+        : []),
+    ])
+  ).catch((error) => {
+    console.error("Failed to archive conversation:", error);
+  });
   if (selectedConversation === conversationId) {
     selectedConversation = null;
   }
+  syncPreviewTargets();
   rerenderChat();
 };
 
@@ -358,14 +397,91 @@ const unarchiveConversation = (conversationId: string) => {
   const profileId = yourKeyProfile?.id;
   if (!profileId) return;
   const creds = credentials ?? undefined;
+  if (conversations && creds) {
+    conversations = sortConversations(
+      conversations.map((c) =>
+        c.id === conversationId ? { ...c, archivedBy: [] } : c
+      ),
+    );
+    writeCachedConversations(creds.publicSignKey, conversations);
+  }
   ensureInstantAuth(creds).then(() =>
     accessDb().transact(
       tx.identities[profileId].unlink({
         archivedConversations: conversationId,
       }),
     )
-  );
+  ).catch((error) => {
+    console.error("Failed to unarchive conversation:", error);
+  });
+  syncPreviewTargets();
   rerenderChat();
+};
+
+const pinConversation = (conversationId: string) => {
+  const profileId = yourKeyProfile?.id;
+  const creds = credentials;
+  if (!profileId || !creds) return;
+  const prevConversations = conversations;
+  if (conversations) {
+    conversations = sortConversations(
+      conversations.map((c) =>
+        c.id === conversationId
+          ? { ...c, pinnedBy: [{ publicSignKey: creds.publicSignKey }] }
+          : c
+      ),
+    );
+    writeCachedConversations(creds.publicSignKey, conversations);
+  }
+  syncPreviewTargets();
+  rerenderChat();
+  ensureInstantAuth(creds)
+    .then(() =>
+      accessDb().transact(
+        tx.identities[profileId].link({
+          pinnedConversations: conversationId,
+        }),
+      )
+    )
+    .catch((error) => {
+      console.error("Failed to pin conversation:", error);
+      conversations = prevConversations;
+      syncPreviewTargets();
+      showToast("Failed to pin chat", "error");
+      rerenderChat();
+    });
+};
+
+const unpinConversation = (conversationId: string) => {
+  const profileId = yourKeyProfile?.id;
+  const creds = credentials;
+  if (!profileId || !creds) return;
+  const prevConversations = conversations;
+  if (conversations) {
+    conversations = sortConversations(
+      conversations.map((c) =>
+        c.id === conversationId ? { ...c, pinnedBy: [] } : c
+      ),
+    );
+    writeCachedConversations(creds.publicSignKey, conversations);
+  }
+  syncPreviewTargets();
+  rerenderChat();
+  ensureInstantAuth(creds)
+    .then(() =>
+      accessDb().transact(
+        tx.identities[profileId].unlink({
+          pinnedConversations: conversationId,
+        }),
+      )
+    )
+    .catch((error) => {
+      console.error("Failed to unpin conversation:", error);
+      conversations = prevConversations;
+      syncPreviewTargets();
+      showToast("Failed to unpin chat", "error");
+      rerenderChat();
+    });
 };
 
 // Name cache for conversation list items
@@ -1258,6 +1374,63 @@ const markReadSvg = html`
   </svg>
 `;
 
+const pinSvg = html`
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-4 h-4"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+    />
+  </svg>
+`;
+
+const unpinSvg = html`
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    class="w-4 h-4"
+  >
+    <path
+      d="M16 3a1 1 0 0 1 .707.293l4 4a1 1 0 0 1-.141 1.53l-2.34 1.56-.97 4.854a1 1 0 0 1-1.688.51l-2.861-2.861-4.5 4.5a1 1 0 0 1-1.414-1.414l4.5-4.5-2.86-2.861a1 1 0 0 1 .509-1.688l4.854-.97 1.56-2.34A1 1 0 0 1 16 3Z"
+    />
+  </svg>
+`;
+
+const pinnedIndicatorSvg = html`
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    class="w-3.5 h-3.5"
+    aria-hidden="true"
+  >
+    <path
+      d="M16 3a1 1 0 0 1 .707.293l4 4a1 1 0 0 1-.141 1.53l-2.34 1.56-.97 4.854a1 1 0 0 1-1.688.51l-2.861-2.861-4.5 4.5a1 1 0 0 1-1.414-1.414l4.5-4.5-2.86-2.861a1 1 0 0 1 .509-1.688l4.854-.97 1.56-2.34A1 1 0 0 1 16 3Z"
+    />
+  </svg>
+`;
+
+const swipePinSvg = html`
+  <svg
+    class="w-5 h-5"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path
+      d="M16 3a1 1 0 0 1 .707.293l4 4a1 1 0 0 1-.141 1.53l-2.34 1.56-.97 4.854a1 1 0 0 1-1.688.51l-2.861-2.861-4.5 4.5a1 1 0 0 1-1.414-1.414l4.5-4.5-2.86-2.861a1 1 0 0 1 .509-1.688l4.854-.97 1.56-2.34A1 1 0 0 1 16 3Z"
+    />
+  </svg>
+`;
+
 const openRenameModal = (convId: string, currentTitle: string) => {
   renameModalConvId = convId;
   renameModalInput = currentTitle;
@@ -1506,9 +1679,10 @@ const visibleConversations = (sq?: string) => {
   const filtered = query
     ? conversations.filter((conv) => conv.title.toLowerCase().includes(query))
     : conversations;
-  return filtered.filter((conv) =>
+  const scoped = filtered.filter((conv) =>
     showArchived ? isArchived(conv) : !isArchived(conv)
   );
+  return showArchived ? scoped : sortConversations(scoped);
 };
 
 const syncPreviewTargets = () => {
@@ -1520,6 +1694,69 @@ const syncPreviewTargets = () => {
 };
 
 // --- Conversation list item ---
+
+const unreadAccentBarClass =
+  "pointer-events-none absolute left-0 top-2 bottom-2 w-[3.5px] rounded-r-full bg-[#2563eb] dark:bg-[#60a5fa]";
+
+const conversationRowButtonClass = (
+  isSelected: boolean,
+  isUnread: boolean,
+  isSearchHighlighted: boolean,
+) =>
+  `relative overflow-hidden w-full text-left px-3 py-2.5 flex items-center gap-3 rounded-xl transition-colors ${
+    isSelected
+      ? "bg-[#ebe7dc] dark:bg-[#24231f]"
+      : isUnread
+      ? "bg-[#edf3fc] hover:bg-[#e2ebfa] dark:bg-[#192334] dark:hover:bg-[#202d43]"
+      : "hover:bg-[#f0ede4] dark:hover:bg-[#1c1b18]"
+  }${
+    isSearchHighlighted
+      ? " ring-2 ring-[#2563eb]/50 dark:ring-[#60a5fa]/50"
+      : ""
+  }`;
+
+const conversationRowTitleClass = (isSelected: boolean, isUnread: boolean) =>
+  `${
+    isUnread
+      ? "font-bold text-[#111110] dark:text-[#ffffff]"
+      : isSelected
+      ? "font-semibold text-[#181715] dark:text-[#f3f1ea]"
+      : "font-normal text-[#524e47] dark:text-[#a8a298]"
+  } text-sm truncate min-w-0`;
+
+const conversationRowPreviewClass = (isUnread: boolean) =>
+  `block truncate ${
+    isUnread
+      ? "font-semibold text-[#1f1e1b] dark:text-[#f3f1ea]"
+      : "font-normal text-[#8c867c] dark:text-[#78736a]"
+  }`;
+
+const conversationRowTimeClass = (isUnread: boolean, hideOnHover: boolean) =>
+  `text-[11px] shrink-0 tabular-nums ${
+    isUnread
+      ? "font-bold text-[#2563eb] dark:text-[#60a5fa]"
+      : "font-normal text-[#9c968c] dark:text-[#66625b]"
+  }${
+    hideOnHover
+      ? " group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity"
+      : ""
+  }`;
+
+const conversationRowActionsBgClass = (
+  isSelected: boolean,
+  isUnread: boolean,
+) =>
+  isSelected
+    ? "bg-[#ebe7dc] dark:bg-[#24231f]"
+    : isUnread
+    ? "bg-[#e2ebfa] dark:bg-[#202d43]"
+    : "bg-[#f0ede4] dark:bg-[#1c1b18]";
+
+const conversationActionBtnClass =
+  "p-1.5 rounded-lg text-[#78736a] hover:bg-black/6 dark:hover:bg-white/10 hover:text-[#181715] dark:hover:text-[#f3f1ea]";
+
+const pinnedSectionDividerClass =
+  "mx-4 my-1 border-t border-[#e5e1d6] dark:border-[#24231f]";
 
 const conversationListItem = (conv: Conversation, index: number) => {
   if (!credentials) {
@@ -1537,6 +1774,7 @@ const conversationListItem = (conv: Conversation, index: number) => {
   const isSearchHighlighted = !currentIsMobile && searchInputFocused &&
     index === searchHighlightIndex;
   const isCurrentlyArchived = isArchived(conv);
+  const isCurrentlyPinned = !isCurrentlyArchived && isPinned(conv);
   const isGroupChat = conv.participants.length > 2;
   const preview = conversationPreviews[conv.id];
   const unread = unreadStatusFor(conv);
@@ -1563,13 +1801,40 @@ const conversationListItem = (conv: Conversation, index: number) => {
   const transitionStyle = activeSwipeConvId === conv.id
     ? "transition: none;"
     : swipeTransition;
+  const hideOnDesktopHoverClass = !currentIsMobile
+    ? " group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity"
+    : "";
 
   return html`
     <li
       data-conversation-id="${conv.id}"
+      data-unread="${unread.isUnread ? "true" : "false"}"
+      data-pinned="${isCurrentlyPinned ? "true" : "false"}"
       class="relative group overflow-hidden px-2 py-0.5"
     >
-      <!-- Swipe background reveal on mobile -->
+      <!-- Swipe right reveal on mobile (Pin / Unpin) -->
+      ${activeSwipeConvId === conv.id && activeSwipeOffset > 0 &&
+          !isCurrentlyArchived
+        ? html`
+          <div
+            class="absolute inset-x-2 inset-y-0.5 bg-[#2563eb] dark:bg-[#3b82f6] text-white flex items-center justify-start pl-5 pointer-events-none rounded-xl"
+          >
+            <div
+              class="flex flex-col items-center justify-center gap-0.5"
+              style="transform: scale(${Math.min(
+                1.2,
+                Math.max(0.8, Math.abs(activeSwipeOffset) / 80),
+              )}); transition: transform 0.1s ease-out;"
+            >
+              ${swipePinSvg}
+              <span class="text-[10px] font-bold uppercase tracking-wider"
+              >${isCurrentlyPinned ? "Unpin" : "Pin"}</span>
+            </div>
+          </div>
+        `
+        : null}
+
+      <!-- Swipe left reveal on mobile (Archive / Unarchive) -->
       ${activeSwipeConvId === conv.id && activeSwipeOffset < 0
         ? html`
           <div
@@ -1621,18 +1886,27 @@ const conversationListItem = (conv: Conversation, index: number) => {
         @touchmove="${(e: TouchEvent) => handleTouchMove(e, conv.id)}"
         @touchend="${(e: TouchEvent) => handleTouchEnd(e, conv.id)}"
       >
-        <button type="button" class="${`w-full text-left px-3 py-2.5 flex items-center gap-3 rounded-xl transition-colors ${
-          isSelected
-            ? "bg-[#ebe7dc] dark:bg-[#24231f]"
-            : "hover:bg-[#f0ede4] dark:hover:bg-[#1c1b18]"
-        }${
-          isSearchHighlighted
-            ? " ring-2 ring-[#39587f]/50 dark:ring-[#7da2cf]/50"
-            : ""
-        }`}" @click="${() => {
-          if (wasSwiping) return;
-          selectConversation(conv.id);
-        }}">
+        <button
+          type="button"
+          class="${conversationRowButtonClass(
+            isSelected,
+            unread.isUnread,
+            isSearchHighlighted,
+          )}"
+          @click="${() => {
+            if (wasSwiping) return;
+            selectConversation(conv.id);
+          }}"
+        >
+          ${unread.isUnread
+            ? html`
+              <span
+                data-testid="conversation-unread-bar"
+                aria-hidden="true"
+                class="${unreadAccentBarClass}"
+              ></span>
+            `
+            : nothing}
           ${displayName === null ? shimmerCircle(40) : chatAvatar({
             image: otherParticipant?.avatar,
             name: displayName,
@@ -1641,24 +1915,23 @@ const conversationListItem = (conv: Conversation, index: number) => {
           })}
           <div class="flex-grow overflow-hidden min-w-0">
             <div class="flex items-baseline justify-between gap-2">
-              <div class="${`${
-                isSelected || unread.isUnread ? "font-semibold" : "font-medium"
-              } text-sm ${textColorStyle} truncate min-w-0`}">
+              <div
+                data-testid="conversation-title"
+                class="${conversationRowTitleClass(
+                  isSelected,
+                  unread.isUnread,
+                )}"
+              >
                 ${displayName === null ? shimmerText() : displayName}
               </div>
               ${timeLabel
                 ? html`
                   <span
                     data-testid="conversation-time"
-                    class="${`text-[11px] shrink-0 tabular-nums ${
-                      unread.isUnread
-                        ? "font-semibold text-[#39587f] dark:text-[#7da2cf]"
-                        : "text-[#8c867c] dark:text-[#78736a]"
-                    } ${
-                      !currentIsMobile
-                        ? "group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity"
-                        : ""
-                    }`}"
+                    class="${conversationRowTimeClass(
+                      unread.isUnread,
+                      !currentIsMobile,
+                    )}"
                   >${timeLabel}</span>
                 `
                 : nothing}
@@ -1669,7 +1942,7 @@ const conversationListItem = (conv: Conversation, index: number) => {
                   ? html`
                     <span
                       data-testid="conversation-typing-indicator"
-                      class="inline-flex items-center gap-1.5 font-medium text-[#39587f] dark:text-[#7da2cf] max-w-full"
+                      class="inline-flex items-center gap-1.5 font-medium text-[#2563eb] dark:text-[#60a5fa] max-w-full"
                     >
                       <span class="typing-dots-inline" aria-hidden="true">
                         <span></span><span></span><span></span>
@@ -1681,11 +1954,7 @@ const conversationListItem = (conv: Conversation, index: number) => {
                   ? html`
                     <span
                       data-testid="conversation-last-message"
-                      class="${`block truncate ${
-                        unread.isUnread
-                          ? "font-medium text-[#2c2a26] dark:text-[#e7e5df]"
-                          : "text-[#78736a] dark:text-[#8c867c]"
-                      }`}"
+                      class="${conversationRowPreviewClass(unread.isUnread)}"
                     >${previewLine}</span>
                   `
                   : preview?.empty
@@ -1696,33 +1965,43 @@ const conversationListItem = (conv: Conversation, index: number) => {
                   `
                   : nothing}
               </div>
-              ${unread.isUnread
-                ? unreadLabel
-                  ? html`
-                    <span
-                      data-testid="conversation-unread-badge"
-                      aria-label="${unread.count === 1
-                        ? "1 unread message"
-                        : `${unreadLabel} unread messages`}"
-                      class="${`inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110] text-[11px] font-bold leading-none tabular-nums shrink-0 ${
-                        !currentIsMobile
-                          ? "group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity"
-                          : ""
-                      }`}"
-                    >${unreadLabel}</span>
-                  `
-                  : html`
-                    <span
-                      data-testid="conversation-unread-badge"
-                      data-unread-dot
-                      aria-label="Unread"
-                      class="${`w-2.5 h-2.5 rounded-full bg-[#39587f] dark:bg-[#7da2cf] shrink-0 ${
-                        !currentIsMobile
-                          ? "group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity"
-                          : ""
-                      }`}"
-                    ></span>
-                  `
+              ${isCurrentlyPinned || unread.isUnread
+                ? html`
+                  <span
+                    class="${`inline-flex items-center gap-1.5 shrink-0${hideOnDesktopHoverClass}`}"
+                  >
+                    ${isCurrentlyPinned
+                      ? html`
+                        <span
+                          data-testid="conversation-pin-indicator"
+                          aria-label="Pinned"
+                          title="Pinned"
+                          class="inline-flex items-center text-[#8c867c] dark:text-[#8c867c]"
+                        >${pinnedIndicatorSvg}</span>
+                      `
+                      : nothing}
+                    ${unread.isUnread
+                      ? unreadLabel
+                        ? html`
+                          <span
+                            data-testid="conversation-unread-badge"
+                            aria-label="${unread.count === 1
+                              ? "1 unread message"
+                              : `${unreadLabel} unread messages`}"
+                            class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-[#2563eb] text-white dark:bg-[#60a5fa] dark:text-[#0d1526] text-[11px] font-bold leading-none tabular-nums shadow-2xs shrink-0"
+                          >${unreadLabel}</span>
+                        `
+                        : html`
+                          <span
+                            data-testid="conversation-unread-badge"
+                            data-unread-dot
+                            aria-label="Unread"
+                            class="w-2.5 h-2.5 rounded-full bg-[#2563eb] dark:bg-[#60a5fa] ring-2 ring-[#2563eb]/20 dark:ring-[#60a5fa]/25 shrink-0"
+                          ></span>
+                        `
+                      : nothing}
+                  </span>
+                `
                 : nothing}
             </div>
           </div>
@@ -1731,15 +2010,41 @@ const conversationListItem = (conv: Conversation, index: number) => {
           ? html`
             <div
               class="${`absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center gap-0.5 pl-2 py-1 rounded-lg ${
-                isSelected
-                  ? "bg-[#ebe7dc] dark:bg-[#24231f]"
-                  : "bg-[#f0ede4] dark:bg-[#1c1b18]"
+                conversationRowActionsBgClass(isSelected, unread.isUnread)
               }`}"
             >
+              ${!isCurrentlyArchived
+                ? html`
+                  <button
+                    type="button"
+                    data-testid="toggle-pin-button"
+                    aria-pressed="${isCurrentlyPinned ? "true" : "false"}"
+                    class="${`${conversationActionBtnClass}${
+                      isCurrentlyPinned
+                        ? " text-[#2563eb] dark:text-[#60a5fa]"
+                        : ""
+                    }`}"
+                    title="${isCurrentlyPinned ? "Unpin chat" : "Pin chat"}"
+                    aria-label="${isCurrentlyPinned
+                      ? "Unpin chat"
+                      : "Pin chat"}"
+                    @click="${(e: Event) => {
+                      e.stopPropagation();
+                      if (isCurrentlyPinned) {
+                        unpinConversation(conv.id);
+                      } else {
+                        pinConversation(conv.id);
+                      }
+                    }}"
+                  >
+                    ${isCurrentlyPinned ? unpinSvg : pinSvg}
+                  </button>
+                `
+                : nothing}
               <button
                 type="button"
                 data-testid="toggle-unread-button"
-                class="p-1.5 rounded-lg text-[#78736a] hover:bg-black/6 dark:hover:bg-white/10 hover:text-[#181715] dark:hover:text-[#f3f1ea]"
+                class="${conversationActionBtnClass}"
                 title="${unread.isUnread ? "Mark as read" : "Mark as unread"}"
                 aria-label="${unread.isUnread
                   ? "Mark as read"
@@ -1761,7 +2066,7 @@ const conversationListItem = (conv: Conversation, index: number) => {
               </button>
               <button
                 type="button"
-                class="p-1.5 rounded-lg text-[#78736a] hover:bg-black/6 dark:hover:bg-white/10 hover:text-[#181715] dark:hover:text-[#f3f1ea]"
+                class="${conversationActionBtnClass}"
                 title="Rename Chat"
                 @click="${(e: Event) => {
                   e.stopPropagation();
@@ -1772,7 +2077,8 @@ const conversationListItem = (conv: Conversation, index: number) => {
               </button>
               <button
                 type="button"
-                class="p-1.5 rounded-lg text-[#78736a] hover:bg-black/6 dark:hover:bg-white/10 hover:text-[#181715] dark:hover:text-[#f3f1ea]"
+                data-testid="toggle-archive-button"
+                class="${conversationActionBtnClass}"
                 title="${isCurrentlyArchived
                   ? "Unarchive Chat"
                   : "Archive Chat"}"
@@ -1974,11 +2280,29 @@ const openChats = (sq?: string, onNewChat?: () => void) => {
     `;
   }
   const displayList = visibleConversations(sq);
+  const pinnedCount = showArchived ? 0 : displayList.filter(isPinned).length;
+  const showPinnedDivider = pinnedCount > 0 && pinnedCount < displayList.length;
 
   return html`
     <div style="display:flex;flex-direction:column;flex-grow:1">
       ${displayList.length === 0 ? emptyChatsView(sq, onNewChat) : html`
-        <ul class="flex flex-col">${displayList.map(conversationListItem)}</ul>
+        <ul class="flex flex-col">
+          ${displayList.map((conv, index) =>
+            html`
+              ${conversationListItem(conv, index)}
+              ${showPinnedDivider && index === pinnedCount - 1
+                ? html`
+                  <li
+                    role="separator"
+                    data-testid="pinned-chats-divider"
+                    aria-hidden="true"
+                    class="${pinnedSectionDividerClass}"
+                  ></li>
+                `
+                : nothing}
+            `
+          )}
+        </ul>
       `}
     </div>
   `;
@@ -3308,7 +3632,7 @@ const desktopSidebar = () => {
               aria-label="${activeUnreadChats === 1
                 ? "1 unread chat"
                 : `${activeUnreadChats} unread chats`}"
-              class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110] text-[10px] font-bold leading-none tabular-nums ring-2 ring-[#f2efe8] dark:ring-[#111110]"
+              class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-[#2563eb] text-white dark:bg-[#60a5fa] dark:text-[#0d1526] text-[10px] font-bold leading-none tabular-nums ring-2 ring-[#f2efe8] dark:ring-[#111110]"
             >${formatUnreadBadgeLabel(activeUnreadChats)}</span>
           `
           : nothing}
@@ -3593,8 +3917,8 @@ const mobileBottomNav = () => {
                 : `${activeUnreadChats} unread chats`}"
               class="${`inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full text-[10px] font-bold leading-none tabular-nums ${
                 view === "chats"
-                  ? "bg-[#39587f] text-white"
-                  : "bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110]"
+                  ? "bg-[#2563eb] text-white"
+                  : "bg-[#2563eb] text-white dark:bg-[#60a5fa] dark:text-[#0d1526]"
               }`}"
             >${formatUnreadBadgeLabel(activeUnreadChats)}</span>
           `
@@ -3720,7 +4044,7 @@ const mobileChatsListView = () => {
                 ? html`
                   <span
                     data-testid="archived-unread-badge"
-                    class="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110] text-[10px] font-bold leading-none tabular-nums"
+                    class="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-[#2563eb] text-white dark:bg-[#60a5fa] dark:text-[#0d1526] text-[10px] font-bold leading-none tabular-nums"
                   >${formatUnreadBadgeLabel(
                     unreadSummary().archivedUnreadChats,
                   )}</span>
@@ -3890,7 +4214,7 @@ const desktopChatsView = () => {
             ? html`
               <span
                 data-testid="archived-unread-badge"
-                class="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-[#39587f] text-white dark:bg-[#7da2cf] dark:text-[#111110] text-[10px] font-bold leading-none tabular-nums"
+                class="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-[#2563eb] text-white dark:bg-[#60a5fa] dark:text-[#0d1526] text-[10px] font-bold leading-none tabular-nums"
               >${formatUnreadBadgeLabel(
                 unreadSummary().archivedUnreadChats,
               )}</span>

@@ -45,8 +45,14 @@ const rules = {
     allow: {
       view: "true",
       ...noWriteAllow,
-      link: { archivedConversations: isIdentityOwner },
-      unlink: { archivedConversations: isIdentityOwner },
+      link: {
+        archivedConversations: isIdentityOwner,
+        pinnedConversations: isIdentityOwner,
+      },
+      unlink: {
+        archivedConversations: isIdentityOwner,
+        pinnedConversations: isIdentityOwner,
+      },
     },
     fields: {
       webhook: "false",

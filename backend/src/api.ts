@@ -494,6 +494,9 @@ export const backendApiSchema = {
               archivedBy: z
                 .array(z.object({ publicSignKey: z.string() }))
                 .optional(),
+              pinnedBy: z
+                .array(z.object({ publicSignKey: z.string() }))
+                .optional(),
             }),
           )
           .optional(),
@@ -1092,6 +1095,7 @@ export type MintInstantTokenBootstrap = {
       avatar?: string;
     }>;
     archivedBy?: Array<{ publicSignKey: string }>;
+    pinnedBy?: Array<{ publicSignKey: string }>;
   }>;
   conversationBootstrap?: {
     conversationId: string;

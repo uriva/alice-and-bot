@@ -31,6 +31,7 @@ import {
   type Conversation,
   type ConversationMessagesStream,
   createTypingNotifier,
+  isConversationPinned,
   nextConversationKey,
   subscribeConversationKey,
   subscribeConversationMessagesStream,
@@ -281,11 +282,11 @@ const sidebarItemTopRowStyle =
 
 const sidebarItemTimeStyle = (isDark: boolean, isUnread = false) =>
   `font-size:11px;line-height:18px;flex-shrink:0;font-variant-numeric:tabular-nums;font-weight:${
-    isUnread ? "600" : "400"
+    isUnread ? "700" : "400"
   };color:${
     isUnread
-      ? (isDark ? "#7da2cf" : "#39587f")
-      : (isDark ? "#78736a" : "#8c867c")
+      ? (isDark ? "#60a5fa" : "#2563eb")
+      : (isDark ? "#66625b" : "#9c968c")
   }`;
 
 const sidebarItemBottomRowStyle =
@@ -296,27 +297,48 @@ const sidebarItemPreviewRowStyle =
 
 const sidebarItemPreviewStyle = (isDark: boolean, isUnread = false) =>
   `${sidebarItemPreviewRowStyle};font-weight:${
-    isUnread ? "500" : "400"
+    isUnread ? "600" : "400"
   };color:${
     isUnread
-      ? (isDark ? "#e7e5df" : "#2c2a26")
-      : (isDark ? "#9c968c" : "#66625b")
+      ? (isDark ? "#f3f1ea" : "#1f1e1b")
+      : (isDark ? "#78736a" : "#8c867c")
   }`;
 
 const sidebarItemTypingStyle = (isDark: boolean) =>
   `${sidebarItemPreviewRowStyle};font-weight:500;color:${
-    isDark ? "#7da2cf" : "#39587f"
+    isDark ? "#60a5fa" : "#2563eb"
   }`;
 
 const sidebarUnreadBadgeStyle = (isDark: boolean) =>
-  `display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9999px;font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;flex-shrink:0;background:${
-    isDark ? "#7da2cf" : "#39587f"
-  };color:${isDark ? "#111110" : "#ffffff"}`;
+  `display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:9999px;font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;flex-shrink:0;background:${
+    isDark ? "#60a5fa" : "#2563eb"
+  };color:${isDark ? "#0d1526" : "#ffffff"}`;
 
 const sidebarUnreadDotStyle = (isDark: boolean) =>
-  `display:inline-block;width:9px;height:9px;border-radius:9999px;flex-shrink:0;background:${
-    isDark ? "#7da2cf" : "#39587f"
+  `display:inline-block;width:10px;height:10px;border-radius:9999px;flex-shrink:0;background:${
+    isDark ? "#60a5fa" : "#2563eb"
+  };box-shadow:0 0 0 2px ${
+    isDark ? "rgba(96,165,250,0.22)" : "rgba(37,99,235,0.18)"
   }`;
+
+const sidebarPinnedIndicatorStyle = (isDark: boolean) =>
+  `display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:${
+    isDark ? "#8c867c" : "#8c867c"
+  }`;
+
+const sidebarPinSvg = html`
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path
+      d="M16 3a1 1 0 0 1 .707.293l4 4a1 1 0 0 1-.141 1.53l-2.34 1.56-.97 4.854a1 1 0 0 1-1.688.51l-2.861-2.861-4.5 4.5a1 1 0 0 1-1.414-1.414l4.5-4.5-2.86-2.861a1 1 0 0 1 .509-1.688l4.854-.97 1.56-2.34A1 1 0 0 1 16 3Z"
+    />
+  </svg>
+`;
 
 const sidebarHoverStyles = `
   .alice-sidebar-rename-btn { opacity: 0.6; }
@@ -581,13 +603,18 @@ const sidebarItemStyle = (
   isSelected: boolean,
   isDark: boolean,
   customColors?: CustomColors,
+  isUnread = false,
 ) =>
   `display:flex;align-items:center;gap:10px;padding:8px 10px;width:100%;text-align:left;background:${
     isSelected
       ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)")
+      : isUnread
+      ? (isDark ? "rgba(59,130,246,0.14)" : "rgba(37,99,235,0.08)")
       : "transparent"
   };border:none;border-left:3px solid ${
-    isSelected
+    isUnread
+      ? (isDark ? "#60a5fa" : "#2563eb")
+      : isSelected
       ? (customColors?.primary ?? defaultPrimary(isDark))
       : "transparent"
   };border-radius:8px;cursor:pointer;transition:background 0.15s;box-sizing:border-box;outline:none`;
@@ -599,9 +626,14 @@ const sidebarItemTitleStyle = (
   isUnread = false,
 ) =>
   `font-size:13px;line-height:18px;font-weight:${
-    isSelected || isUnread ? "600" : "500"
+    isUnread ? "700" : isSelected ? "600" : "400"
   };color:${
-    customColors?.text ?? (isDark ? "#f4f4f4" : "#111827")
+    customColors?.text ??
+      (isUnread
+        ? (isDark ? "#ffffff" : "#111110")
+        : isSelected
+        ? (isDark ? "#f4f4f4" : "#181715")
+        : (isDark ? "#a8a298" : "#524e47"))
   };white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0`;
 
 const mobileBackButtonStyle = (isDark: boolean, customColors?: CustomColors) =>
@@ -2103,12 +2135,20 @@ export class ConnectedChat extends LitElement {
       const timeLabel = preview?.empty
         ? ""
         : formatConversationTime(preview?.timestamp || conv.updatedAt);
+      const isPinned = isConversationPinned(conv);
 
       return html`
         <div
           class="alice-sidebar-item"
           data-conversation-id="${conv.id}"
-          style="${sidebarItemStyle(isSelected, isDark, this.customColors)}"
+          data-unread="${unread.isUnread ? "true" : "false"}"
+          data-pinned="${isPinned ? "true" : "false"}"
+          style="${sidebarItemStyle(
+            isSelected,
+            isDark,
+            this.customColors,
+            unread.isUnread,
+          )}"
           @click="${() => this._selectConversation(conv.id)}"
         >
           <chat-avatar
@@ -2161,26 +2201,38 @@ export class ConnectedChat extends LitElement {
               >
                 ${typingLabel || previewLine || nothing}
               </div>
-              ${unread.isUnread
-                ? unreadLabel
+              <span
+                style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0">
+                ${isPinned
                   ? html`
                     <span
-                      data-testid="conversation-unread-badge"
-                      aria-label="${unread.count === 1
-                        ? "1 unread message"
-                        : `${unreadLabel} unread messages`}"
-                      style="${sidebarUnreadBadgeStyle(isDark)}"
-                    >${unreadLabel}</span>
+                      data-testid="conversation-pin-indicator"
+                      aria-label="Pinned"
+                      style="${sidebarPinnedIndicatorStyle(isDark)}"
+                    >${sidebarPinSvg}</span>
                   `
-                  : html`
-                    <span
-                      data-testid="conversation-unread-badge"
-                      data-unread-dot
-                      aria-label="Unread"
-                      style="${sidebarUnreadDotStyle(isDark)}"
-                    ></span>
-                  `
-                : nothing}
+                  : nothing}
+                ${unread.isUnread
+                  ? unreadLabel
+                    ? html`
+                      <span
+                        data-testid="conversation-unread-badge"
+                        aria-label="${unread.count === 1
+                          ? "1 unread message"
+                          : `${unreadLabel} unread messages`}"
+                        style="${sidebarUnreadBadgeStyle(isDark)}"
+                      >${unreadLabel}</span>
+                    `
+                    : html`
+                      <span
+                        data-testid="conversation-unread-badge"
+                        data-unread-dot
+                        aria-label="Unread"
+                        style="${sidebarUnreadDotStyle(isDark)}"
+                      ></span>
+                    `
+                  : nothing}
+              </span>
             </div>
           </div>
           <button

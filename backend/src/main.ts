@@ -219,6 +219,9 @@ const queryMintBootstrap = async ({
           archivedBy: {
             $: { where: { publicSignKey }, fields: ["publicSignKey"] },
           },
+          pinnedBy: {
+            $: { where: { publicSignKey }, fields: ["publicSignKey"] },
+          },
         },
       },
       conversations: {
@@ -261,6 +264,9 @@ const queryMintBootstrap = async ({
             $: { fields: ["publicSignKey", "name", "avatar"] },
           },
           archivedBy: {
+            $: { where: { publicSignKey }, fields: ["publicSignKey"] },
+          },
+          pinnedBy: {
             $: { where: { publicSignKey }, fields: ["publicSignKey"] },
           },
         },
@@ -1420,6 +1426,13 @@ export const endpoints: BackendApiImpl = {
               ? {
                 archivedBy: c.archivedBy.map((a: any) => ({
                   publicSignKey: a.publicSignKey,
+                })),
+              }
+              : {}),
+            ...(c.pinnedBy !== undefined
+              ? {
+                pinnedBy: c.pinnedBy.map((p: any) => ({
+                  publicSignKey: p.publicSignKey,
                 })),
               }
               : {}),

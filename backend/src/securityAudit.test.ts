@@ -154,9 +154,13 @@ Deno.test("instant.perms.ts locks down sensitive entities, default attrs, writes
       link: {
         archivedConversations:
           "auth.email != null && auth.email == data.instantEmail",
+        pinnedConversations:
+          "auth.email != null && auth.email == data.instantEmail",
       },
       unlink: {
         archivedConversations:
+          "auth.email != null && auth.email == data.instantEmail",
+        pinnedConversations:
           "auth.email != null && auth.email == data.instantEmail",
       },
     },

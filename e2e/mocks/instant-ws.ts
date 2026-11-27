@@ -108,6 +108,7 @@ const buildAttrs = () => [
   refAttr("identities", "keys", "keys", "owner"),
   refAttr("conversations", "participants", "identities", "conversations"),
   refAttr("identities", "archivedConversations", "conversations", "archivedBy"),
+  refAttr("identities", "pinnedConversations", "conversations", "pinnedBy"),
   refAttr("conversations", "typingStates", "typingStates", "conversation"),
   refAttr("identities", "typingStates", "typingStates", "owner"),
   refAttr("conversations", "uiElements", "uiElements", "conversation"),
@@ -197,6 +198,7 @@ export type ExtraConversation = {
   id: string;
   title: string;
   updatedAt: number;
+  pinned?: boolean;
 };
 
 export const setupInstantWsMock = async (
@@ -214,6 +216,8 @@ export const setupInstantWsMock = async (
     currentMessages: TestData["messages"];
     latestTypingUpdatedAt: number | null;
     conversationUpdatedAt: number;
+    pinnedConversationIds: Set<string>;
+    archivedConversationIds: Set<string>;
   } = {
     serverWs: null,
     txCounter: 100,
@@ -223,6 +227,10 @@ export const setupInstantWsMock = async (
       (max, m) => Math.max(max, m.timestamp),
       Date.now(),
     ),
+    pinnedConversationIds: new Set(
+      extraConversations.filter((c) => c.pinned).map((c) => c.id),
+    ),
+    archivedConversationIds: new Set(),
   };
 
   const buildIdentityTriples = (tx: number): Triple[] => [
@@ -285,6 +293,24 @@ export const setupInstantWsMock = async (
         link("identities", "keys", data.aliceIdentityId, convKeyId, tx),
       ];
     }),
+    ...Array.from(state.pinnedConversationIds).map((convId) =>
+      link(
+        "identities",
+        "pinnedConversations",
+        data.aliceIdentityId,
+        convId,
+        tx,
+      )
+    ),
+    ...Array.from(state.archivedConversationIds).map((convId) =>
+      link(
+        "identities",
+        "archivedConversations",
+        data.aliceIdentityId,
+        convId,
+        tx,
+      )
+    ),
   ];
 
   const buildTypingTriples = (updatedAt: number, tx: number): Triple[] => {
@@ -334,7 +360,7 @@ export const setupInstantWsMock = async (
   };
 
   await page.routeWebSocket(
-    /wss:\/\/api\.instantdb\.uriv\.me\/runtime\/session/,
+    /wss:\/\/db\.aliceandbot\.com\/runtime\/session/,
     (ws: WebSocketRoute) => {
       state.serverWs = ws;
       const tx = Date.now();
@@ -489,9 +515,54 @@ export const setupInstantWsMock = async (
         }
 
         if (msg.op === "transact") {
+          const steps: unknown[] = Array.isArray(msg["tx-steps"])
+            ? msg["tx-steps"]
+            : [];
+          const pinAttrId = aid("identities->pinnedConversations");
+          const archiveAttrId = aid("identities->archivedConversations");
+          const applyStep = (step: unknown): boolean => {
+            if (!Array.isArray(step) || step.length < 4) return false;
+            const [action, _eid, attrId, targetId] = step;
+            if (typeof targetId !== "string") return false;
+            if (attrId === pinAttrId) {
+              if (action === "add-triple") {
+                state.pinnedConversationIds.add(targetId);
+                return true;
+              }
+              if (action === "retract-triple") {
+                state.pinnedConversationIds.delete(targetId);
+                return true;
+              }
+            }
+            if (attrId === archiveAttrId) {
+              if (action === "add-triple") {
+                state.archivedConversationIds.add(targetId);
+                return true;
+              }
+              if (action === "retract-triple") {
+                state.archivedConversationIds.delete(targetId);
+                return true;
+              }
+            }
+            return false;
+          };
+          const identityChanged = steps.map(applyStep).some(Boolean);
+          const tid = ++state.txCounter;
           ws.send(
-            JSON.stringify({ op: "transact-ok", "tx-id": ++state.txCounter }),
+            JSON.stringify({ op: "transact-ok", "tx-id": tid }),
           );
+          if (identityChanged && identityQueries.length > 0) {
+            const idTriples = buildIdentityTriples(Date.now());
+            identityQueries.forEach(({ q }) => {
+              ws.send(
+                queryResponse(
+                  q,
+                  ++state.txCounter,
+                  wrapResult("identities", idTriples),
+                ),
+              );
+            });
+          }
           return;
         }
       });

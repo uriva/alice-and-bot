@@ -361,7 +361,7 @@ const drawFaviconWithDot = (img: HTMLImageElement): string | null => {
   ctx.fill();
   ctx.beginPath();
   ctx.arc(cx, cy, 5.2, 0, Math.PI * 2);
-  ctx.fillStyle = "#39587f";
+  ctx.fillStyle = "#2563eb";
   ctx.fill();
   return canvas.toDataURL("image/png");
 };

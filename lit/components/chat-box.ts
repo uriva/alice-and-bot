@@ -641,20 +641,20 @@ const unreadDividerRowStyle =
 
 const unreadDividerLineStyle = (isDark: boolean) =>
   `flex:1;height:1px;background:${
-    isDark ? "rgba(255,255,255,0.12)" : "rgba(24,23,21,0.11)"
+    isDark ? "rgba(96,165,250,0.28)" : "rgba(37,99,235,0.24)"
   }`;
 
 const unreadDividerPillStyle = (isDark: boolean) =>
-  `font-size:11px;font-weight:600;letter-spacing:0.01em;padding:3px 10px;border-radius:9999px;white-space:nowrap;background:${
-    isDark ? "rgba(125,162,207,0.16)" : "rgba(57,88,127,0.10)"
-  };color:${isDark ? "#9cc0eb" : "#39587f"};border:1px solid ${
-    isDark ? "rgba(125,162,207,0.28)" : "rgba(57,88,127,0.18)"
+  `font-size:11px;font-weight:700;letter-spacing:0.01em;padding:3px 10px;border-radius:9999px;white-space:nowrap;background:${
+    isDark ? "rgba(96,165,250,0.18)" : "rgba(37,99,235,0.10)"
+  };color:${isDark ? "#93c5fd" : "#1d4ed8"};border:1px solid ${
+    isDark ? "rgba(96,165,250,0.34)" : "rgba(37,99,235,0.24)"
   }`;
 
 const backUnreadBadgeStyle = (isDark: boolean) =>
   `display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:-4px;margin-right:4px;border-radius:9999px;border:none;cursor:pointer;font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;background:${
-    isDark ? "#7da2cf" : "#39587f"
-  };color:${isDark ? "#111110" : "#ffffff"};flex-shrink:0`;
+    isDark ? "#60a5fa" : "#2563eb"
+  };color:${isDark ? "#0d1526" : "#ffffff"};flex-shrink:0`;
 
 const renderUnreadMessagesDivider = (count: number, isDark: boolean) =>
   html`

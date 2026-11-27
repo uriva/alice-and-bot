@@ -196,6 +196,14 @@ const _schema = i.schema({
       },
       reverse: { on: "conversations", label: "archivedBy", has: "many" },
     },
+    identityPinnedConversations: {
+      forward: {
+        on: "identities",
+        label: "pinnedConversations",
+        has: "many",
+      },
+      reverse: { on: "conversations", label: "pinnedBy", has: "many" },
+    },
   },
   rooms: {
     conversations: {
