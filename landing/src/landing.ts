@@ -12,7 +12,11 @@ import {
   privacyPath,
   termsPath,
 } from "./paths.ts";
-import { starterAgentHref, starterAgents } from "./starter-agents.ts";
+import {
+  type StarterAgent,
+  starterAgentHref,
+  starterAgents,
+} from "./starter-agents.ts";
 import { retentionDays } from "../../protocol/src/retention.ts";
 import { useClearViewportStyles } from "./clear-viewport-styles.ts";
 import { triggerPwaInstall } from "./pwaInstall.ts";
@@ -355,6 +359,46 @@ const heroMessengerPreview = () =>
     </div>
   `;
 
+const starterPillClass =
+  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] hover:border-[#c8c2b4] dark:hover:border-[#403e38] text-[#181715] dark:text-[#f3f1ea] font-medium transition-colors";
+const starterPillAvatarImgClass =
+  "w-4 h-4 rounded-full object-cover shrink-0 bg-white dark:bg-[#1e1d1a] ring-1 ring-black/5 dark:ring-white/10";
+const starterPillAvatarFallbackClass =
+  "w-4 h-4 rounded-full items-center justify-center text-[9px] font-bold shrink-0";
+
+const onStarterPillImgError = (e: Event) => {
+  if (!(e.currentTarget instanceof HTMLImageElement)) return;
+  e.currentTarget.classList.add("hidden");
+  const fallback = e.currentTarget.nextElementSibling;
+  if (fallback instanceof HTMLElement) {
+    fallback.classList.remove("hidden");
+    fallback.classList.add("flex");
+  }
+};
+
+const renderStarterPill = (agent: StarterAgent) =>
+  html`
+    <a href="${starterAgentHref(agent.alias)}" class="${starterPillClass}">
+      ${agent.avatar
+        ? html`
+          <img
+            src="${agent.avatar}"
+            alt="${agent.name}"
+            class="${starterPillAvatarImgClass}"
+            @error="${onStarterPillImgError}"
+          />
+          <span
+            class="hidden ${starterPillAvatarFallbackClass} ${agent.avatarBg}"
+          >${agent.initials}</span>
+        `
+        : html`
+          <span class="flex ${starterPillAvatarFallbackClass} ${agent.avatarBg}"
+          >${agent.initials}</span>
+        `}
+      <span>@${agent.alias}</span>
+    </a>
+  `;
+
 const heroSection = () =>
   html`
     <section class="w-full py-12 sm:py-20 mb-10">
@@ -424,21 +468,7 @@ const heroSection = () =>
           >
             <span class="text-[#78736a] dark:text-[#8c867c] font-medium"
             >Try live now:</span>
-            ${starterAgents.map(
-              (agent) =>
-                html`
-                  <a
-                    href="${starterAgentHref(agent.alias)}"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 dark:bg-[#171614] border border-[#e3dfd4] dark:border-[#292824] hover:border-[#c8c2b4] dark:hover:border-[#403e38] text-[#181715] dark:text-[#f3f1ea] font-medium transition-colors"
-                  >
-                    <span
-                      class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${agent
-                        .avatarBg}"
-                    >${agent.initials}</span>
-                    <span>@${agent.alias}</span>
-                  </a>
-                `,
-            )}
+            ${starterAgents.map(renderStarterPill)}
             <a
               href="${chatPath}"
               class="inline-flex items-center px-2.5 py-1 rounded-full text-[#57534e] dark:text-[#a8a298] hover:text-[#181715] dark:hover:text-[#f3f1ea] underline underline-offset-4 decoration-[#d2cec3] dark:decoration-[#3a3832] font-medium transition-colors"

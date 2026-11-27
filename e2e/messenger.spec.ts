@@ -25,6 +25,19 @@ const isInViewport = async (
     box.x + box.width <= viewport.width;
 };
 
+const expectLoadedImage = async (
+  img: import("@playwright/test").Locator,
+) => {
+  await expect(img).toBeVisible({ timeout: 10_000 });
+  await expect.poll(
+    () =>
+      img.evaluate((el) =>
+        el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0
+      ),
+    { timeout: 10_000 },
+  ).toBe(true);
+};
+
 test.describe("Messenger smoke", () => {
   test("landing page code example does not cause horizontal scroll on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
@@ -1095,5 +1108,36 @@ test.describe("Messenger (landing /chat)", () => {
     await expect(olderRow).toHaveAttribute("data-pinned", "false");
 
     await context.close();
+  });
+
+  test("Try a live agent displays loaded avatar images in chat and on landing", async ({ page }) => {
+    const starterAliases = ["find_scene", "agent_fomo", "prompt2bot"];
+
+    await setupMessengerMocks(page, data);
+    await injectMessengerCredentials(page, data, credKey);
+
+    await page.goto("/");
+    const landingAgentLinks = page.locator('a[href^="/chat?chatWith="]');
+    await expect(landingAgentLinks).toHaveCount(3, { timeout: 15_000 });
+    await Promise.all(
+      starterAliases.map((alias) =>
+        expectLoadedImage(page.locator(`a[href="/chat?chatWith=${alias}"] img`))
+      ),
+    );
+
+    await page.goto("/chat");
+    const newChatBtn = page.locator('button[title="New Chat"]').first();
+    await expect(newChatBtn).toBeVisible({ timeout: 15_000 });
+    await newChatBtn.click();
+    await expect(page.getByText("Or try a live agent")).toBeVisible({
+      timeout: 10_000,
+    });
+    await Promise.all(
+      starterAliases.map(async (alias) => {
+        const row = page.locator("button", { hasText: `@${alias}` }).first();
+        await expect(row).toBeVisible({ timeout: 10_000 });
+        await expectLoadedImage(row.locator("img"));
+      }),
+    );
   });
 });

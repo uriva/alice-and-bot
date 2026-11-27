@@ -66,7 +66,9 @@ import {
 } from "./pwaInstall.ts";
 import { copyToClipboard } from "../../lit/components/utils.ts";
 import {
+  fetchStarterAgentAvatars,
   inviteContextLabel,
+  resolveStarterAgentAvatar,
   shareOrCopyInviteLink,
   type StarterAgent,
   starterAgents,
@@ -2162,18 +2164,62 @@ const openStarterAgentChat = (alias: string, onDone?: () => void) => {
     });
 };
 
-const starterAgentRow = (onDone?: () => void) => (agent: StarterAgent) =>
-  html`
+const starterAgentAvatarImgClass =
+  "w-8 h-8 rounded-full object-cover shrink-0 bg-white dark:bg-[#1e1d1a] ring-1 ring-black/5 dark:ring-white/10";
+const starterAgentAvatarFallbackClass =
+  "w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0";
+
+const starterAgentAvatars = new Map<string, string>();
+const failedStarterAvatarUrls = new Set<string>();
+let starterAvatarsPromise: Promise<void> | null = null;
+
+const loadStarterAgentAvatars = () => {
+  if (starterAvatarsPromise) return;
+  starterAvatarsPromise = fetchStarterAgentAvatars(starterAgents, {
+    resolveHandle,
+    getProfile,
+  }).then((avatars) => {
+    avatars.forEach((url, alias) => starterAgentAvatars.set(alias, url));
+    if (avatars.size > 0) rerenderChat();
+  });
+};
+
+const handleStarterAvatarError = (url: string) => () => {
+  failedStarterAvatarUrls.add(url);
+  rerenderChat();
+};
+
+const starterAgentAvatar = (agent: StarterAgent) => {
+  const avatarUrl = resolveStarterAgentAvatar(
+    agent,
+    starterAgentAvatars,
+    failedStarterAvatarUrls,
+  );
+  return avatarUrl
+    ? html`
+      <img
+        src="${avatarUrl}"
+        alt="${agent.name}"
+        class="${starterAgentAvatarImgClass}"
+        @error="${handleStarterAvatarError(avatarUrl)}"
+      />
+    `
+    : html`
+      <span class="${starterAgentAvatarFallbackClass} ${agent.avatarBg}"
+      >${agent.initials}</span>
+    `;
+};
+
+const starterAgentRow = (onDone?: () => void) => (agent: StarterAgent) => {
+  loadStarterAgentAvatars();
+  return html`
     <button
       type="button"
       class="${starterAgentRowClass}"
       ?disabled="${startingAgentAlias !== null}"
       @click="${() => openStarterAgentChat(agent.alias, onDone)}"
     >
-      <span
-        class="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${agent
-          .avatarBg}"
-      >${agent.initials}</span>
+      ${starterAgentAvatar(agent)}
       <span class="min-w-0 flex-1">
         <span class="flex items-center gap-1.5">
           <span
@@ -2194,6 +2240,7 @@ const starterAgentRow = (onDone?: () => void) => (agent: StarterAgent) =>
       >&rarr;</span>
     </button>
   `;
+};
 
 const starterAgentsSection = (onDone?: () => void) =>
   html`

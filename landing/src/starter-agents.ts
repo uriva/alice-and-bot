@@ -6,6 +6,7 @@ export type StarterAgent = {
   tagline: string;
   initials: string;
   avatarBg: string;
+  avatar?: string;
 };
 
 export const starterAgents: readonly StarterAgent[] = [
@@ -15,6 +16,7 @@ export const starterAgents: readonly StarterAgent[] = [
     tagline: "Find any movie or TV clip from a quote",
     initials: "FS",
     avatarBg: "bg-[#39587f] text-white",
+    avatar: "https://find-scene.com/favicon.svg",
   },
   {
     alias: "agent_fomo",
@@ -22,6 +24,7 @@ export const starterAgents: readonly StarterAgent[] = [
     tagline: "Live shows, parties & local picks",
     initials: "AF",
     avatarBg: "bg-[#9a5b38] text-white",
+    avatar: "https://hi.f0mo.com/favicon.svg",
   },
   {
     alias: "prompt2bot",
@@ -29,8 +32,57 @@ export const starterAgents: readonly StarterAgent[] = [
     tagline: "Build your own AI agent or workflow",
     initials: "PB",
     avatarBg: "bg-[#57534e] text-white",
+    avatar:
+      "https://storage.googleapis.com/prompt2bot-chat-images/bob-avatar/78ae4437d9b0161449ff36bf2a95e666ebe5f758b37c00a9a8e8f8078ee2e6a1.png",
   },
 ];
+
+type HandleResolver = (
+  handle: string,
+) => Promise<{ publicSignKey: string } | { error: string }>;
+
+type ProfileFetcher = (
+  publicSignKey: string,
+) => Promise<{ profile: { avatar?: string } | null }>;
+
+const fetchSingleStarterAvatar =
+  (resolveHandle: HandleResolver, getProfile: ProfileFetcher) =>
+  async ({ alias }: StarterAgent): Promise<[string, string] | null> => {
+    const resolved = await resolveHandle(alias).catch(() => null);
+    if (!resolved || !("publicSignKey" in resolved)) return null;
+    const res = await getProfile(resolved.publicSignKey).catch(() => null);
+    const avatar = res?.profile?.avatar?.trim();
+    return avatar ? [alias, avatar] : null;
+  };
+
+const isAvatarEntry = (
+  entry: [string, string] | null,
+): entry is [string, string] => entry !== null;
+
+export const fetchStarterAgentAvatars = async (
+  agents: readonly StarterAgent[],
+  {
+    resolveHandle,
+    getProfile,
+  }: { resolveHandle: HandleResolver; getProfile: ProfileFetcher },
+): Promise<Map<string, string>> =>
+  new Map(
+    (await Promise.all(
+      agents.map(fetchSingleStarterAvatar(resolveHandle, getProfile)),
+    )).filter(isAvatarEntry),
+  );
+
+export const resolveStarterAgentAvatar = (
+  agent: StarterAgent,
+  profileAvatars: ReadonlyMap<string, string>,
+  failedUrls: ReadonlySet<string>,
+): string | null => {
+  const liveAvatar = profileAvatars.get(agent.alias)?.trim();
+  if (liveAvatar && !failedUrls.has(liveAvatar)) return liveAvatar;
+  const fallbackAvatar = agent.avatar?.trim();
+  if (fallbackAvatar && !failedUrls.has(fallbackAvatar)) return fallbackAvatar;
+  return null;
+};
 
 export const starterAgentHref = (alias: string) =>
   `${chatPath}?chatWith=${encodeURIComponent(alias)}`;

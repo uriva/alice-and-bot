@@ -1,15 +1,68 @@
-import { assertEquals } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
+import { getProfile, resolveHandle } from "../protocol/src/clientApi.ts";
 import {
+  fetchStarterAgentAvatars,
   inviteContextLabel,
+  resolveStarterAgentAvatar,
   shareOrCopyInviteLink,
   starterAgentHref,
   starterAgents,
 } from "./src/starter-agents.ts";
 
-Deno.test("starterAgents have valid aliases and generate /chat?chatWith links", () => {
+Deno.test("starterAgents have valid aliases, avatar URLs, and generate /chat?chatWith links", () => {
   assertEquals(starterAgents.length, 3);
+  starterAgents.forEach((agent) => {
+    assert(
+      agent.avatar?.startsWith("https://"),
+      `Expected https avatar URL for @${agent.alias}`,
+    );
+  });
   assertEquals(starterAgentHref("find_scene"), "/chat?chatWith=find_scene");
   assertEquals(starterAgentHref("agent_fomo"), "/chat?chatWith=agent_fomo");
+});
+
+Deno.test("resolveStarterAgentAvatar prefers live profile avatar, falls back to default, then null on error", () => {
+  const agent = starterAgents[0];
+  const liveUrl = "https://example.com/live-avatar.png";
+  assertEquals(
+    resolveStarterAgentAvatar(
+      agent,
+      new Map([[agent.alias, liveUrl]]),
+      new Set(),
+    ),
+    liveUrl,
+  );
+  assertEquals(
+    resolveStarterAgentAvatar(
+      agent,
+      new Map([[agent.alias, liveUrl]]),
+      new Set([liveUrl]),
+    ),
+    agent.avatar ?? null,
+  );
+  assertEquals(
+    resolveStarterAgentAvatar(
+      agent,
+      new Map(),
+      new Set(agent.avatar ? [agent.avatar] : []),
+    ),
+    null,
+  );
+});
+
+Deno.test("fetchStarterAgentAvatars resolves live Alice&Bot profile avatars", async () => {
+  const avatars = await fetchStarterAgentAvatars(starterAgents, {
+    resolveHandle,
+    getProfile,
+  });
+  assert(
+    avatars.get("find_scene")?.startsWith("https://"),
+    "Expected live avatar for @find_scene",
+  );
+  assert(
+    avatars.get("prompt2bot")?.startsWith("https://"),
+    "Expected live avatar for @prompt2bot",
+  );
 });
 
 Deno.test("inviteContextLabel formats known starter agents, handles, and friend invite keys", () => {
