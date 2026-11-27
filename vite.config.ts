@@ -1,24 +1,83 @@
 import { defineConfig, type Plugin } from "vite";
 import deno from "@deno/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
-import { copyFileSync, existsSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { type RouteMeta, routeMetaByPath } from "./landing/src/route-meta.ts";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const siteOrigin = "https://aliceandbot.com";
+
+const escapeAttr = (value: string) =>
+  value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+
+const withRouteMeta = (html: string, routePath: string, meta: RouteMeta) => {
+  const canonicalUrl = `${siteOrigin}${meta.canonicalPath ?? routePath}`;
+  const titleAttr = escapeAttr(meta.title);
+  const descAttr = escapeAttr(meta.description);
+  return html
+    .replace(/<title>[\s\S]*?<\/title>/, `<title>${titleAttr}</title>`)
+    .replace(
+      /(<meta\s+name="description"\s+content=")[\s\S]*?(")/,
+      `$1${descAttr}$2`,
+    )
+    .replace(
+      /(<link\s+rel="canonical"\s+href=")[\s\S]*?(")/,
+      `$1${canonicalUrl}$2`,
+    )
+    .replace(
+      /(<meta\s+property="og:url"\s+content=")[\s\S]*?(")/,
+      `$1${canonicalUrl}$2`,
+    )
+    .replace(
+      /(<meta\s+property="og:title"\s+content=")[\s\S]*?(")/,
+      `$1${titleAttr}$2`,
+    )
+    .replace(
+      /(<meta\s+property="og:description"\s+content=")[\s\S]*?(")/,
+      `$1${descAttr}$2`,
+    )
+    .replace(
+      /(<meta\s+name="twitter:title"\s+content=")[\s\S]*?(")/,
+      `$1${titleAttr}$2`,
+    )
+    .replace(
+      /(<meta\s+name="twitter:description"\s+content=")[\s\S]*?(")/,
+      `$1${descAttr}$2`,
+    );
+};
 
 const spaFallback = (): Plugin => ({
   name: "spa-fallback-404",
   closeBundle: () => {
-    const src = resolve(__dirname, "landing/dist/index.html");
-    const dest = resolve(__dirname, "landing/dist/404.html");
-    if (existsSync(src)) {
-      copyFileSync(src, dest);
-    } else {
+    const distDir = resolve(__dirname, "landing/dist");
+    const src = resolve(distDir, "index.html");
+    const dest = resolve(distDir, "404.html");
+    if (!existsSync(src)) {
       console.warn(
         "spaFallback: index.html not found, skipping copy to 404.html",
       );
+      return;
     }
+    copyFileSync(src, dest);
+    const indexHtml = readFileSync(src, "utf8");
+    Object.entries(routeMetaByPath)
+      .filter(([routePath]) => routePath !== "/")
+      .forEach(([routePath, meta]) => {
+        const dir = resolve(distDir, routePath.slice(1));
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          resolve(dir, "index.html"),
+          withRouteMeta(indexHtml, routePath, meta),
+        );
+      });
   },
 });
 

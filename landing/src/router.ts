@@ -1,10 +1,6 @@
 import { render, type TemplateResult } from "lit";
 
-type RouteMeta = {
-  title: string;
-  description: string;
-  canonicalPath?: string;
-};
+import type { RouteMeta } from "./route-meta.ts";
 
 type Route = {
   path: string;
@@ -13,6 +9,9 @@ type Route = {
 };
 
 const siteOrigin = "https://aliceandbot.com";
+
+const normalizePath = (pathname: string) =>
+  pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 
 const setMetaTag = (attr: "name" | "property", key: string, value: string) => {
   const el = document.querySelector(`meta[${attr}="${key}"]`);
@@ -39,13 +38,13 @@ let rootEl: HTMLElement;
 let currentLeave: (() => void) | null = null;
 
 const matchRoute = (pathname: string) =>
-  routes.find(({ path }) => path === pathname);
+  routes.find(({ path }) => path === normalizePath(pathname));
 
 let currentPath = "";
 
 const renderRoute = () => {
   (async () => {
-    const pathname = globalThis.location.pathname;
+    const pathname = normalizePath(globalThis.location.pathname);
     if (pathname === currentPath) return;
     if (currentLeave) {
       currentLeave();
