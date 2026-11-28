@@ -291,7 +291,7 @@ const sidebarItemTimeStyle = (isDark: boolean, isUnread = false) =>
   }`;
 
 const sidebarItemBottomRowStyle =
-  "display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0";
+  "display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;min-height:19px";
 
 const sidebarItemPreviewRowStyle =
   "font-size:12px;line-height:15px;min-height:15px;height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0";

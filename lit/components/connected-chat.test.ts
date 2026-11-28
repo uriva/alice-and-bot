@@ -501,3 +501,11 @@ Deno.test("conversations default to unnamed and resolve other participants' name
     false,
   );
 });
+
+Deno.test("connected-chat sidebar bottom row reserves 19px height so unread badge dismissal never shifts row height", async () => {
+  const code = await Deno.readTextFile("./lit/components/connected-chat.ts");
+  const bottomRowMatch = code.match(
+    /const sidebarItemBottomRowStyle =[\s\S]*?";/,
+  );
+  assertEquals(Boolean(bottomRowMatch?.[0].includes("min-height:19px")), true);
+});
